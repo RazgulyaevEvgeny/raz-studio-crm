@@ -300,6 +300,15 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .attach.sm{min-height:36px;padding:0 12px;font-size:13px;background:var(--paper)}
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.kaspi-box{display:flex;flex-direction:column;gap:12px}
+.kcalc{background:var(--tile);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.kcalc div{display:flex;justify-content:space-between;gap:12px}
+.kcalc span{color:var(--muted)}
+.kcalc b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.kcalc .tot{border-top:1px solid var(--line,rgba(0,0,0,.08));padding-top:8px;margin-top:2px;font-size:15px}
+.kcalc .tot b{font:700 17px var(--f)}
+.kcalc .pos{color:var(--ok)}.kcalc .neg{color:var(--danger)}
+.kcalc p{margin:0;color:var(--muted);font-size:13px}
 .qty-row{display:flex;gap:8px}
 .qty-row input{flex:1 1 auto;min-width:0}
 .fld .qty-row select{flex:0 0 112px;width:112px}
@@ -812,6 +821,15 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="fld"><label for="x-qty">Количество</label><div class="xq-row" style="display:flex;gap:8px"><input id="x-qty" type="number" min="0" step="any" inputmode="decimal" style="flex:1;min-width:0"><select id="x-unit"><option>шт</option><option>м</option><option>м²</option><option>кг</option><option>л</option><option>рулон</option><option>упак</option><option>катушка</option><option>лист</option></select></div></div>
         <div class="fld"><label for="x-vendor">Поставщик</label><input id="x-vendor" autocomplete="off" placeholder="Магазин, Kaspi, Китай" data-sugg="vendors-dl"></div>
       </div>
+      <div id="x-kaspi-w" hidden class="kaspi-box">
+        <div class="grid2">
+          <div class="fld"><label for="x-kbuy">Купили за 1 шт</label><div class="suffix"><input id="x-kbuy" type="number" min="0" step="1" inputmode="numeric" placeholder="0"><span>₸</span></div></div>
+          <div class="fld"><label for="x-kcargo">Доставка карго</label><div class="suffix"><input id="x-kcargo" type="number" min="0" step="1" inputmode="numeric" placeholder="за всю партию"><span>₸</span></div></div>
+          <div class="fld"><label for="x-ksell">Продаём на Каспи</label><div class="suffix"><input id="x-ksell" type="number" min="0" step="1" inputmode="numeric" placeholder="за 1 шт"><span>₸</span></div></div>
+          <div class="fld"><label for="x-kfee">Комиссия Каспи</label><div class="suffix"><input id="x-kfee" type="number" min="0" step="1" inputmode="numeric" placeholder="30"><span>%</span></div></div>
+        </div>
+        <div class="kcalc" id="x-kcalc"></div>
+      </div>
       <div class="grid2">
         <div class="fld"><label for="x-who">Кто оплатил</label><input id="x-who" data-sugg="owners-dl" autocomplete="off"></div>
         <div class="fld" id="x-st-w"><label for="x-status">Статус</label><select id="x-status"><option value="ordered" data-c="--st-prod">Заказано</option><option value="received" data-c="--st-ready">Получено</option></select></div>
@@ -940,7 +958,7 @@ const LEDGERS={
   office:{title:'Расходы офиса',one:'расход',add:'Добавить расход',newH:'Новый расход',what:'Что оплатили *',ph:'Аренда за октябрь, интернет, вода',
     cats:[['rent','Аренда','--blue'],['util','Коммунальные','--sky'],['net','Связь и интернет','--st-design'],['salary','Зарплата','--st-prod'],['ads','Реклама','--danger'],['house','Хозтовары и канцелярия','--st-ready'],['repair','Ремонт и техника','--muted'],['other','Другое','--ink']]},
   supplies:{title:'Закупка расходников',one:'закупка',add:'Добавить закупку',newH:'Новая закупка',what:'Что купили *',ph:'Плёнка Oracal 641 белая',
-    cats:[['film','Плёнка','--blue'],['plastic','Пластик для 3D','--st-prod'],['thread','Нитки','--st-design'],['blank','Футболки и заготовки','--sky'],['ink','Краски и чернила','--danger'],['paper','Бумага','--muted'],['pack','Упаковка','--st-ready'],['other','Другое','--ink']]}
+    cats:[['film','Плёнка','--blue'],['plastic','Пластик для 3D','--st-prod'],['thread','Нитки','--st-design'],['blank','Футболки и заготовки','--sky'],['ink','Краски и чернила','--danger'],['paper','Бумага','--muted'],['pack','Упаковка','--st-ready'],['kaspi','Каспи','--danger'],['other','Другое','--ink']]}
 };
 let prices=[],pricesLoaded=false,prMode='studio',prSvc='all',prQ='',qEditing=null,qSvc='vinyl',qTiers=[];
 const KASPI_FEE=0.30;
@@ -1376,7 +1394,8 @@ function renderLedger(k){
   $(k+'-sub').textContent=ledgerLoaded[k]?`Показано ${rows.length} ${plural(rows.length,'запись','записи','записей')} на ${money(shown)}`:'Подключаемся к базе…';
   $(k+'-head').hidden=!rows.length;
   $(k+'-list').innerHTML=rows.length?rows.map(x=>{const col=catOf(k,x.cat)[2];const st=k==='supplies'&&SSTAT[x.status];
-    const sub=k==='supplies'?[x.qty?String(x.qty).replace('.',',')+' '+(x.unit||'шт'):'',x.plType,x.color,x.notes].filter(Boolean).join(', '):[x.notes].filter(Boolean).join('');
+    const kp=k==='supplies'&&x.cat==='kaspi'?kaspiMath(x):null;
+    const sub=k==='supplies'?[x.qty?String(x.qty).replace('.',',')+' '+(x.unit||'шт'):'',x.plType,x.color,kp&&kp.sell?'продаём по '+money(kp.sell):'',kp&&kp.sell&&kp.qty?'прибыль '+money(kp.profit):'',x.notes].filter(Boolean).join(', '):[x.notes].filter(Boolean).join('');
     const cc=k==='supplies'&&x.color?colorCss(x.color):'';
     return `<button type="button" class="lrow item" data-xopen="${esc(x.id)}" data-xkind="${k}">
       <div class="cell l-d"><b>${x.date?fmtDate(x.date):'—'}</b></div>
@@ -1391,6 +1410,7 @@ function renderXCats(){
   $('x-cats').innerHTML=LEDGERS[xKind].cats.map(([id,l])=>`<button type="button" data-xcat="${id}" aria-pressed="${xCat===id}" ${canWrite?'':'disabled'}>${esc(l)}</button>`).join('');
   $('x-catc-w').hidden=xCat!=='other';
   const pl=xKind==='supplies'&&xCat==='plastic';$('x-pl-w').hidden=!pl;
+  $('x-kaspi-w').hidden=!(xKind==='supplies'&&xCat==='kaspi');if(!$('x-kaspi-w').hidden)kaspiCalc(false);
   if(pl){
     $('x-pltypes').innerHTML=[...PLTYPES,'Другая'].map(t=>`<button type="button" data-plt="${t}" aria-pressed="${xPlType===t}" ${canWrite?'':'disabled'}>${t}</button>`).join('');
     $('x-pltc-w').hidden=xPlType!=='Другая';
@@ -1398,6 +1418,26 @@ function renderXCats(){
     $('x-swatches').innerHTML=COLORS.map(([n,c])=>`<button type="button" data-xcolor="${n}" aria-pressed="${cur===n}" ${canWrite?'':'disabled'}><i style="--c:${c}"></i>${n}</button>`).join('');
   }
 }
+function kaspiMath(x){
+  const qty=+x.qty||0,buy=+x.kBuy||0,cargo=+x.kCargo||0,sell=+x.kSell||0,fee=x.kFee==null?KASPI_FEE*100:+x.kFee;
+  const total=buy*qty+cargo,unit=qty?total/qty:0,feeU=sell*fee/100,netU=sell-feeU-unit;
+  return {qty,buy,cargo,sell,fee,total,unit,feeU,netU,profit:netU*qty,margin:unit>0?Math.round(netU/unit*100):null};
+}
+function kaspiCalc(setAmount=true){
+  const v=i=>$(i).value===''?null:+$(i).value;
+  const m=kaspiMath({qty:v('x-qty'),kBuy:v('x-kbuy'),kCargo:v('x-kcargo'),kSell:v('x-ksell'),kFee:v('x-kfee')});
+  if(setAmount&&($('x-kbuy').value!==''||$('x-kcargo').value!=='')&&m.total>0)$('x-amount').value=Math.round(m.total);
+  const r=(a,b,c='')=>`<div class="${c}"><span>${a}</span><b>${b}</b></div>`;
+  if(!m.qty){$('x-kcalc').innerHTML='<p>Впишите количество в штуках, цену закупки и доставку. Сумма закупки посчитается сама, а здесь появится себестоимость и прибыль.</p>';return}
+  let h=r('Товар',money(Math.round(m.buy*m.qty)))+r('Карго',money(Math.round(m.cargo)))+r('Себестоимость 1 шт',money(Math.round(m.unit)));
+  if(m.sell){const cls=m.netU>=0?'pos':'neg';
+    h+=r('Комиссия Каспи '+String(m.fee).replace('.',',')+'%','−'+money(Math.round(m.feeU))+' с 1 шт')
+     +r('Чистыми с 1 шт',`<span class="${cls}">${money(Math.round(m.netU))}</span>`)
+     +r('Прибыль с партии'+(m.margin!==null?' · '+m.margin+'%':''),`<span class="${cls}">${money(Math.round(m.profit))}</span>`,'tot')}
+  else h+='<p>Впишите цену на Каспи, чтобы увидеть прибыль.</p>';
+  $('x-kcalc').innerHTML=h;
+}
+['x-kbuy','x-kcargo','x-ksell','x-kfee','x-qty'].forEach(i=>document.getElementById(i).addEventListener('input',()=>{if(xCat==='kaspi')kaspiCalc()}));
 function renderXFiles(){$('x-files').innerHTML=xFiles.map(f=>fileTile(f,{rm:canWrite&&!!assets,owner:'x'})).join('')}
 function openX(k,id){
   xKind=k;xEditing=id;const c=LEDGERS[k];
@@ -1407,9 +1447,10 @@ function openX(k,id){
   setDM($('x-date'),x.date||'');$('x-amount').value=x.amount??'';$('x-title').value=x.title||'';
   xCat=x.cat||'other';$('x-catc').value=x.catCustom||'';
   $('x-color').value=x.color||'';xPlType=x.plType?(PLTYPES.includes(x.plType)?x.plType:'Другая'):'PLA';$('x-pltype').value=x.plType&&!PLTYPES.includes(x.plType)?x.plType:'';
-  renderXCats();
   $('x-sup-w').hidden=k!=='supplies';$('x-st-w').hidden=k!=='supplies';
+  $('x-kbuy').value=x.kBuy??'';$('x-kcargo').value=x.kCargo??'';$('x-ksell').value=x.kSell??'';$('x-kfee').value=x.kFee??(KASPI_FEE*100);
   $('x-qty').value=x.qty??'';$('x-unit').value=x.unit||'шт';$('x-vendor').value=x.vendor||'';$('x-status').value=x.status||'received';
+  renderXCats();
   $('x-who').value=x.who||(id==='new'&&isMgr()?ROLE().name:'');$('x-notes').value=x.notes||'';
   xFiles=(x.files||[]).map(f=>({...f}));xFilesOrig=xFiles.map(f=>f.id);renderXFiles();
   const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
@@ -1435,7 +1476,9 @@ async function saveX(e){
   const d={title,amount,date:date||todayStr(),cat:xCat,catCustom:xCat==='other'?$('x-catc').value.trim():'',who:$('x-who').value.trim(),notes:$('x-notes').value.trim(),files:xFiles,updatedAt:Date.now()};
   if(xKind==='supplies'&&xCat==='plastic'){d.plType=xPlType==='Другая'?$('x-pltype').value.trim():xPlType;d.color=$('x-color').value.trim()}
   else if(xKind==='supplies'){d.plType='';d.color=''}
-  if(xKind==='supplies'){d.qty=$('x-qty').value===''?null:Math.max(0,+$('x-qty').value);d.unit=$('x-unit').value;d.vendor=$('x-vendor').value.trim();d.status=$('x-status').value}
+  if(xKind==='supplies'){d.qty=$('x-qty').value===''?null:Math.max(0,+$('x-qty').value);d.unit=$('x-unit').value;d.vendor=$('x-vendor').value.trim();d.status=$('x-status').value;
+    const nv=i=>$(i).value===''?null:Math.max(0,+$(i).value);
+    if(xCat==='kaspi'){d.kBuy=nv('x-kbuy');d.kCargo=nv('x-kcargo');d.kSell=nv('x-ksell');d.kFee=nv('x-kfee')}else{d.kBuy=d.kCargo=d.kSell=d.kFee=null}}
   const btn=$('x-save');btn.disabled=true;
   try{
     if(xEditing==='new')await db.collection(xKind).doc().set({...d,createdAt:Date.now(),createdBy:ROLE().name||''});
@@ -1983,7 +2026,7 @@ document.addEventListener('click',e=>{
   const cma=t.closest('[data-cmadd]');if(cma){addComment(cma.dataset.cmadd);return}
   const plt=t.closest('[data-plt]');if(plt&&canWrite){xPlType=plt.dataset.plt;renderXCats();if(xPlType==='Другая')$('x-pltype').focus();return}
   const xcl=t.closest('[data-xcolor]');if(xcl&&canWrite){$('x-color').value=xcl.dataset.xcolor;renderXCats();return}
-  const xc=t.closest('[data-xcat]');if(xc&&canWrite){xCat=xc.dataset.xcat;if(xCat==='plastic'&&xKind==='supplies'&&$('x-unit').value==='шт')$('x-unit').value='кг';renderXCats();return}
+  const xc=t.closest('[data-xcat]');if(xc&&canWrite){xCat=xc.dataset.xcat;if(xCat==='plastic'&&xKind==='supplies'&&$('x-unit').value==='шт')$('x-unit').value='кг';if(xCat==='kaspi')$('x-unit').value='шт';renderXCats();return}
   const wl=t.closest('[data-wl]');if(wl){go(wl.dataset.wl);return}
   const bd=t.closest('[data-bday]');if(bd){selDay=bd.dataset.bday;const [y,m]=selDay.split('-').map(Number);if(m-1!==calM){calY=y;calM=m-1}render();setTimeout(()=>{if(matchMedia('(max-width:1060px)').matches)$('dp-title').scrollIntoView({block:'start',behavior:'auto'})},0);return}
   const pk=t.closest('[data-pick]');if(pk&&canWrite){edSvc=pk.dataset.pick;renderSvcPick();return}
