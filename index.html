@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261012185635">
+<meta name="app-build" content="20261013014902">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -651,6 +651,274 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .csback{position:fixed;inset:0;z-index:59;background:transparent}
 @media(max-width:560px){.csmenu{left:0!important;right:0;bottom:0;top:auto!important;width:auto!important;max-width:none;max-height:70vh;border-radius:24px 24px 0 0;padding:12px 10px calc(14px + env(safe-area-inset-bottom,0px));animation:none}.csmenu button{min-height:48px;font-size:15px}.csback{background:rgba(10,11,20,.3)}}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font:600 14px var(--f);z-index:30;max-width:calc(100% - 32px)}
+/* ===== компактная мобильная версия (телефоны) =====
+   Меньше шрифты и отступы, больше строк на экране. Поля ввода остаются удобными для пальца. */
+.rq-imp{background:var(--paper);color:var(--blue)}
+.rq-imp:hover{background:var(--blue);color:#fff}
+@media(max-width:600px){
+  body{font-size:14px;line-height:1.42;padding-inline:12px;padding-block:10px 84px}
+  .shell{gap:12px}
+  .page{gap:10px!important}
+
+  /* шапка: логотип, имя и «Выйти» в одну строку, разделы сеткой 4×2 */
+  .logo svg{height:34px}
+  .nav{gap:8px}
+  .nav .who-pill,.nav .logout{top:2px;min-height:30px;padding:0 11px;font-size:12px}
+  .nav .who-pill{right:62px;max-width:calc(100% - 196px)}
+  .nav .pills{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+  .nav .pills .pill:not(.who-pill):not(.logout){position:relative;min-width:0;min-height:34px;padding:0 4px;justify-content:center;font-size:12.5px;letter-spacing:-.01em;border-radius:11px}
+  .nav .pill .n{position:absolute;top:-6px;right:-3px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;font:700 10px/17px var(--f);background:var(--muted);color:#fff;box-shadow:0 0 0 2px var(--paper)}
+  .nav .pill .n.hot,.nav .pill .n.req{background:var(--danger)}
+  .nav .pill.on .n{background:var(--ink)}
+  .nav .pill.on .n.hot,.nav .pill.on .n.req{background:var(--danger)}
+
+  /* заголовок страницы */
+  .ph{gap:8px 12px;align-items:center}
+  .ph h1{font-size:23px;letter-spacing:-.04em}
+  .ph p{font-size:12.5px;margin-top:2px;line-height:1.35}
+  .btn{min-height:40px;padding:0 16px;font-size:14px}
+  .btn.sm{min-height:36px;padding:0 13px;font-size:13px}
+  .note{padding:9px 12px;border-radius:12px;font-size:12.5px}
+
+  /* сводка на главной: плитки 2×2, низкие */
+  .stats{gap:8px}
+  .stat{min-height:0;padding:10px 12px 9px;border-radius:16px;gap:1px}
+  .stat .lbl{max-width:none;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stat small{display:none}
+  .stat b{font-size:20px;padding-bottom:0;margin-top:3px}
+  .stat svg.spark{position:static;display:block;width:100%;max-width:none;height:15px;margin-top:5px}
+
+  /* виджеты */
+  .pack,.pcol{gap:10px}
+  .w{padding:12px;border-radius:18px;gap:9px}
+  .w-h{flex-wrap:nowrap}
+  .w-h h2{font-size:17px;gap:7px;min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden}
+  .w-h h2 .c{font-size:11.5px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .go{min-height:30px;padding:0 10px;font-size:12.5px;gap:4px;white-space:nowrap;flex:none}
+  .go svg{width:12px;height:12px}
+  .mini,.tasks,.hbars{gap:5px}
+  .mrow{padding:8px 10px;border-radius:12px;gap:1px 10px}
+  .mrow b{font-size:13.5px}
+  .mrow small{font-size:11.5px}
+  .mrow .r b{font-size:12.5px}
+  .dotlbl{font-size:11.5px;gap:5px}.dotlbl::before{width:7px;height:7px}
+  .w-empty{padding:12px;border-radius:12px;font-size:12.5px}
+  .wsum{padding:8px 10px;border-radius:12px}
+  .wsum b{font-size:19px}.wsum small{font-size:11.5px}
+  .wproj{padding:8px 10px;border-radius:12px;gap:5px}
+  .wproj b{font-size:13.5px}.wproj small{font-size:11.5px}
+  .rq-imp{min-height:30px;padding:0 12px;font-size:12.5px}
+  .done-tog{font-size:12px;padding:2px}
+  .legend,.blegend{gap:4px 10px;font-size:11px}
+  .legend i,.blegend i{width:7px;height:7px}
+
+  /* задачи */
+  .task{padding:7px 6px 7px 10px;border-radius:12px;gap:8px}
+  .task .tt b{font-size:13.5px}
+  .task .tt small{font-size:11.5px}
+  .task.boss{padding-left:12px}
+  .task.boss .tt b{font-size:14px}
+  .chk{width:24px;height:24px}.chk svg{width:12px;height:12px}
+  .tdel{width:28px;height:28px;font-size:16px}
+  .tstat{min-height:30px;font-size:11.5px;padding:0 24px 0 22px}
+  .tstat-w::before{left:9px;width:7px;height:7px;margin-top:-3.5px}
+  .icb{width:30px;height:30px}.icb svg{width:15px;height:15px}
+  .tdesc,.cm{font-size:12.5px;padding:6px 10px;border-radius:10px}
+  .cm-tog{font-size:11.5px}
+  .tform{padding:8px;border-radius:12px;gap:6px}
+  .tform input{min-height:38px;border-radius:10px;padding:0 10px}
+
+  /* мини-календарь */
+  .cal-g{gap:3px}
+  .day{height:34px;border-radius:9px;font-size:12.5px}
+  .mk{bottom:3px}.mk i{width:3.5px;height:3.5px}
+
+  /* фильтры: поиск и выпадающий список в одну строку, без пустых категорий */
+  .filters{padding:8px;border-radius:16px;gap:8px}
+  .filters .top{flex-wrap:nowrap;gap:6px}
+  .filters .search,.search{flex:1 1 auto;min-width:0;max-width:none}
+  .search input{min-height:38px;padding:0 32px 0 13px}
+  .search svg{right:12px;width:14px;height:14px}
+  .selwrap{flex:0 0 132px;min-width:0}
+  .selwrap .cs-btn,.selwrap select{min-height:38px;padding:0 26px 0 12px;font-size:12.5px;background-position:right 10px center}
+  .chips{gap:5px}
+  .chips .chip,.chip{min-height:30px;padding:0 10px;font-size:12.5px;gap:5px}
+  .chip .dot{width:7px;height:7px}
+  .chip.zero:not(.on){display:none}
+  .seg{padding:3px}
+  .seg button{min-height:32px;padding:0 10px;font-size:12px}
+  .filter-note{font-size:12.5px;gap:6px}
+
+  /* ведомость: карточка заказа в три строки */
+  .rows{gap:6px}
+  .row.item{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"client client money" "svc svc money" "num due status";gap:3px 8px;padding:9px 12px;border-radius:14px;align-items:center}
+  .row.item>.num{grid-area:num;font-size:12px}
+  .row.item>.num small{display:none}
+  .row.item .cell b{font-size:14px;line-height:1.25}
+  .row.item .cell small{font-size:11.5px}
+  .row.item>.c-client{align-self:end}
+  .row.item>.c-client b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row.item>.c-client small{display:none}
+  .row.item>.c-svc{flex-direction:row;gap:6px;align-items:baseline;align-self:start}
+  .row.item>.c-svc b{flex:none;max-width:62%;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row.item>.c-svc small{flex:1 1 auto;min-width:0}
+  .row.item>.due{flex-direction:row;gap:5px;align-items:baseline;min-width:0;overflow:hidden}
+  .row.item>.due b{font-size:12px;font-weight:600;white-space:nowrap}
+  .row.item>.due small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row.item>.money{align-self:start}
+  .row.item>.money b{font-size:14px;white-space:nowrap}
+  .row.item>.money small:not(.debt):not(.paid){display:none}
+  .st{min-height:28px;font-size:12px;padding:0 24px 0 21px;background-position:right 9px center}
+  .st-w::before{left:9px;width:7px;height:7px;margin-top:-3.5px}
+  .empty{padding:24px 14px;border-radius:16px;gap:8px}
+  .empty h3{font-size:17px}.empty p{font-size:12.5px}
+
+  /* календарь */
+  .big,.dayp{padding:10px;border-radius:18px;gap:8px}
+  .big-h{flex-wrap:nowrap}
+  .big-h h2,.dayp h2{font-size:18px}
+  .dayp h3{font-size:12px;margin-top:2px}
+  .mnav{gap:4px}
+  .mnav button{width:32px;height:32px;font-size:15px}
+  #cal-today{min-height:32px;height:32px;padding:0 12px;font-size:12.5px}
+  .bg{gap:3px}
+  .bday{min-height:42px;padding:3px;border-radius:10px;gap:2px}
+  .bday .dn{width:24px;height:24px;font-size:12.5px}
+
+  /* расходы, закупки, прайс, проекты: сводка в три узкие плитки */
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .kpis .kpi:last-child{grid-column:auto}
+  .kpi{padding:8px 10px;border-radius:14px;gap:1px}
+  .kpi span{font-size:11.5px;line-height:1.2}
+  .kpi b{font-size:16px;margin-top:auto;padding-top:2px}
+  .kpi small{font-size:10.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .an-kpis .kpi b{margin-top:2px}
+  .lrow.item{padding:9px 12px;border-radius:14px;gap:3px 10px}
+  .lrow .cell b{font-size:13.5px}
+  .lrow .cell small{font-size:11.5px}
+  .lrow .amt{font-size:14px}
+  .catlbl{font-size:11.5px;gap:5px}.catlbl::before{width:7px;height:7px}
+  .pst{min-height:20px;padding:0 7px;font-size:10.5px;margin-left:4px}
+  .prices{gap:14px}
+  .psec{gap:5px}
+  .psec-h h2{font-size:17px}.psec-h small{font-size:11.5px}
+  .prow.item{padding:9px 12px;border-radius:14px;grid-template-areas:"n p" "n u";gap:1px 10px;align-items:start}
+  .prow.item>.unit{grid-area:u;text-align:right;align-self:start}
+  .prow.item>.unit::before{content:"за "}
+  .prices.client .prow.item{grid-template-areas:"n p" "n u"}
+  .prow .cell b{font-size:13.5px}.prow .cell small{font-size:11.5px}
+  .prow .pr b{font-size:14px}.prow .pr small,.prow .unit{font-size:11.5px}
+  .mkb{min-height:22px;font-size:11px;padding:0 8px}
+  .pgrid{gap:8px}
+  .pcard{padding:10px;border-radius:16px;gap:7px}
+  .pcover{height:110px;border-radius:12px}
+  .pcover.none{display:none}
+  .pcard h3{font-size:16px}
+  .pcard p{font-size:12.5px;min-height:0}
+  .pmeta{font-size:11.5px}.pmeta b{font-size:12px}
+
+  /* аналитика */
+  .an-per .chip{flex:1 1 0;min-width:0;padding:0 4px;font-size:12px}
+  .an-kpis{grid-template-columns:1fr 1fr;gap:6px}
+  .an-kpis .kpi:nth-child(5){grid-column:1/-1}
+  .an-kpis .kpi b{font-size:18px}
+  .an-kpis .kpi small{white-space:normal}
+  .agrid{column-gap:10px;margin-bottom:-10px}
+  .agrid>.w{margin-bottom:10px}
+  .agrid .w-h .c{font-size:11px}
+  .hb{grid-template-columns:minmax(0,36%) minmax(0,1fr) auto;gap:8px;padding:6px 10px;border-radius:10px;font-size:12.5px}
+  .hb .t{height:6px}
+  .hb .v small{font-size:10.5px}
+  .cols{height:136px;padding:12px 8px 26px;border-radius:12px;gap:3px}
+  .cols .cb em{font-size:9.5px}
+  .cols .cb span{font-size:10px;bottom:-19px}
+  .an-note{font-size:12px}
+  .an-empty{padding:10px;font-size:12.5px}
+
+  /* окна редактирования */
+  .ed-head{padding:12px 14px 6px;padding-top:calc(12px + env(safe-area-inset-top,0px))}
+  .ed-head h2{font-size:21px}
+  .x{width:36px;height:36px;font-size:18px;flex:none}
+  .tabs{padding:0 14px 2px;gap:5px}
+  .tab{min-height:32px;padding:0 12px;font-size:13px}
+  .ed-body{padding:8px 14px 14px;gap:10px}
+  .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+  .grid2:has(#f-client){grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+  .fld{gap:4px}
+  .fld>label,.fld>.lb{font-size:12px}
+  .fld input,.fld select,.fld textarea{min-height:40px;padding:8px 11px;border-radius:11px}
+  .fld textarea{min-height:60px}
+  .fld .cs-btn{min-height:40px;padding:0 30px 0 11px;border-radius:11px;font-size:14px;background-position:right 11px center}
+  .fld .qty-row .cs-btn{flex:0 0 78px;width:78px;padding:0 22px 0 10px;background-position:right 8px center}
+  .fld .xq-row .cs-btn{flex:0 0 84px;width:84px;padding:0 22px 0 10px;background-position:right 8px center}
+  .fld .qty-row select{flex:0 0 78px;width:78px}
+  .qty-row{gap:6px}
+  .combo input{padding-right:40px!important}
+  .combo-btn{right:3px;width:32px;height:32px}
+  .suffix span{right:11px;font-size:12px}
+  .suffix input{padding-right:30px}
+  .range{gap:6px}
+  .range input,.fld .range input{max-width:none;flex:1 1 0;min-width:0}
+  .svc-pick{gap:5px}
+  .svc-pick button{min-height:32px;padding:0 11px;font-size:12.5px}
+  .sugg button{min-height:28px;padding:0 10px;font-size:12px}
+  .sw button{min-height:30px;font-size:12px}
+  .sw i{width:16px;height:16px}
+  .hint,.meta{font-size:11.5px}
+  .sum{padding:9px 12px;border-radius:12px;font-size:12.5px}
+  .sum b{font-size:18px}
+  .linkbtn{font-size:12.5px}
+  .wa{font-size:12px}
+  .pnl{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .pnl div:last-child{grid-column:auto}
+  .pnl div{padding:8px 10px;border-radius:12px}
+  .pnl small{font-size:11px;line-height:1.2}
+  .pnl b{font-size:16px}
+  .exp,.pexp{padding:4px 4px 4px 11px;border-radius:11px}
+  .exp b,.exp span,.pexp b,.pexp span{font-size:13.5px}
+  .exp-add input,.pexp-add input{min-height:40px;border-radius:10px}
+  .ofiles{gap:8px}
+  .ofg{padding:9px 10px;border-radius:12px;gap:6px}
+  .ofg-h b{font-size:14px}
+  .attach{min-height:38px;padding:0 12px;font-size:13px;border-radius:10px}
+  .attach.sm{min-height:32px;padding:0 10px;font-size:12px}
+  .files{gap:5px}
+  .file{width:54px;height:54px;border-radius:10px}
+  .reqbox{padding:10px 12px;border-radius:14px;gap:6px}
+  .reqbox .rh b{font-size:14px}
+  .reqbox li{padding:6px 10px;border-radius:10px;font-size:13px}
+  .reqbox li .cl,.reqbox .rh small{font-size:11.5px}
+  .kadd{padding:10px;border-radius:14px;gap:8px}
+  .kadd-foot .kfee{width:120px}
+  .kcalc{padding:9px 11px;border-radius:12px;font-size:13px;gap:4px}
+  .kcalc .tot b{font-size:15px}
+  .calc{padding:10px;border-radius:14px;gap:8px}
+  .chk-row{font-size:13px;gap:8px}
+  .ed-foot{padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));gap:8px}
+  .err{font-size:12.5px}
+
+  /* кнопка «+», подсказки */
+  .fab{width:52px;height:52px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .fab svg{width:22px;height:22px}
+  .toast{padding:10px 16px;font-size:13px;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+}
+@media(max-width:389px){
+  .grid2:has(#f-client){grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .wa{font-size:11.5px;white-space:nowrap}
+  .selwrap{flex-basis:118px}
+  .selwrap .cs-btn,.selwrap select{padding:0 22px 0 10px;font-size:12px;background-position:right 8px center}
+}
+@media(max-width:359px){
+  .nav .pills .pill:not(.who-pill):not(.logout){font-size:11.5px;padding:0 2px}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+  .grid2:has(#f-client){grid-template-columns:minmax(0,1fr)}
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpis .kpi:last-child{grid-column:1/-1}
+}
+/* iPhone увеличивает страницу, если шрифт в поле меньше 16 px: на iOS поля остаются 16 px */
+@supports(-webkit-touch-callout:none){
+  @media(max-width:600px){input,select,textarea{font-size:16px!important}}
+}
 </style>
 
 <div class="shell">
@@ -772,7 +1040,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="kpis" id="pr-kpi"></div>
     <div class="filters">
       <div class="top">
-        <label class="search"><input id="pr-q" type="search" placeholder="Поиск по прайсу" aria-label="Поиск по прайсу"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></label>
+        <label class="search"><input id="pr-q" type="search" placeholder="Поиск по прайсу" data-phm="Поиск" aria-label="Поиск по прайсу"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></label>
         <div class="seg" role="group" aria-label="Вид прайса"><button type="button" data-prmode="studio" aria-pressed="true">Для студии</button><button type="button" data-prmode="client" aria-pressed="false">Для клиента</button></div>
       </div>
       <div class="chips" id="pr-chips" aria-label="Услуга"></div>
@@ -795,7 +1063,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="filters">
       <div class="top">
         <label class="search">
-          <input id="q" type="search" placeholder="Клиент, телефон или № заказа" aria-label="Поиск">
+          <input id="q" type="search" placeholder="Клиент, телефон или № заказа" data-phm="Клиент, тел., №" aria-label="Поиск">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         </label>
         <label class="selwrap"><select id="svc-sel" aria-label="Услуга"></select></label>
@@ -1131,7 +1399,7 @@ for(const k of ['office','supplies']){const c=LEDGERS[k];document.getElementById
     <div class="kpis" id="${k}-kpi"></div>
     <div class="filters">
       <div class="top">
-        <label class="search"><input id="${k}-q" data-lq="${k}" type="search" placeholder="${k==='supplies'?'Поиск по названию, поставщику, заметкам':'Поиск по названию и заметкам'}" aria-label="Поиск"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></label>
+        <label class="search"><input id="${k}-q" data-lq="${k}" data-phm="Поиск" type="search" placeholder="${k==='supplies'?'Поиск по названию, поставщику, заметкам':'Поиск по названию и заметкам'}" aria-label="Поиск"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></label>
         <label class="selwrap"><select id="${k}-month" data-lm="${k}" aria-label="Месяц"></select></label>
       </div>
       <div class="chips" id="${k}-cats" aria-label="Категория"></div>
@@ -1647,7 +1915,7 @@ function openX(k,id){
   document.querySelectorAll('#xed-form input,#xed-form select,#xed-form textarea').forEach(el=>el.disabled=!canWrite);
   $('x-save').hidden=!canWrite;
   $('vendors-dl').innerHTML=[...new Set(ledger.supplies.map(r=>r.vendor).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join('');
-  $('xed').hidden=false;setTimeout(()=>{if(canWrite&&id==='new')$('x-title').focus()},50);
+  $('xed').hidden=false;document.querySelectorAll('#xed .ed-body').forEach(b=>b.scrollTop=0);setTimeout(()=>{if(canWrite&&id==='new')$('x-title').focus()},50);
 }
 function closeX(){dpClose();$('xed').hidden=true;xEditing=null}
 function renderXDel(conf){
@@ -1743,7 +2011,7 @@ function openQ(id){
   $('q-meta').textContent=x.updatedAt?'Цена обновлена '+new Date(x.updatedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}):'';
   $('q-err').hidden=true;renderQDel(false);
   document.querySelectorAll('#qed-form input,#qed-form textarea').forEach(el=>el.disabled=!canWrite);$('q-save').hidden=!canWrite;
-  $('qed').hidden=false;setTimeout(()=>{if(canWrite&&id==='new')$('q-name').focus()},50);
+  $('qed').hidden=false;document.querySelectorAll('#qed .ed-body').forEach(b=>b.scrollTop=0);setTimeout(()=>{if(canWrite&&id==='new')$('q-name').focus()},50);
 }
 function closeQ(){$('qed').hidden=true;qEditing=null;applyRoleWrite();render()}
 function renderQDel(conf){const b=$('q-del');if(!canWrite||qEditing==='new'){b.innerHTML='';return}
@@ -1824,7 +2092,7 @@ function openP(id){
   $('p-meta').textContent=p.createdAt?'Создан '+f(p.createdAt)+(p.updatedAt&&p.updatedAt!==p.createdAt?', изменён '+f(p.updatedAt):''):'';
   $('p-err').hidden=true;renderPDel(false);
   document.querySelectorAll('#ped-form input,#ped-form textarea').forEach(el=>el.disabled=!canWrite);$('p-save').hidden=!canWrite;
-  setPTab('main');$('ped').hidden=false;setTimeout(()=>{if(canWrite&&id==='new')$('p-name').focus()},50);
+  setPTab('main');$('ped').hidden=false;document.querySelectorAll('#ped .ed-body').forEach(b=>b.scrollTop=0);setTimeout(()=>{if(canWrite&&id==='new')$('p-name').focus()},50);
 }
 function closeP(){dpClose();$('ped').hidden=true;pEditing=null;applyRoleWrite();render()}
 function renderPDel(conf){const b=$('p-del');if(!canWrite||pEditing==='new'){b.innerHTML='';return}
@@ -1859,9 +2127,11 @@ function renderSvcPick(){
   if(!edUnitTouched){const u=(SV[edSvc]||SV.other).unit;$('f-unit').value=['шт','листов','м²'].includes(u)?u:'шт'}
   $('custom-wrap').hidden=edSvc!=='other';
 }
+let edScrollReset=new Set();
 function setTab(t){
   edTab=t;['main','cost','kaspi'].forEach(k=>{$('pane-'+k).hidden=t!==k;$('tab-'+k).setAttribute('aria-selected',t===k)});
   if(t==='cost')renderCost();if(t==='kaspi')renderKaspi();
+  if(!$('ed').hidden&&edScrollReset.has(t)){edScrollReset.delete(t);$('pane-'+t).scrollTop=0}
 }
 function renderOrderFiles(){
   for(const k of ['mockup','final','other']){
@@ -1888,6 +2158,7 @@ function updateRest(){
   const w=waLink($('f-phone').value);const a=$('wa');a.hidden=!w;if(w)a.href=w;
 }
 function openEditor(id,preset={}){
+  edScrollReset=new Set(['main','cost','kaspi']);
   editing=id;
   const o=id==='new'?{status:'new',service:view.svc!=='all'?view.svc:'vinyl',deadline:preset.deadline||view.day||'',...(preset.o||{})}:orders.find(x=>x.id===id);
   $('ed-save').textContent='Сохранить';edReq=id==='new'&&preset.req?preset.req:null;reqAskReject=false;renderReqBox();
@@ -1911,8 +2182,8 @@ function openEditor(id,preset={}){
   document.querySelectorAll('#ed-form input,#ed-form select,#ed-form textarea').forEach(el=>el.disabled=!canWrite);
   $('ed-save').hidden=!canWrite;$('pay-full').hidden=!canWrite;
   updateRest();setTab(preset.tab||'main');renderCost();
-  $('ed').hidden=false;
-  setTimeout(()=>{if(canWrite&&id==='new')$('f-client').focus()},50);
+  $('ed').hidden=false;edScrollReset.delete(edTab);$('pane-'+edTab).scrollTop=0;
+  setTimeout(()=>{if(canWrite&&id==='new'&&!preset.req)$('f-client').focus()},50);
 }
 function closeEditor(){dpClose();$('ed').hidden=true;editing=null;edReq=null;$('ed-save').textContent='Сохранить'}
 function addExpense(){
@@ -2481,6 +2752,10 @@ $('ri-text').addEventListener('input',riPreview);
 $('ried-form').addEventListener('submit',saveReqImport);
 $('ried-close').onclick=$('ried-cancel').onclick=$('ried-back').onclick=closeReqImport;
 $('req-done-tog').addEventListener('click',()=>{showReqDone=!showReqDone;renderReqWidget();packHome()});
+/* короткие подсказки в полях поиска на телефоне */
+const mqPhone=matchMedia('(max-width:600px)');
+function applyPh(){document.querySelectorAll('input[data-phm]').forEach(el=>{if(el.dataset.phd==null)el.dataset.phd=el.placeholder;el.placeholder=mqPhone.matches?el.dataset.phm:el.dataset.phd})}
+applyPh();try{mqPhone.addEventListener('change',applyPh)}catch(_){mqPhone.addListener&&mqPhone.addListener(applyPh)}
 /* колёсико мыши не меняет числа в полях */
 addEventListener('wheel',e=>{const t=e.target;if(t&&t.matches&&t.matches('input[type=number]')&&document.activeElement===t)t.blur()},{passive:true});
 
