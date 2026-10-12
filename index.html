@@ -1827,6 +1827,7 @@ function addKaspi(){
   const prevRev=kaspiSum(edK,0).rev;
   const line={id:kEditId||uid(),name,price,qty,date:date||todayStr(),cost:$('k-cost').value===''?0:Math.max(0,+$('k-cost').value),src:kSrcCost!=null&&+$('k-cost').value===kSrcCost?'auto':''};
   const i=edK.findIndex(l=>l.id===line.id);if(i>=0)edK[i]=line;else edK.push(line);
+  if(editing==='new'&&edSvc!=='kaspi'&&edK.length===1&&!$('f-desc').value.trim()){edSvc='kaspi';renderSvcPick()}
   kSyncPrice(prevRev);kClear();renderKaspi();return true;
 }
 /* сумма заказа следует за продажами Каспи, пока её не поменяли вручную */
@@ -1889,7 +1890,14 @@ function handleWriteError(e){
 async function saveOrder(ev){
   ev.preventDefault();
   if(!db||!canWrite)return;
+  if(($('k-name').value.trim()||$('k-price').value)&&!(setTab('kaspi'),addKaspi())){return}
   const d=formData();
+  /* продажа на Kaspi: клиент и описание подставляются сами */
+  if(d.kaspi.length){
+    if(!d.client){d.client='Kaspi';$('f-client').value='Kaspi'}
+    if(!d.desc)d.desc=d.kaspi.map(l=>l.name+(l.qty>1?' × '+l.qty:'')).join(', ');
+    if(d.paid==null&&d.price)d.paid=d.price;
+  }
   if(!d.client){setTab('main');showErr('f-err','Впишите клиента, без него заказ не сохранить.');$('f-client').focus();return}
   const rec=valIso($('f-received'));
   if(rec===null){setTab('main');showErr('f-err','Дата получения не распознана. Пишите день и месяц, например 12.10.');$('f-received').focus();return}
@@ -1902,8 +1910,7 @@ async function saveOrder(ev){
   d.receivedAt=rec||todayStr();d.deadlineFrom=dFrom&&dFrom!==dTo?dFrom:'';d.deadline=dTo||'';
   if(d.service==='other'&&!d.customService){setTab('main');showErr('f-err','Впишите название услуги.');$('f-custom').focus();return}
   if(($('e-title').value.trim()||$('e-amount').value)&&!confirmPendingExp()){return}
-  if(($('k-name').value.trim()||$('k-price').value)&&!(setTab('kaspi'),addKaspi())){return}
-  if(edK.length){const nd=formData();d.kaspi=nd.kaspi;d.kaspiFee=nd.kaspiFee}
+
   const now=Date.now();const btn=$('ed-save');btn.disabled=true;
   try{
     if(editing==='new'){
