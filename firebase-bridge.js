@@ -86,6 +86,71 @@
       e => err && err(mapErr(e)))
   });
 
+  /* ---------- файлы в базе Firestore (без Storage) ----------
+     Фото сжимаются в браузере до JPEG ~300 КБ, PDF хранится как есть, если меньше ~700 КБ.
+     В записях заказа хранится ссылка вида fsblob:<id>, а картинка подгружается при показе. */
+  const MAX_CHARS = 940000; // предел документа Firestore 1 МБ, с запасом
+  const fileToDataURL = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
+  async function compressImage(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+      let side = 1600, q = 0.82, out = '';
+      for (let step = 0; step < 8; step++) {
+        const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        out = c.toDataURL('image/jpeg', q);
+        if (out.length <= 420000) break;           // ~300 КБ — цель
+        if (q > 0.6) q -= 0.1; else side = Math.round(side * 0.8);
+      }
+      return out;
+    } finally { URL.revokeObjectURL(url); }
+  }
+  const cache = new Map();
+  function dataUrlToObjectUrl(d) {
+    const [head, b64] = d.split(','); const type = (head.match(/data:([^;]+)/) || [])[1] || 'application/octet-stream';
+    const bin = atob(b64); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([arr], { type }));
+  }
+  function makeBlobStore(fs) {
+    const col = fs.collection('blobs');
+    const resolve = id => {
+      if (!cache.has(id)) cache.set(id, col.doc(id).get().then(s => s.exists ? dataUrlToObjectUrl(s.data().data) : '').catch(() => ''));
+      return cache.get(id);
+    };
+    const fix = async (el, attr, mk) => {
+      const v = el.getAttribute(attr) || ''; const m = v.match(/fsblob:([\w-]+)/); if (!m) return;
+      el.setAttribute('data-fsblob', m[1]);
+      const u = await resolve(m[1]);
+      if (u) el.setAttribute(attr, mk ? mk(v, m[0], u) : u); else if (attr === 'src') el.removeAttribute('src');
+    };
+    const scan = root => {
+      (root.querySelectorAll ? root : document).querySelectorAll('img[src^="fsblob:"],video[src^="fsblob:"]').forEach(el => fix(el, 'src'));
+      (root.querySelectorAll ? root : document).querySelectorAll('a[href^="fsblob:"]').forEach(el => fix(el, 'href'));
+      (root.querySelectorAll ? root : document).querySelectorAll('[style*="fsblob:"]').forEach(el => fix(el, 'style', (v, tok, u) => v.replace(tok, u)));
+    };
+    new MutationObserver(ms => { for (const m of ms) { if (m.type === 'childList') m.addedNodes.forEach(n => n.nodeType === 1 && scan(n.parentNode || n)); else if (m.target.nodeType === 1) scan(m.target.parentNode || m.target); } })
+      .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'href', 'style'] });
+    return {
+      upload: async file => {
+        let data;
+        const t = file.type || '';
+        if (t.startsWith('image/')) data = await compressImage(file);
+        else if (t === 'application/pdf') { data = await fileToDataURL(file); if (data.length > MAX_CHARS) throw { code: 'too_large', message: 'pdf' }; }
+        else throw { code: 'unsupported_type', message: t };
+        if (data.length > MAX_CHARS) throw { code: 'too_large', message: 'image' };
+        const ref = col.doc();
+        try { await ref.set({ data, type: t.startsWith('image/') ? 'image/jpeg' : t, name: String(file.name || '').slice(0, 120), createdAt: Date.now() }); }
+        catch (e) { throw { code: e && e.code === 'permission-denied' ? 'not_granted' : 'upstream_error', message: (e && e.message) || '' }; }
+        const id = 'fsblob:' + ref.id;
+        return { id, url: id, durableUrl: id, sizeBytes: Math.round(data.length * 0.75), contentType: t.startsWith('image/') ? 'image/jpeg' : t };
+      },
+      delete: async id => { try { await col.doc(String(id).replace('fsblob:', '')).delete(); return { deleted: true }; } catch (_) { return { deleted: false }; } }
+    };
+  }
+
   function start() {
     const authEl = mountAuth();
     if (!configured) {
@@ -98,26 +163,10 @@
     const auth = firebase.auth();
     const fs = firebase.firestore();
     try { fs.settings({ ignoreUndefinedProperties: true, merge: true }); } catch (_) {}
-    let storage = null;
-    try { storage = firebase.storage(); } catch (_) { storage = null; }
 
     api.db = { collection: p => wrapCol(fs.collection(p)), doc: p => wrapDoc(fs.doc(p)) };
     api.user = { can: async () => true, canEdit: async () => true, isOwner: async () => true };
-    api.assets = storage ? {
-      upload: async (file, opts) => {
-        const safe = String(file.name || 'file').replace(/[^\wа-яА-ЯёЁ.\-]+/g, '_').slice(-80);
-        const path = 'files/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '_' + safe;
-        const ref = storage.ref(path);
-        try {
-          await ref.put(file, { contentType: (opts && opts.type) || file.type || 'application/octet-stream' });
-          const url = await ref.getDownloadURL();
-          return { id: path, url, durableUrl: url, sizeBytes: file.size, contentType: file.type };
-        } catch (e) {
-          throw { code: e && e.code === 'storage/unauthorized' ? 'not_granted' : e && e.code === 'storage/quota-exceeded' ? 'quota_or_state' : 'upstream_error', message: (e && e.message) || '' };
-        }
-      },
-      delete: async id => { try { await storage.ref(id).delete(); return { deleted: true }; } catch (_) { return { deleted: false }; } }
-    } : null;
+    api.assets = makeBlobStore(fs);
 
     const form = document.getElementById('auth-form');
     form.addEventListener('submit', async e => {

@@ -10,7 +10,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="firebase-bridge.js"></script>
 </head>
@@ -575,7 +574,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
             <input id="b-who" data-sugg="owners-dl" placeholder="Кому" autocomplete="off" aria-label="Кому">
             <button class="attach" type="button" id="b-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button>
             <div class="files" id="b-files"></div>
-            <div class="hint full" data-need-assets>Даты выбираются в календаре по нажатию. Файлы: фото, PDF или видео до 20 МБ.</div>
+            <div class="hint full" data-need-assets>Даты выбираются в календаре по нажатию. Файлы: фото или PDF до 700 КБ.</div>
             <div class="err" id="b-err" hidden></div>
             <div class="acts"><button class="btn soft sm" type="button" id="b-cancel">Отмена</button><button class="btn primary sm" type="submit" id="b-save">Поставить задачу</button></div>
           </form>
@@ -746,7 +745,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <datalist id="exp-dl"><option value="Материалы"><option value="Плёнка"><option value="Пластик"><option value="Нитки"><option value="Футболки"><option value="Печать"><option value="Доставка"><option value="Работа мастера"><option value="Реклама"><option value="Комиссия Kaspi"></datalist>
       <div class="fld"><span class="lb">Чеки, фото и файлы</span>
         <div class="files" id="o-files"></div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="o-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить файл или фото</button><span class="hint" data-need-assets>Фото, PDF или видео до 20 МБ</span></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="o-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить файл или фото</button><span class="hint" data-need-assets>Фото или PDF до 700 КБ</span></div>
       </div>
     </div>
     <div class="err" id="f-err" hidden style="padding:0 24px 8px"></div>
@@ -788,7 +787,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <div class="fld"><label for="x-notes">Заметки</label><textarea id="x-notes"></textarea></div>
       <div class="fld"><span class="lb">Чеки, фото и файлы</span>
         <div class="files" id="x-files"></div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="x-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить чек или фото</button><span class="hint" data-need-assets>Фото, PDF или видео до 20 МБ</span></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="x-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить чек или фото</button><span class="hint" data-need-assets>Фото или PDF до 700 КБ</span></div>
       </div>
       <div class="meta" id="x-meta"></div>
       <div class="err" id="x-err" hidden></div>
@@ -834,7 +833,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="ed-body" id="ppane-files" hidden>
       <div class="files" id="p-files" style="gap:8px"></div>
       <div class="w-empty" id="p-files-empty" style="background:var(--tile)">Здесь можно хранить фото образцов, макеты, референсы, PDF с расчётами. Первое фото станет обложкой проекта.</div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="p-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить фото или файл</button><span class="hint" data-need-assets>Фото, PDF или видео до 20 МБ</span></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="p-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить фото или файл</button><span class="hint" data-need-assets>Фото или PDF до 700 КБ</span></div>
     </div>
     <div class="err" id="p-err" hidden style="padding:0 24px 8px"></div>
     <div class="ed-foot"><div id="p-del"></div><div class="r"><button class="btn soft sm" type="button" id="ped-cancel">Отмена</button><button class="btn primary sm" type="submit" id="p-save">Сохранить</button></div></div>
@@ -869,7 +868,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 <div class="csback" id="cs-back" hidden></div>
 <div class="csmenu" id="cs-menu" hidden role="listbox"></div>
 <div class="dpick" id="dp" hidden role="dialog" aria-label="Выбор даты"></div>
-<input type="file" id="file-in" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,video/mp4,video/webm" hidden>
+<input type="file" id="file-in" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" hidden>
 <div class="lbox" id="lb" hidden role="dialog" aria-label="Просмотр файла"><button class="x" type="button" id="lb-close" aria-label="Закрыть">×</button><div id="lb-body" style="display:contents"></div></div>
 
 <script>
@@ -1005,11 +1004,11 @@ function maskDM(el){el.addEventListener('input',()=>{el.dataset.iso='';let v=el.
 const ACCEPT=new Set(['image/png','image/jpeg','image/gif','image/webp','application/pdf','video/mp4','video/webm']);
 function fileErrMsg(e){
   const c=e&&e.code;
-  if(c==='too_large')return 'Файл больше 20 МБ. Уменьшите его и прикрепите снова.';
-  if(c==='unsupported_type')return 'Такой тип файла не поддерживается. Подойдут фото (JPG, PNG, WebP), PDF или видео MP4.';
-  if(c==='quota_or_state')return 'Место для файлов закончилось. Удалите старые файлы и попробуйте снова.';
+  if(c==='too_large')return 'Файл слишком большой. Фото сжимаются сами, а PDF должен быть меньше 700 КБ.';
+  if(c==='unsupported_type')return 'Такой тип файла не поддерживается. Подойдут фото (JPG, PNG, WebP) или PDF до 700 КБ.';
+  if(c==='quota_or_state')return 'Место в базе закончилось. Удалите старые файлы и попробуйте снова.';
   if(c==='rate_limited')return 'Слишком много загрузок подряд. Подождите минуту и попробуйте снова.';
-  if(c==='not_granted'||c==='capability_disabled'||c==='capability_removed')return 'Загрузка файлов недоступна. Проверьте, что в Firebase включено хранилище файлов (Storage).';
+  if(c==='not_granted'||c==='capability_disabled'||c==='capability_removed')return 'Загрузка файлов недоступна. Выйдите и войдите снова.';
   return 'Файл не загрузился. Проверьте интернет и попробуйте ещё раз.';
 }
 async function uploadAll(list){
