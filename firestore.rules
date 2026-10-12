@@ -17,6 +17,25 @@ service cloud.firestore {
     match /office/{id}   { allow read, write: if signedIn(); }
     match /blobs/{id}    { allow read, write: if signedIn(); }
 
+    // Заявки с сайта топперов: сайт может только создать новую заявку (без входа),
+    // читать, подтверждать и удалять их могут только сотрудники
+    match /requests/{id} {
+      allow read, update, delete: if signedIn();
+      allow create: if request.resource.data.keys().hasOnly(['source','code','status','createdAt','name','cafe','note','customDesc','items','total','qty','text','hasCustom'])
+        && request.resource.data.source == 'toppers'
+        && request.resource.data.status == 'new'
+        && request.resource.data.code == id
+        && id.size() <= 12
+        && request.resource.data.items is list && request.resource.data.items.size() <= 40
+        && request.resource.data.text is string && request.resource.data.text.size() <= 6000
+        && request.resource.data.name is string && request.resource.data.name.size() <= 200
+        && request.resource.data.cafe is string && request.resource.data.cafe.size() <= 200
+        && request.resource.data.note is string && request.resource.data.note.size() <= 2000
+        && request.resource.data.customDesc is string && request.resource.data.customDesc.size() <= 2000
+        && request.resource.data.qty is int && request.resource.data.qty >= 0 && request.resource.data.qty <= 1000000
+        && request.resource.data.total is number && request.resource.data.total >= 0;
+    }
+
     // Проекты и прайс — менеджер только смотрит
     match /projects/{id} { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
     match /prices/{id}   { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }

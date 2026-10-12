@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261012165740">
+<meta name="app-build" content="20261012182447">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -303,6 +303,21 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .kaspi-box{display:flex;flex-direction:column;gap:12px}
+.n.req{background:var(--danger);color:#fff}
+.reqbox{background:color-mix(in srgb,var(--blue) 8%,var(--paper));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--blue) 30%,transparent);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.reqbox .rh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.reqbox .rh b{font:700 15.5px var(--f)}
+.reqbox .rh>b{white-space:nowrap}
+#w-req .w-h h2{white-space:nowrap}
+.reqbox .rh small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.reqbox ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.reqbox li{background:var(--paper);border-radius:12px;padding:8px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;font-size:14px}
+.reqbox li b{font-weight:600}
+.reqbox li .cl{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 10px;color:var(--muted);font-size:12.5px}
+.reqbox li .cl i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);margin-right:4px;vertical-align:-1px}
+.reqbox .rq-txt{color:var(--muted);font-size:13px;white-space:pre-wrap}
+.reqbox .rq-acts{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.mrow .rq-st{font:600 11.5px var(--f);padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--sc) 14%,transparent);color:var(--sc)}
 .kadd{display:flex;flex-direction:column;gap:12px;background:var(--tile);border-radius:18px;padding:14px}
 .kadd .combo input,.kadd .suffix input,.kadd input[data-dm]{background:var(--paper)}
 .kadd-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -586,7 +601,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   <header class="nav">
     <button class="logo" type="button" data-go="home" aria-label="На главную"><svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="44.1 51.2 200.6 60.6" role="img" aria-label="Студия брендирования Разгуляев"><defs><g id="g0_0"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.3 -7.9 3 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.8 -8.7 7.5 -8.3C8.1 -8 8.6 -7.6 8.9 -7L7.7 -6.2C7.4 -6.6 7.1 -6.9 6.7 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.8 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.7C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.8 -1.3 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.7 -1.6C7.1 -1.8 7.4 -2.1 7.7 -2.5L8.9 -1.8C8.6 -1.2 8.1 -0.7 7.5 -0.4C6.8 -0.1 6.1 0.1 5.3 0.1Z"/></g><g id="g0_1"><path d="M 8 -7.4L4.8 -7.4L4.8 0L3.3 0L3.3 -7.4L0.1 -7.4L0.1 -8.7L8 -8.7Z"/></g><g id="g0_2"><path d="M 9.3 -8.7L5.1 0.9C4.7 1.8 4.3 2.4 3.8 2.8C3.3 3.1 2.7 3.3 2 3.3C1.5 3.3 1.1 3.2 0.7 3.1C0.3 3 0 2.8 -0.3 2.5L0.4 1.3C0.9 1.7 1.4 2 2 2C2.4 2 2.7 1.8 2.9 1.6C3.2 1.4 3.4 1.1 3.6 0.6L3.9 0L0.1 -8.7L1.7 -8.7L4.8 -1.7L7.8 -8.7Z"/></g><g id="g0_3"><path d="M 10.4 -1.4L10.4 2L8.9 2L8.9 0L1.6 0L1.6 2L0.1 2L0.1 -1.4L0.6 -1.4C1.2 -1.4 1.5 -1.8 1.8 -2.6C2 -3.3 2.1 -4.4 2.2 -5.8L2.3 -8.7L9.1 -8.7L9.1 -1.4ZM 3.6 -5.7C3.6 -4.6 3.5 -3.7 3.4 -2.9C3.2 -2.2 3 -1.7 2.6 -1.4L7.5 -1.4L7.5 -7.4L3.7 -7.4Z"/></g><g id="g0_4"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -2.4L8.5 -8.7L9.9 -8.7L9.9 0L8.3 0L8.3 -6.4L3 0L1.5 0Z"/></g><g id="g0_5"><path d="M 8.5 -8.7L8.5 0L7.1 0L7.1 -2.8L4.4 -2.8L2.5 0L0.8 0L2.9 -3C2.3 -3.2 1.8 -3.5 1.4 -4C1.1 -4.4 0.9 -5 0.9 -5.7C0.9 -6.7 1.2 -7.4 1.9 -8C2.6 -8.5 3.5 -8.7 4.7 -8.7ZM 2.5 -5.6C2.5 -5 2.7 -4.6 3 -4.3C3.4 -4 4 -3.9 4.7 -3.9L7.1 -3.9L7.1 -7.4L4.8 -7.4C3.2 -7.4 2.5 -6.8 2.5 -5.6Z"/></g><g id="g0_6"><path d="M 6 -8.5C6.8 -8.5 7.5 -8.3 8.2 -7.9C8.8 -7.5 9.3 -7 9.7 -6.4C10 -5.7 10.2 -5 10.2 -4.2C10.2 -3.3 10 -2.6 9.6 -1.9C9.3 -1.3 8.7 -0.8 8 -0.4C7.3 -0.1 6.6 0.1 5.7 0.1C4.2 0.1 3 -0.4 2.2 -1.4C1.4 -2.4 1 -3.8 1 -5.7C1 -7.5 1.4 -8.9 2.1 -9.9C2.9 -10.9 4 -11.6 5.5 -11.9L9.5 -12.8L9.7 -11.4L6.1 -10.6C4.9 -10.3 4.1 -9.9 3.5 -9.3C2.9 -8.7 2.6 -7.8 2.5 -6.7C2.9 -7.2 3.4 -7.7 4 -8C4.6 -8.3 5.3 -8.5 6 -8.5ZM 5.7 -1.2C6.3 -1.2 6.8 -1.3 7.2 -1.6C7.6 -1.8 8 -2.2 8.2 -2.6C8.5 -3.1 8.6 -3.6 8.6 -4.1C8.6 -5 8.3 -5.7 7.8 -6.2C7.3 -6.8 6.6 -7 5.7 -7C4.8 -7 4.2 -6.8 3.6 -6.2C3.1 -5.7 2.8 -5 2.8 -4.1C2.8 -3.6 2.9 -3.1 3.2 -2.6C3.4 -2.2 3.8 -1.8 4.2 -1.6C4.7 -1.3 5.2 -1.2 5.7 -1.2Z"/></g><g id="g0_7"><path d="M 6.2 -8.8C7 -8.8 7.8 -8.6 8.4 -8.3C9.1 -7.9 9.6 -7.4 10 -6.7C10.4 -6 10.6 -5.2 10.6 -4.4C10.6 -3.5 10.4 -2.7 10 -2C9.6 -1.4 9.1 -0.8 8.4 -0.5C7.8 -0.1 7 0.1 6.2 0.1C5.5 0.1 5 0 4.4 -0.3C3.9 -0.5 3.5 -0.9 3.1 -1.3L3.1 3.2L1.5 3.2L1.5 -8.7L3 -8.7L3 -7.4C3.4 -7.8 3.8 -8.2 4.4 -8.5C4.9 -8.7 5.5 -8.8 6.2 -8.8ZM 6 -1.3C6.6 -1.3 7.1 -1.4 7.5 -1.7C8 -1.9 8.3 -2.3 8.6 -2.8C8.9 -3.2 9 -3.8 9 -4.4C9 -5 8.9 -5.5 8.6 -6C8.3 -6.5 8 -6.8 7.5 -7.1C7.1 -7.3 6.6 -7.4 6 -7.4C5.5 -7.4 5 -7.3 4.5 -7C4.1 -6.8 3.7 -6.4 3.5 -6C3.2 -5.5 3.1 -5 3.1 -4.4C3.1 -3.8 3.2 -3.2 3.5 -2.8C3.7 -2.3 4.1 -1.9 4.5 -1.7C5 -1.4 5.5 -1.3 6 -1.3Z"/></g><g id="g0_8"><path d="M 9.4 -4.3C9.4 -4.2 9.4 -4 9.4 -3.8L2.3 -3.8C2.4 -3.1 2.7 -2.5 3.3 -2C3.9 -1.5 4.6 -1.3 5.5 -1.3C6.5 -1.3 7.4 -1.6 8 -2.3L8.9 -1.3C8.5 -0.9 8 -0.5 7.4 -0.3C6.8 0 6.1 0.1 5.4 0.1C4.5 0.1 3.7 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.5 -8.6 4.3 -8.8 5.1 -8.8C6 -8.8 6.7 -8.6 7.3 -8.2C8 -7.9 8.5 -7.3 8.9 -6.7C9.3 -6 9.4 -5.2 9.4 -4.3ZM 5.1 -7.5C4.3 -7.5 3.7 -7.3 3.2 -6.8C2.7 -6.3 2.4 -5.7 2.3 -5L7.9 -5C7.8 -5.7 7.5 -6.3 7 -6.8C6.5 -7.2 5.9 -7.5 5.1 -7.5Z"/></g><g id="g0_9"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -5L8.1 -5L8.1 -8.7L9.7 -8.7L9.7 0L8.1 0L8.1 -3.7L3.1 -3.7L3.1 0L1.5 0Z"/></g><g id="g0_10"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 2.9 -0.5C2.2 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.9 -8.6 7.6 -8.2C8.3 -7.9 8.8 -7.3 9.2 -6.7C9.6 -6 9.8 -5.2 9.8 -4.4C9.8 -3.5 9.6 -2.7 9.2 -2.1C8.8 -1.4 8.3 -0.9 7.6 -0.5C6.9 -0.1 6.1 0.1 5.3 0.1ZM 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.8 -1.7C7.2 -1.9 7.6 -2.3 7.8 -2.8C8.1 -3.2 8.2 -3.8 8.2 -4.4C8.2 -5 8.1 -5.5 7.8 -6C7.6 -6.5 7.2 -6.8 6.8 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.7 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.8C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.7 -1.3 5.3 -1.3Z"/></g><g id="g0_11"><path d="M 7.5 -4.5C8.6 -4.2 9.2 -3.5 9.2 -2.4C9.2 -1.6 8.9 -1 8.3 -0.6C7.7 -0.2 6.9 0 5.7 0L1.5 0L1.5 -8.7L5.6 -8.7C6.6 -8.7 7.4 -8.6 8 -8.2C8.6 -7.8 8.9 -7.2 8.9 -6.5C8.9 -6 8.8 -5.6 8.5 -5.3C8.3 -5 7.9 -4.7 7.5 -4.5ZM 3.1 -5L5.5 -5C6.1 -5 6.5 -5.1 6.8 -5.3C7.2 -5.5 7.3 -5.8 7.3 -6.3C7.3 -7.1 6.7 -7.5 5.5 -7.5L3.1 -7.5ZM 5.6 -1.2C6.3 -1.2 6.8 -1.3 7.1 -1.5C7.4 -1.7 7.6 -2.1 7.6 -2.5C7.6 -3 7.5 -3.3 7.2 -3.5C6.9 -3.7 6.4 -3.8 5.7 -3.8L3.1 -3.8L3.1 -1.2Z"/></g><g id="g0_12"><path d="M 4.7 -8.8C5.9 -8.8 6.8 -8.5 7.4 -7.9C8.1 -7.3 8.4 -6.5 8.4 -5.3L8.4 0L6.9 0L6.9 -1.2C6.6 -0.7 6.3 -0.4 5.8 -0.2C5.3 0 4.7 0.1 4 0.1C3.1 0.1 2.3 -0.1 1.7 -0.6C1.1 -1.1 0.8 -1.7 0.8 -2.5C0.8 -3.2 1.1 -3.9 1.6 -4.3C2.2 -4.8 3.1 -5 4.3 -5L6.8 -5L6.8 -5.3C6.8 -6 6.6 -6.6 6.2 -6.9C5.8 -7.3 5.2 -7.5 4.5 -7.5C4 -7.5 3.5 -7.4 3 -7.2C2.5 -7 2 -6.8 1.7 -6.5L1 -7.7C1.5 -8.1 2 -8.3 2.7 -8.5C3.3 -8.7 3.9 -8.8 4.7 -8.8ZM 4.3 -1.1C4.9 -1.1 5.4 -1.3 5.9 -1.5C6.3 -1.8 6.6 -2.2 6.8 -2.7L6.8 -3.9L4.4 -3.9C3 -3.9 2.4 -3.4 2.4 -2.5C2.4 -2.1 2.5 -1.7 2.9 -1.5C3.2 -1.2 3.7 -1.1 4.3 -1.1Z"/></g><g id="g1_0"><path d="M 6.4 -11.5C7.5 -11.5 8.3 -11.4 9.1 -11C9.8 -10.7 10.4 -10.2 10.8 -9.6C11.2 -9 11.5 -8.2 11.5 -7.4C11.5 -6.5 11.2 -5.8 10.8 -5.1C10.4 -4.5 9.8 -4 9.1 -3.7C8.3 -3.4 7.5 -3.2 6.4 -3.2L4.1 -3.2L4.1 0L1.4 0L1.4 -11.5ZM 6.3 -5.4C7.1 -5.4 7.7 -5.5 8.1 -5.9C8.5 -6.2 8.7 -6.7 8.7 -7.4C8.7 -8 8.5 -8.5 8.1 -8.8C7.7 -9.2 7.1 -9.4 6.3 -9.4L4.1 -9.4L4.1 -5.4Z"/></g><g id="g1_1"><path d="M 4.7 -9C6.1 -9 7.1 -8.7 7.9 -8C8.6 -7.4 9 -6.4 9 -5.1L9 0L6.6 0L6.6 -1.1C6.1 -0.3 5.2 0.1 3.8 0.1C3.2 0.1 2.6 0 2.1 -0.2C1.6 -0.4 1.2 -0.8 0.9 -1.2C0.7 -1.6 0.5 -2 0.5 -2.6C0.5 -3.4 0.8 -4 1.5 -4.5C2.1 -5 3 -5.2 4.3 -5.2L6.4 -5.2C6.4 -5.8 6.2 -6.2 5.9 -6.5C5.5 -6.8 5 -7 4.3 -7C3.9 -7 3.4 -6.9 3 -6.7C2.5 -6.6 2.1 -6.4 1.8 -6.1L0.9 -7.9C1.3 -8.3 1.9 -8.5 2.6 -8.7C3.3 -8.9 4 -9 4.7 -9ZM 4.5 -1.6C4.9 -1.6 5.3 -1.7 5.7 -1.9C6 -2.1 6.2 -2.4 6.4 -2.8L6.4 -3.7L4.6 -3.7C3.6 -3.7 3 -3.4 3 -2.7C3 -2.3 3.2 -2.1 3.4 -1.9C3.7 -1.7 4 -1.6 4.5 -1.6Z"/></g><g id="g1_2"><path d="M 7 -4.6C7.5 -4.5 7.9 -4.2 8.2 -3.9C8.5 -3.5 8.7 -3.1 8.7 -2.6C8.7 -2.1 8.5 -1.6 8.1 -1.2C7.7 -0.7 7.2 -0.4 6.5 -0.2C5.8 0.1 5.1 0.2 4.2 0.2C3.5 0.2 2.8 0.1 2.2 0C1.5 -0.2 0.9 -0.4 0.3 -0.7L1 -2.5C1.9 -2 3 -1.8 4.1 -1.8C4.7 -1.8 5.2 -1.9 5.5 -2.1C5.9 -2.3 6.1 -2.5 6.1 -2.9C6.1 -3.1 5.9 -3.4 5.7 -3.5C5.4 -3.7 5.1 -3.7 4.6 -3.7L2.8 -3.7L2.8 -5.3L4.4 -5.3C4.9 -5.3 5.2 -5.4 5.4 -5.5C5.7 -5.7 5.8 -5.9 5.8 -6.2C5.8 -6.5 5.7 -6.7 5.4 -6.8C5.1 -7 4.6 -7.1 4.1 -7.1C3.2 -7.1 2.3 -6.9 1.3 -6.5L0.6 -8.2C1.9 -8.8 3.1 -9 4.2 -9C5 -9 5.7 -8.9 6.4 -8.7C7 -8.6 7.5 -8.3 7.9 -7.9C8.2 -7.5 8.4 -7.1 8.4 -6.5C8.4 -6.1 8.3 -5.8 8 -5.4C7.8 -5.1 7.4 -4.8 7 -4.6Z"/></g><g id="g1_3"><path d="M 8.3 -6.8L3.8 -6.8L3.8 0L1.2 0L1.2 -8.9L8.3 -8.9Z"/></g><g id="g1_4"><path d="M 10.1 -8.9L6.1 0.5C5.7 1.6 5.2 2.3 4.6 2.7C4 3.1 3.3 3.3 2.4 3.3C2 3.3 1.5 3.3 1.1 3.1C0.6 3 0.2 2.8 0 2.5L0.9 0.7C1.1 0.9 1.3 1 1.6 1.1C1.8 1.2 2.1 1.3 2.4 1.3C2.7 1.3 3 1.2 3.2 1C3.4 0.8 3.6 0.6 3.8 0.2L3.8 0.1L0 -8.9L2.7 -8.9L5.1 -2.9L7.7 -8.9Z"/></g><g id="g1_5"><path d="M 9.8 -8.9L9.8 0L7.2 0L7.2 -6.8L4.4 -6.8L4.3 -5.2C4.2 -4 4.1 -3.1 4 -2.3C3.8 -1.5 3.5 -0.9 3.1 -0.5C2.7 0 2.2 0.2 1.5 0.2C1.1 0.2 0.6 0.1 0.1 0L0.3 -2.1C0.4 -2.1 0.6 -2.1 0.6 -2.1C1 -2.1 1.3 -2.2 1.5 -2.5C1.7 -2.8 1.8 -3.1 1.9 -3.6C1.9 -4 2 -4.6 2 -5.3L2.2 -8.9Z"/></g><g id="g1_6"><path d="M 9.1 -8.9L9.1 0L6.8 0L6.8 -2.5L4.9 -2.5L3.3 0L0.5 0L2.5 -2.9C1.9 -3.1 1.4 -3.5 1.1 -4C0.8 -4.4 0.6 -5 0.6 -5.6C0.6 -6.6 1 -7.5 1.8 -8C2.5 -8.6 3.6 -8.9 4.9 -8.9ZM 4.9 -6.8C4.4 -6.8 4 -6.7 3.7 -6.5C3.4 -6.3 3.3 -6 3.3 -5.5C3.3 -5.1 3.4 -4.8 3.7 -4.6C3.9 -4.4 4.4 -4.2 4.9 -4.2L6.8 -4.2L6.8 -6.8Z"/></g><g id="g1_7"><path d="M 9.9 -4.4C9.9 -4.4 9.9 -4.1 9.8 -3.7L3.1 -3.7C3.2 -3.2 3.5 -2.7 4 -2.4C4.4 -2.1 5 -1.9 5.6 -1.9C6.1 -1.9 6.5 -2 6.9 -2.1C7.2 -2.3 7.6 -2.5 7.9 -2.8L9.2 -1.3C8.4 -0.3 7.2 0.1 5.6 0.1C4.6 0.1 3.7 -0.1 2.9 -0.5C2.1 -0.8 1.6 -1.4 1.1 -2.1C0.7 -2.8 0.5 -3.6 0.5 -4.4C0.5 -5.3 0.7 -6.1 1.1 -6.8C1.5 -7.5 2.1 -8 2.8 -8.4C3.5 -8.8 4.4 -9 5.3 -9C6.1 -9 6.9 -8.8 7.6 -8.5C8.3 -8.1 8.9 -7.5 9.3 -6.8C9.7 -6.1 9.9 -5.3 9.9 -4.4ZM 5.3 -7.1C4.7 -7.1 4.2 -6.9 3.8 -6.6C3.4 -6.2 3.2 -5.8 3.1 -5.2L7.4 -5.2C7.4 -5.8 7.1 -6.2 6.7 -6.6C6.3 -6.9 5.8 -7.1 5.3 -7.1Z"/></g><g id="g1_8"><path d="M 8 -4.6C9.1 -4.3 9.6 -3.6 9.6 -2.5C9.6 -1.7 9.3 -1.1 8.7 -0.7C8.1 -0.2 7.2 0 6 0L1.2 0L1.2 -8.9L5.8 -8.9C6.9 -8.9 7.8 -8.7 8.4 -8.3C9 -7.9 9.3 -7.3 9.3 -6.6C9.3 -6.1 9.2 -5.8 9 -5.4C8.8 -5.1 8.4 -4.8 8 -4.6ZM 3.6 -5.2L5.5 -5.2C6.4 -5.2 6.9 -5.6 6.9 -6.2C6.9 -6.8 6.4 -7.1 5.5 -7.1L3.6 -7.1ZM 5.8 -1.7C6.7 -1.7 7.2 -2.1 7.2 -2.7C7.2 -3.1 7.1 -3.3 6.8 -3.5C6.6 -3.6 6.3 -3.7 5.8 -3.7L3.6 -3.7L3.6 -1.7Z"/></g><g id="g1_9"><path d="M 2.2 0.1C1.7 0.1 1.3 0 1 -0.3C0.7 -0.6 0.6 -1 0.6 -1.5C0.6 -2 0.7 -2.3 1 -2.6C1.3 -2.9 1.7 -3.1 2.2 -3.1C2.6 -3.1 3 -2.9 3.3 -2.6C3.6 -2.3 3.8 -2 3.8 -1.5C3.8 -1 3.6 -0.6 3.3 -0.3C3 0 2.6 0.1 2.2 0.1Z"/></g></defs><g fill="currentColor"><path d="M 67.7 87.3C71.2 87.3 75.3 87.7 78.2 85.3C80.8 83.1 81.3 78.8 79.5 75.9C76.2 70.9 68 72.9 63 72.5L63 92.8L67.7 92.8ZM 86.8 62.5C83.2 62.7 83.5 68.4 87.3 68.1C90.9 67.8 90.6 62.3 86.8 62.5M70.4 60.3C76.3 60.2 82.3 60.6 88.2 60.4C90.2 60.7 91.7 62.3 92 64.3C91.8 70.3 92.3 76.3 92.1 82.3C92.1 83.7 91.7 85.1 91 86.3C84.3 93.5 77.2 100.4 70.1 107.2C68.3 108.3 66.4 108 64.8 106.7C59.6 101.5 54.3 96.3 49.2 91.1C45.6 87.4 42.7 85.6 47.1 80.7C52.9 74.4 59.6 68.7 65.5 62.4C66.8 61.2 68.6 60.4 70.4 60.3"/><path d="M 67.7 83.5L67.7 76.3L72 76.3C72.3 76.3 73.4 76.6 73.8 76.7C76.7 77.8 76.6 82.1 73.7 83.1C73.3 83.3 72.2 83.5 71.8 83.5Z"/><use xlink:href="#g0_0" x="104.3" y="73.3"/><use xlink:href="#g0_1" x="113.6" y="73.3"/><use xlink:href="#g0_2" x="121.8" y="73.3"/><use xlink:href="#g0_3" x="130.8" y="73.3"/><use xlink:href="#g0_4" x="141.7" y="73.3"/><use xlink:href="#g0_5" x="153.2" y="73.3"/><use xlink:href="#g0_6" x="104.3" y="88.9"/><use xlink:href="#g0_7" x="115.2" y="88.9"/><use xlink:href="#g0_8" x="126.6" y="88.9"/><use xlink:href="#g0_9" x="136.9" y="88.9"/><use xlink:href="#g0_3" x="148.2" y="88.9"/><use xlink:href="#g0_4" x="159.1" y="88.9"/><use xlink:href="#g0_7" x="170.6" y="88.9"/><use xlink:href="#g0_10" x="181.9" y="88.9"/><use xlink:href="#g0_11" x="192.5" y="88.9"/><use xlink:href="#g0_12" x="202.6" y="88.9"/><use xlink:href="#g0_9" x="212.4" y="88.9"/><use xlink:href="#g0_4" x="223.6" y="88.9"/><use xlink:href="#g0_5" x="235" y="88.9"/><use xlink:href="#g1_0" x="104.3" y="104.5"/><use xlink:href="#g1_1" x="116" y="104.5"/><use xlink:href="#g1_2" x="125.9" y="104.5"/><use xlink:href="#g1_3" x="135.2" y="104.5"/><use xlink:href="#g1_4" x="143.7" y="104.5"/><use xlink:href="#g1_5" x="153.2" y="104.5"/><use xlink:href="#g1_6" x="164.2" y="104.5"/><use xlink:href="#g1_7" x="174.6" y="104.5"/><use xlink:href="#g1_8" x="185.2" y="104.5"/><use xlink:href="#g1_9" x="195.5" y="104.5"/></g><path fill="none" stroke-width="0.5" stroke="currentColor" d="M 99.1 52.3L99.1 111"/></svg></button>
     <nav class="pills" aria-label="Разделы">
-      <button class="pill on" type="button" data-go="home">Главная</button>
+      <button class="pill on" type="button" data-go="home">Главная <span class="n req" id="n-req" hidden title="Новые заявки с сайта">0</span></button>
       <button class="pill" type="button" data-go="orders">Ведомость <span class="n" id="n-all">0</span></button>
       <button class="pill" type="button" data-go="calendar">Календарь <span class="n hot" id="n-late" hidden>0</span></button>
       <button class="pill" type="button" data-go="office">Расходы офиса</button>
@@ -615,6 +630,12 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="pack" id="pack"></div>
     <div class="home-grid">
       <div class="home-col">
+        <div class="w" id="w-req">
+          <div class="w-h"><h2>Заявки с сайта <span class="c" id="w-req-c"></span></h2><a class="go" href="https://razgulyaevevgeny.github.io/toppers-site/" target="_blank" rel="noopener" title="Открыть сайт топперов">Сайт ↗</a></div>
+          <div class="mini" id="w-req-list"></div>
+          <button class="done-tog" type="button" id="req-done-tog" hidden></button>
+          <div class="mini" id="req-done" hidden></div>
+        </div>
         <div class="w link" id="w-orders" role="link" tabindex="0" aria-label="Открыть ведомость">
           <div class="w-h"><h2>Ведомость <span class="c" id="w-orders-c"></span></h2><span class="go">Открыть <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
           <div class="mini" id="w-orders-list"></div>
@@ -762,6 +783,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <button class="tab" type="button" role="tab" id="tab-kaspi" aria-selected="false" data-tab="kaspi">Kaspi</button>
     </div>
     <div class="ed-body" id="pane-main">
+      <div class="reqbox" id="req-box" hidden></div>
       <div class="grid2">
         <div class="fld"><label for="f-client">Клиент *</label><div class="combo"><input id="f-client" autocomplete="off" placeholder="Имя или компания"><button class="combo-btn" type="button" id="f-client-btn" aria-label="Выбрать из клиентов" aria-haspopup="listbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>
         <div class="fld"><label for="f-phone">Телефон</label><input id="f-phone" type="tel" placeholder="+7 7__ ___ __ __"><a class="wa" id="wa" target="_blank" rel="noopener" hidden>Написать в WhatsApp ↗</a></div>
@@ -988,6 +1010,7 @@ const CM_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 let bossPending=[], fileTarget=null, askFile=null;
 let edUnitTouched=false;
 let edExp=[], edFiles=[], edFilesOrig=[], edTab='main', edK=[], kEditId=null, kSrcCost=null;
+let requests=[], requestsLoaded=false, edReq=null, showReqDone=false, reqAskReject=false;
 const LEDGERS={
   office:{title:'Расходы офиса',one:'расход',add:'Добавить расход',newH:'Новый расход',what:'Что оплатили *',ph:'Аренда за октябрь, интернет, вода',
     cats:[['rent','Аренда','--blue'],['util','Коммунальные','--sky'],['net','Связь и интернет','--st-design'],['salary','Зарплата','--st-prod'],['ads','Реклама','--danger'],['house','Хозтовары и канцелярия','--st-ready'],['repair','Ремонт и техника','--muted'],['other','Другое','--ink']]},
@@ -1405,7 +1428,8 @@ function renderCalendar(){
 function render(){
   const keep=[...document.querySelectorAll('textarea[data-cmtext]')].map(x=>[x.dataset.cmtext,x.value,document.activeElement===x]);
   renderNav();
-  if(page==='home'){renderHome();packHome()}
+  renderReqBadge();
+  if(page==='home'){renderHome();renderReqWidget();packHome()}
   if(page==='orders')renderOrders();
   if(page==='calendar')renderCalendar();
   if(page==='office'||page==='supplies')renderLedger(page);
@@ -1552,7 +1576,7 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 /* ---------- раскладка главной ---------- */
 let packW=[];
 function initPack(){
-  packW=[$('w-orders'),$('w-cal'),$('boss-list').closest('.w'),$('w-today').closest('.w'),$('w-projects'),$('w-office'),$('w-supplies')];
+  packW=[$('w-req'),$('w-orders'),$('w-cal'),$('boss-list').closest('.w'),$('w-today').closest('.w'),$('w-projects'),$('w-office'),$('w-supplies')];
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);packW.forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
   document.querySelectorAll('#p-home .home-grid,#p-home .home-grid2').forEach(el=>el.remove());
 }
@@ -1761,7 +1785,8 @@ function updateRest(){
 }
 function openEditor(id,preset={}){
   editing=id;
-  const o=id==='new'?{status:'new',service:view.svc!=='all'?view.svc:'vinyl',deadline:preset.deadline||view.day||''}:orders.find(x=>x.id===id);
+  const o=id==='new'?{status:'new',service:view.svc!=='all'?view.svc:'vinyl',deadline:preset.deadline||view.day||'',...(preset.o||{})}:orders.find(x=>x.id===id);
+  $('ed-save').textContent='Сохранить';edReq=id==='new'&&preset.req?preset.req:null;reqAskReject=false;renderReqBox();
   if(!o)return;
   $('ed-title').textContent=id==='new'?'Новый заказ':'Заказ № '+String(o.num||0).padStart(3,'0');
   $('f-client').value=o.client||'';$('f-phone').value=o.phone||'';edSvc=SV[o.service]?o.service:'other';
@@ -1771,7 +1796,7 @@ function openEditor(id,preset={}){
   edK=(o.kaspi||[]).map(l=>({...l}));$('k-fee').value=kaspiFeeOf(o);kClear();
   $('f-qty').value=o.qty??'';$('f-desc').value=o.desc||'';
   setDM($('f-deadline'),o.deadline||'');setDM($('f-dfrom'),o.deadlineFrom||'');
-  setDM($('f-received'),id==='new'?todayStr():receivedOf(o));
+  setDM($('f-received'),id==='new'?(o.receivedAt||todayStr()):receivedOf(o));
   $('f-status').value=o.status||'new';$('f-price').value=o.price??'';$('f-paid').value=o.paid??'';
   $('f-owner').value=o.owner||(id==='new'&&isMgr()?ROLE().name:'');$('f-notes').value=o.notes||'';
   const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
@@ -1785,13 +1810,56 @@ function openEditor(id,preset={}){
   $('ed').hidden=false;
   setTimeout(()=>{if(canWrite&&id==='new')$('f-client').focus()},50);
 }
-function closeEditor(){dpClose();$('ed').hidden=true;editing=null}
+function closeEditor(){dpClose();$('ed').hidden=true;editing=null;edReq=null;$('ed-save').textContent='Сохранить'}
 function addExpense(){
   const title=$('e-title').value.trim(),amount=+$('e-amount').value;
   if(!title){showErr('f-err','Впишите статью расхода.');$('e-title').focus();return false}
   if(!(amount>0)){showErr('f-err','Впишите сумму расхода.');$('e-amount').focus();return false}
   $('f-err').hidden=true;edExp.push({id:uid(),title,amount});$('e-title').value='';$('e-amount').value='';renderCost();$('e-title').focus();return true;
 }
+/* ---------- заявки с сайта топперов ---------- */
+const REQ_ST={new:{l:'Новая',c:'--danger'},accepted:{l:'Подтверждена',c:'--ok'},rejected:{l:'Отклонена',c:'--muted'}};
+const reqTime=r=>+r.createdAt||0;
+const reqWho=r=>[r.cafe,r.name].filter(Boolean).join(' · ')||'Без имени';
+const reqWhen=r=>reqTime(r)?new Date(reqTime(r)).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+function reqRow(r){
+  const st=REQ_ST[r.status]||REQ_ST.new,models=(r.items||[]).length;
+  return `<button type="button" class="mrow" data-req="${esc(r.id)}"><span style="min-width:0;display:flex;flex-direction:column"><b>${esc(reqWho(r))}</b><small>№ ${esc(r.code||r.id)} · ${esc(reqWhen(r))} · ${+r.qty||0} шт${models?', '+models+' '+plural(models,'модель','модели','моделей'):''}</small></span>
+    <span class="r"><b>${r.total?money(r.total):'по запросу'}</b>${r.status!=='new'?`<span class="rq-st" style="--sc:var(${st.c})">${st.l}${r.orderNum?' № '+String(r.orderNum).padStart(3,'0'):''}</span>`:''}</span></button>`;
+}
+function renderReqWidget(){
+  const all=[...requests].sort((a,b)=>reqTime(b)-reqTime(a)),fresh=all.filter(r=>(r.status||'new')==='new'),done=all.filter(r=>(r.status||'new')!=='new');
+  $('w-req-c').textContent=fresh.length?fresh.length+' '+plural(fresh.length,'новая','новые','новых'):'';
+  $('w-req-list').innerHTML=!requestsLoaded?'':fresh.length?fresh.map(reqRow).join(''):`<div class="w-empty">Новых заявок нет. Когда клиент отправит заказ с сайта топперов, он появится здесь сам.</div>`;
+  const tog=$('req-done-tog');tog.hidden=!done.length;tog.textContent=(showReqDone?'Скрыть обработанные':'Показать обработанные')+' ('+done.length+')';
+  $('req-done').hidden=!showReqDone||!done.length;$('req-done').innerHTML=showReqDone?done.slice(0,30).map(reqRow).join(''):'';
+}
+function renderReqBadge(){const n=requests.filter(r=>(r.status||'new')==='new').length,b=$('n-req');b.hidden=!n;b.textContent=n}
+function reqToOrder(r){
+  const items=r.items||[];
+  const desc=items.map(i=>`${i.model}: ${+i.qty||0} шт`+((i.colors||[]).length?' ('+i.colors.map(c=>(c.name||'').toLowerCase()+' '+(+c.qty||0)).join(', ')+')':'')).join('\n')+(r.customDesc?'\nСвоя модель: '+r.customDesc:'');
+  const notes=[r.name?'Контакт: '+r.name:'',r.note?'Комментарий клиента: '+r.note:'','Заявка с сайта топперов № '+(r.code||r.id)].filter(Boolean).join('\n');
+  return {client:r.cafe||r.name||'Заявка с сайта',service:'print3d',qty:+r.qty||null,unit:'шт',desc,price:+r.total||null,notes,status:'new',
+    receivedAt:reqTime(r)?ds(new Date(reqTime(r))):todayStr()};
+}
+function openRequest(id){
+  const r=requests.find(x=>x.id===id);if(!r)return;
+  if(r.status==='accepted'&&r.orderId&&orders.find(o=>o.id===r.orderId)){openEditor(r.orderId);return}
+  if(r.status==='rejected'&&!canWrite)return;
+  openEditor('new',{o:reqToOrder(r),req:r});
+}
+function renderReqBox(){
+  const box=$('req-box'),r=edReq;box.hidden=!r;if(!r){box.innerHTML='';return}
+  box.innerHTML=`<div class="rh"><div><b>Заявка с сайта топперов № ${esc(r.code||r.id)}</b><small>${esc(reqWhen(r))}${r.status==='rejected'?' · была отклонена':''}. Проверьте данные, поставьте оплату и срок, затем нажмите «Подтвердить заявку».</small></div><b>${r.total?money(r.total):''}</b></div>
+    <ul>${(r.items||[]).map(i=>`<li><b>${esc(i.model)}</b><span>${+i.qty||0} шт${i.price?' × '+money(i.price):''}</span>${(i.colors||[]).length?`<span class="cl">${i.colors.map(c=>`<span><i style="--c:${esc(c.hex||'#ccc')}"></i>${esc(c.name)}: ${+c.qty||0} шт</span>`).join('')}</span>`:''}</li>`).join('')}</ul>
+    ${r.customDesc?`<div class="rq-txt">Своя модель: ${esc(r.customDesc)}</div>`:''}${r.note?`<div class="rq-txt">Комментарий: ${esc(r.note)}</div>`:''}
+    ${canWrite&&r.status!=='rejected'?`<div class="rq-acts">${reqAskReject?`<span class="err">Отклонить заявку?</span><button class="btn danger solid sm" type="button" data-rqrej="yes">Отклонить</button><button class="btn soft sm" type="button" data-rqrej="no">Нет</button>`:`<button class="btn danger sm" type="button" data-rqrej="ask">Отклонить заявку</button>`}</div>`:''}`;
+  $('ed-save').textContent='Подтвердить заявку';
+}
+async function rejectRequest(){
+  if(!edReq)return;try{await db.doc('requests/'+edReq.id).update({status:'rejected',handledBy:ROLE().name||'',handledAt:Date.now()});closeEditor();toast('Заявка отклонена')}catch(er){showErr('f-err',handleWriteError(er))}
+}
+
 /* ---------- ветка Каспи в заказе ---------- */
 const kFee=()=>{const v=$('k-fee').value;return v===''?KASPI_FEE*100:Math.min(100,Math.max(0,+v))};
 function kaspiCatalog(){
@@ -1917,8 +1985,11 @@ async function saveOrder(ev){
   try{
     if(editing==='new'){
       const nextNum=orders.reduce((m,o)=>Math.max(m,o.num||0),0)+1;
-      await ordersCol.doc().set({...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||''});
-      toast('Заказ № '+String(nextNum).padStart(3,'0')+' добавлен');
+      const ref=ordersCol.doc();const rq=edReq;
+      if(rq){d.requestId=rq.id;d.source='toppers'}
+      await ref.set({...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||''});
+      if(rq){try{await db.doc('requests/'+rq.id).update({status:'accepted',orderId:ref.id,orderNum:nextNum,handledBy:ROLE().name||'',handledAt:now})}catch(_){}}
+      toast(rq?'Заявка подтверждена: заказ № '+String(nextNum).padStart(3,'0'):'Заказ № '+String(nextNum).padStart(3,'0')+' добавлен');
     }else{
       await db.doc('orders/'+editing).update({...d,updatedAt:now});
       toast('Сохранено');
@@ -2133,6 +2204,9 @@ $('k-list').addEventListener('click',e=>{
 });
 $('k-list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-kedit]')){e.preventDefault();e.target.click()}});
 {const _cc2=csClose;csClose=function(r){$('k-name-btn').setAttribute('aria-expanded','false');return _cc2(r)}}
+document.addEventListener('click',e=>{const r=e.target.closest('[data-req]');if(r){openRequest(r.dataset.req);return}
+  const rj=e.target.closest('[data-rqrej]');if(rj){const v=rj.dataset.rqrej;if(v==='ask'){reqAskReject=true;renderReqBox()}else if(v==='no'){reqAskReject=false;renderReqBox()}else rejectRequest()}});
+$('req-done-tog').addEventListener('click',()=>{showReqDone=!showReqDone;renderReqWidget();packHome()});
 /* колёсико мыши не меняет числа в полях */
 addEventListener('wheel',e=>{const t=e.target;if(t&&t.matches&&t.matches('input[type=number]')&&document.activeElement===t)t.blur()},{passive:true});
 
@@ -2297,6 +2371,7 @@ $('task-form').addEventListener('submit',async e=>{
   },fail);
   tasksCol.onSnapshot(snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));tasksLoaded=true;render()},fail);
   db.collection('prices').onSnapshot(snap=>{prices=snap.docs.map(d=>({id:d.id,...d.data()}));pricesLoaded=true;render();if(qEditing&&qEditing!=='new'&&!prices.find(x=>x.id===qEditing)){closeQ();toast('Эту позицию удалили')}},fail);
+  db.collection('requests').onSnapshot(snap=>{requests=snap.docs.map(d=>({id:d.id,...d.data()}));requestsLoaded=true;render()},e=>{requestsLoaded=true;try{console.warn('requests',e)}catch(_){}});
   db.collection('projects').onSnapshot(snap=>{projects=snap.docs.map(d=>({id:d.id,...d.data()}));projLoaded=true;render();if(pEditing&&pEditing!=='new'&&!projects.find(x=>x.id===pEditing)){closeP();toast('Этот проект удалили')}},fail);
   for(const k of ['office','supplies'])db.collection(k).onSnapshot(snap=>{ledger[k]=snap.docs.map(d=>({id:d.id,...d.data()}));ledgerLoaded[k]=true;render();if(xEditing&&xEditing!=='new'&&xKind===k&&!ledger[k].find(r=>r.id===xEditing)){closeX();toast('Эту запись удалили')}},fail);
 })();
