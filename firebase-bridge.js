@@ -121,16 +121,51 @@
     const bin = atob(b64); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return URL.createObjectURL(new Blob([arr], { type }));
   }
+  /* 3D-файлы (STL, 3MF) хранятся частями: документ Firestore вмещает меньше 1 МБ */
+  const CHUNK = 900 * 1024;
+  const is3d = f => /\.(stl|3mf)$/i.test(String((f && f.name) || ''));
+  const toU8 = p => p && p.toUint8Array ? p.toUint8Array() : p && p._b ? Uint8Array.from(atob(p._b), c => c.charCodeAt(0)) : new Uint8Array(0);
+  const fromU8 = u => (window.firebase && firebase.firestore && firebase.firestore.Blob) ? firebase.firestore.Blob.fromUint8Array(u) : u;
+  async function gz(u8, dir) {
+    const S = dir === 'c' ? window.CompressionStream : window.DecompressionStream; if (!S) return null;
+    return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new S('gzip'))).arrayBuffer());
+  }
   function makeBlobStore(fs) {
     const col = fs.collection('blobs');
+    const big = new Map();
     const resolve = id => {
-      if (!cache.has(id)) cache.set(id, col.doc(id).get().then(s => s.exists ? dataUrlToObjectUrl(s.data().data) : '').catch(() => ''));
+      if (!cache.has(id)) cache.set(id, col.doc(id).get().then(s => {
+        if (!s.exists) return '';
+        const d = s.data();
+        if (d.chunks) { big.set(id, d); return { lazy: true, meta: d }; }
+        return dataUrlToObjectUrl(d.data);
+      }).catch(() => ''));
       return cache.get(id);
     };
+    async function loadBig(id, meta) {
+      const parts = await Promise.all([...Array(meta.chunks)].map((_, i) => col.doc(id + '_' + i).get().then(s => toU8(s.data().part))));
+      let len = 0; parts.forEach(p => len += p.length);
+      let all = new Uint8Array(len), o = 0; parts.forEach(p => { all.set(p, o); o += p.length; });
+      if (meta.gz) all = await gz(all, 'd');
+      return URL.createObjectURL(new Blob([all], { type: 'application/octet-stream' }));
+    }
     const fix = async (el, attr, mk) => {
       const v = el.getAttribute(attr) || ''; const m = v.match(/fsblob:([\w-]+)/); if (!m) return;
       el.setAttribute('data-fsblob', m[1]);
       const u = await resolve(m[1]);
+      if (u && typeof u === 'object') {
+        if (attr !== 'href') { if (attr === 'src') el.removeAttribute('src'); return; }
+        el.setAttribute('href', '#'); if (el._big) return; el._big = 1;
+        el.removeAttribute('target');
+        el.addEventListener('click', async e => {
+          if (el._ready) return; e.preventDefault(); if (el._busy) return; el._busy = 1;
+          const label = el.textContent; el.textContent = 'Скачиваем…';
+          try { const url = await loadBig(m[1], u.meta); el.href = url; el.setAttribute('download', u.meta.name || 'model'); el._ready = 1; el.textContent = label; el.click(); }
+          catch (_) { el.textContent = 'Не удалось скачать'; setTimeout(() => (el.textContent = label), 2500); }
+          finally { el._busy = 0; }
+        });
+        return;
+      }
       if (u) el.setAttribute(attr, mk ? mk(v, m[0], u) : u); else if (attr === 'src') el.removeAttribute('src');
     };
     const scan = root => {
@@ -142,6 +177,18 @@
       .observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'href', 'style'] });
     return {
       upload: async file => {
+        if (is3d(file)) {
+          if (file.size > 50 * 1024 * 1024) throw { code: 'too_large', message: '3d' };
+          let u8 = new Uint8Array(await file.arrayBuffer()), packed = false;
+          if (/\.stl$/i.test(file.name)) { try { const z = await gz(u8, 'c'); if (z && z.length < u8.length * 0.9) { u8 = z; packed = true; } } catch (_) {} }
+          const ref = col.doc(), n = Math.max(1, Math.ceil(u8.length / CHUNK)), ext = file.name.split('.').pop().toLowerCase();
+          try {
+            for (let i = 0; i < n; i += 4) await Promise.all([...Array(Math.min(4, n - i))].map((_, k) => col.doc(ref.id + '_' + (i + k)).set({ part: fromU8(u8.slice((i + k) * CHUNK, (i + k + 1) * CHUNK)), i: i + k, of: ref.id })));
+            await ref.set({ type: 'model/' + ext, name: String(file.name || '').slice(0, 120), size: file.size, chunks: n, gz: packed, createdAt: Date.now() });
+          } catch (e) { throw { code: e && e.code === 'permission-denied' ? 'not_granted' : 'upstream_error', message: (e && e.message) || '' }; }
+          const id = 'fsblob:' + ref.id;
+          return { id, url: id, durableUrl: id, sizeBytes: file.size, contentType: 'model/' + ext };
+        }
         let data;
         const t = file.type || '';
         if (t.startsWith('image/')) data = await compressImage(file);
@@ -154,7 +201,14 @@
         const id = 'fsblob:' + ref.id;
         return { id, url: id, durableUrl: id, sizeBytes: Math.round(data.length * 0.75), contentType: t.startsWith('image/') ? 'image/jpeg' : t };
       },
-      delete: async id => { try { await col.doc(String(id).replace('fsblob:', '')).delete(); return { deleted: true }; } catch (_) { return { deleted: false }; } }
+      delete: async id => {
+        const k = String(id).replace('fsblob:', '');
+        try {
+          const s = await col.doc(k).get(); const n = s.exists ? (s.data().chunks || 0) : 0;
+          for (let i = 0; i < n; i++) await col.doc(k + '_' + i).delete().catch(() => {});
+          await col.doc(k).delete(); return { deleted: true };
+        } catch (_) { return { deleted: false }; }
+      }
     };
   }
 

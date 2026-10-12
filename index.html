@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261012183109">
+<meta name="app-build" content="20261012183637">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -653,7 +653,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
             <input id="b-who" data-sugg="owners-dl" placeholder="Кому" autocomplete="off" aria-label="Кому">
             <button class="attach" type="button" id="b-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button>
             <div class="files" id="b-files"></div>
-            <div class="hint full" data-need-assets>Даты выбираются в календаре по нажатию. Файлы: фото или PDF до 700 КБ.</div>
+            <div class="hint full" data-need-assets>Даты выбираются в календаре по нажатию. Файлы: фото, PDF до 700 КБ, STL и 3MF до 50 МБ.</div>
             <div class="err" id="b-err" hidden></div>
             <div class="acts"><button class="btn soft sm" type="button" id="b-cancel">Отмена</button><button class="btn primary sm" type="submit" id="b-save">Поставить задачу</button></div>
           </form>
@@ -816,7 +816,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="ofg"><div class="ofg-h"><b>Макет</b><button class="attach sm" type="button" data-oattach="mockup" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button></div><div class="files" id="o-files-mockup"></div><p class="hint ofg-empty" id="o-empty-mockup">Эскиз, исходник или фото от клиента.</p></div>
         <div class="ofg"><div class="ofg-h"><b>Готовый макет</b><button class="attach sm" type="button" data-oattach="final" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button></div><div class="files" id="o-files-final"></div><p class="hint ofg-empty" id="o-empty-final">Утверждённый вариант, который идёт в работу.</p></div>
         <div class="ofg" id="o-other-w" hidden><div class="ofg-h"><b>Другие файлы</b></div><div class="files" id="o-files-other"></div></div>
-        <span class="hint" data-need-assets>Фото или PDF до 700 КБ</span>
+        <span class="hint" data-need-assets>Фото, PDF до 700 КБ, STL и 3MF до 50 МБ</span>
       </div>
       <div class="meta" id="f-meta"></div>
     </div>
@@ -909,7 +909,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <div class="fld"><label for="x-notes">Заметки</label><textarea id="x-notes"></textarea></div>
       <div class="fld"><span class="lb">Чеки, фото и файлы</span>
         <div class="files" id="x-files"></div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="x-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить чек или фото</button><span class="hint" data-need-assets>Фото или PDF до 700 КБ</span></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="x-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить чек или фото</button><span class="hint" data-need-assets>Фото, PDF до 700 КБ, STL и 3MF до 50 МБ</span></div>
       </div>
       <div class="meta" id="x-meta"></div>
       <div class="err" id="x-err" hidden></div>
@@ -955,7 +955,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="ed-body" id="ppane-files" hidden>
       <div class="files" id="p-files" style="gap:8px"></div>
       <div class="w-empty" id="p-files-empty" style="background:var(--tile)">Здесь можно хранить фото образцов, макеты, референсы, PDF с расчётами. Первое фото станет обложкой проекта.</div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="p-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить фото или файл</button><span class="hint" data-need-assets>Фото или PDF до 700 КБ</span></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="p-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить фото или файл</button><span class="hint" data-need-assets>Фото, PDF до 700 КБ, STL и 3MF до 50 МБ</span></div>
     </div>
     <div class="err" id="p-err" hidden style="padding:0 24px 8px"></div>
     <div class="ed-foot"><div id="p-del"></div><div class="r"><button class="btn soft sm" type="button" id="ped-cancel">Отмена</button><button class="btn primary sm" type="submit" id="p-save">Сохранить</button></div></div>
@@ -990,7 +990,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 <div class="csback" id="cs-back" hidden></div>
 <div class="csmenu" id="cs-menu" hidden role="listbox"></div>
 <div class="dpick" id="dp" hidden role="dialog" aria-label="Выбор даты"></div>
-<input type="file" id="file-in" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf" hidden>
+<input type="file" id="file-in" multiple accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,.stl,.3mf,model/stl,model/3mf" hidden>
 <div class="lbox" id="lb" hidden role="dialog" aria-label="Просмотр файла"><button class="x" type="button" id="lb-close" aria-label="Закрыть">×</button><div id="lb-body" style="display:contents"></div></div>
 
 <script>
@@ -1132,10 +1132,14 @@ function valIso(el,min){const v=el.value.trim();if(!v)return '';if(el.dataset.is
 function maskDM(el){el.addEventListener('input',()=>{el.dataset.iso='';let v=el.value.replace(/[^\d]/g,'').slice(0,4);if(v.length>2)v=v.slice(0,2)+'.'+v.slice(2);el.value=v})}
 /* файлы */
 const ACCEPT=new Set(['image/png','image/jpeg','image/gif','image/webp','application/pdf','video/mp4','video/webm']);
+const is3dName=n=>/\.(stl|3mf)$/i.test(String(n||''));
+const okType=f=>ACCEPT.has(f.type)||is3dName(f.name);
+const maxSize=f=>is3dName(f.name)?50*1024*1024:20*1024*1024;
+const ext3d=f=>{const m=String(f.name||'').match(/\.(stl|3mf)$/i);return m?m[1].toUpperCase():''};
 function fileErrMsg(e){
   const c=e&&e.code;
-  if(c==='too_large')return 'Файл слишком большой. Фото сжимаются сами, а PDF должен быть меньше 700 КБ.';
-  if(c==='unsupported_type')return 'Такой тип файла не поддерживается. Подойдут фото (JPG, PNG, WebP) или PDF до 700 КБ.';
+  if(c==='too_large')return 'Файл слишком большой. Фото сжимаются сами, а PDF должен быть меньше 700 КБ. STL и 3MF можно до 50 МБ.';
+  if(c==='unsupported_type')return 'Такой тип файла не поддерживается. Подойдут фото (JPG, PNG, WebP), PDF до 700 КБ, 3D-модели STL и 3MF до 50 МБ.';
   if(c==='quota_or_state')return 'Место в базе закончилось. Удалите старые файлы и попробуйте снова.';
   if(c==='rate_limited')return 'Слишком много загрузок подряд. Подождите минуту и попробуйте снова.';
   if(c==='not_granted'||c==='capability_disabled'||c==='capability_removed')return 'Загрузка файлов недоступна. Выйдите и войдите снова.';
@@ -1144,8 +1148,8 @@ function fileErrMsg(e){
 async function uploadAll(list){
   const out=[];
   for(const f of list){
-    if(!ACCEPT.has(f.type))throw {code:'unsupported_type'};
-    if(f.size>20*1024*1024)throw {code:'too_large'};
+    if(!okType(f))throw {code:'unsupported_type'};
+    if(f.size>maxSize(f))throw {code:'too_large'};
     let r;try{r=await assets.upload(f)}catch(e){if(e&&e.code==='store_unavailable'){await new Promise(z=>setTimeout(z,800));r=await assets.upload(f)}else throw e}
     out.push({id:r.id,name:String(f.name||'файл').slice(0,120),type:r.contentType,size:r.sizeBytes,...(r.durableUrl?{url:r.durableUrl}:{})});
   }
@@ -1153,7 +1157,7 @@ async function uploadAll(list){
 }
 function fileTile(f,{rm,owner,src}={}){
   const url=src||f.url||('/_blob/'+f.id);const isImg=(f.type||'').startsWith('image/');
-  const label=(f.type||'').includes('pdf')?'PDF':(f.type||'').startsWith('video/')?'ВИДЕО':'ФАЙЛ';
+  const label=(f.type||'').includes('pdf')?'PDF':(f.type||'').startsWith('video/')?'ВИДЕО':ext3d(f)||((f.type||'').startsWith('model/')?(f.type.split('/')[1]||'').toUpperCase():'')||'ФАЙЛ';
   const rmBtn=rm?(askFile===(owner+':'+f.id)?`<button class="rm ask" type="button" data-rmfile="${esc(f.id)}" data-owner="${esc(owner)}" data-confirm="1">Удалить</button>`:`<button class="rm" type="button" data-rmfile="${esc(f.id)}" data-owner="${esc(owner)}" aria-label="Убрать файл ${esc(f.name)}">×</button>`):'';
   return `<span class="file"><button class="fv" type="button" data-view="${esc(url)}" data-vtype="${esc(f.type)}" data-vname="${esc(f.name)}" aria-label="Открыть ${esc(f.name)}">${isImg?`<img src="${esc(url)}" alt="${esc(f.name)}" loading="lazy">`:label}</button>${rmBtn}</span>`;
 }
@@ -1161,6 +1165,8 @@ function openViewer(url,type,name){
   let h;
   if(type.startsWith('image/'))h=`<img src="${esc(url)}" alt="${esc(name)}">`;
   else if(type.startsWith('video/'))h=`<video src="${esc(url)}" controls playsinline></video>`;
+  else if(type.startsWith('model/')||is3dName(name)){const x=(is3dName(name)?name.split('.').pop():type.split('/')[1]||'').toUpperCase();
+    h=`<div class="doc"><b style="font:800 20px var(--f)">${esc(x)}</b><span>${esc(name)}</span><span class="hint">3D-модель. Скачайте и откройте в слайсере (Bambu Studio, Orca, Cura).</span><a class="btn primary sm" href="${esc(url)}" download="${esc(name)}">Скачать ${esc(x)}</a></div>`}
   else h=`<div class="doc"><b style="font:800 20px var(--f)">PDF</b><span>${esc(name)}</span><a class="btn primary sm" href="${esc(url)}" target="_blank" rel="noopener">Открыть PDF</a></div>`;
   $('lb-body').innerHTML=h+`<div class="cap">${esc(name)}</div>`;$('lb').hidden=false;
 }
@@ -2388,8 +2394,8 @@ document.addEventListener('input',e=>{const q=e.target.closest('[data-lq]');if(q
 document.addEventListener('change',e=>{const m=e.target.closest('[data-lm]');if(m){lview[m.dataset.lm].m=m.value;render()}});
 $('file-in').addEventListener('change',async e=>{
   const list=[...e.target.files];if(!list.length||!fileTarget)return;const tg=fileTarget;fileTarget=null;
-  const bad=list.find(f=>!ACCEPT.has(f.type)||f.size>20*1024*1024);
-  if(bad){const m=fileErrMsg({code:!ACCEPT.has(bad.type)?'unsupported_type':'too_large'});if(tg.kind==='boss-new')showErr('b-err',m);else if(tg.kind==='order')showErr('f-err',m);else toast(m);return}
+  const bad=list.find(f=>!okType(f)||f.size>maxSize(f));
+  if(bad){const m=fileErrMsg({code:!okType(bad)?'unsupported_type':'too_large'});if(tg.kind==='boss-new')showErr('b-err',m);else if(tg.kind==='order')showErr('f-err',m);else toast(m);return}
   if(tg.kind==='boss-new'){list.forEach(f=>bossPending.push({file:f,url:URL.createObjectURL(f)}));renderBossPending();return}
   if(!assets){toast(fileErrMsg({code:'not_granted'}));return}
   toast('Загружаем '+list.length+' '+plural(list.length,'файл','файла','файлов')+'…');
