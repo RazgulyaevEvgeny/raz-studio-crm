@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261012184653">
+<meta name="app-build" content="20261012185635">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -303,6 +303,36 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .kaspi-box{display:flex;flex-direction:column;gap:12px}
+/* аналитика */
+.an-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media(max-width:1100px){.an-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.an-kpis{grid-template-columns:1fr 1fr}}
+.an-kpis .kpi b.pos{color:var(--ok)}.an-kpis .kpi b.neg{color:var(--danger)}
+.agrid{columns:2;column-gap:16px;margin-bottom:-16px}
+.agrid>.w{break-inside:avoid;margin-bottom:16px;width:100%}
+@media(max-width:860px){.agrid{columns:1}}
+.agrid .w-h .c{font-size:12.5px;color:var(--muted);font-weight:500}
+.hbars{display:flex;flex-direction:column;gap:6px}
+.hb{display:grid;grid-template-columns:minmax(0,38%) minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--paper);border-radius:12px;padding:8px 12px;font-size:13.5px;cursor:default}
+.hb .l{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .t{height:10px;border-radius:999px;background:var(--tile);overflow:hidden}
+.hb .t i{display:block;height:100%;border-radius:999px;background:var(--blue);min-width:3px}
+.hb .v{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;text-align:right}
+.hb .v small{display:block;font-weight:500;color:var(--muted);font-size:11.5px}
+.hb .sw{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);margin-right:6px;vertical-align:-1px}
+.cols{display:flex;align-items:flex-end;gap:4px;height:180px;background:var(--paper);border-radius:16px;padding:14px 12px 30px;position:relative}
+.cols .cb{flex:1 1 0;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;position:relative;cursor:default}
+.cols .cb i{display:block;width:min(100%,34px);border-radius:6px 6px 2px 2px;background:var(--blue);min-height:2px;transition:filter .15s}
+.cols .cb.z i{background:var(--tile-2)}
+.cols .cb.cur i{background:var(--blue-d,#2f3fd6)}
+.cols .cb:hover i,.cols .cb:focus-visible i{filter:brightness(1.15)}
+.cols .cb span{position:absolute;bottom:-22px;font-size:11px;color:var(--muted);white-space:nowrap}
+.cols .cb em{font-style:normal;font-size:10.5px;font-weight:700;color:var(--ink);margin-bottom:3px;white-space:nowrap}
+.cols.hr .cb span{font-size:10px}
+.cols.hr .cb:not(:nth-child(3n+1)) span{visibility:hidden}
+.an-note{margin:0;font-size:13px;color:var(--muted)}
+.an-empty{background:var(--paper);border-radius:12px;padding:14px;color:var(--muted);font-size:13.5px;text-align:center}
+#an-tip{position:fixed;z-index:60;pointer-events:none;background:var(--ink);color:#fff;padding:7px 10px;border-radius:10px;font:600 12.5px/1.35 var(--f);max-width:240px;white-space:pre-line;box-shadow:0 8px 24px -8px rgba(0,0,0,.4)}
 .n.req{background:var(--danger);color:#fff}
 .rq-imp{align-self:flex-start}
 #ri-prev .reqbox{margin-top:4px}
@@ -492,18 +522,24 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .kpi small{white-space:normal}
 /* мобильная шапка: разделы переносятся рядами, имя и «Выйти» справа от логотипа */
 .ls{display:none}
+.nav{position:relative}
+.nav .pills{width:100%}
+.nav .who-pill,.nav .logout{position:absolute;top:calc((clamp(44px,8vw,58px) - 38px)/2);min-height:38px;flex:none;font-size:13px;padding:0 14px}
+.nav .logout{right:0}
+.nav .who-pill{right:86px;max-width:calc(100% - 300px);overflow:hidden;text-overflow:ellipsis}
 @media(max-width:860px){
-  .nav{position:relative;gap:12px}
+  .nav{gap:12px}
   .nav .pills{width:100%;flex-wrap:wrap;gap:6px}
   .nav .pill{flex:1 1 auto;justify-content:center;min-height:40px;padding:0 12px;font-size:13.5px;gap:6px}
-  .nav .who-pill,.nav .logout{position:absolute;top:calc((clamp(44px,8vw,58px) - 36px)/2);min-height:36px;flex:none;font-size:13px;padding:0 12px}
-  .nav .logout{right:0}
+  .nav .who-pill,.nav .logout{top:calc((clamp(44px,8vw,58px) - 36px)/2);min-height:36px;padding:0 12px}
   .nav .pill .lf{display:none}.nav .pill .ls{display:inline}
-  .nav .who-pill{right:80px;max-width:calc(100% - 250px);overflow:hidden;text-overflow:ellipsis}
+  .nav .who-pill{right:80px;max-width:calc(100% - 250px)}
 }
 @media(max-width:600px){
   .lf{display:none}.ls{display:inline}
   .nav .who-pill .wt{display:none}
+  .nav .pills .pill:not(.who-pill):not(.logout){flex:1 1 28%;padding:0 8px}
+  .an-per .chip{flex:1 1 40%;justify-content:center}
   .ph .btns .btn.primary{display:none}
   .ph .btns:not(:has(.btn:not(.primary))){display:none}
 }
@@ -628,6 +664,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <button class="pill" type="button" data-go="supplies">Закупки</button>
       <button class="pill" type="button" data-go="projects">Проекты</button>
       <button class="pill" type="button" data-go="prices">Прайс</button>
+      <button class="pill" type="button" data-go="analytics">Аналитика</button>
     </nav>
   </header>
 
@@ -712,6 +749,24 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   </section>
   <section id="p-office" class="page" style="gap:16px" hidden></section>
   <section id="p-supplies" class="page" style="gap:16px" hidden></section>
+  <section id="p-analytics" class="page" style="gap:16px" hidden>
+    <div class="ph"><div><h1>Аналитика</h1><p id="an-sub">Сколько заработали, что заказывают чаще и когда.</p></div></div>
+    <div class="chips an-per" id="an-per" role="group" aria-label="Период"></div>
+    <div class="an-kpis" id="an-kpis"></div>
+    <div class="w an-wide"><div class="w-h"><h2 id="an-dyn-h">Выручка</h2><span class="c" id="an-dyn-c"></span></div><div class="cols" id="an-dyn"></div><p class="an-note" id="an-dyn-n"></p></div>
+    <div class="agrid">
+      <div class="w"><div class="w-h"><h2>Услуги</h2><span class="c">по выручке</span></div><div class="hbars" id="an-svc"></div></div>
+      <div class="w"><div class="w-h"><h2>Откуда заказы</h2></div><div class="hbars" id="an-src"></div></div>
+      <div class="w"><div class="w-h"><h2>Модели топперов</h2><span class="c">по количеству, из заявок</span></div><div class="hbars" id="an-top"></div></div>
+      <div class="w"><div class="w-h"><h2>Цвета топперов</h2><span class="c">шт</span></div><div class="hbars" id="an-col"></div></div>
+      <div class="w"><div class="w-h"><h2>Товары Kaspi</h2><span class="c">продано, шт</span></div><div class="hbars" id="an-kaspi"></div></div>
+      <div class="w"><div class="w-h"><h2>Лучшие клиенты</h2><span class="c">по выручке</span></div><div class="hbars" id="an-cli"></div></div>
+      <div class="w"><div class="w-h"><h2>Дни недели</h2><span class="c">заказы и заявки</span></div><div class="cols wd" id="an-wd"></div><p class="an-note" id="an-wd-n"></p></div>
+      <div class="w"><div class="w-h"><h2>Время суток</h2><span class="c">когда приходят</span></div><div class="cols hr" id="an-hr"></div><p class="an-note" id="an-hr-n"></p></div>
+      <div class="w"><div class="w-h"><h2>Кто ведёт заказы</h2><span class="c">по выручке</span></div><div class="hbars" id="an-own"></div></div>
+      <div class="w"><div class="w-h"><h2>Расходы</h2><span class="c">офис и закупки</span></div><div class="hbars" id="an-exp"></div></div>
+    </div>
+  </section>
   <section id="p-prices" class="page" style="gap:16px" hidden>
     <div class="ph"><div><h1>Прайс</h1><p id="pr-sub">Цены студии по услугам.</p></div><div class="btns"><button class="btn outline" type="button" id="pr-copy">Скопировать для клиента</button><button class="btn primary" type="button" data-qnew>Добавить позицию</button></div></div>
     <div class="kpis" id="pr-kpi"></div>
@@ -1207,7 +1262,7 @@ const MGR_LOCKED=['projects','prices'];
 function applyRoleWrite(){canWrite=baseWrite&&!(isMgr()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
 function go(p,opts={}){
   page=p;applyRoleWrite();
-  ['home','orders','calendar','office','supplies','projects','prices'].forEach(x=>$('p-'+x).hidden=x!==p);
+  ['home','orders','calendar','office','supplies','projects','prices','analytics'].forEach(x=>$('p-'+x).hidden=x!==p);
   document.querySelectorAll('.pills [data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===p));
   if(p==='calendar'){selDay=opts.day||selDay||todayStr();const [y,m]=selDay.split('-').map(Number);calY=y;calM=m-1}
   render();
@@ -1483,6 +1538,7 @@ function render(){
   if(page==='office'||page==='supplies')renderLedger(page);
   if(page==='projects')renderProjects();
   if(page==='prices')renderPrices();
+  if(page==='analytics')renderAnalytics();
   enhanceSelects();
   keep.forEach(([id,v,f])=>{const x=document.querySelector('textarea[data-cmtext="'+CSS.escape(id)+'"]');if(x){x.value=v;if(f)x.focus()}});
   if(isMgr()){const b=$('boss-add-btn');if(b)b.hidden=true;$('boss-form').hidden=true}
@@ -1865,6 +1921,109 @@ function addExpense(){
   if(!(amount>0)){showErr('f-err','Впишите сумму расхода.');$('e-amount').focus();return false}
   $('f-err').hidden=true;edExp.push({id:uid(),title,amount});$('e-title').value='';$('e-amount').value='';renderCost();$('e-title').focus();return true;
 }
+/* ---------- аналитика ---------- */
+let anPer='3m';
+const AN_PER=[['month','Этот месяц'],['3m','3 месяца'],['year','12 месяцев'],['all','Всё время']];
+function anRange(){
+  const t=new Date(),y=t.getFullYear(),m=t.getMonth();
+  if(anPer==='month')return [ds(new Date(y,m,1)),todayStr()];
+  if(anPer==='3m')return [ds(new Date(y,m-2,1)),todayStr()];
+  if(anPer==='year')return [ds(new Date(y,m-11,1)),todayStr()];
+  return ['0000-00-00','9999-99-99'];
+}
+const tsDay=t=>t?ds(new Date(+t)):'';
+function hbars(rows,{fmt=money,max,sub,color}={}){
+  if(!rows.length)return '<div class="an-empty">Пока нет данных за этот период.</div>';
+  const mx=max||Math.max(...rows.map(r=>r.v),1);
+  return rows.map(r=>`<div class="hb" tabindex="0" data-tip="${esc(r.tip||(r.l+': '+fmt(r.v)))}"><span class="l">${r.c?`<i class="sw" style="--c:${esc(r.c)}"></i>`:''}${esc(r.l)}</span><span class="t"><i style="width:${Math.max(2,r.v/mx*100).toFixed(1)}%"></i></span><span class="v">${fmt(r.v)}${r.s?`<small>${esc(r.s)}</small>`:''}</span></div>`).join('');
+}
+function cols(rows,{fmt=String,label=true,cur=-1}={}){
+  const mx=Math.max(...rows.map(r=>r.v),0);
+  return rows.map((r,i)=>`<div class="cb${r.v?'':' z'}${i===cur?' cur':''}" tabindex="0" data-tip="${esc(r.tip||(r.l+': '+fmt(r.v)))}">${label&&r.v&&mx?`<em>${esc(r.short??fmt(r.v))}</em>`:''}<i style="height:${mx?Math.max(r.v?3:1,r.v/mx*100):1}%"></i><span>${esc(r.l)}</span></div>`).join('');
+}
+const kShort=n=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1).replace('.',',')+' млн':n>=1e3?Math.round(n/1e3)+' тыс':String(Math.round(n));
+function topN(map,n){const a=[...map.entries()].map(([l,o])=>({l,...o})).sort((a,b)=>b.v-a.v);if(a.length<=n)return a;const rest=a.slice(n-1);return [...a.slice(0,n-1),{l:'Остальные ('+rest.length+')',v:rest.reduce((s,x)=>s+x.v,0),n:rest.reduce((s,x)=>s+(x.n||0),0),x:rest.reduce((s,x)=>s+(x.x||0),0),p:rest.reduce((s,x)=>s+(x.p||0),0)}]}
+function bump(map,k,v,extra){const o=map.get(k)||{v:0,n:0,x:0};o.v+=v;o.n++;if(extra)o.x+=extra;map.set(k,o);return o}
+function renderAnalytics(){
+  $('an-per').innerHTML=AN_PER.map(([id,l])=>`<button type="button" class="chip${anPer===id?' on':''}" data-anper="${id}">${l}</button>`).join('');
+  const [from,to]=anRange(),inR=d=>d&&d>=from&&d<=to;
+  const os=orders.filter(o=>o.status!=='cancel'&&inR(receivedOf(o)));
+  const rev=os.reduce((s,o)=>s+(+o.price||0),0),prof=os.reduce((s,o)=>s+profitOf(o),0),paid=os.reduce((s,o)=>s+Math.min(+o.paid||0,+o.price||0),0);
+  const expL=['office','supplies'].flatMap(k=>ledger[k].filter(x=>inR(x.date)).map(x=>({...x,k})));
+  const exp=expL.reduce((s,x)=>s+(+x.amount||0),0),net=prof-exp;
+  const perTxt=anPer==='all'?'за всё время':anPer==='month'?'за '+monthName(curMonth()):anPer==='3m'?'за 3 месяца':'за 12 месяцев';
+  $('an-sub').textContent='Данные '+perTxt+' по дате получения заказа. Отменённые заказы не считаются.';
+  const k=(t,v,sm,cls='')=>`<div class="kpi"><span>${t}</span><b class="${cls}">${v}</b><small>${sm}</small></div>`;
+  $('an-kpis').innerHTML=k('Выручка',money(rev),os.length+' '+plural(os.length,'заказ','заказа','заказов'))
+    +k('Прибыль с заказов',money(prof),rev?'рентабельность '+Math.round(prof/rev*100)+'%':'—',prof<0?'neg':'')
+    +k('Чистыми',money(net),'после офиса и закупок: '+money(exp),net<0?'neg':net>0?'pos':'')
+    +k('Средний чек',money(os.length?rev/os.length:0),'на один заказ')
+    +k('Получено денег',money(paid),rev-paid>0?'ещё должны '+money(rev-paid):'всё оплачено');
+  /* динамика */
+  let dyn=[],cur=-1;
+  if(anPer==='month'){
+    const t=new Date(),y=t.getFullYear(),m=t.getMonth(),n=new Date(y,m+1,0).getDate();
+    for(let d=1;d<=n;d++){const key=ds(new Date(y,m,d)),L=os.filter(o=>receivedOf(o)===key),v=L.reduce((s,o)=>s+(+o.price||0),0);
+      dyn.push({l:d%5===1||d===n?String(d):'',v,short:'',tip:`${d} ${MONTHS_GEN[m]}: ${money(v)}, ${L.length} ${plural(L.length,'заказ','заказа','заказов')}`});if(key===todayStr())cur=d-1}
+    $('an-dyn-h').textContent='Выручка по дням';
+  }else{
+    const months=[];const t=new Date();
+    let start=from==='0000-00-00'?(orders.map(receivedOf).filter(Boolean).sort()[0]||todayStr()).slice(0,7):from.slice(0,7);
+    let [y,m]=start.split('-').map(Number);const endYM=curMonth();
+    while(true){const ym=y+'-'+String(m).padStart(2,'0');months.push(ym);if(ym>=endYM||months.length>36)break;m++;if(m>12){m=1;y++}}
+    dyn=months.map(ym=>{const L=os.filter(o=>receivedOf(o).slice(0,7)===ym),v=L.reduce((s,o)=>s+(+o.price||0),0),pr=L.reduce((s,o)=>s+profitOf(o),0),[yy,mm]=ym.split('-').map(Number);
+      return {l:MONTHS_FULL[mm-1].slice(0,3).toLowerCase()+(yy!==t.getFullYear()?' '+String(yy).slice(2):''),v,short:v?kShort(v):'',tip:`${MONTHS_FULL[mm-1]} ${yy}\nВыручка: ${money(v)}\nПрибыль: ${money(pr)}\nЗаказов: ${L.length}`}});
+    cur=dyn.length-1;$('an-dyn-h').textContent='Выручка по месяцам';
+  }
+  $('an-dyn').innerHTML=cols(dyn,{fmt:money,cur});
+  const best=[...dyn].sort((a,b)=>b.v-a.v)[0];
+  $('an-dyn-c').textContent=perTxt;
+  $('an-dyn-n').textContent=best&&best.v?'Лучший '+(anPer==='month'?'день':'месяц')+': '+best.tip.split('\n')[0].replace(/:.*$/,'')+', '+money(best.v)+'. Наведите или нажмите на столбик, чтобы увидеть детали.':'';
+  /* услуги */
+  const svc=new Map();os.forEach(o=>bump(svc,svcLabel(o.service,o),+o.price||0));
+  $('an-svc').innerHTML=hbars(topN(svc,8).map(r=>({...r,s:r.n?r.n+' '+plural(r.n,'заказ','заказа','заказов'):'',tip:`${r.l}: ${money(r.v)}${r.n?', '+r.n+' '+plural(r.n,'заказ','заказа','заказов'):''}`})));
+  /* источники */
+  const src=new Map();os.forEach(o=>bump(src,o.source==='toppers'?'Сайт топперов':(o.kaspi||[]).length||o.service==='kaspi'?'Kaspi':'Студия, вручную',+o.price||0));
+  $('an-src').innerHTML=hbars(topN(src,5).map(r=>({...r,s:r.n+' '+plural(r.n,'заказ','заказа','заказов')})));
+  /* топперы из заявок */
+  const rq=requests.filter(r=>r.status!=='rejected'&&inR(tsDay(r.createdAt)));
+  const mdl=new Map(),clr=new Map();
+  rq.forEach(r=>(r.items||[]).forEach(i=>{bump(mdl,i.model,+i.qty||0,+i.sum||0);(i.colors||[]).forEach(c=>{const o=bump(clr,c.name,+c.qty||0);o.c=c.hex})}));
+  $('an-top').innerHTML=hbars(topN(mdl,8).map(r=>({...r,s:r.x?money(r.x):'',tip:`${r.l}: ${r.v} шт${r.n?' в '+r.n+' '+plural(r.n,'заявке','заявках','заявках'):''}`})),{fmt:v=>v+' шт'});
+  $('an-col').innerHTML=hbars(topN(clr,8).map(r=>({...r,tip:`${r.l}: ${r.v} шт`})),{fmt:v=>v+' шт'});
+  /* Kaspi */
+  const kp=new Map();orders.filter(o=>o.status!=='cancel').forEach(o=>(o.kaspi||[]).forEach(l=>{if(!inR(l.date||receivedOf(o)))return;const fee=kaspiFeeOf(o)/100,q=+l.qty||0,pr=(+l.price||0)*q;
+    const e=bump(kp,l.name,q,pr);e.p=(e.p||0)+pr*(1-fee)-(+l.cost||0)*q}));
+  $('an-kaspi').innerHTML=hbars(topN(kp,8).map(r=>({...r,s:money(r.x),tip:`${r.l}: ${r.v} шт на ${money(r.x)}${r.p!=null?'\nПрибыль: '+money(r.p):''}`})),{fmt:v=>v+' шт'});
+  /* клиенты */
+  const cl=new Map();os.forEach(o=>bump(cl,(o.client||'Без имени').trim(),+o.price||0));
+  $('an-cli').innerHTML=hbars(topN(cl,8).map(r=>({...r,s:r.n+' '+plural(r.n,'заказ','заказа','заказов')})));
+  /* дни недели: заказы + заявки */
+  const wd=Array(7).fill(0);os.forEach(o=>{const d=new Date(receivedOf(o)+'T12:00');wd[(d.getDay()+6)%7]++});rq.forEach(r=>{const d=new Date(+r.createdAt);wd[(d.getDay()+6)%7]++});
+  const wTot=wd.reduce((a,b)=>a+b,0),WDF=['понедельник','вторник','среда','четверг','пятница','суббота','воскресенье'];
+  $('an-wd').innerHTML=cols(wd.map((v,i)=>({l:WD[i],v,tip:`${WDF[i][0].toUpperCase()+WDF[i].slice(1)}: ${v} ${plural(v,'заказ','заказа','заказов')} и заявок`+(wTot?' ('+Math.round(v/wTot*100)+'%)':'')})));
+  const wMax=wd.indexOf(Math.max(...wd));$('an-wd-n').textContent=wTot?'Самый активный день: '+WDF[wMax]+'.':'';
+  /* часы: когда заводят заказы и приходят заявки */
+  const hr=Array(24).fill(0);os.forEach(o=>{if(o.createdAt)hr[new Date(+o.createdAt).getHours()]++});rq.forEach(r=>{if(r.createdAt)hr[new Date(+r.createdAt).getHours()]++});
+  const hTot=hr.reduce((a,b)=>a+b,0);
+  $('an-hr').innerHTML=cols(hr.map((v,i)=>({l:String(i),v,tip:`${String(i).padStart(2,'0')}:00–${String(i).padStart(2,'0')}:59: ${v}`})),{label:false});
+  if(hTot){let bi=0,bs=-1;for(let i=0;i<24;i++){const s3=hr[i]+hr[(i+1)%24]+hr[(i+2)%24];if(s3>bs){bs=s3;bi=i}}$('an-hr-n').textContent='Чаще всего с '+String(bi).padStart(2,'0')+':00 до '+String((bi+3)%24).padStart(2,'0')+':00.'}else $('an-hr-n').textContent='';
+  /* ответственные */
+  const ow=new Map();os.forEach(o=>bump(ow,o.owner||'Не указан',+o.price||0));
+  $('an-own').innerHTML=hbars(topN(ow,6).map(r=>({...r,s:r.n+' '+plural(r.n,'заказ','заказа','заказов')})));
+  /* расходы по категориям */
+  const ex=new Map();expL.forEach(x=>bump(ex,(x.k==='office'?'Офис: ':'Закупки: ')+catLabel(x.k,x),+x.amount||0));
+  $('an-exp').innerHTML=hbars(topN(ex,8).map(r=>({...r,s:r.n+' '+plural(r.n,'запись','записи','записей')})));
+}
+/* подсказка у столбиков и полосок */
+{const tip=document.createElement('div');tip.id='an-tip';tip.hidden=true;document.body.appendChild(tip);
+  const show=(el,x,y)=>{tip.textContent=el.dataset.tip;tip.hidden=false;const r=tip.getBoundingClientRect();let L=x+12,T=y-r.height-12;if(L+r.width>innerWidth-8)L=x-r.width-12;if(L<8)L=8;if(T<8)T=y+16;tip.style.left=L+'px';tip.style.top=T+'px'};
+  document.addEventListener('pointermove',e=>{const el=e.target.closest&&e.target.closest('#p-analytics [data-tip]');if(el)show(el,e.clientX,e.clientY);else tip.hidden=true});
+  document.addEventListener('pointerdown',e=>{const el=e.target.closest&&e.target.closest('#p-analytics [data-tip]');if(el){const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top)}else tip.hidden=true});
+  document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('#p-analytics [data-tip]');if(el){const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top)}});
+  document.addEventListener('scroll',()=>{tip.hidden=true},{passive:true});
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-anper]');if(b){anPer=b.dataset.anper;renderAnalytics()}});}
+
 /* ---------- заявки с сайта топперов ---------- */
 const REQ_ST={new:{l:'Новая',c:'--danger'},accepted:{l:'Подтверждена',c:'--ok'},rejected:{l:'Отклонена',c:'--muted'}};
 const reqTime=r=>+r.createdAt||0;
@@ -2496,7 +2655,7 @@ $('task-form').addEventListener('submit',async e=>{
 })();
 for(const n of ['openEditor','openX','openQ','openP']){const f=window[n];if(typeof f==='function')window[n]=function(...a){const r=f.apply(this,a);enhanceSelects();return r}}
 initPack();
-{const h=(location.hash||'').slice(1);go(['orders','calendar','office','supplies','projects','prices'].includes(h)?h:'home')}
+{const h=(location.hash||'').slice(1);go(['orders','calendar','office','supplies','projects','prices','analytics'].includes(h)?h:'home')}
 setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('input,select,textarea'))))render()},60000);
 </script>
 <div id="upd-bar" hidden style="position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:200;background:#4358ef;color:#fff;border-radius:999px;padding:8px 8px 8px 18px;display:flex;gap:12px;align-items:center;font:600 14px 'Inter Tight',Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(67,88,239,.35);max-width:calc(100% - 24px)">
