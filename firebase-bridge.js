@@ -3,6 +3,9 @@
    здесь эти обращения переводятся на Firebase. */
 (function () {
   const cfg = window.FIREBASE_CONFIG || {};
+  /* Роли сотрудников. Ключ — часть почты до @. Все остальные считаются руководителями.
+     Такой же список должен быть в правилах firestore.rules (функция isManager). */
+  const MANAGERS = { 'raz.brandstudio': { name: 'Милана', title: 'менеджер' } };
   const configured = cfg.apiKey && !String(cfg.apiKey).includes('ВСТАВЬТЕ');
 
   let resolveReady;
@@ -58,6 +61,8 @@
   function addLogout(auth, user) {
     const pills = document.querySelector('.pills');
     if (!pills || document.getElementById('logout-btn')) return;
+    const r = window.APP_ROLE || {};
+    if (r.name) { const w = document.createElement('span'); w.className = 'pill who-pill'; w.textContent = r.name + (r.title ? ', ' + r.title : ''); pills.appendChild(w); }
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'pill logout'; b.id = 'logout-btn';
     b.textContent = 'Выйти'; b.title = user.email || '';
@@ -181,6 +186,9 @@
     let started = false;
     auth.onAuthStateChanged(u => {
       if (u) {
+        const local = String(u.email || '').toLowerCase().split('@')[0];
+        const m = MANAGERS[local];
+        window.APP_ROLE = m ? { role: 'manager', name: m.name, title: m.title, email: u.email } : { role: 'admin', name: u.displayName || 'Руководитель', title: '', email: u.email };
         authEl.hidden = true; addLogout(auth, u);
         if (!started) { started = true; resolveReady(); }
       } else {

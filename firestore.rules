@@ -1,9 +1,39 @@
 rules_version = '2';
-// Читать и менять данные могут только сотрудники, вошедшие по почте и паролю.
+// Доступ только для сотрудников, вошедших по почте и паролю.
+// Менеджер (почта raz.brandstudio@...) работает с заказами, закупками и расходами офиса,
+// в задачах от начальства может только менять статус и писать комментарии,
+// проекты и прайс только просматривает.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    function signedIn() { return request.auth != null; }
+    function isManager() {
+      return signedIn() && request.auth.token.email != null
+        && request.auth.token.email.lower().matches('raz[.]brandstudio@.*');
+    }
+
+    // Заказы, закупки, расходы офиса, фото и файлы — всем сотрудникам
+    match /orders/{id}   { allow read, write: if signedIn(); }
+    match /supplies/{id} { allow read, write: if signedIn(); }
+    match /office/{id}   { allow read, write: if signedIn(); }
+    match /blobs/{id}    { allow read, write: if signedIn(); }
+
+    // Проекты и прайс — менеджер только смотрит
+    match /projects/{id} { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
+    match /prices/{id}   { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
+
+    // Задачи: календарные — всем; от начальства — ставит и удаляет только руководитель,
+    // менеджер меняет статус и добавляет комментарии
+    match /tasks/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && (!isManager() || request.resource.data.kind != 'boss');
+      allow delete: if signedIn() && (!isManager() || resource.data.kind != 'boss');
+      allow update: if signedIn() && (
+        !isManager()
+        || (resource.data.kind != 'boss' && request.resource.data.kind != 'boss')
+        || (resource.data.kind == 'boss'
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['status', 'done', 'doneAt', 'comments', 'updatedAt']))
+      );
     }
   }
 }

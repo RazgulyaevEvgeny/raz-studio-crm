@@ -312,6 +312,18 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .icb:hover{background:var(--tile);color:var(--blue)}
 .icb svg{width:17px;height:17px}
 @media(max-width:520px){.task.boss{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"tt tt tt" "st at dl"}.task.boss .tt{grid-area:tt}.task.boss .tstat-w{grid-area:st;justify-self:start}}
+.tcm{grid-column:1/-1;display:flex;flex-direction:column;gap:8px}
+.tdesc{margin:0;font-size:13.5px;color:var(--ink);white-space:pre-wrap;background:var(--tile);border-radius:12px;padding:8px 12px}
+.cm-tog{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--f);color:var(--muted);padding:4px 0}
+.cm-tog:hover{color:var(--blue)}
+.cm-tog svg{width:15px;height:15px}
+.cm-list{display:flex;flex-direction:column;gap:6px}
+.cm{background:var(--tile);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;gap:2px;font-size:13.5px}
+.cm small{color:var(--muted);font-size:12px}
+.cm span{white-space:pre-wrap;overflow-wrap:anywhere}
+.cm-add{display:flex;gap:8px;align-items:flex-end}
+.cm-add textarea{flex:1;min-width:0;border:0;background:var(--tile);border-radius:12px;padding:10px 12px;resize:vertical;font:inherit;min-height:44px}
+.who-pill{background:transparent!important;box-shadow:inset 0 0 0 2px var(--line);color:var(--muted)!important;cursor:default}
 .blegend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
 .blegend span{display:flex;align-items:center;gap:6px}.blegend i{width:8px;height:8px;border-radius:50%;background:var(--sc)}
 /* файлы */
@@ -571,6 +583,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
           <form class="tform" id="boss-form" hidden novalidate>
             <input class="full" id="b-title" placeholder="Что сделать" autocomplete="off" aria-label="Задача">
             <div class="range full"><span>с</span><input id="b-from" data-dm data-range-to="b-to" placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off" aria-label="Начало, день и месяц"><span>по</span><input id="b-to" data-dm data-range-from="b-from" placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off" aria-label="Срок, день и месяц"></div>
+            <textarea class="full" id="b-desc" rows="2" placeholder="Описание: подробности, что важно учесть (необязательно)" aria-label="Описание задачи" style="border:0;background:var(--tile);border-radius:12px;padding:10px 12px;font:inherit;resize:vertical"></textarea>
             <input id="b-who" data-sugg="owners-dl" placeholder="Кому" autocomplete="off" aria-label="Кому">
             <button class="attach" type="button" id="b-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button>
             <div class="files" id="b-files"></div>
@@ -899,6 +912,8 @@ let assets=null;
 const BSTAT=[{id:'new',label:'Новая',c:'--st-new'},{id:'accepted',label:'Принята в работу',c:'--st-prod'},{id:'done',label:'Выполнено',c:'--st-ready'}];
 const BS=Object.fromEntries(BSTAT.map(s=>[s.id,s]));
 const bossStatus=t=>t.done?'done':(BS[t.status]?t.status:'new');
+const openCm=new Set();
+const CM_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
 let bossPending=[], fileTarget=null, askFile=null;
 let edUnitTouched=false;
 let edExp=[], edFiles=[], edFilesOrig=[], edTab='main';
@@ -1037,8 +1052,14 @@ function openViewer(url,type,name){
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
 /* ---------- навигация ---------- */
+/* ---------- роли: менеджер и руководитель ---------- */
+let baseWrite=true;
+const ROLE=()=>window.APP_ROLE||{role:'admin',name:''};
+const isMgr=()=>ROLE().role==='manager';
+const MGR_LOCKED=['projects','prices'];
+function applyRoleWrite(){canWrite=baseWrite&&!(isMgr()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
 function go(p,opts={}){
-  page=p;
+  page=p;applyRoleWrite();
   ['home','orders','calendar','office','supplies','projects','prices'].forEach(x=>$('p-'+x).hidden=x!==p);
   document.querySelectorAll('.pills [data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===p));
   if(p==='calendar'){selDay=opts.day||selDay||todayStr();const [y,m]=selDay.split('-').map(Number);calY=y;calM=m-1}
@@ -1130,13 +1151,21 @@ function bossRow(t){
   if(t.date){const rng=t.dateFrom&&t.dateFrom!==t.date?'с '+fmtDate(t.dateFrom)+' по '+fmtDate(t.date):'до '+fmtDate(t.date);meta.push(rng+(t.done?'':', '+relWord(t.date)))}
   if(t.who)meta.push('кому: '+t.who);
   if(t.done&&t.doneAt)meta.push('выполнено '+new Date(t.doneAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}));
-  const del=askDel===t.id?`<button class="tdel ask" type="button" data-tdel="${esc(t.id)}" data-confirm="1">Удалить</button>`:`<button class="tdel" type="button" data-tdel="${esc(t.id)}" aria-label="Удалить задачу">×</button>`;
+  const boss=canWrite&&!isMgr();
+  const del=!boss?'<span></span>':askDel===t.id?`<button class="tdel ask" type="button" data-tdel="${esc(t.id)}" data-confirm="1">Удалить</button>`:`<button class="tdel" type="button" data-tdel="${esc(t.id)}" aria-label="Удалить задачу">×</button>`;
+  const cms=t.comments||[],open=openCm.has(t.id);
+  const cmBox=`<div class="tcm">
+    ${t.desc?`<p class="tdesc">${esc(t.desc)}</p>`:''}
+    <button class="cm-tog" type="button" data-cmtog="${esc(t.id)}" aria-expanded="${open}">${CM_ICON}${cms.length?'Комментарии ('+cms.length+')':'Добавить комментарий'}</button>
+    ${open?`<div class="cm-list">${cms.map(c=>`<div class="cm"><small><b>${esc(c.by||'Сотрудник')}</b>, ${new Date(c.at).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</small><span>${esc(c.text)}</span></div>`).join('')}
+      ${canWrite?`<div class="cm-add"><textarea data-cmtext="${esc(t.id)}" rows="2" placeholder="Что сделано, что мешает, вопрос начальству" aria-label="Комментарий к задаче"></textarea><button class="btn primary sm" type="button" data-cmadd="${esc(t.id)}">Отправить</button></div>`:''}</div>`:''}
+  </div>`;
   const sel=`<span class="tstat-w" style="--sc:var(${st.c})"><select class="tstat" data-tstat="${esc(t.id)}" aria-label="Статус задачи" ${canWrite?'':'disabled'}>${BSTAT.map(x=>`<option value="${x.id}" data-c="${x.c}"${x.id===st.id?' selected':''}>${x.label}</option>`).join('')}</select></span>`;
-  const att=canWrite&&assets?`<button class="icb" type="button" data-tattach="${esc(t.id)}" aria-label="Прикрепить файл к задаче"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg></button>`:'<span></span>';
+  const att=boss&&assets?`<button class="icb" type="button" data-tattach="${esc(t.id)}" aria-label="Прикрепить файл к задаче"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg></button>`:'<span></span>';
   return `<div class="task boss${t.done?' done':''}" style="--sc:var(${st.c})">
     <span class="tt"><b>${esc(t.title)}</b>${meta.length?`<small class="${late?'late':''}">${esc(meta.join(', '))}</small>`:''}</span>
-    ${sel}${att}${canWrite?del:'<span></span>'}
-    <div class="files">${(t.files||[]).map(f=>fileTile(f,{rm:canWrite&&!!assets,owner:'t:'+t.id})).join('')}</div></div>`;
+    ${sel}${att}${del}
+    <div class="files">${(t.files||[]).map(f=>fileTile(f,{rm:boss&&!!assets,owner:'t:'+t.id})).join('')}</div>${cmBox}</div>`;
 }
 function taskRow(t){
   if(t.kind==='boss')return bossRow(t);
@@ -1185,7 +1214,7 @@ function renderHome(){
   const done=boss.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const acc=open.filter(t=>bossStatus(t)==='accepted').length;
   $('w-boss-c').textContent=open.length?open.length+' '+plural(open.length,'открыта','открыты','открыто')+(acc?', в работе '+acc:''):'';
-  $('boss-list').innerHTML=!tasksLoaded?'':open.length?open.map(taskRow).join(''):`<div class="w-empty">Открытых задач нет.${canWrite?' Новую можно поставить кнопкой «+ Задача».':''}</div>`;
+  $('boss-list').innerHTML=!tasksLoaded?'':open.length?open.map(taskRow).join(''):`<div class="w-empty">Открытых задач нет.${canWrite&&!isMgr()?' Новую можно поставить кнопкой «+ Задача».':''}</div>`;
   const tog=$('boss-done-tog');tog.hidden=!done.length;tog.textContent=(showBossDone?'Скрыть выполненные':'Показать выполненные')+' ('+done.length+')';
   $('boss-done').hidden=!showBossDone||!done.length;$('boss-done').innerHTML=showBossDone?done.slice(0,20).map(taskRow).join(''):'';
   $('boss-add-btn').hidden=!canWrite;
@@ -1277,6 +1306,7 @@ function renderCalendar(){
   $('task-form').hidden=!canWrite;
 }
 function render(){
+  const keep=[...document.querySelectorAll('textarea[data-cmtext]')].map(x=>[x.dataset.cmtext,x.value,document.activeElement===x]);
   renderNav();
   if(page==='home'){renderHome();packHome()}
   if(page==='orders')renderOrders();
@@ -1285,6 +1315,8 @@ function render(){
   if(page==='projects')renderProjects();
   if(page==='prices')renderPrices();
   enhanceSelects();
+  keep.forEach(([id,v,f])=>{const x=document.querySelector('textarea[data-cmtext="'+CSS.escape(id)+'"]');if(x){x.value=v;if(f)x.focus()}});
+  if(isMgr()){const b=$('boss-add-btn');if(b)b.hidden=true;$('boss-form').hidden=true}
 }
 
 /* ---------- расходы офиса и закупки ---------- */
@@ -1359,10 +1391,10 @@ function openX(k,id){
   renderXCats();
   $('x-sup-w').hidden=k!=='supplies';$('x-st-w').hidden=k!=='supplies';
   $('x-qty').value=x.qty??'';$('x-unit').value=x.unit||'шт';$('x-vendor').value=x.vendor||'';$('x-status').value=x.status||'received';
-  $('x-who').value=x.who||'';$('x-notes').value=x.notes||'';
+  $('x-who').value=x.who||(id==='new'&&isMgr()?ROLE().name:'');$('x-notes').value=x.notes||'';
   xFiles=(x.files||[]).map(f=>({...f}));xFilesOrig=xFiles.map(f=>f.id);renderXFiles();
   const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
-  $('x-meta').textContent=x.createdAt?'Добавлено '+f(x.createdAt):'';
+  $('x-meta').textContent=x.createdAt?'Добавлено '+f(x.createdAt)+(x.createdBy?' ('+x.createdBy+')':''):'';
   $('x-err').hidden=true;renderXDel(false);
   document.querySelectorAll('#xed-form input,#xed-form select,#xed-form textarea').forEach(el=>el.disabled=!canWrite);
   $('x-save').hidden=!canWrite;
@@ -1387,7 +1419,7 @@ async function saveX(e){
   if(xKind==='supplies'){d.qty=$('x-qty').value===''?null:Math.max(0,+$('x-qty').value);d.unit=$('x-unit').value;d.vendor=$('x-vendor').value.trim();d.status=$('x-status').value}
   const btn=$('x-save');btn.disabled=true;
   try{
-    if(xEditing==='new')await db.collection(xKind).doc().set({...d,createdAt:Date.now()});
+    if(xEditing==='new')await db.collection(xKind).doc().set({...d,createdAt:Date.now(),createdBy:ROLE().name||''});
     else await db.doc(xKind+'/'+xEditing).update(d);
     const kept=new Set(xFiles.map(f=>f.id));if(assets)xFilesOrig.filter(id=>!kept.has(id)).forEach(id=>assets.delete(id).catch(()=>{}));
     toast(xEditing==='new'?'Запись добавлена':'Сохранено');closeX();
@@ -1419,6 +1451,7 @@ let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(pa
 function prSorted(){return [...prices].sort((a,b)=>(a.order??a.createdAt??0)-(b.order??b.createdAt??0))}
 function renderPrices(){
   const q=prQ.toLowerCase(),client=prMode==='client';
+  document.querySelectorAll('[data-qnew]').forEach(b=>b.hidden=!canWrite);
   document.querySelectorAll('[data-prmode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.prmode===prMode));
   const vis=prSorted().filter(x=>!(client&&x.hidden));
   const svcN=new Set(prices.map(x=>x.svc)).size,hidN=prices.filter(x=>x.hidden).length;
@@ -1451,7 +1484,7 @@ function prText(){
 }
 function renderQSvc(){$('q-svc').innerHTML=SERVICES.map(s=>`<button type="button" data-qsvc="${s.id}" aria-pressed="${qSvc===s.id}" ${canWrite?'':'disabled'}>${esc(s.label)}</button>`).join('')}
 function openQ(id){
-  qEditing=id;const x=id==='new'?{svc:prSvc!=='all'?prSvc:'vinyl',unit:'шт',cost:{}}:prices.find(r=>r.id===id);if(!x)return;
+  qEditing=id;applyRoleWrite();const x=id==='new'?{svc:prSvc!=='all'?prSvc:'vinyl',unit:'шт',cost:{}}:prices.find(r=>r.id===id);if(!x)return;
   $('q-h').textContent=id==='new'?'Новая позиция':x.name;
   qSvc=x.svc||'other';renderQSvc();
   $('q-name').value=x.name||'';$('q-desc').value=x.desc||'';$('q-price').value=x.price??'';$('q-unit').value=x.unit||'шт';$('q-from').checked=!!x.from;
@@ -1462,7 +1495,7 @@ function openQ(id){
   document.querySelectorAll('#qed-form input,#qed-form textarea').forEach(el=>el.disabled=!canWrite);$('q-save').hidden=!canWrite;
   $('qed').hidden=false;setTimeout(()=>{if(canWrite&&id==='new')$('q-name').focus()},50);
 }
-function closeQ(){$('qed').hidden=true;qEditing=null}
+function closeQ(){$('qed').hidden=true;qEditing=null;applyRoleWrite();render()}
 function renderQDel(conf){const b=$('q-del');if(!canWrite||qEditing==='new'){b.innerHTML='';return}
   b.innerHTML=conf?`<span class="err">Удалить позицию?</span> <button class="btn danger solid sm" type="button" data-qdel="yes">Удалить</button> <button class="btn soft sm" type="button" data-qdel="no">Нет</button>`:`<button class="btn danger sm" type="button" data-qdel="ask">Удалить</button>`}
 async function saveQ(e){
@@ -1531,7 +1564,7 @@ function renderPExtras(){
   $('ptab-exp-n').textContent=sp?'('+money(sp)+')':'';$('ptab-files-n').textContent=pFiles.length?'('+pFiles.length+')':'';
 }
 function openP(id){
-  pEditing=id;const p=id==='new'?{status:'idea',start:todayStr()}:projects.find(x=>x.id===id);if(!p)return;
+  pEditing=id;applyRoleWrite();const p=id==='new'?{status:'idea',start:todayStr()}:projects.find(x=>x.id===id);if(!p)return;
   $('p-h').textContent=id==='new'?'Новый проект':p.name;
   $('p-name').value=p.name||'';$('p-desc').value=p.desc||'';$('p-budget').value=p.budget??'';$('p-owner').value=p.owner||'';
   setDM($('p-start'),p.start||'');setDM($('p-launch'),p.launch||'');setDM($('pe-date'),todayStr());$('pe-title').value='';$('pe-amount').value='';
@@ -1543,7 +1576,7 @@ function openP(id){
   document.querySelectorAll('#ped-form input,#ped-form textarea').forEach(el=>el.disabled=!canWrite);$('p-save').hidden=!canWrite;
   setPTab('main');$('ped').hidden=false;setTimeout(()=>{if(canWrite&&id==='new')$('p-name').focus()},50);
 }
-function closeP(){dpClose();$('ped').hidden=true;pEditing=null}
+function closeP(){dpClose();$('ped').hidden=true;pEditing=null;applyRoleWrite();render()}
 function renderPDel(conf){const b=$('p-del');if(!canWrite||pEditing==='new'){b.innerHTML='';return}
   b.innerHTML=conf?`<span class="err">Удалить проект?</span> <button class="btn danger solid sm" type="button" data-pdel="yes">Удалить</button> <button class="btn soft sm" type="button" data-pdel="no">Нет</button>`:`<button class="btn danger sm" type="button" data-pdel="ask">Удалить</button>`}
 function addPExp(){
@@ -1609,9 +1642,9 @@ function openEditor(id,preset={}){
   setDM($('f-deadline'),o.deadline||'');setDM($('f-dfrom'),o.deadlineFrom||'');
   setDM($('f-received'),id==='new'?todayStr():receivedOf(o));
   $('f-status').value=o.status||'new';$('f-price').value=o.price??'';$('f-paid').value=o.paid??'';
-  $('f-owner').value=o.owner||'';$('f-notes').value=o.notes||'';
+  $('f-owner').value=o.owner||(id==='new'&&isMgr()?ROLE().name:'');$('f-notes').value=o.notes||'';
   const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
-  $('f-meta').textContent=o.createdAt?'Создан '+f(o.createdAt)+(o.updatedAt&&o.updatedAt!==o.createdAt?', изменён '+f(o.updatedAt):''):'';
+  $('f-meta').textContent=o.createdAt?'Создан '+f(o.createdAt)+(o.createdBy?' ('+o.createdBy+')':'')+(o.updatedAt&&o.updatedAt!==o.createdAt?', изменён '+f(o.updatedAt):''):'';
   $('f-err').hidden=true;
   edUnitTouched=false;renderDelete(false);renderSvcPick();
   if(o.unit&&['шт','листов','м²'].includes(o.unit)){$('f-unit').value=o.unit;edUnitTouched=true}
@@ -1675,7 +1708,7 @@ async function saveOrder(ev){
   try{
     if(editing==='new'){
       const nextNum=orders.reduce((m,o)=>Math.max(m,o.num||0),0)+1;
-      await ordersCol.doc().set({...d,num:nextNum,createdAt:now,updatedAt:now});
+      await ordersCol.doc().set({...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||''});
       toast('Заказ № '+String(nextNum).padStart(3,'0')+' добавлен');
     }else{
       await db.doc('orders/'+editing).update({...d,updatedAt:now});
@@ -1714,9 +1747,17 @@ async function removeFile(owner,id,confirmed){
   try{await db.doc('tasks/'+tid).update({files:(t.files||[]).filter(f=>f.id!==id)});if(assets)assets.delete(id).catch(()=>{});toast('Файл удалён')}
   catch(er){toast(handleWriteError(er))}
 }
+async function addComment(id){
+  const ta=document.querySelector('[data-cmtext="'+CSS.escape(id)+'"]');const text=(ta&&ta.value||'').trim();
+  if(!text){ta&&ta.focus();return}
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const by=ROLE().name||'Руководитель';
+  try{await db.doc('tasks/'+id).update({comments:[...(t.comments||[]),{by,text,at:Date.now()}],updatedAt:Date.now()});ta.value='';toast('Комментарий добавлен')}
+  catch(er){toast(handleWriteError(er))}
+}
 async function setBossStatus(id,st){
   const t=tasks.find(x=>x.id===id);if(!t||!canWrite)return;
-  try{await db.doc('tasks/'+id).update({status:st,done:st==='done',doneAt:st==='done'?Date.now():null});toast('Статус: '+BS[st].label)}
+  try{await db.doc('tasks/'+id).update({status:st,done:st==='done',doneAt:st==='done'?Date.now():null,updatedAt:Date.now()});toast('Статус: '+BS[st].label)}
   catch(er){toast(handleWriteError(er));render()}
 }
 document.addEventListener('change',e=>{const s=e.target.closest('[data-tstat]');if(s)setBossStatus(s.dataset.tstat,s.value)});
@@ -1735,7 +1776,7 @@ async function deleteTask(id){
   catch(e){toast(handleWriteError(e))}
 }
 function setReadOnly(){
-  canWrite=false;document.querySelectorAll('[data-new],[data-xnew],[data-pnew],[data-qnew]').forEach(b=>b.hidden=true);
+  baseWrite=false;canWrite=false;document.querySelectorAll('[data-new],[data-xnew],[data-pnew],[data-qnew]').forEach(b=>b.hidden=true);
   banner('Режим просмотра: менять заказы и задачи может только тот, у кого есть права на редактирование.');
   render();
 }
@@ -1862,10 +1903,11 @@ document.addEventListener('click',e=>{
   const ta=t.closest('[data-tattach]');if(ta){pickFiles({kind:'task',id:ta.dataset.tattach});return}
   const g=t.closest('[data-go]');
   if(g){if(g.dataset.f){view={f:g.dataset.f,svc:'all',q:'',day:''};$('q').value=''}go(g.dataset.go);return}
-  if(t.closest('[data-new]')){if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
+  if(t.closest('[data-new]')){if(t.closest('.fab')&&isMgr()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
   const op=t.closest('[data-open]');if(op){openEditor(op.dataset.open);return}
   const dn=t.closest('[data-tdone]');if(dn){toggleTask(dn.dataset.tdone);return}
-  const td=t.closest('[data-tdel]');if(td){if(td.dataset.confirm)deleteTask(td.dataset.tdel);else{askDel=td.dataset.tdel;render();setTimeout(()=>{if(askDel===td.dataset.tdel){askDel=null;render()}},4000)}return}
+  const td=t.closest('[data-tdel]');if(td&&isMgr()&&tasks.find(x=>x.id===td.dataset.tdel)?.kind==='boss'){toast('Удалять задачи от начальства может только руководитель');return}
+  if(td){if(td.dataset.confirm)deleteTask(td.dataset.tdel);else{askDel=td.dataset.tdel;render();setTimeout(()=>{if(askDel===td.dataset.tdel){askDel=null;render()}},4000)}return}
   const cd=t.closest('[data-cday]');if(cd){go('calendar',{day:cd.dataset.cday});return}
   if(t.closest('#w-orders')){go('orders');return}
   if(t.closest('#w-cal')){go('calendar',{day:todayStr()});return}
@@ -1887,6 +1929,8 @@ document.addEventListener('click',e=>{
   const xn=t.closest('[data-xnew]');if(xn){openX(xn.dataset.xnew,'new');return}
   const xo=t.closest('[data-xopen]');if(xo){openX(xo.dataset.xkind,xo.dataset.xopen);return}
   const lc=t.closest('[data-lcat]');if(lc){lview[lc.dataset.lk].cat=lc.dataset.lcat;render();return}
+  const cmt=t.closest('[data-cmtog]');if(cmt){const id=cmt.dataset.cmtog;openCm.has(id)?openCm.delete(id):openCm.add(id);render();setTimeout(()=>document.querySelector('[data-cmtext="'+CSS.escape(id)+'"]')?.focus(),0);return}
+  const cma=t.closest('[data-cmadd]');if(cma){addComment(cma.dataset.cmadd);return}
   const plt=t.closest('[data-plt]');if(plt&&canWrite){xPlType=plt.dataset.plt;renderXCats();if(xPlType==='Другая')$('x-pltype').focus();return}
   const xcl=t.closest('[data-xcolor]');if(xcl&&canWrite){$('x-color').value=xcl.dataset.xcolor;renderXCats();return}
   const xc=t.closest('[data-xcat]');if(xc&&canWrite){xCat=xc.dataset.xcat;if(xCat==='plastic'&&xKind==='supplies'&&$('x-unit').value==='шт')$('x-unit').value='кг';renderXCats();return}
@@ -1969,7 +2013,8 @@ $('boss-form').addEventListener('submit',async e=>{
   try{
     let files=[];
     if(bossPending.length){try{files=await uploadAll(bossPending.map(p=>p.file))}catch(er){showErr('b-err',fileErrMsg(er));return}}
-    if(await addTask({kind:'boss',title,dateFrom:from,date:to,who,time:'',status:'new',files},'b-err',null)){
+    if(isMgr()){showErr('b-err','Ставить задачи от начальства может только руководитель.');return}
+    if(await addTask({kind:'boss',title,desc:$('b-desc').value.trim(),dateFrom:from,date:to,who,time:'',status:'new',files,comments:[]},'b-err',null)){$('b-desc').value='';
       bossPending.forEach(p=>URL.revokeObjectURL(p.url));bossPending=[];renderBossPending();
       $('b-title').value='';setDM($('b-from'),'');setDM($('b-to'),'');$('b-who').value='';$('boss-form').hidden=true;toast('Задача поставлена');
     }
