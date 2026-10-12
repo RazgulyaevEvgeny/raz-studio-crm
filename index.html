@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261012182447">
+<meta name="app-build" content="20261012183109">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -304,6 +304,8 @@ input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .kaspi-box{display:flex;flex-direction:column;gap:12px}
 .n.req{background:var(--danger);color:#fff}
+.rq-imp{align-self:flex-start}
+#ri-prev .reqbox{margin-top:4px}
 .reqbox{background:color-mix(in srgb,var(--blue) 8%,var(--paper));box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--blue) 30%,transparent);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
 .reqbox .rh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
 .reqbox .rh b{font:700 15.5px var(--f)}
@@ -632,6 +634,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <div class="home-col">
         <div class="w" id="w-req">
           <div class="w-h"><h2>Заявки с сайта <span class="c" id="w-req-c"></span></h2><a class="go" href="https://razgulyaevevgeny.github.io/toppers-site/" target="_blank" rel="noopener" title="Открыть сайт топперов">Сайт ↗</a></div>
+          <button class="btn soft sm rq-imp" type="button" id="req-imp-btn">+ Из WhatsApp</button>
           <div class="mini" id="w-req-list"></div>
           <button class="done-tog" type="button" id="req-done-tog" hidden></button>
           <div class="mini" id="req-done" hidden></div>
@@ -856,6 +859,19 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   </form>
 </div>
 
+<div class="ed" id="ried" hidden>
+  <div class="ed-back" id="ried-back"></div>
+  <form class="ed-panel" id="ried-form" novalidate>
+    <div class="ed-head"><h2>Заявка из WhatsApp</h2><button class="x" type="button" id="ried-close" aria-label="Закрыть">×</button></div>
+    <div class="ed-body">
+      <div class="fld"><label for="ri-text">Текст сообщения клиента</label><textarea id="ri-text" rows="9" placeholder="Вставьте сообщение «Здравствуйте! Хочу заказать топперы: …» целиком"></textarea>
+        <span class="hint">Модели, цвета, количество, цены, имя и кофейня разберутся сами. Строки вроде «+1000 штук своих моделей «котик» по 36 тг» тоже.</span></div>
+      <div id="ri-prev"></div>
+      <div class="err" id="ri-err" hidden></div>
+    </div>
+    <div class="ed-foot"><div></div><div class="r"><button class="btn soft sm" type="button" id="ried-cancel">Отмена</button><button class="btn primary sm" type="submit" id="ri-save">Добавить заявку</button></div></div>
+  </form>
+</div>
 <div class="ed" id="xed" hidden>
   <div class="ed-back" id="xed-back"></div>
   <form class="ed-panel" id="xed-form" novalidate>
@@ -1829,6 +1845,7 @@ function reqRow(r){
 }
 function renderReqWidget(){
   const all=[...requests].sort((a,b)=>reqTime(b)-reqTime(a)),fresh=all.filter(r=>(r.status||'new')==='new'),done=all.filter(r=>(r.status||'new')!=='new');
+  $('req-imp-btn').hidden=!canWrite;
   $('w-req-c').textContent=fresh.length?fresh.length+' '+plural(fresh.length,'новая','новые','новых'):'';
   $('w-req-list').innerHTML=!requestsLoaded?'':fresh.length?fresh.map(reqRow).join(''):`<div class="w-empty">Новых заявок нет. Когда клиент отправит заказ с сайта топперов, он появится здесь сам.</div>`;
   const tog=$('req-done-tog');tog.hidden=!done.length;tog.textContent=(showReqDone?'Скрыть обработанные':'Показать обработанные')+' ('+done.length+')';
@@ -1855,6 +1872,68 @@ function renderReqBox(){
     ${r.customDesc?`<div class="rq-txt">Своя модель: ${esc(r.customDesc)}</div>`:''}${r.note?`<div class="rq-txt">Комментарий: ${esc(r.note)}</div>`:''}
     ${canWrite&&r.status!=='rejected'?`<div class="rq-acts">${reqAskReject?`<span class="err">Отклонить заявку?</span><button class="btn danger solid sm" type="button" data-rqrej="yes">Отклонить</button><button class="btn soft sm" type="button" data-rqrej="no">Нет</button>`:`<button class="btn danger sm" type="button" data-rqrej="ask">Отклонить заявку</button>`}</div>`:''}`;
   $('ed-save').textContent='Подтвердить заявку';
+}
+/* ---------- заявка из текста WhatsApp ---------- */
+const TOP_COLORS={'белый':'#ffffff','жёлтый':'#f5b800','желтый':'#f5b800','оранжевый':'#ff7a0d','красный':'#ff3b30','розовый':'#f0537f','бордовый':'#a02b50','чёрный':'#262626','черный':'#262626','синий':'#2563eb','фиолетовый':'#7c3aed','зелёный':'#22a447','зеленый':'#22a447','голубой':'#38bdf8','серый':'#9ca3af','коричневый':'#8b5a2b'};
+const numOf=t=>+(String(t||'').replace(/[^\d]/g,''))||0;
+function parseWaOrder(text){
+  const r={name:'',cafe:'',note:'',customDesc:'',code:'',items:[]},extra=[];let last=null;
+  const ls=String(text||'').split(/\r?\n/);
+  for(let i=0;i<ls.length;i++){
+    const ln=ls[i].trim();if(!ln)continue;let m;
+    if(/^здравствуйте|^добрый|^привет|^итого/i.test(ln))continue;
+    if(m=ln.match(/^имя\s*:\s*(.+)$/i)){r.name=m[1].trim();continue}
+    if(m=ln.match(/^кофейня\s*:\s*(.+)$/i)){r.cafe=m[1].trim();continue}
+    if(m=ln.match(/^комментарий\s*:\s*(.+)$/i)){r.note=(r.note?r.note+'\n':'')+m[1].trim();continue}
+    if(m=ln.match(/^номер заявки\s*:\s*([A-Za-z0-9]+)/i)){r.code=m[1].toUpperCase();continue}
+    if(m=ln.match(/^описание своей модели\s*:\s*(.+)$/i)){r.customDesc=m[1].trim();continue}
+    if(m=ln.match(/^\d+\s*[.)]\s*(.+?)\s*:\s*([\d\s]+)\s*шт(?:\s*[×xх*]\s*([\d\s]+)\s*(?:₸|тг|тенге)?)?/i)){
+      last={modelId:'',model:m[1].trim(),qty:numOf(m[2]),price:m[3]?numOf(m[3]):0,sum:0,colors:[]};last.sum=last.qty*last.price;r.items.push(last);continue}
+    if(last&&(m=ln.match(/^[-–—•*]\s*(.+?)\s*:\s*([\d\s]+)\s*шт/i))){const n=m[1].trim();last.colors.push({name:n,hex:TOP_COLORS[n.toLowerCase()]||'#cccccc',qty:numOf(m[2])});continue}
+    /* своя модель свободным текстом: «+1000 штук своих моделей «котик в шапке» по 36 тг» */
+    const both=ln+' '+(ls[i+1]||'');
+    if(m=ln.match(/(\d[\d\s]*)\s*(?:штуки|штук|шт)[^«"“]*[«"“]([^»"”]+)[»"”]/i)){
+      const pm=both.match(/по\s*(\d[\d\s]*)\s*(?:₸|тг|тенге)/i);const q=numOf(m[1]),pr=pm?numOf(pm[1]):0;
+      r.items.push({modelId:'custom',model:'Своя модель: '+m[2].trim(),qty:q,price:pr,sum:q*pr,colors:[]});
+      r.customDesc=(r.customDesc?r.customDesc+'; ':'')+m[2].trim()+', '+q+' шт'+(pr?' по '+pr+' ₸':'');
+      if(pm&&!ln.match(/по\s*\d/i))i++;continue}
+    extra.push(ln);
+  }
+  if(extra.length)r.note=[r.note,...extra].filter(Boolean).join('\n');
+  r.qty=r.items.reduce((a,x)=>a+x.qty,0);r.total=r.items.reduce((a,x)=>a+x.sum,0);r.hasCustom=r.items.some(x=>x.modelId==='custom'||!x.price);
+  return r;
+}
+function riPreview(){
+  const t=$('ri-text').value,r=parseWaOrder(t);$('ri-err').hidden=true;
+  $('ri-prev').innerHTML=!t.trim()?'':r.items.length?`<div class="reqbox"><div class="rh"><div><b>${esc([r.cafe,r.name].filter(Boolean).join(' · ')||'Без имени')}</b><small>${r.qty} шт, ${r.items.length} ${plural(r.items.length,'модель','модели','моделей')}${r.code?' · № '+esc(r.code):''}</small></div><b>${money(r.total)}</b></div>
+    <ul>${r.items.map(i=>`<li><b>${esc(i.model)}</b><span>${i.qty} шт${i.price?' × '+money(i.price):' · цена не указана'}</span>${i.colors.length?`<span class="cl">${i.colors.map(c=>`<span><i style="--c:${c.hex}"></i>${esc(c.name)}: ${c.qty} шт</span>`).join('')}</span>`:''}</li>`).join('')}</ul>${r.note?`<div class="rq-txt">Комментарий: ${esc(r.note)}</div>`:''}</div>`
+    :`<div class="w-empty" style="background:var(--tile)">Не нашёл позиций. Нужны строки вида «1. Тыква: 50 шт × 35 ₸».</div>`;
+}
+function openReqImport(){$('ri-text').value='';$('ri-prev').innerHTML='';$('ri-err').hidden=true;$('ried').hidden=false;setTimeout(()=>$('ri-text').focus(),50)}
+function closeReqImport(){$('ried').hidden=true}
+async function saveReqImport(e){
+  e.preventDefault();if(!db||!canWrite)return;
+  const r=parseWaOrder($('ri-text').value);
+  if(!r.items.length){showErr('ri-err','Не нашёл ни одной модели в тексте. Проверьте, что вставили сообщение целиком.');return}
+  const ABC='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code=r.code;
+  if(!code||requests.some(x=>x.id===code)){if(code&&requests.some(x=>x.id===code)){showErr('ri-err','Заявка № '+code+' уже есть в списке.');return}code='W';for(let i=0;i<6;i++)code+=ABC[Math.floor(Math.random()*ABC.length)]}
+  const doc={source:'toppers',code,status:'new',createdAt:Date.now(),name:r.name.slice(0,200),cafe:r.cafe.slice(0,200),note:r.note.slice(0,2000),customDesc:r.customDesc.slice(0,2000),
+    items:r.items.slice(0,40),total:Math.round(r.total),qty:r.qty,hasCustom:r.hasCustom,text:$('ri-text').value.trim().slice(0,6000)};
+  const b=$('ri-save');b.disabled=true;
+  try{await db.doc('requests/'+code).set(doc);closeReqImport();toast('Заявка добавлена');if(page!=='home')go('home')}
+  catch(er){showErr('ri-err',handleWriteError(er))}finally{b.disabled=false}
+}
+/* заявки из WhatsApp, внесённые 12.10: добавляются один раз при входе сотрудника */
+const PENDING_REQ=[['WDARYA1',"Здравствуйте! Хочу заказать топперы:\n1. Призрак в шапке: 300 шт × 31 ₸ = 9 300 ₸\n   - Чёрный: 300 шт\n2. Тыква: 300 шт × 33 ₸ = 9 900 ₸\n   - Оранжевый: 300 шт\n\nИтого: 19 200 ₸\nИмя: Дарья\nКофейня: Cafeteria\n\n+1000 штук своих моделей «котик в шапке»\nпо 36 тг за штуку"],['WFRENDO1',"Здравствуйте! Хочу заказать топперы:\n1. Призрак в шапке: 50 шт × 33 ₸ = 1 650 ₸\n   - Белый: 50 шт\n2. Призрак с шарфом: 50 шт × 33 ₸ = 1 650 ₸\n   - Белый: 50 шт\n3. Сердечко: 50 шт × 32 ₸ = 1 600 ₸\n   - Оранжевый: 50 шт\n4. Тыква: 50 шт × 35 ₸ = 1 750 ₸\n   - Оранжевый: 50 шт\n\nИтого: 6 650 ₸\nИмя: Анатолий\nКофейня: Frendo"],['WKOVA1',"Здравствуйте! Хочу заказать топперы:\n1. Вязаное сердечко: 50 шт × 38 ₸ = 1 900 ₸\n   - Красный: 50 шт\n2. Призрак: 20 шт × 30 ₸ = 600 ₸\n   - Оранжевый: 20 шт\n3. Тыква: 20 шт × 35 ₸ = 700 ₸\n   - Оранжевый: 20 шт\n4. Кошечка: 30 шт × 33 ₸ = 990 ₸\n   - Розовый: 30 шт\n\nИтого: 4 190 ₸\nИмя: Салтанат\nКофейня: Kova"]];
+let pendingReqDone=false;
+async function importPendingReq(){
+  if(pendingReqDone||!requestsLoaded||!db||!canWrite)return;pendingReqDone=true;
+  for(const [code,text] of PENDING_REQ){
+    if(requests.some(x=>x.id===code))continue;
+    const r=parseWaOrder(text);if(!r.items.length)continue;
+    const doc={source:'toppers',code,status:'new',createdAt:Date.now(),name:r.name,cafe:r.cafe,note:r.note,customDesc:r.customDesc,items:r.items,total:Math.round(r.total),qty:r.qty,hasCustom:r.hasCustom,text};
+    try{await db.doc('requests/'+code).set(doc)}catch(e){try{console.warn('pending request',code,e)}catch(_){}}
+  }
 }
 async function rejectRequest(){
   if(!edReq)return;try{await db.doc('requests/'+edReq.id).update({status:'rejected',handledBy:ROLE().name||'',handledAt:Date.now()});closeEditor();toast('Заявка отклонена')}catch(er){showErr('f-err',handleWriteError(er))}
@@ -2206,6 +2285,10 @@ $('k-list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.
 {const _cc2=csClose;csClose=function(r){$('k-name-btn').setAttribute('aria-expanded','false');return _cc2(r)}}
 document.addEventListener('click',e=>{const r=e.target.closest('[data-req]');if(r){openRequest(r.dataset.req);return}
   const rj=e.target.closest('[data-rqrej]');if(rj){const v=rj.dataset.rqrej;if(v==='ask'){reqAskReject=true;renderReqBox()}else if(v==='no'){reqAskReject=false;renderReqBox()}else rejectRequest()}});
+$('req-imp-btn').addEventListener('click',()=>{if(canWrite)openReqImport()});
+$('ri-text').addEventListener('input',riPreview);
+$('ried-form').addEventListener('submit',saveReqImport);
+$('ried-close').onclick=$('ried-cancel').onclick=$('ried-back').onclick=closeReqImport;
 $('req-done-tog').addEventListener('click',()=>{showReqDone=!showReqDone;renderReqWidget();packHome()});
 /* колёсико мыши не меняет числа в полях */
 addEventListener('wheel',e=>{const t=e.target;if(t&&t.matches&&t.matches('input[type=number]')&&document.activeElement===t)t.blur()},{passive:true});
@@ -2371,7 +2454,7 @@ $('task-form').addEventListener('submit',async e=>{
   },fail);
   tasksCol.onSnapshot(snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));tasksLoaded=true;render()},fail);
   db.collection('prices').onSnapshot(snap=>{prices=snap.docs.map(d=>({id:d.id,...d.data()}));pricesLoaded=true;render();if(qEditing&&qEditing!=='new'&&!prices.find(x=>x.id===qEditing)){closeQ();toast('Эту позицию удалили')}},fail);
-  db.collection('requests').onSnapshot(snap=>{requests=snap.docs.map(d=>({id:d.id,...d.data()}));requestsLoaded=true;render()},e=>{requestsLoaded=true;try{console.warn('requests',e)}catch(_){}});
+  db.collection('requests').onSnapshot(snap=>{requests=snap.docs.map(d=>({id:d.id,...d.data()}));requestsLoaded=true;render();setTimeout(importPendingReq,300)},e=>{requestsLoaded=true;try{console.warn('requests',e)}catch(_){}});
   db.collection('projects').onSnapshot(snap=>{projects=snap.docs.map(d=>({id:d.id,...d.data()}));projLoaded=true;render();if(pEditing&&pEditing!=='new'&&!projects.find(x=>x.id===pEditing)){closeP();toast('Этот проект удалили')}},fail);
   for(const k of ['office','supplies'])db.collection(k).onSnapshot(snap=>{ledger[k]=snap.docs.map(d=>({id:d.id,...d.data()}));ledgerLoaded[k]=true;render();if(xEditing&&xEditing!=='new'&&xKind===k&&!ledger[k].find(r=>r.id===xEditing)){closeX();toast('Эту запись удалили')}},fail);
 })();
