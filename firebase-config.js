@@ -1,13 +1,11 @@
-/* Настройки проекта Firebase.
-   Где взять: консоль Firebase → шестерёнка «Project settings» → вкладка General →
-   внизу блок «Your apps» → веб-приложение → «SDK setup and configuration» → вариант Config.
-   Скопируйте значения сюда вместо надписей ВСТАВЬТЕ.
-   Эти ключи не секретные: доступ к данным закрыт правилами в firestore.rules и storage.rules. */
+/* Настройки проекта Firebase raz-studio.
+   Эти ключи не секретные: доступ к данным закрыт правилами в firestore.rules
+   и разрешён только сотрудникам, вошедшим по почте и паролю. */
 window.FIREBASE_CONFIG = {
-  apiKey: "ВСТАВЬТЕ apiKey",
-  authDomain: "ВСТАВЬТЕ authDomain",
-  projectId: "ВСТАВЬТЕ projectId",
-  storageBucket: "ВСТАВЬТЕ storageBucket",
-  messagingSenderId: "ВСТАВЬТЕ messagingSenderId",
-  appId: "ВСТАВЬТЕ appId"
+  apiKey: "AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0",
+  authDomain: "raz-studio-5a486.firebaseapp.com",
+  projectId: "raz-studio-5a486",
+  storageBucket: "raz-studio-5a486.firebasestorage.app",
+  messagingSenderId: "661085467003",
+  appId: "1:661085467003:web:2c896e473b214266c24dde"
 };
