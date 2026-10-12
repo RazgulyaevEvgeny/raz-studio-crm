@@ -758,7 +758,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="tabs" role="tablist">
       <button class="tab" type="button" role="tab" id="tab-main" aria-selected="true" data-tab="main">Заказ</button>
       <button class="tab" type="button" role="tab" id="tab-cost" aria-selected="false" data-tab="cost">Сколько мы потратили <em id="tab-cost-n"></em></button>
-      <button class="tab" type="button" role="tab" id="tab-kaspi" aria-selected="false" data-tab="kaspi">Каспи <em id="tab-kaspi-n"></em></button>
+      <button class="tab" type="button" role="tab" id="tab-kaspi" aria-selected="false" data-tab="kaspi">Kaspi</button>
     </div>
     <div class="ed-body" id="pane-main">
       <div class="grid2">
@@ -807,19 +807,19 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 
     </div>
     <div class="ed-body" id="pane-kaspi" hidden>
-      <div class="pnl"><div><small>Продали на Каспи</small><b id="k-rev">0 ₸</b></div><div><small>Себестоимость и комиссия</small><b id="k-tot">0 ₸</b></div><div><small>Прибыль</small><b id="k-profit">0 ₸</b></div></div>
+      <div class="pnl"><div><small>Продали на Kaspi</small><b id="k-rev">0 ₸</b></div><div><small>Себестоимость и комиссия</small><b id="k-tot">0 ₸</b></div><div><small>Прибыль</small><b id="k-profit">0 ₸</b></div></div>
       <div class="meta" id="k-note"></div>
       <div class="fld"><span class="lb">Продажи</span><div class="exps" id="k-list"></div></div>
       <div class="kadd" id="k-add">
-        <div class="fld"><label for="k-name">Наименование товара</label><div class="combo"><input id="k-name" autocomplete="off" placeholder="Впишите или выберите из прайса и закупок"><button class="combo-btn" type="button" id="k-name-btn" aria-label="Выбрать товар из прайса и закупок Каспи" aria-haspopup="listbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>
+        <div class="fld"><label for="k-name">Наименование товара</label><div class="combo"><input id="k-name" autocomplete="off" placeholder="Впишите или выберите из списка"><button class="combo-btn" type="button" id="k-name-btn" aria-label="Выбрать товар из ранее введённых" aria-haspopup="listbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>
         <div class="grid2">
           <div class="fld"><label for="k-price">Стоимость, за 1 шт</label><div class="suffix"><input id="k-price" type="number" min="0" step="1" inputmode="numeric"><span>₸</span></div></div>
           <div class="fld"><label for="k-qty">Количество</label><div class="suffix"><input id="k-qty" type="number" min="1" step="1" inputmode="numeric" placeholder="1"><span>шт</span></div></div>
           <div class="fld"><label for="k-date">Дата заказа</label><input id="k-date" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div>
           <div class="fld"><label for="k-cost">Себестоимость, за 1 шт</label><div class="suffix"><input id="k-cost" type="number" min="0" step="1" inputmode="numeric"><span>₸</span></div></div>
         </div>
-        <span class="hint" id="k-src">Себестоимость подставится из прайса или из закупок Каспи, когда выберете товар.</span>
-        <div class="kadd-foot"><div class="fld kfee"><label for="k-fee">Комиссия Каспи</label><div class="suffix"><input id="k-fee" type="number" min="0" max="100" step="0.5" inputmode="decimal"><span>%</span></div></div><button class="btn primary sm" type="button" id="k-addbtn">Добавить продажу</button></div>
+        <span class="hint" id="k-src">Выберите товар стрелочкой: цена и себестоимость подставятся как в прошлый раз.</span>
+        <div class="kadd-foot"><div class="fld kfee"><label for="k-fee">Комиссия Kaspi</label><div class="suffix"><input id="k-fee" type="number" min="0" max="100" step="0.5" inputmode="decimal"><span>%</span></div></div><button class="btn primary sm" type="button" id="k-addbtn">Добавить продажу</button></div>
       </div>
     </div>
     <div class="err" id="f-err" hidden style="padding:0 24px 8px"></div>
@@ -858,8 +858,8 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="grid2">
           <div class="fld"><label for="x-kbuy">Купили за 1 шт</label><div class="suffix"><input id="x-kbuy" type="number" min="0" step="1" inputmode="numeric" placeholder="0"><span>₸</span></div></div>
           <div class="fld"><label for="x-kcargo">Доставка карго</label><div class="suffix"><input id="x-kcargo" type="number" min="0" step="1" inputmode="numeric" placeholder="за всю партию"><span>₸</span></div></div>
-          <div class="fld"><label for="x-ksell">Продаём на Каспи</label><div class="suffix"><input id="x-ksell" type="number" min="0" step="1" inputmode="numeric" placeholder="за 1 шт"><span>₸</span></div></div>
-          <div class="fld"><label for="x-kfee">Комиссия Каспи</label><div class="suffix"><input id="x-kfee" type="number" min="0" step="1" inputmode="numeric" placeholder="30"><span>%</span></div></div>
+          <div class="fld"><label for="x-ksell">Продаём на Kaspi</label><div class="suffix"><input id="x-ksell" type="number" min="0" step="1" inputmode="numeric" placeholder="за 1 шт"><span>₸</span></div></div>
+          <div class="fld"><label for="x-kfee">Комиссия Kaspi</label><div class="suffix"><input id="x-kfee" type="number" min="0" step="1" inputmode="numeric" placeholder="30"><span>%</span></div></div>
         </div>
         <div class="kcalc" id="x-kcalc"></div>
       </div>
@@ -991,7 +991,7 @@ const LEDGERS={
   office:{title:'Расходы офиса',one:'расход',add:'Добавить расход',newH:'Новый расход',what:'Что оплатили *',ph:'Аренда за октябрь, интернет, вода',
     cats:[['rent','Аренда','--blue'],['util','Коммунальные','--sky'],['net','Связь и интернет','--st-design'],['salary','Зарплата','--st-prod'],['ads','Реклама','--danger'],['house','Хозтовары и канцелярия','--st-ready'],['repair','Ремонт и техника','--muted'],['other','Другое','--ink']]},
   supplies:{title:'Закупка расходников',one:'закупка',add:'Добавить закупку',newH:'Новая закупка',what:'Что купили *',ph:'Плёнка Oracal 641 белая',
-    cats:[['film','Плёнка','--blue'],['plastic','Пластик для 3D','--st-prod'],['thread','Нитки','--st-design'],['blank','Футболки и заготовки','--sky'],['ink','Краски и чернила','--danger'],['paper','Бумага','--muted'],['pack','Упаковка','--st-ready'],['kaspi','Каспи','--danger'],['other','Другое','--ink']]}
+    cats:[['film','Плёнка','--blue'],['plastic','Пластик для 3D','--st-prod'],['thread','Нитки','--st-design'],['blank','Футболки и заготовки','--sky'],['ink','Краски и чернила','--danger'],['paper','Бумага','--muted'],['pack','Упаковка','--st-ready'],['kaspi','Kaspi','--danger'],['other','Другое','--ink']]}
 };
 let prices=[],pricesLoaded=false,prMode='studio',prSvc='all',prQ='',qEditing=null,qSvc='vinyl',qTiers=[];
 const KASPI_FEE=0.30;
@@ -1490,10 +1490,10 @@ function kaspiCalc(setAmount=true){
   if(!m.qty){$('x-kcalc').innerHTML='<p>Впишите количество в штуках, цену закупки и доставку. Сумма закупки посчитается сама, а здесь появится себестоимость и прибыль.</p>';return}
   let h=r('Товар',money(Math.round(m.buy*m.qty)))+r('Карго',money(Math.round(m.cargo)))+r('Себестоимость 1 шт',money(Math.round(m.unit)));
   if(m.sell){const cls=m.netU>=0?'pos':'neg';
-    h+=r('Комиссия Каспи '+String(m.fee).replace('.',',')+'%','−'+money(Math.round(m.feeU))+' с 1 шт')
+    h+=r('Комиссия Kaspi '+String(m.fee).replace('.',',')+'%','−'+money(Math.round(m.feeU))+' с 1 шт')
      +r('Чистыми с 1 шт',`<span class="${cls}">${money(Math.round(m.netU))}</span>`)
      +r('Прибыль с партии'+(m.margin!==null?' · '+m.margin+'%':''),`<span class="${cls}">${money(Math.round(m.profit))}</span>`,'tot')}
-  else h+='<p>Впишите цену на Каспи, чтобы увидеть прибыль.</p>';
+  else h+='<p>Впишите цену на Kaspi, чтобы увидеть прибыль.</p>';
   $('x-kcalc').innerHTML=h;
 }
 ['x-kbuy','x-kcargo','x-ksell','x-kfee','x-qty'].forEach(i=>document.getElementById(i).addEventListener('input',()=>{if(xCat==='kaspi')kaspiCalc()}));
@@ -1747,10 +1747,9 @@ function renderCost(){
   const price=+$('f-price').value||0,cost=edExp.reduce((s,e)=>s+(+e.amount||0),0)+(ks?ks.total:0),profit=price-cost;
   $('c-price').textContent=money(price);$('c-cost').textContent=money(cost);
   const pe=$('c-profit');pe.textContent=money(profit);pe.className=price||cost?(profit>=0?'pos':'neg'):'';
-  $('c-margin').textContent=(price?`Рентабельность ${Math.round(profit/price*100)}% от суммы заказа.`:'Впишите сумму заказа на вкладке «Заказ», чтобы посчитать прибыль.')+(ks?` В «Потратили» входит себестоимость и комиссия Каспи: ${money(ks.total)}.`:'');
+  $('c-margin').textContent=(price?`Рентабельность ${Math.round(profit/price*100)}% от суммы заказа.`:'Впишите сумму заказа на вкладке «Заказ», чтобы посчитать прибыль.')+(ks?` В «Потратили» входит себестоимость и комиссия Kaspi: ${money(ks.total)}.`:'');
   $('exps').innerHTML=edExp.length?edExp.map(e=>`<div class="exp"><b>${esc(e.title)}</b><span>${money(e.amount)}</span>${canWrite?`<button class="tdel" type="button" data-rmexp="${esc(e.id)}" aria-label="Убрать статью ${esc(e.title)}">×</button>`:'<span></span>'}</div>`).join(''):`<div class="w-empty" style="background:var(--tile)">Расходов пока нет. Добавьте статью и сумму ниже.</div>`;
   $('tab-cost-n').textContent=edExp.length?`(${money(edExp.reduce((s,e)=>s+(+e.amount||0),0))})`:'';
-  $('tab-kaspi-n').textContent=edK.length?`(${money(ks.rev)})`:'';
   renderOrderFiles();
   $('exp-add').hidden=!canWrite;
 }
@@ -1796,9 +1795,14 @@ function addExpense(){
 const kFee=()=>{const v=$('k-fee').value;return v===''?KASPI_FEE*100:Math.min(100,Math.max(0,+v))};
 function kaspiCatalog(){
   const items=[];
+  const hist=[];
+  orders.forEach(o=>{if(o.id===editing)return;(o.kaspi||[]).forEach(l=>hist.push({...l,_t:(l.date||'')+'|'+String(o.updatedAt||o.createdAt||0).padStart(15,'0')}))});
+  edK.forEach(l=>hist.push({...l,_t:(l.date||'')+'|'+'9'.repeat(15)}));
+  hist.sort((a,b)=>b._t.localeCompare(a._t)).forEach(l=>items.push({name:l.name,price:+l.price||0,cost:+l.cost?+l.cost:null,qty:+l.qty||1,src:'Ранее'+(l.date?' '+fmtDate(l.date):''),key:'h'+l.id}));
   prices.filter(x=>x.svc==='kaspi').forEach(x=>{const c=qCost(x);items.push({name:x.name,price:+x.price||0,cost:c>0?c:null,src:'Прайс',key:'p'+x.id})});
   lsorted('supplies').filter(x=>x.cat==='kaspi').forEach(x=>{const m=kaspiMath(x);items.push({name:x.title,price:+x.kSell||0,cost:m.qty?Math.round(m.unit):null,src:'Закупка'+(x.date?' '+fmtDate(x.date):''),key:'s'+x.id})});
-  return items;
+  const seen=new Set();
+  return items.filter(i=>{const k=i.name.trim().toLowerCase();if(!k||seen.has(k))return false;seen.add(k);return true});
 }
 function kFindCost(name){
   const n=name.trim().toLowerCase();if(!n)return null;
@@ -1806,11 +1810,11 @@ function kFindCost(name){
 }
 function kClear(){
   kEditId=null;kSrcCost=null;$('k-name').value='';$('k-price').value='';$('k-qty').value='';$('k-cost').value='';setDM($('k-date'),todayStr());
-  $('k-src').textContent='Себестоимость подставится из прайса или из закупок Каспи, когда выберете товар.';$('k-addbtn').textContent='Добавить продажу';
+  $('k-src').textContent='Выберите товар стрелочкой: цена и себестоимость подставятся как в прошлый раз.';$('k-addbtn').textContent='Добавить продажу';
 }
 function kApply(it){
-  $('k-name').value=it.name;if(it.price)$('k-price').value=it.price;
-  if(it.cost!=null){$('k-cost').value=it.cost;kSrcCost=it.cost;$('k-src').textContent='Себестоимость взята: '+it.src.toLowerCase()+'. Можно поправить вручную.'}
+  $('k-name').value=it.name;if(it.price)$('k-price').value=it.price;if(it.qty&&$('k-qty').value==='')$('k-qty').value=it.qty;
+  if(it.cost!=null){$('k-cost').value=it.cost;kSrcCost=it.cost;$('k-src').textContent=(it.key[0]==='h'?'Подставлено как в прошлый раз ('+it.src.replace('Ранее ','').trim()+')':'Себестоимость взята: '+it.src.toLowerCase())+'. Можно поправить вручную.'}
   else $('k-src').textContent='В «'+it.src+'» себестоимость не указана, впишите её вручную.';
 }
 function addKaspi(){
@@ -1835,14 +1839,13 @@ function renderKaspi(){
   $('k-rev').textContent=money(ks.rev);
   $('k-tot').textContent=money(ks.total);
   const pe=$('k-profit');pe.textContent=money(ks.profit);pe.className=edK.length?(ks.profit>=0?'pos':'neg'):'';
-  $('k-note').textContent=edK.length?`${ks.n} шт. Себестоимость ${money(ks.cost)}, комиссия ${String(kFee()).replace('.',',')}%: ${money(ks.com)}. Эти суммы входят в «Сколько мы потратили», а продажи — в сумму заказа.`:'Добавьте, что продали на Каспи: товар, цену, количество и дату. Себестоимость подтянется из прайса или закупок Каспи.';
+  $('k-note').textContent=edK.length?`${ks.n} шт. Себестоимость ${money(ks.cost)}, комиссия ${String(kFee()).replace('.',',')}%: ${money(ks.com)}. Эти суммы входят в «Сколько мы потратили», а продажи — в сумму заказа.`:'Добавьте, что продали на Kaspi: товар, цену, количество и дату. Товары, введённые раньше, можно выбрать стрелочкой.';
   $('k-list').innerHTML=edK.length?edK.map(l=>{const u=(+l.price||0)*(1-kFee()/100)-(+l.cost||0),pr=u*(+l.qty||0);
     return `<div class="exp kline" role="button" tabindex="0" data-kedit="${esc(l.id)}"><span class="kt"><b>${esc(l.name)}</b><small>${+l.qty||0} шт × ${money(l.price)} · себест. ${l.cost?money(l.cost):'не указана'}${l.date?' · '+fmtDate(l.date):''}</small></span>
       <span class="kr"><b>${money((+l.price||0)*(+l.qty||0))}</b><small class="${pr>=0?'pos':'neg'}">прибыль ${money(pr)}</small></span>
       ${canWrite?`<button class="tdel" type="button" data-krm="${esc(l.id)}" aria-label="Убрать продажу ${esc(l.name)}">×</button>`:'<span></span>'}</div>`}).join('')
-    :`<div class="w-empty" style="background:var(--tile)">Продаж на Каспи пока нет.</div>`;
+    :`<div class="w-empty" style="background:var(--tile)">Продаж на Kaspi пока нет.</div>`;
   $('k-add').hidden=!canWrite;
-  $('tab-kaspi-n').textContent=edK.length?`(${money(ks.rev)})`:'';
 }
 let kItems=[];
 function openKaspiMenu(){
@@ -1850,7 +1853,7 @@ function openKaspiMenu(){
   const all=kaspiCatalog();kItems=all.filter(i=>!q||i.name.toLowerCase().includes(q));if(!kItems.length)kItems=all;
   const m=$('cs-menu');m.classList.add('climenu');
   m.innerHTML=kItems.length?kItems.map((c,i)=>`<button type="button" role="option" data-kpick="${i}"><span>${esc(c.name)}<span class="src">${esc(c.src)}</span></span><small>${c.cost!=null?'себест. '+money(c.cost):'себест. —'}${c.price?' · '+money(c.price):''}</small></button>`).join('')
-    :`<div class="cli-empty">Товаров для Каспи пока нет. Добавьте их в «Прайс» (услуга Kaspi) или в «Закупки» с категорией «Каспи». Или впишите название вручную.</div>`;
+    :`<div class="cli-empty">Список пока пуст. Впишите товар вручную: после сохранения заказа он появится здесь вместе с ценой и себестоимостью.</div>`;
   csSel={_btn:btn};btn.setAttribute('aria-expanded','true');m.hidden=false;$('cs-back').hidden=false;
   if(innerWidth>560){const r=$('k-name').getBoundingClientRect();m.style.minWidth=r.width+'px';const h=m.offsetHeight;let top=r.bottom+6;if(top+h>innerHeight-8)top=Math.max(8,r.top-h-6);m.style.top=top+'px';m.style.left=Math.max(8,r.left)+'px'}
   m.querySelector('button')?.focus({preventScroll:true});
