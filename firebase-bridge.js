@@ -6,6 +6,8 @@
   /* Роли сотрудников. Ключ — часть почты до @. Все остальные считаются руководителями.
      Такой же список должен быть в правилах firestore.rules (функция isManager). */
   const MANAGERS = { 'raz.brandstudio': { name: 'Милана', title: 'менеджер' } };
+  /* Руководители с полными правами: точная почта → имя и подпись. */
+  const ADMINS = { 'design.onegin@gmail.com': { name: 'Евгений', title: 'руководитель' } };
   const configured = cfg.apiKey && !String(cfg.apiKey).includes('ВСТАВЬТЕ');
 
   let resolveReady;
@@ -188,7 +190,10 @@
       if (u) {
         const local = String(u.email || '').toLowerCase().split('@')[0];
         const m = MANAGERS[local];
-        window.APP_ROLE = m ? { role: 'manager', name: m.name, title: m.title, email: u.email } : { role: 'admin', name: u.displayName || 'Руководитель', title: '', email: u.email };
+        const a = ADMINS[String(u.email || '').toLowerCase()];
+        window.APP_ROLE = m ? { role: 'manager', name: m.name, title: m.title, email: u.email }
+          : a ? { role: 'admin', name: a.name, title: a.title, email: u.email }
+          : { role: 'admin', name: u.displayName || 'Руководитель', title: '', email: u.email };
         authEl.hidden = true; addLogout(auth, u);
         if (!started) { started = true; resolveReady(); }
       } else {
