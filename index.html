@@ -284,6 +284,22 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .sw button[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--blue)}
 .sw i{width:18px;height:18px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(10,11,20,.18)}
 .cdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(10,11,20,.2);vertical-align:-1px;margin-right:4px}
+.combo{position:relative}
+.combo input{width:100%;padding-right:48px!important}
+.combo-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--muted);background:transparent}
+.combo-btn:hover,.combo-btn[aria-expanded="true"]{background:var(--paper);color:var(--blue)}
+.combo-btn svg{width:18px;height:18px}
+.climenu small{margin-left:auto;color:var(--muted);font:500 12.5px var(--fb);white-space:nowrap}
+.climenu .cli-empty{padding:12px;color:var(--muted);font-size:13.5px}
+.ofiles{display:flex;flex-direction:column;gap:10px}
+.ofg{background:var(--tile);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.ofg-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ofg-h b{font:700 15px var(--f)}
+.ofg .files .file{background:var(--paper)}
+.ofg-empty{margin:0}
+.attach.sm{min-height:36px;padding:0 12px;font-size:13px;background:var(--paper)}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .qty-row{display:flex;gap:8px}
 .qty-row input{flex:1 1 auto;min-width:0}
 .fld .qty-row select{flex:0 0 112px;width:112px}
@@ -720,7 +736,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     </div>
     <div class="ed-body" id="pane-main">
       <div class="grid2">
-        <div class="fld"><label for="f-client">Клиент *</label><input id="f-client" autocomplete="off" placeholder="Имя или компания"></div>
+        <div class="fld"><label for="f-client">Клиент *</label><div class="combo"><input id="f-client" autocomplete="off" placeholder="Имя или компания"><button class="combo-btn" type="button" id="f-client-btn" aria-label="Выбрать из клиентов" aria-haspopup="listbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>
         <div class="fld"><label for="f-phone">Телефон</label><input id="f-phone" type="tel" placeholder="+7 7__ ___ __ __"><a class="wa" id="wa" target="_blank" rel="noopener" hidden>Написать в WhatsApp ↗</a></div>
       </div>
       <div class="fld"><span class="lb" id="svc-lb">Услуга</span><div class="svc-pick" id="svc-pick" role="group" aria-labelledby="svc-lb"></div></div>
@@ -744,6 +760,12 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       </div>
       <div class="sum"><span>Остаток к оплате <button class="linkbtn" type="button" id="pay-full">· оплачено полностью</button></span><b id="f-rest">0 ₸</b></div>
       <div class="fld"><label for="f-notes">Заметки</label><textarea id="f-notes" placeholder="Макет согласован в WhatsApp, клиент заберёт сам и т.п."></textarea></div>
+      <div class="ofiles" id="o-filebox">
+        <div class="ofg"><div class="ofg-h"><b>Макет</b><button class="attach sm" type="button" data-oattach="mockup" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button></div><div class="files" id="o-files-mockup"></div><p class="hint ofg-empty" id="o-empty-mockup">Эскиз, исходник или фото от клиента.</p></div>
+        <div class="ofg"><div class="ofg-h"><b>Готовый макет</b><button class="attach sm" type="button" data-oattach="final" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button></div><div class="files" id="o-files-final"></div><p class="hint ofg-empty" id="o-empty-final">Утверждённый вариант, который идёт в работу.</p></div>
+        <div class="ofg" id="o-other-w" hidden><div class="ofg-h"><b>Другие файлы</b></div><div class="files" id="o-files-other"></div></div>
+        <span class="hint" data-need-assets>Фото или PDF до 700 КБ</span>
+      </div>
       <div class="meta" id="f-meta"></div>
     </div>
     <div class="ed-body" id="pane-cost" hidden>
@@ -756,10 +778,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <button class="btn primary sm" type="button" id="e-add">Добавить</button>
       </div>
       <datalist id="exp-dl"><option value="Материалы"><option value="Плёнка"><option value="Пластик"><option value="Нитки"><option value="Футболки"><option value="Печать"><option value="Доставка"><option value="Работа мастера"><option value="Реклама"><option value="Комиссия Kaspi"></datalist>
-      <div class="fld"><span class="lb">Чеки, фото и файлы</span>
-        <div class="files" id="o-files"></div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="o-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить файл или фото</button><span class="hint" data-need-assets>Фото или PDF до 700 КБ</span></div>
-      </div>
+
     </div>
     <div class="err" id="f-err" hidden style="padding:0 24px 8px"></div>
     <div class="ed-foot">
@@ -1614,14 +1633,22 @@ function setTab(t){
   $('tab-main').setAttribute('aria-selected',t==='main');$('tab-cost').setAttribute('aria-selected',t==='cost');
   if(t==='cost')renderCost();
 }
+function renderOrderFiles(){
+  for(const k of ['mockup','final','other']){
+    const list=edFiles.filter(f=>(f.fk||'other')===k);
+    $('o-files-'+k).innerHTML=list.map(f=>fileTile(f,{rm:canWrite&&!!assets,owner:'o'})).join('');
+    if(k!=='other')$('o-empty-'+k).hidden=!!list.length;else $('o-other-w').hidden=!list.length;
+  }
+  document.querySelectorAll('[data-oattach]').forEach(b=>b.hidden=!(canWrite&&assets));
+}
 function renderCost(){
   const price=+$('f-price').value||0,cost=edExp.reduce((s,e)=>s+(+e.amount||0),0),profit=price-cost;
   $('c-price').textContent=money(price);$('c-cost').textContent=money(cost);
   const pe=$('c-profit');pe.textContent=money(profit);pe.className=price||cost?(profit>=0?'pos':'neg'):'';
   $('c-margin').textContent=price?`Рентабельность ${Math.round(profit/price*100)}% от суммы заказа.`:'Впишите сумму заказа на вкладке «Заказ», чтобы посчитать прибыль.';
   $('exps').innerHTML=edExp.length?edExp.map(e=>`<div class="exp"><b>${esc(e.title)}</b><span>${money(e.amount)}</span>${canWrite?`<button class="tdel" type="button" data-rmexp="${esc(e.id)}" aria-label="Убрать статью ${esc(e.title)}">×</button>`:'<span></span>'}</div>`).join(''):`<div class="w-empty" style="background:var(--tile)">Расходов пока нет. Добавьте статью и сумму ниже.</div>`;
-  $('o-files').innerHTML=edFiles.map(f=>fileTile(f,{rm:canWrite&&!!assets,owner:'o'})).join('');
-  $('tab-cost-n').textContent=edExp.length||edFiles.length?`(${money(cost)})`:'';
+  $('tab-cost-n').textContent=edExp.length?`(${money(cost)})`:'';
+  renderOrderFiles();
   $('exp-add').hidden=!canWrite;
 }
 function updateRest(){
@@ -1739,7 +1766,7 @@ async function addTask(data,errId,btn){
 }
 async function removeFile(owner,id,confirmed){
   const key=owner+':'+id;
-  if(owner==='o'){edFiles=edFiles.filter(f=>f.id!==id);renderCost();return}
+  if(owner==='o'){edFiles=edFiles.filter(f=>f.id!==id);renderOrderFiles();return}
   if(owner==='x'){xFiles=xFiles.filter(f=>f.id!==id);renderXFiles();return}
   if(owner==='p'){pFiles=pFiles.filter(f=>f.id!==id);renderPExtras();return}
   if(!confirmed){askFile=key;render();setTimeout(()=>{if(askFile===key){askFile=null;render()}},4000);return}
@@ -1890,6 +1917,29 @@ $('cs-back').addEventListener('click',()=>csClose(false));
 addEventListener('resize',()=>{if(csSel)csClose(false)});
 document.querySelectorAll('.ed-body').forEach(b=>b.addEventListener('scroll',()=>{if(csSel&&innerWidth>560)csClose(false)},{passive:true}));
 
+/* ---------- выбор клиента из уже добавленных ---------- */
+function clientList(){
+  const m=new Map();
+  [...orders].sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).forEach(o=>{const n=(o.client||'').trim();if(!n)return;const k=n.toLowerCase();if(!m.has(k))m.set(k,{name:n,phone:o.phone||'',n:0});const c=m.get(k);c.n++;if(!c.phone&&o.phone)c.phone=o.phone});
+  return [...m.values()];
+}
+let cliItems=[];
+function openClientMenu(){
+  const btn=$('f-client-btn'),q=$('f-client').value.trim().toLowerCase();
+  const all=clientList();cliItems=all.filter(c=>!q||c.name.toLowerCase().includes(q)||c.phone.includes(q));if(!cliItems.length)cliItems=all;
+  const m=$('cs-menu');m.classList.add('climenu');
+  m.innerHTML=cliItems.length?cliItems.map((c,i)=>`<button type="button" role="option" data-cli="${i}"><span>${esc(c.name)}</span><small>${esc(c.phone||(c.n+' '+plural(c.n,'заказ','заказа','заказов')))}</small></button>`).join(''):`<div class="cli-empty">Клиентов пока нет. Впишите имя вручную, после сохранения заказа клиент появится в этом списке.</div>`;
+  csSel={_btn:btn};btn.setAttribute('aria-expanded','true');m.hidden=false;$('cs-back').hidden=false;
+  if(innerWidth>560){const r=$('f-client').getBoundingClientRect();m.style.minWidth=r.width+'px';const h=m.offsetHeight;let top=r.bottom+6;if(top+h>innerHeight-8)top=Math.max(8,r.top-h-6);m.style.top=top+'px';m.style.left=Math.max(8,r.left)+'px'}
+  m.querySelector('button')?.focus({preventScroll:true});
+}
+$('f-client-btn').addEventListener('click',e=>{e.stopPropagation();if(!canWrite)return;openClientMenu()});
+$('cs-menu').addEventListener('click',e=>{const it=e.target.closest('[data-cli]');if(!it)return;const c=cliItems[+it.dataset.cli];if(!c)return;
+  $('f-client').value=c.name;if(c.phone&&!$('f-phone').value.trim())$('f-phone').value=c.phone;updateRest();csClose(false);$('f-client').focus()});
+{const _cc=csClose;csClose=function(r){$('cs-menu').classList.remove('climenu');$('f-client-btn').setAttribute('aria-expanded','false');return _cc(r)}}
+/* колёсико мыши не меняет числа в полях */
+addEventListener('wheel',e=>{const t=e.target;if(t&&t.matches&&t.matches('input[type=number]')&&document.activeElement===t)t.blur()},{passive:true});
+
 /* ---------- события ---------- */
 document.querySelectorAll('[data-need-assets]').forEach(el=>el.hidden=true);
 $('f-status').innerHTML=STATUSES.map(s=>`<option value="${s.id}" data-c="${s.c}">${s.label}</option>`).join('');
@@ -1961,7 +2011,7 @@ maskDM($('b-from'));maskDM($('b-to'));maskDM($('f-received'));maskDM($('x-date')
 function renderBossPending(){$('b-files').innerHTML=bossPending.map((p,i)=>`<span class="file"><button class="fv" type="button" data-view="${esc(p.url)}" data-vtype="${esc(p.file.type)}" data-vname="${esc(p.file.name)}">${p.file.type.startsWith('image/')?`<img src="${esc(p.url)}" alt="${esc(p.file.name)}">`:(p.file.type.includes('pdf')?'PDF':'ВИДЕО')}</button><button class="rm" type="button" data-rmpend="${i}" aria-label="Убрать ${esc(p.file.name)}">×</button></span>`).join('')}
 function pickFiles(target){fileTarget=target;const fi=$('file-in');fi.value='';fi.click()}
 $('b-attach').onclick=()=>pickFiles({kind:'boss-new'});
-$('o-attach').onclick=()=>pickFiles({kind:'order'});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-oattach]');if(b)pickFiles({kind:'order',fk:b.dataset.oattach})});
 $('x-attach').onclick=()=>pickFiles({kind:'x'});
 $('p-attach').onclick=()=>pickFiles({kind:'p'});
 $('qed-form').addEventListener('submit',saveQ);
@@ -1992,7 +2042,7 @@ $('file-in').addEventListener('change',async e=>{
   toast('Загружаем '+list.length+' '+plural(list.length,'файл','файла','файлов')+'…');
   try{
     const up=await uploadAll(list);
-    if(tg.kind==='order'){edFiles.push(...up);renderCost();toast('Файлы добавлены. Нажмите «Сохранить».')}
+    if(tg.kind==='order'){edFiles.push(...up.map(f=>({...f,fk:tg.fk||'mockup'})));renderOrderFiles();toast('Файлы добавлены. Нажмите «Сохранить».')}
     else if(tg.kind==='x'){xFiles.push(...up);renderXFiles();toast('Файлы добавлены. Нажмите «Сохранить».')}
     else if(tg.kind==='p'){pFiles.push(...up);renderPExtras();toast('Файлы добавлены. Нажмите «Сохранить».')}
     else if(tg.kind==='task'){const t=tasks.find(x=>x.id===tg.id);if(!t)return;await db.doc('tasks/'+t.id).update({files:[...(t.files||[]),...up]});toast('Файлы прикреплены')}
