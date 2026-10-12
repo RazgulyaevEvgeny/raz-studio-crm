@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261012183637">
+<meta name="app-build" content="20261012184313">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -423,9 +423,11 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 @media(max-width:440px){.exp-add{grid-template-columns:minmax(0,1fr) 110px}.exp-add .btn{grid-column:1/-1}}
 /* просмотр файла */
 .lbox{position:fixed;inset:0;z-index:40;background:rgba(10,11,20,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:56px 16px 24px}
-.lbox img,.lbox video{max-width:100%;max-height:calc(100% - 60px);border-radius:16px;background:#fff}
+.lbox img,.lbox video{max-width:100%;max-height:calc(100% - 120px);border-radius:16px;background:#fff}
 .lbox .cap{color:#fff;font:600 14px var(--f);text-align:center;overflow-wrap:anywhere}
 .lbox .cap a{color:#fff}
+.lb-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;color:#fff;font:600 14px var(--f)}
+.lb-acts .btn.danger:not(.solid){background:rgba(255,255,255,.95)}
 .lbox .x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;background:rgba(255,255,255,.18);color:#fff}
 .lbox .doc{background:#fff;border-radius:20px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:360px;text-align:center}
 /* выбор даты */
@@ -1158,17 +1160,25 @@ async function uploadAll(list){
 function fileTile(f,{rm,owner,src}={}){
   const url=src||f.url||('/_blob/'+f.id);const isImg=(f.type||'').startsWith('image/');
   const label=(f.type||'').includes('pdf')?'PDF':(f.type||'').startsWith('video/')?'ВИДЕО':ext3d(f)||((f.type||'').startsWith('model/')?(f.type.split('/')[1]||'').toUpperCase():'')||'ФАЙЛ';
-  const rmBtn=rm?(askFile===(owner+':'+f.id)?`<button class="rm ask" type="button" data-rmfile="${esc(f.id)}" data-owner="${esc(owner)}" data-confirm="1">Удалить</button>`:`<button class="rm" type="button" data-rmfile="${esc(f.id)}" data-owner="${esc(owner)}" aria-label="Убрать файл ${esc(f.name)}">×</button>`):'';
-  return `<span class="file"><button class="fv" type="button" data-view="${esc(url)}" data-vtype="${esc(f.type)}" data-vname="${esc(f.name)}" aria-label="Открыть ${esc(f.name)}">${isImg?`<img src="${esc(url)}" alt="${esc(f.name)}" loading="lazy">`:label}</button>${rmBtn}</span>`;
+  /* удалить можно только из окна просмотра, чтобы не нажать случайно */
+  return `<span class="file"><button class="fv" type="button" data-view="${esc(url)}" data-vtype="${esc(f.type)}" data-vname="${esc(f.name)}"${rm?` data-vrm="${esc(owner)}|${esc(f.id)}"`:''} aria-label="Открыть ${esc(f.name)}">${isImg?`<img src="${esc(url)}" alt="${esc(f.name)}" loading="lazy">`:label}</button></span>`;
 }
-function openViewer(url,type,name){
+let lbRm=null;
+function lbActs(ask){
+  const a=$('lb-acts');if(!a)return;if(!lbRm){a.innerHTML='';return}
+  a.innerHTML=ask?`<span>Удалить этот файл?</span><button class="btn danger solid sm" type="button" data-lbrm="yes">Удалить</button><button class="btn soft sm" type="button" data-lbrm="no">Нет</button>`
+    :`<button class="btn danger sm" type="button" data-lbrm="ask">Удалить файл</button>`;
+}
+function closeViewer(){$('lb').hidden=true;$('lb-body').innerHTML='';lbRm=null}
+function openViewer(url,type,name,rm){
   let h;
   if(type.startsWith('image/'))h=`<img src="${esc(url)}" alt="${esc(name)}">`;
   else if(type.startsWith('video/'))h=`<video src="${esc(url)}" controls playsinline></video>`;
   else if(type.startsWith('model/')||is3dName(name)){const x=(is3dName(name)?name.split('.').pop():type.split('/')[1]||'').toUpperCase();
     h=`<div class="doc"><b style="font:800 20px var(--f)">${esc(x)}</b><span>${esc(name)}</span><span class="hint">3D-модель. Скачайте и откройте в слайсере (Bambu Studio, Orca, Cura).</span><a class="btn primary sm" href="${esc(url)}" download="${esc(name)}">Скачать ${esc(x)}</a></div>`}
   else h=`<div class="doc"><b style="font:800 20px var(--f)">PDF</b><span>${esc(name)}</span><a class="btn primary sm" href="${esc(url)}" target="_blank" rel="noopener">Открыть PDF</a></div>`;
-  $('lb-body').innerHTML=h+`<div class="cap">${esc(name)}</div>`;$('lb').hidden=false;
+  lbRm=rm||null;
+  $('lb-body').innerHTML=h+`<div class="cap">${esc(name)}</div>`+(lbRm?`<div class="lb-acts" id="lb-acts"></div>`:'');lbActs(false);$('lb').hidden=false;
 }
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
@@ -2129,8 +2139,8 @@ document.addEventListener('change',e=>{const s=e.target.closest('[data-tstat]');
 $('e-add').onclick=addExpense;
 ['e-title','e-amount'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addExpense()}}));
 $('f-price').addEventListener('input',()=>{if(edTab==='cost')renderCost()});
-$('lb-close').onclick=()=>{$('lb').hidden=true;$('lb-body').innerHTML=''};
-$('lb').addEventListener('click',e=>{if(e.target.id==='lb'){$('lb').hidden=true;$('lb-body').innerHTML=''}});
+$('lb-close').onclick=closeViewer;
+$('lb').addEventListener('click',e=>{if(e.target.id==='lb')closeViewer()});
 async function toggleTask(id){
   const t=tasks.find(x=>x.id===id);if(!t||!canWrite)return;
   try{await db.doc('tasks/'+id).update({done:!t.done,doneAt:t.done?null:Date.now()});toast(t.done?'Задача снова в работе':'Задача выполнена')}
@@ -2304,7 +2314,11 @@ document.querySelectorAll('[data-need-assets]').forEach(el=>el.hidden=true);
 $('f-status').innerHTML=STATUSES.map(s=>`<option value="${s.id}" data-c="${s.c}">${s.label}</option>`).join('');
 document.addEventListener('click',e=>{
   const t=e.target;
-  const vw=t.closest('[data-view]');if(vw){openViewer(vw.dataset.view,vw.dataset.vtype||'',vw.dataset.vname||'');return}
+  const lr=t.closest('[data-lbrm]');if(lr){const v=lr.dataset.lbrm;if(v==='ask')lbActs(true);else if(v==='no')lbActs(false);else if(lbRm){const r=lbRm;closeViewer();
+      if(r.pend!=null){const p=bossPending.splice(r.pend,1)[0];if(p)URL.revokeObjectURL(p.url);renderBossPending()}
+      else{removeFile(r.owner,r.id,true);if(['o','x','p'].includes(r.owner))toast('Файл убран. Нажмите «Сохранить», чтобы сохранить изменения.')}}return}
+  const vw=t.closest('[data-view]');if(vw){const rv=vw.dataset.vrm,rp=vw.dataset.vpend;
+    openViewer(vw.dataset.view,vw.dataset.vtype||'',vw.dataset.vname||'',rv?{owner:rv.slice(0,rv.lastIndexOf('|')),id:rv.slice(rv.lastIndexOf('|')+1)}:rp!=null?{pend:+rp}:null);return}
   const tb=t.closest('[data-tab]');if(tb){setTab(tb.dataset.tab);return}
   const rx=t.closest('[data-rmexp]');if(rx){edExp=edExp.filter(x=>x.id!==rx.dataset.rmexp);renderCost();return}
   const rp=t.closest('[data-rmpend]');if(rp){const p=bossPending.splice(+rp.dataset.rmpend,1)[0];if(p)URL.revokeObjectURL(p.url);renderBossPending();return}
@@ -2355,7 +2369,7 @@ $('f-unit').addEventListener('change',()=>{edUnitTouched=true});
 $('pay-full').onclick=()=>{$('f-paid').value=$('f-price').value||'';updateRest()};
 $('del-box').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;
   if(b.dataset.del==='ask')renderDelete(true);else if(b.dataset.del==='no')renderDelete(false);else delOrder();});
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(csSel){csClose(true);return}if(dpEl){dpClose();return}if(!$('xed').hidden){closeX();return}if(!$('ped').hidden){closeP();return}if(!$('qed').hidden){closeQ();return}if(!$('copy-lb').hidden){$('copy-lb').hidden=true;return}if(!$('lb').hidden){$('lb').hidden=true;$('lb-body').innerHTML='';return}if(!$('ed').hidden)closeEditor()});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(csSel){csClose(true);return}if(dpEl){dpClose();return}if(!$('xed').hidden){closeX();return}if(!$('ped').hidden){closeP();return}if(!$('qed').hidden){closeQ();return}if(!$('copy-lb').hidden){$('copy-lb').hidden=true;return}if(!$('lb').hidden){closeViewer();return}if(!$('ed').hidden)closeEditor()});
 let qt;$('q').addEventListener('input',e=>{clearTimeout(qt);qt=setTimeout(()=>{view.q=e.target.value.trim();render()},120)});
 $('list').addEventListener('change',e=>{const s=e.target.closest('select.st');if(s)quickStatus(s.dataset.id,s.value)});
 $('list').addEventListener('click',e=>{if(e.target.closest('select,.cs-btn'))return;const r=e.target.closest('.row.item');if(r)openEditor(r.dataset.id)});
@@ -2367,7 +2381,7 @@ $('cal-today').onclick=()=>{selDay=todayStr();const n=new Date();calY=n.getFullY
 // задачи от начальства
 $('boss-add-btn').onclick=()=>{const f=$('boss-form');f.hidden=!f.hidden;$('b-err').hidden=true;if(!f.hidden){if(!$('b-from').value)setDM($('b-from'),todayStr());$('b-title').focus()}};
 maskDM($('b-from'));maskDM($('b-to'));maskDM($('f-received'));maskDM($('x-date'));maskDM($('p-start'));maskDM($('p-launch'));maskDM($('pe-date'));maskDM($('f-dfrom'));maskDM($('f-deadline'));
-function renderBossPending(){$('b-files').innerHTML=bossPending.map((p,i)=>`<span class="file"><button class="fv" type="button" data-view="${esc(p.url)}" data-vtype="${esc(p.file.type)}" data-vname="${esc(p.file.name)}">${p.file.type.startsWith('image/')?`<img src="${esc(p.url)}" alt="${esc(p.file.name)}">`:(p.file.type.includes('pdf')?'PDF':'ВИДЕО')}</button><button class="rm" type="button" data-rmpend="${i}" aria-label="Убрать ${esc(p.file.name)}">×</button></span>`).join('')}
+function renderBossPending(){$('b-files').innerHTML=bossPending.map((p,i)=>`<span class="file"><button class="fv" type="button" data-view="${esc(p.url)}" data-vtype="${esc(p.file.type)}" data-vname="${esc(p.file.name)}" data-vpend="${i}">${p.file.type.startsWith('image/')?`<img src="${esc(p.url)}" alt="${esc(p.file.name)}">`:(p.file.type.includes('pdf')?'PDF':is3dName(p.file.name)?ext3d(p.file):'ВИДЕО')}</button></span>`).join('')}
 function pickFiles(target){fileTarget=target;const fi=$('file-in');fi.value='';fi.click()}
 $('b-attach').onclick=()=>pickFiles({kind:'boss-new'});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-oattach]');if(b)pickFiles({kind:'order',fk:b.dataset.oattach})});
