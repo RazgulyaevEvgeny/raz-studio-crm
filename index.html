@@ -234,6 +234,7 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .bday.sel{box-shadow:inset 0 0 0 2.5px var(--blue)}
 .ev{display:block;font:600 11.5px/1.3 var(--f);padding:3px 7px;border-radius:7px;background:color-mix(in srgb,var(--sc) 13%,transparent);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:3px solid var(--sc)}
 .ev.done{opacity:.5;text-decoration:line-through}
+.ev.due{background:color-mix(in srgb,var(--sc) 26%,transparent)}
 .more{font:600 11.5px var(--f);color:var(--muted);padding-left:4px}
 @media(max-width:760px){
   .bday{min-height:58px;padding:5px;align-items:center}
@@ -337,6 +338,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .icb:hover{background:var(--tile);color:var(--blue)}
 .icb svg{width:17px;height:17px}
 @media(max-width:520px){.task.boss{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"tt tt tt" "st at dl"}.task.boss .tt{grid-area:tt}.task.boss .tstat-w{grid-area:st;justify-self:start}}
+.tasks{container-type:inline-size}
+@container (max-width:440px){.task.boss{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"tt tt tt" "st at dl"}.task.boss .tt{grid-area:tt}.task.boss .tstat-w{grid-area:st;justify-self:start}}
 .tcm{grid-column:1/-1;display:flex;flex-direction:column;gap:8px}
 .tdesc{margin:0;font-size:13.5px;color:var(--ink);white-space:pre-wrap;background:var(--tile);border-radius:12px;padding:8px 12px}
 .cm-tog{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--f);color:var(--muted);padding:4px 0}
@@ -699,7 +702,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   <!-- КАЛЕНДАРЬ -->
   <section id="p-calendar" class="page" style="gap:16px" hidden>
     <div class="ph">
-      <div><h1>Календарь</h1><p>Сроки заказов, задачи студии и поручения от начальства.</p></div>
+      <div><h1>Календарь</h1><p>Заказы и задачи видны в каждый день своего срока. Яркая плашка: день сдачи.</p></div>
     </div>
     <div class="cal-page">
       <div class="big">
@@ -721,7 +724,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         </form>
         <h3>Задачи</h3>
         <div class="tasks" id="dp-tasks"></div>
-        <h3>Сдать заказы</h3>
+        <h3>Заказы в работе</h3>
         <div class="mini" id="dp-orders"></div>
       </aside>
     </div>
@@ -1136,9 +1139,30 @@ function drawSpark(svg,vals,key){
 }
 
 /* ---------- данные по дням ---------- */
+/* заказ или задача считаются активными в каждый день своего срока;
+   просроченные и незавершённые висят ещё и на сегодня */
+const ACTIVE_ST=new Set(['design','prod']);
+function orderOn(o,day){
+  if(CLOSED.has(o.status))return false;
+  const t=todayStr(),rec=o.receivedAt||(o.createdAt?ds(new Date(o.createdAt)):'');
+  if(o.deadline){
+    let st=o.deadlineFrom||rec||o.deadline;if(st>o.deadline)st=o.deadline;
+    if(day>=st&&day<=o.deadline)return true;
+    return day===t&&o.deadline<t;
+  }
+  if(ACTIVE_ST.has(o.status))return day<=t&&(!rec||day>=rec);
+  return false;
+}
+function taskOn(t,day){
+  if(!t.date)return false;
+  let st=t.dateFrom||t.date;if(st>t.date)st=t.date;
+  if(day>=st&&day<=t.date)return true;
+  return !t.done&&day===todayStr()&&t.date<day;
+}
+const isDueDay=(x,day)=>x.date===day||x.deadline===day;
 function itemsOn(day){
-  const os=orders.filter(o=>o.deadline===day&&!CLOSED.has(o.status));
-  const ts=tasks.filter(t=>t.date===day).sort((a,b)=>(a.done-b.done)||String(a.time||'').localeCompare(String(b.time||'')));
+  const os=orders.filter(o=>orderOn(o,day)).sort((a,b)=>(b.deadline===day)-(a.deadline===day)||String(a.deadline||'9').localeCompare(String(b.deadline||'9')));
+  const ts=tasks.filter(t=>taskOn(t,day)).sort((a,b)=>(a.done-b.done)||((b.date===day)-(a.date===day))||String(a.time||'').localeCompare(String(b.time||'')));
   return {os,ts};
 }
 function dayMarks(day){
@@ -1151,7 +1175,7 @@ function dayMarks(day){
 /* ---------- фильтры ведомости ---------- */
 function matches(o){
   if(view.svc!=='all'&&o.service!==view.svc)return false;
-  if(view.day&&o.deadline!==view.day)return false;
+  if(view.day&&!orderOn(o,view.day))return false;
   const f=view.f;
   if(f==='active'&&CLOSED.has(o.status))return false;
   if(f==='overdue'&&!isOverdue(o))return false;
@@ -1324,12 +1348,12 @@ function renderCalendar(){
   for(let i=0;i<42;i++){
     const d=new Date(start);d.setDate(start.getDate()+i);const k=ds(d);if(i===35&&d.getMonth()!==calM)break;
     const {os,ts}=itemsOn(k);
-    const ev=[...ts.map(x=>({t:(x.time?x.time+' ':'')+x.title,c:taskLate(x)?'--danger':x.kind==='boss'?'--boss':'--task',done:x.done})),
-              ...os.map(o=>({t:o.client,c:isOverdue(o)?'--danger':'--blue'}))];
+    const ev=[...ts.map(x=>({t:(x.time?x.time+' ':'')+x.title,c:taskLate(x)?'--danger':x.kind==='boss'?'--boss':'--task',done:x.done,due:x.date===k})),
+              ...os.map(o=>({t:o.client,c:isOverdue(o)?'--danger':'--blue',due:o.deadline===k}))];
     const mk=dayMarks(k);
     h+=`<button type="button" class="bday${d.getMonth()!==calM?' out':''}${k===t?' today':''}${k===selDay?' sel':''}" data-bday="${k}" aria-label="${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${ev.length?', записей: '+ev.length:''}">
       <span class="dn">${d.getDate()}</span>
-      ${ev.slice(0,3).map(e=>`<span class="ev${e.done?' done':''}" style="--sc:var(${e.c})">${esc(e.t)}</span>`).join('')}${ev.length>3?`<span class="more">ещё ${ev.length-3}</span>`:''}
+      ${ev.slice(0,3).map(e=>`<span class="ev${e.done?' done':''}${e.due?' due':''}" style="--sc:var(${e.c})">${esc(e.t)}</span>`).join('')}${ev.length>3?`<span class="more">ещё ${ev.length-3}</span>`:''}
       ${mk.length?`<span class="mk">${mk.slice(0,3).map(c=>`<i style="--sc:var(${c})"></i>`).join('')}</span>`:''}</button>`;
   }
   $('big-grid').innerHTML=h;
@@ -1339,7 +1363,7 @@ function renderCalendar(){
   $('dp-sub').textContent=WD_FULL[dd.getDay()]+(n===0?', сегодня':n===1?', завтра':n===-1?', вчера':'');
   const {os,ts}=itemsOn(selDay);
   $('dp-tasks').innerHTML=ts.length?ts.map(taskRow).join(''):`<div class="w-empty">Задач на этот день нет.</div>`;
-  $('dp-orders').innerHTML=os.length?os.map(orderMini).join(''):`<div class="w-empty">Заказов со сроком на этот день нет.</div>`;
+  $('dp-orders').innerHTML=os.length?os.map(orderMini).join(''):`<div class="w-empty">Заказов в работе на этот день нет.</div>`;
   $('task-form').hidden=!canWrite;
 }
 function render(){
