@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261012184313">
+<meta name="app-build" content="20261012184653">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -158,9 +158,9 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .sep{width:1.5px;height:22px;border-radius:2px;background:var(--tile-2);margin:0 4px;flex:none}
 @media(max-width:640px){
   .selwrap{flex:1 1 100%}
-  .chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-12px;padding-inline:12px;
-    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 28px),transparent)}
-  .chips::-webkit-scrollbar{display:none}
+  .chips{flex-wrap:wrap;gap:6px}
+  .chips .chip{min-height:34px;padding:0 11px;font-size:13px;gap:6px}
+  .chips .sep{display:none}
 }
 .chip{flex:none;display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 14px;border-radius:999px;background:var(--tile);font:600 13.5px var(--f);white-space:nowrap}
 .chip:hover{background:var(--tile-2)}
@@ -382,7 +382,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .cm span{white-space:pre-wrap;overflow-wrap:anywhere}
 .cm-add{display:flex;gap:8px;align-items:flex-end}
 .cm-add textarea{flex:1;min-width:0;border:0;background:var(--tile);border-radius:12px;padding:10px 12px;resize:vertical;font:inherit;min-height:44px}
-.who-pill{background:transparent!important;box-shadow:inset 0 0 0 2px var(--line);color:var(--muted)!important;cursor:default}
+.who-pill{gap:0!important;background:transparent!important;box-shadow:inset 0 0 0 2px var(--line);color:var(--muted)!important;cursor:default}
 .blegend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
 .blegend span{display:flex;align-items:center;gap:6px}.blegend i{width:8px;height:8px;border-radius:50%;background:var(--sc)}
 /* файлы */
@@ -490,7 +490,23 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .stat small.net{max-width:none;margin-top:6px}
 .stat small.net:empty{display:none}
 .kpi small{white-space:normal}
-@media(max-width:860px){.nav .pills{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}.nav .pills::-webkit-scrollbar{display:none}.nav .pill{flex:none}}
+/* мобильная шапка: разделы переносятся рядами, имя и «Выйти» справа от логотипа */
+.ls{display:none}
+@media(max-width:860px){
+  .nav{position:relative;gap:12px}
+  .nav .pills{width:100%;flex-wrap:wrap;gap:6px}
+  .nav .pill{flex:1 1 auto;justify-content:center;min-height:40px;padding:0 12px;font-size:13.5px;gap:6px}
+  .nav .who-pill,.nav .logout{position:absolute;top:calc((clamp(44px,8vw,58px) - 36px)/2);min-height:36px;flex:none;font-size:13px;padding:0 12px}
+  .nav .logout{right:0}
+  .nav .pill .lf{display:none}.nav .pill .ls{display:inline}
+  .nav .who-pill{right:80px;max-width:calc(100% - 250px);overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:600px){
+  .lf{display:none}.ls{display:inline}
+  .nav .who-pill .wt{display:none}
+  .ph .btns .btn.primary{display:none}
+  .ph .btns:not(:has(.btn:not(.primary))){display:none}
+}
 /* проекты */
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
 .pcard{background:var(--tile);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px;text-align:left;cursor:pointer;min-width:0}
@@ -608,7 +624,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <button class="pill on" type="button" data-go="home">Главная <span class="n req" id="n-req" hidden title="Новые заявки с сайта">0</span></button>
       <button class="pill" type="button" data-go="orders">Ведомость <span class="n" id="n-all">0</span></button>
       <button class="pill" type="button" data-go="calendar">Календарь <span class="n hot" id="n-late" hidden>0</span></button>
-      <button class="pill" type="button" data-go="office">Расходы офиса</button>
+      <button class="pill" type="button" data-go="office"><span class="lf">Расходы офиса</span><span class="ls">Расходы</span></button>
       <button class="pill" type="button" data-go="supplies">Закупки</button>
       <button class="pill" type="button" data-go="projects">Проекты</button>
       <button class="pill" type="button" data-go="prices">Прайс</button>
@@ -784,7 +800,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     </div>
     <div class="tabs" role="tablist">
       <button class="tab" type="button" role="tab" id="tab-main" aria-selected="true" data-tab="main">Заказ</button>
-      <button class="tab" type="button" role="tab" id="tab-cost" aria-selected="false" data-tab="cost">Сколько мы потратили <em id="tab-cost-n"></em></button>
+      <button class="tab" type="button" role="tab" id="tab-cost" aria-selected="false" data-tab="cost"><span class="lf">Сколько мы потратили</span><span class="ls">Расходы</span> <em id="tab-cost-n"></em></button>
       <button class="tab" type="button" role="tab" id="tab-kaspi" aria-selected="false" data-tab="kaspi">Kaspi</button>
     </div>
     <div class="ed-body" id="pane-main">

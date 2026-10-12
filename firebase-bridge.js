@@ -64,7 +64,7 @@
     const pills = document.querySelector('.pills');
     if (!pills || document.getElementById('logout-btn')) return;
     const r = window.APP_ROLE || {};
-    if (r.name) { const w = document.createElement('span'); w.className = 'pill who-pill'; w.textContent = r.name + (r.title ? ', ' + r.title : ''); pills.appendChild(w); }
+    if (r.name) { const w = document.createElement('span'); w.className = 'pill who-pill'; w.textContent = r.name; if (r.title) { const t = document.createElement('span'); t.className = 'wt'; t.textContent = ', ' + r.title; w.appendChild(t); } w.title = r.name + (r.title ? ', ' + r.title : ''); pills.appendChild(w); }
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'pill logout'; b.id = 'logout-btn';
     b.textContent = 'Выйти'; b.title = user.email || '';
