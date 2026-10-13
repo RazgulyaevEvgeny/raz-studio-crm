@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013120222">
+<meta name="app-build" content="20261013120758">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -335,6 +335,11 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .oc-out{font-size:12.5px;color:var(--muted)}.oc-out b{color:var(--ink)}
 .oc-res{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px;font-size:12.5px;color:var(--muted)}
 .oc-res b{font:800 16px var(--f);color:var(--ink)}
+.exp.ic{grid-template-columns:minmax(0,1fr) 110px 96px;padding:6px 10px 6px 14px}
+.exp.ic b{display:flex;flex-direction:column;min-width:0}
+.exp.ic b small{font:500 12px var(--fb);color:var(--muted)}
+.exp.ic .ic-in input{border:0;background:var(--paper);border-radius:10px;min-height:36px;padding:0 26px 0 10px;width:100%;min-width:0}
+.exp.ic>span{text-align:right}
 .dates-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px;align-items:start}
 .dates-row .range input{max-width:none;flex:1 1 0;min-width:0}
 .climenu .oi-src{font:600 11px var(--f);padding:2px 7px;border-radius:999px;background:var(--tile);color:var(--muted);margin-left:6px;white-space:nowrap}
@@ -348,6 +353,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
   .oi .ot small{font-size:11.5px}
   .oi-tot{font-size:12.5px}.oi-tot b{font-size:16px}
   .dates-row{grid-template-columns:minmax(0,1fr);gap:10px}
+  .exp.ic{grid-template-columns:minmax(0,1fr) 90px 78px;padding:5px 8px 5px 11px;gap:6px}
+  .exp.ic b{font-size:13px}
 }
 /* аналитика */
 .an-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
@@ -1245,7 +1252,9 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="ed-body" id="pane-cost" hidden>
       <div class="pnl"><div><small>Сумма заказа</small><b id="c-price">0 ₸</b></div><div><small>Потратили</small><b id="c-cost">0 ₸</b></div><div><small>Прибыль</small><b id="c-profit">0 ₸</b></div></div>
       <div class="meta" id="c-margin"></div>
-      <div class="fld"><span class="lb">Статьи расходов</span><div class="exps" id="exps"></div></div>
+      <div class="fld" id="ic-w" hidden><span class="lb">Себестоимость позиций — считается сама</span><div class="exps" id="ic-list"></div>
+        <span class="hint">Берётся из прайса. Можно поправить цену за единицу прямо здесь.</span></div>
+      <div class="fld"><span class="lb">Другие расходы</span><div class="exps" id="exps"></div></div>
       <div class="exp-add" id="exp-add">
         <input id="e-title" data-sugg="exp-dl" placeholder="Статья: плёнка, пластик, доставка" autocomplete="off" aria-label="Статья расхода">
         <div class="suffix"><input id="e-amount" type="number" min="0" step="1" inputmode="numeric" placeholder="Сумма" aria-label="Сумма расхода"><span>₸</span></div>
@@ -1398,6 +1407,8 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="fld"><label for="q-price">Цена *</label><div class="suffix"><input id="q-price" type="number" min="0" step="1" inputmode="numeric"><span>₸</span></div></div>
         <div class="fld"><label for="q-unit">За что</label><input id="q-unit" data-sugg="units-dl" autocomplete="off" placeholder="шт"></div>
       </div>
+      <div class="fld" id="q-cost-w"><label for="q-cost">Себестоимость за единицу</label><div class="suffix"><input id="q-cost" type="number" min="0" step="any" inputmode="decimal" placeholder="Сколько тратим на 1 шт"><span>₸</span></div>
+        <span class="hint">Подставится в заказ во вкладку «Сколько мы потратили».</span></div>
       <datalist id="units-dl"><option value="шт"><option value="м²"><option value="пог. м"><option value="см²"><option value="лист A4"><option value="лист A3"><option value="принт"><option value="1000 стежков"><option value="заказ"><option value="час"></datalist>
       <div class="calc" id="q-calc" hidden>
         <b style="font:700 14px var(--f)">Расчёт цены за погонный метр</b>
@@ -1479,6 +1490,8 @@ const LEDGERS={
 let prices=[],pricesLoaded=false,prMode='studio',prSvc='all',prQ='',qEditing=null,qSvc='vinyl',qTiers=[];
 const KASPI_FEE=0.30;
 const qCost=x=>(+x.mat||0)+(+x.work||0)+(+x.extra||0);
+/* себестоимость единицы по прайсу: поле cost, расчёт винила или старые поля mat/work/extra */
+const unitCostOf=x=>!x?0:x.calc?calcCost(x.calc):x.cost!=null&&x.cost!==''?+x.cost:qCost(x);
 const mkPct=(price,cost)=>cost>0?Math.round((price-cost)/cost*100):null;
 const mkColor=m=>m===null?'--muted':m<50?'--danger':m<100?'--st-prod':'--ok';
 const priceTxt=x=>+x.price===0?'Бесплатно':(x.from?'от ':'')+money(x.price);
@@ -1567,7 +1580,8 @@ function kaspiSum(lines,fee){
   const rev=(lines||[]).reduce((s,l)=>s+(+l.price||0)*(+l.qty||0),0),cost=(lines||[]).reduce((s,l)=>s+(+l.cost||0)*(+l.qty||0),0),com=rev*(+fee||0)/100;
   return {rev,cost,com,total:cost+com,profit:rev-cost-com,n:(lines||[]).reduce((s,l)=>s+(+l.qty||0),0)};
 }
-const costOf=o=>(o.expenses||[]).reduce((s,e)=>s+(+e.amount||0),0)+((o.kaspi||[]).length?kaspiSum(o.kaspi,kaspiFeeOf(o)).total:0);
+const itemsCost=list=>(list||[]).reduce((s,i)=>s+(+i.cost||0)*(+i.qty||0),0);
+const costOf=o=>(o.expenses||[]).reduce((s,e)=>s+(+e.amount||0),0)+itemsCost(o.items)+((o.kaspi||[]).length?kaspiSum(o.kaspi,kaspiFeeOf(o)).total:0);
 const uid=()=>Math.random().toString(36).slice(2,10);
 /* дд.мм -> ГГГГ-ММ-ДД, год текущий */
 function parseDM(v,minIso){
@@ -1885,7 +1899,7 @@ function renderOrders(){
       <div class="cell c-svc"><b>${esc(svcLabel(o.service,o))}${esc(qty)}</b><small>${esc(itemsText(o)||o.desc||'')}</small></div>
       <div class="cell due"><b class="${due.cls}">${o.deadline?fmtRange(o.deadlineFrom,o.deadline):'—'}</b><small class="${due.cls}">${due.txt}</small></div>
       <div class="c-status"><span class="st-w" style="--sc:var(${s.c})"><select class="st" data-id="${esc(o.id)}" aria-label="Статус заказа №${o.num}" ${canWrite?'':'disabled'}>${STATUSES.map(x=>`<option value="${x.id}" data-c="${x.c}"${x.id===s.id?' selected':''}>${x.label}</option>`).join('')}</select></span></div>
-      <div class="cell money"><b>${o.price?money(o.price):'—'}</b>${pay}${(o.expenses||[]).length||(o.kaspi||[]).length?`<small>прибыль ${money((+o.price||0)-costOf(o))}</small>`:''}</div>
+      <div class="cell money"><b>${o.price?money(o.price):'—'}</b>${pay}${(o.expenses||[]).length||(o.kaspi||[]).length||itemsCost(o.items)?`<small>прибыль ${money((+o.price||0)-costOf(o))}</small>`:''}</div>
     </div>`;
   }).join('');
 }
@@ -2109,7 +2123,7 @@ function renderPrices(){
       return `<button type="button" class="prow item" data-qopen="${esc(x.id)}">
         <div class="cell c-n"><b>${esc(x.name)}${x.hidden&&!client?'<span class="hid">скрыто</span>':''}</b>${x.desc?`<small style="white-space:normal">${esc(x.desc)}</small>`:''}</div>
         <div class="unit">${esc(x.unit||'шт')}</div>
-        <div class="pr"><b>${x.calc?'от '+money(calcMin(x.calc)):priceTxt(x)}</b>${x.calc?`<small>плёнка ${x.calc.vinyl.map(money).join(' / ')} + монтажная ${x.calc.mount.map(money).join(' / ')}, наценка ${x.calc.markup}%</small>`:''}${tiers.map(t=>`<small>при заказе от ${t.qty} шт: ${money(t.price)}</small>`).join('')}</div>
+        <div class="pr"><b>${x.calc?'от '+money(calcMin(x.calc)):priceTxt(x)}</b>${!client&&!x.calc&&unitCostOf(x)?`<small>себестоимость ${money(unitCostOf(x))}</small>`:''}${x.calc?`<small>плёнка ${x.calc.vinyl.map(money).join(' / ')} + монтажная ${x.calc.mount.map(money).join(' / ')}, наценка ${x.calc.markup}%</small>`:''}${tiers.map(t=>`<small>при заказе от ${t.qty} шт: ${money(t.price)}</small>`).join('')}</div>
       </button>`}).join('')}</section>`).join('');
 }
 function prText(){
@@ -2128,7 +2142,8 @@ function openQ(id){
 
   $('q-hidden').checked=!!x.hidden;$('q-notes').value=x.notes||'';
   qTiers=(x.tiers||[]).filter(t=>t.qty&&t.price!=null).map(t=>({qty:t.qty,price:t.price}));renderQTiers();
-  qCalc=x.calc?{...x.calc}:null;$('q-calc').hidden=!qCalc;
+  qCalc=x.calc?{...x.calc}:null;$('q-calc').hidden=!qCalc;$('q-cost-w').hidden=!!qCalc;
+  $('q-cost').value=x.calc?'':(x.cost!=null&&x.cost!==''?x.cost:(qCost(x)||''));
   if(qCalc){$('qc-v').value=qCalc.vinyl.join(', ');$('qc-m').value=qCalc.mount.join(', ');$('qc-mk').value=qCalc.markup;$('qc-roll').value=qCalc.roll||126;qcRes()}
   $('q-meta').textContent=x.updatedAt?'Цена обновлена '+new Date(x.updatedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}):'';
   $('q-err').hidden=true;renderQDel(false);
@@ -2155,7 +2170,7 @@ async function saveQ(e){
   const n=v=>v===''?null:Math.max(0,+v);
   readQTiers();
   const d={svc:qSvc,name,desc:$('q-desc').value.trim(),price,unit:$('q-unit').value.trim()||'шт',from:$('q-from').checked,
-    ...(qCalc&&readQCalc()?{calc:readQCalc(),price:calcMin(readQCalc())}:{}),
+    ...(qCalc&&readQCalc()?{calc:readQCalc(),price:calcMin(readQCalc())}:{cost:$('q-cost').value===''?null:Math.max(0,+$('q-cost').value)}),
     tiers:qTiers.filter(t=>+t.qty>1&&$('q-tiers')&&t.price!==''&&+t.price>=0).map(t=>({qty:+t.qty,price:+t.price})).sort((a,b)=>a.qty-b.qty),
     hidden:$('q-hidden').checked,notes:$('q-notes').value.trim(),updatedAt:Date.now()};
   const btn=$('q-save');btn.disabled=true;
@@ -2290,14 +2305,24 @@ function renderOrderFiles(){
 }
 function renderCost(){
   const ks=edK.length?kaspiSum(edK,kFee()):null;
-  const price=+$('f-price').value||0,cost=edExp.reduce((s,e)=>s+(+e.amount||0),0)+(ks?ks.total:0),profit=price-cost;
+  const ic=itemsCost(edItems);
+  const price=+$('f-price').value||0,cost=edExp.reduce((s,e)=>s+(+e.amount||0),0)+ic+(ks?ks.total:0),profit=price-cost;
+  renderItemCosts();
   $('c-price').textContent=money(price);$('c-cost').textContent=money(cost);
   const pe=$('c-profit');pe.textContent=money(profit);pe.className=price||cost?(profit>=0?'pos':'neg'):'';
   $('c-margin').textContent=(price?`Рентабельность ${Math.round(profit/price*100)}% от суммы заказа.`:'Впишите сумму заказа на вкладке «Заказ», чтобы посчитать прибыль.')+(ks?` В «Потратили» входит себестоимость и комиссия Kaspi: ${money(ks.total)}.`:'');
   $('exps').innerHTML=edExp.length?edExp.map(e=>`<div class="exp"><b>${esc(e.title)}</b><span>${money(e.amount)}</span>${canWrite?`<button class="tdel" type="button" data-rmexp="${esc(e.id)}" aria-label="Убрать статью ${esc(e.title)}">×</button>`:'<span></span>'}</div>`).join(''):`<div class="w-empty" style="background:var(--tile)">Расходов пока нет. Добавьте статью и сумму ниже.</div>`;
-  $('tab-cost-n').textContent=edExp.length?`(${money(edExp.reduce((s,e)=>s+(+e.amount||0),0))})`:'';
+  $('tab-cost-n').textContent=edExp.length||ic?`(${money(edExp.reduce((s,e)=>s+(+e.amount||0),0)+ic)})`:'';
   renderOrderFiles();
   $('exp-add').hidden=!canWrite;
+}
+function renderItemCosts(){
+  const w=$('ic-w');if(!w)return;w.hidden=!edItems.length;if(!edItems.length)return;
+  const L=$('ic-list'),ae=document.activeElement,keep=ae&&ae.dataset&&ae.dataset.icost;
+  if(keep&&L.contains(ae)){L.querySelectorAll('[data-icsum]').forEach(el=>{const i=edItems.find(x=>x.id===el.dataset.icsum);if(i)el.textContent=money((+i.cost||0)*(+i.qty||0))});return}
+  L.innerHTML=edItems.map(i=>`<div class="exp ic"><b>${esc(i.name)}<small>${fmtQty(i.qty)} ${esc(i.unit||'шт')} ×</small></b>
+    <div class="suffix ic-in"><input type="number" min="0" step="any" inputmode="decimal" data-icost="${esc(i.id)}" value="${i.cost!=null&&i.cost!==''?esc(i.cost):''}" placeholder="0" aria-label="Себестоимость за единицу: ${esc(i.name)}" ${canWrite?'':'disabled'}><span>₸</span></div>
+    <span data-icsum="${esc(i.id)}">${money((+i.cost||0)*(+i.qty||0))}</span></div>`).join('');
 }
 function updateRest(){
   const price=+$('f-price').value||0,paid=+$('f-paid').value||0,rest=Math.max(0,price-paid);
@@ -2549,6 +2574,7 @@ async function importPendingReq(){
   }
 }
 /* прайс DTF (13.10): добавляется один раз, при входе руководителя */
+const PRICE_COSTS_3={"dtf-a3": 1500, "dtf-a4": 850, "dtf-a5": 470, "dtf-a6": 210, "dtf-transfer": 0, "dtf-prep": 0, "dtf-fix": 0, "dtf-logo": 0};
 const PENDING_PRICES_2=[{"id": "emb-base", "svc": "embroidery", "name": "Вышивка", "desc": "Цена зависит от сложности и размера, в заказе вписывается вручную", "price": 4000, "unit": "шт", "from": true, "hidden": false, "notes": "", "tiers": [], "order": 1100}, {"id": "p3d-hour", "svc": "print3d", "name": "3D-печать своей модели", "desc": "Печать модели клиента, оплата за час работы принтера", "price": 1000, "unit": "час", "from": true, "hidden": false, "notes": "", "tiers": [], "order": 1110}, {"id": "vinyl-calc", "svc": "vinyl", "name": "Винил с монтажной плёнкой", "desc": "Плёнка винил + монтажная плёнка, цена за погонный метр", "price": 11200, "unit": "пог. м", "from": true, "hidden": false, "notes": "Себестоимость: винил 1 600 или 3 400 ₸, монтажная 1 600 или 2 400 ₸ за пог. м; наценка 250%", "tiers": [], "order": 1120, "calc": {"vinyl": [1600, 3400], "mount": [1600, 2400], "markup": 250, "roll": 126}}];
 const PENDING_PRICES=[{"id": "dtf-a3", "svc": "dtf", "name": "DTF-печать A3", "desc": "27×37 см. Нанесение 2 частей макета входит в цену", "price": 4500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 3500}], "order": 1000}, {"id": "dtf-a4", "svc": "dtf", "name": "DTF-печать A4", "desc": "21×27 см. Нанесение 2 частей макета входит в цену", "price": 3500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 2500}], "order": 1001}, {"id": "dtf-a5", "svc": "dtf", "name": "DTF-печать A5", "desc": "21×15 см. Нанесение 2 частей макета входит в цену", "price": 2500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 1500}], "order": 1002}, {"id": "dtf-a6", "svc": "dtf", "name": "DTF-печать A6", "desc": "10×14 см. Нанесение 2 частей макета входит в цену", "price": 1500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 900}], "order": 1003}, {"id": "dtf-transfer", "svc": "dtf", "name": "Перенос DTF-наклейки", "desc": "Нанесение готовой наклейки на изделие", "price": 500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 250}], "order": 1004}, {"id": "dtf-prep", "svc": "dtf", "name": "Подготовка макета", "desc": "Удаление фона, изменение размера, раскладка изображений на печатный лист", "price": 0, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [], "order": 1005}, {"id": "dtf-fix", "svc": "dtf", "name": "Корректировка макета", "desc": "Цвет букв, трассировка, добавление текста и т.д.", "price": 2500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 1000}], "order": 1006}, {"id": "dtf-logo", "svc": "dtf", "name": "Разработка логотипа", "desc": "Разработка логотипа и фирменных элементов", "price": 10000, "unit": "шт", "from": true, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [], "order": 1007}];
 let pendingPricesDone=false;
@@ -2560,10 +2586,13 @@ async function importPendingPrices(){
     for(const it of list){
       const {id,...d}=it;
       if(prices.some(x=>x.id===id||(x.svc===d.svc&&String(x.name||'').trim().toLowerCase()===d.name.toLowerCase())))continue;
-      try{await db.doc('prices/'+id).set({...d,createdAt:now,updatedAt:now})}catch(e){try{console.warn('price import',id,e)}catch(_){}}
+      try{await db.doc('prices/'+id).set({...d,...(PRICE_COSTS_3[id]!=null&&d.cost==null?{cost:PRICE_COSTS_3[id]}:{}),createdAt:now,updatedAt:now})}catch(e){try{console.warn('price import',id,e)}catch(_){}}
     }
     try{await db.doc('blobs/'+marker).set({done:true,at:now})}catch(_){}
   }
+  try{const mk=await db.doc('blobs/_import_costs_v3').get();if(!mk.exists){
+    for(const [id,c] of Object.entries(PRICE_COSTS_3)){const x=prices.find(y=>y.id===id);if(x&&(x.cost==null||x.cost==='')){try{await db.doc('prices/'+id).update({cost:c})}catch(_){}}}
+    await db.doc('blobs/_import_costs_v3').set({done:true,at:Date.now()})}}catch(_){}
 }
 async function rejectRequest(){
   if(!edReq)return;try{await db.doc('requests/'+edReq.id).update({status:'rejected',handledBy:ROLE().name||'',handledAt:Date.now()});closeEditor();toast('Заявка отклонена')}catch(er){showErr('f-err',handleWriteError(er))}
@@ -2589,9 +2618,12 @@ function addItem(){
   $('f-err').hidden=true;const prev=edAutoTotal();
   const sz=oiCalc&&+oiCalc.L&&+oiCalc.H?', '+fmtQty(oiCalc.L)+'×'+fmtQty(oiCalc.H)+' см'+((+oiCalc.N||1)>1?' × '+(+oiCalc.N)+' шт':''):'';
   const nm=oiCalc&&!/плёнка \d/.test(name)?name+' (плёнка '+money(oiCalc.v)+' + монтажная '+money(oiCalc.m)+sz+')':name;
-  const it={id:oiEditId||uid(),name:nm,price,qty,unit:$('oi-unit').textContent||'шт',...(oiPick?{pid:oiPick.pid}:{}),...(oiCalc?{calc:{v:+oiCalc.v,m:+oiCalc.m,markup:+oiCalc.markup,...(+oiCalc.L&&+oiCalc.H?{L:+oiCalc.L,H:+oiCalc.H,N:+oiCalc.N||1}:{})}}:{})};
+  const prevIt=oiEditId&&edItems.find(x=>x.id===oiEditId);
+  const pxCost=oiCalc?calcCost(oiCalc):oiPick?unitCostOf(prices.find(x=>x.id===oiPick.pid)||oiPick):null;
+  const cost=pxCost!=null?pxCost:prevIt&&prevIt.cost!=null?+prevIt.cost:null;
+  const it={id:oiEditId||uid(),name:nm,price,qty,unit:$('oi-unit').textContent||'шт',...(cost!=null?{cost}:{}),...(oiPick?{pid:oiPick.pid}:{}),...(oiCalc?{calc:{v:+oiCalc.v,m:+oiCalc.m,markup:+oiCalc.markup,...(+oiCalc.L&&+oiCalc.H?{L:+oiCalc.L,H:+oiCalc.H,N:+oiCalc.N||1}:{})}}:{})};
   const k=edItems.findIndex(x=>x.id===it.id);if(k>=0)edItems[k]=it;else edItems.push(it);
-  oiClear();kSyncPrice(prev);renderItems();$('oi-name').focus();return true;
+  oiClear();kSyncPrice(prev);renderItems();if(edTab==='cost')renderCost();$('oi-name').focus();return true;
 }
 function priceHint(){
   const h=$('f-price-hint');if(!h)return;const auto=edAutoTotal(),cur=$('f-price').value;
@@ -2729,7 +2761,7 @@ function formData(){
   return {
     client:$('f-client').value.trim(),phone:$('f-phone').value.trim(),service:edSvc,
     customService:edSvc==='other'?$('f-custom').value.trim():'',
-    items:edItems.map(i=>({id:i.id,name:i.name,price:+i.price||0,qty:+i.qty||0,unit:i.unit||'шт',...(i.pid?{pid:i.pid}:{}),...(i.calc?{calc:i.calc}:{})})),
+    items:edItems.map(i=>({id:i.id,name:i.name,price:+i.price||0,qty:+i.qty||0,unit:i.unit||'шт',...(i.cost!=null&&i.cost!==''?{cost:+i.cost}:{}),...(i.pid?{pid:i.pid}:{}),...(i.calc?{calc:i.calc}:{})})),
     unit:edItems.length?(edItems[0].unit||'шт'):(edOrig&&edOrig.unit||'шт'),
     expenses:edExp.map(e=>({id:e.id,title:e.title,amount:+e.amount||0})),files:edFiles,
     kaspi:edK.map(l=>({id:l.id,name:l.name,price:+l.price||0,qty:+l.qty||0,date:l.date||'',cost:+l.cost||0,src:l.src||''})),kaspiFee:kFee(),
@@ -2985,6 +3017,7 @@ $('cs-menu').addEventListener('click',e=>{const it=e.target.closest('[data-oipic
 $('oi-name').addEventListener('change',()=>{const n=$('oi-name').value.trim().toLowerCase();if(!n||$('oi-price').value!=='')return;const c=itemCatalog().find(x=>x.name.trim().toLowerCase()===n);if(c)oiApply({...c,name:$('oi-name').value.trim()})});
 $('oi-addbtn').addEventListener('click',()=>{addItem()});
 $('oi-qty').addEventListener('input',oiQtyChanged);
+$('ic-list').addEventListener('input',e=>{const el=e.target.closest('[data-icost]');if(!el)return;const i=edItems.find(x=>x.id===el.dataset.icost);if(!i)return;i.cost=el.value===''?null:Math.max(0,+el.value);renderCost()});
 $('oi-calc').addEventListener('input',e=>{const el=e.target.closest('[data-ocs]');if(!el||!oiCalc)return;oiCalc[el.dataset.ocs]=el.value===''?null:+el.value;ocSizeOut(true)});
 $('oi-calc').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.closest('[data-ocs]')){e.preventDefault();addItem()}});
 $('oi-calc').addEventListener('click',e=>{const b=e.target.closest('[data-oc]');if(!b||!oiCalc)return;oiCalc[b.dataset.oc]=+b.dataset.v;oiPriceTouched=false;$('oi-price').value=calcPrice(oiCalc);
