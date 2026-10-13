@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013122635">
+<meta name="app-build" content="20261013123536">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -132,6 +132,36 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .tform input::placeholder{color:#8a8ea8}
 .tform .acts{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .tform .err{grid-column:1/-1}
+/* «Сегодня» */
+.tday-w{display:flex;flex-direction:column;gap:6px}
+.tsub{display:flex;align-items:baseline;gap:6px;padding:4px 4px 0;font:700 12px var(--f);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.tsub:first-child{padding-top:0}
+.tsub em{font-style:normal;font-weight:600;letter-spacing:0}
+.tday{background:var(--paper);background:color-mix(in srgb,var(--sc) 9%,var(--paper));border-radius:14px;box-shadow:inset 3px 0 0 var(--sc);display:flex;flex-direction:column;min-width:0}
+.tday-h{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:6px 4px 6px 12px;min-height:46px}
+.tday .chk{width:24px;height:24px;background:var(--paper)}.tday .chk svg{width:12px;height:12px}
+.tday.done .chk{background:var(--ok);box-shadow:none;color:#fff}
+.tday-dot{width:24px;height:24px;display:grid;place-items:center}
+.tday-dot::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--dc);box-shadow:0 0 0 3px var(--paper)}
+.tday-t{display:flex;flex-direction:column;gap:1px;min-width:0;text-align:left;padding:0;cursor:pointer}
+.tday-t b{font:600 13.5px/1.3 var(--f);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tday-t small{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tday-t small .k{color:var(--sc);font-weight:700;filter:brightness(.85)}
+.tday-t small .late{color:var(--danger)}
+.tday.open .tday-t b{white-space:normal;overflow-wrap:anywhere}
+.tday.done .tday-t b{text-decoration:line-through;color:var(--muted)}
+.tday-i{display:flex;gap:8px;color:var(--muted);font:600 11.5px var(--f)}
+.tday-i span{display:inline-flex;align-items:center;gap:3px}.tday-i svg{width:13px;height:13px}
+.tday-x{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
+.tday-x:hover{background:var(--paper)}
+.tday-x .chev{width:16px;height:16px;transition:transform .2s}
+.tday.open .tday-x .chev{transform:rotate(180deg)}
+.tday-b{display:flex;flex-direction:column;gap:8px;padding:0 12px 12px 44px}
+.tday-m{font-size:12px;color:var(--muted)}.tday-m.late{color:var(--danger)}
+.tday-acts{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tday-b .tdesc{background:var(--paper)}
+.tday-b .files:empty{display:none}
+@media(max-width:600px){.tday-h{padding:5px 2px 5px 10px;gap:7px;min-height:42px}.tday-b{padding:0 10px 10px 10px}.tday-t b{font-size:13px}}
 .done-tog{align-self:flex-start;font:600 13px var(--f);color:var(--muted);padding:6px 4px}
 .done-tog:hover{color:var(--blue)}
 
@@ -658,7 +688,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 /* плотная раскладка главной */
 .pack{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:16px;align-items:stretch}
 .pcol{display:flex;flex-direction:column;gap:16px;min-width:0}
-.pcol>.w{flex:1 1 auto}
+.pcol>.w{flex:none}.pcol>.w.fill{flex:1 1 auto}
 .pack.m .pcol>.w{flex:none}
 /* прайс */
 .seg{display:inline-flex;background:var(--paper);border-radius:999px;padding:4px;gap:2px;flex:none}
@@ -1076,7 +1106,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         </div>
         <div class="w">
           <div class="w-h"><h2>Сегодня</h2><button class="go" type="button" data-go="calendar">Все дни</button></div>
-          <div class="mini" id="w-today"></div>
+          <div class="tday-w" id="w-today"></div>
         </div>
       </div>
     </div>
@@ -1784,7 +1814,7 @@ function orderMini(o){
     <span style="min-width:0;display:flex;flex-direction:column"><b>${esc(o.client)}</b><small>№ ${String(o.num||0).padStart(3,'0')}, ${esc(svcLabel(o.service,o))}${itemsText(o)||o.desc?', '+esc(itemsText(o)||o.desc):''}</small></span>
     <span class="r"><span class="dotlbl" style="--sc:var(${s.c})">${s.label}</span><small class="${due.cls}">${o.deadline?fmtRange(o.deadlineFrom,o.deadline)+', ':''}${due.txt}</small></span></button>`;
 }
-function bossRow(t){
+function bossParts(t){
   const st=BS[bossStatus(t)];const late=taskLate(t);
   const meta=[];
   if(t.date){const rng=t.dateFrom&&t.dateFrom!==t.date?'с '+fmtDate(t.dateFrom)+' по '+fmtDate(t.date):'до '+fmtDate(t.date);meta.push(rng+(t.done?'':', '+relWord(t.date)))}
@@ -1801,10 +1831,38 @@ function bossRow(t){
   </div>`;
   const sel=`<span class="tstat-w" style="--sc:var(${st.c})"><select class="tstat" data-tstat="${esc(t.id)}" aria-label="Статус задачи" ${canWrite?'':'disabled'}>${BSTAT.map(x=>`<option value="${x.id}" data-c="${x.c}"${x.id===st.id?' selected':''}>${x.label}</option>`).join('')}</select></span>`;
   const att=boss&&assets?`<button class="icb" type="button" data-tattach="${esc(t.id)}" aria-label="Прикрепить файл к задаче"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg></button>`:'<span></span>';
-  return `<div class="task boss${t.done?' done':''}" style="--sc:var(${st.c})">
-    <span class="tt"><b>${esc(t.title)}</b>${meta.length?`<small class="${late?'late':''}">${esc(meta.join(', '))}</small>`:''}</span>
-    ${sel}${att}${del}
-    <div class="files">${(t.files||[]).map(f=>fileTile(f,{rm:boss&&!!assets,owner:'t:'+t.id})).join('')}</div>${cmBox}</div>`;
+  const files=`<div class="files">${(t.files||[]).map(f=>fileTile(f,{rm:boss&&!!assets,owner:'t:'+t.id})).join('')}</div>`;
+  return {st,late,meta,del,cmBox,sel,att,files};
+}
+function bossRow(t){const b=bossParts(t);
+  return `<div class="task boss${t.done?' done':''}" style="--sc:var(${b.st.c})">
+    <span class="tt"><b>${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
+    ${b.sel}${b.att}${b.del}
+    ${b.files}${b.cmBox}</div>`;
+}
+/* задача в виджете «Сегодня»: компактная строка своего цвета, раскрывается по нажатию */
+const openToday=new Set();let todayAllOrders=false;const TODAY_LIM=5;
+const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+const CLIP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>';
+function todayTask(t){
+  const boss=t.kind==='boss',open=openToday.has(t.id),late=taskLate(t),b=boss?bossParts(t):null,id=esc(t.id);
+  const meta=boss?[b.st.label.toLowerCase(),t.date?(t.done?'до '+fmtDate(t.date):relWord(t.date)):'',t.who]:[t.time,t.who];
+  const nf=(t.files||[]).length,nc=(t.comments||[]).length;
+  const icons=(nc?`<span>${CM_ICON}${nc}</span>`:'')+(nf?`<span>${CLIP_ICON}${nf}</span>`:'');
+  const lead=boss?`<span class="tday-dot" style="--dc:var(${b.st.c})" title="${esc(b.st.label)}"></span>`
+    :`<button class="chk" type="button" data-tdone="${id}" aria-pressed="${!!t.done}" aria-label="${t.done?'Вернуть в работу':'Отметить выполненной'}" ${canWrite?'':'disabled'}>${CHECK}</button>`;
+  let body='';
+  if(open){
+    if(boss)body=`<div class="tday-b">${b.meta.length?`<small class="tday-m${b.late?' late':''}">${esc(b.meta.join(', '))}</small>`:''}<div class="tday-acts">${b.sel}${b.att}${b.del}</div>${nf?b.files:''}${b.cmBox}</div>`;
+    else{const del=!canWrite?'':askDel===t.id?`<button class="tdel ask" type="button" data-tdel="${id}" data-confirm="1">Удалить</button>`:`<button class="tdel" type="button" data-tdel="${id}" aria-label="Удалить задачу">×</button>`;
+      body=`<div class="tday-b">${t.desc?`<p class="tdesc">${esc(t.desc)}</p>`:''}${nf?`<div class="files">${t.files.map(f=>fileTile(f,{rm:false,owner:'t:'+t.id})).join('')}</div>`:''}<div class="tday-acts"><button class="linkbtn" type="button" data-cday="${esc(t.date||todayStr())}">Открыть в календаре</button><span style="flex:1"></span>${del}</div></div>`}
+  }
+  return `<div class="tday${open?' open':''}${t.done?' done':''}" style="--sc:var(${boss?'--boss':'--task'})">
+    <div class="tday-h">${lead}
+      <button type="button" class="tday-t" data-ttog="${id}" aria-expanded="${open}"><b>${esc(t.title)}</b><small><span class="k">${boss?'от начальства':'задача'}</span>${meta.filter(Boolean).map(x=>' · <span class="'+(late&&/просроч/.test(x)?'late':'')+'">'+esc(x)+'</span>').join('')}</small></button>
+      ${icons?`<span class="tday-i">${icons}</span>`:''}
+      <button type="button" class="tday-x" data-ttog="${id}" aria-expanded="${open}" aria-label="${open?'Свернуть задачу':'Подробнее о задаче'}">${CHEV}</button>
+    </div>${body}</div>`;
 }
 function taskRow(t){
   if(t.kind==='boss')return bossRow(t);
@@ -1873,9 +1931,14 @@ function renderHome(){
   // сегодня
   const {os,ts}=itemsOn(t);
   const lateO=orders.filter(isOverdue);
-  const parts=[...ts.map(taskRow),...os.map(orderMini)];
+  const tsOpen=ts.filter(x=>!x.done).length;
+  const parts=[];
+  if(ts.length)parts.push(`<div class="tsub"><span>Задачи</span><em>${tsOpen}${ts.length>tsOpen?' из '+ts.length:''}</em></div><div class="tasks">${ts.map(todayTask).join('')}</div>`);
+  if(os.length){const lim=todayAllOrders?os.length:TODAY_LIM;
+    parts.push(`<div class="tsub"><span>Заказы</span><em>${os.length}</em></div><div class="mini">${os.slice(0,lim).map(orderMini).join('')}</div>`
+      +(os.length>TODAY_LIM?`<button class="done-tog" type="button" data-todaymore>${todayAllOrders?'Свернуть':'Показать ещё '+(os.length-TODAY_LIM)}</button>`:''))}
   if(lateO.length)parts.push(`<button type="button" class="mrow" data-go="orders" data-f="overdue"><span style="min-width:0;display:flex;flex-direction:column"><b class="late">Просрочено заказов: ${lateO.length}</b><small>Открыть список в ведомости</small></span><span></span></button>`);
-  $('w-today').innerHTML=parts.length?`<div class="tasks">${parts.join('')}</div>`:`<div class="w-empty">На сегодня ни сроков, ни задач.</div>`;
+  $('w-today').innerHTML=parts.length?parts.join(''):`<div class="w-empty">На сегодня ни сроков, ни задач.</div>`;
 }
 function renderOrders(){
   const base=orders.filter(o=>(!view.day||o.deadline===view.day));
@@ -2098,7 +2161,7 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 /* ---------- раскладка главной ---------- */
 let packW=[];
 function initPack(){
-  packW=[$('w-req'),$('w-orders'),$('w-cal'),$('boss-list').closest('.w'),$('w-today').closest('.w'),$('w-projects'),$('w-office'),$('w-supplies')];
+  packW=[$('w-today').closest('.w'),$('w-orders'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);packW.forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
   document.querySelectorAll('#p-home .home-grid,#p-home .home-grid2').forEach(el=>el.remove());
 }
@@ -2111,6 +2174,9 @@ function packHome(){
   const hs=packW.map(x=>x.offsetHeight);
   const acc=Array(n).fill(0),assign=packW.map((_,i)=>{let k=acc.indexOf(Math.min(...acc));acc[k]+=hs[i]+16;return k});
   packW.forEach((x,i)=>{const col=cols[assign[i]];if(x.parentNode!==col||[...col.children].indexOf(x)!==packW.filter((_,j)=>j<i&&assign[j]===assign[i]).length)col.appendChild(x)});
+  /* нижний блок колонки дотягивается до соседних, только если разница небольшая: без больших пустот внутри блоков */
+  const gap=parseFloat(getComputedStyle(cols[0]).rowGap)||16,colH=cols.map(c=>[...c.children].reduce((s,x)=>s+x.offsetHeight,0)+gap*Math.max(0,c.children.length-1)),mx=Math.max(...colH);
+  cols.forEach((c,i)=>{[...c.children].forEach(x=>x.classList.remove('fill'));const l=c.lastElementChild;if(l&&n>1&&mx-colH[i]<=140)l.classList.add('fill')});
   pack.classList.remove('m');
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
@@ -3206,6 +3272,8 @@ document.addEventListener('click',e=>{
   const xn=t.closest('[data-xnew]');if(xn){openX(xn.dataset.xnew,'new');return}
   const xo=t.closest('[data-xopen]');if(xo){openX(xo.dataset.xkind,xo.dataset.xopen);return}
   const lc=t.closest('[data-lcat]');if(lc){lview[lc.dataset.lk].cat=lc.dataset.lcat;render();return}
+  const tg=t.closest('[data-ttog]');if(tg){const id=tg.dataset.ttog;openToday.has(id)?openToday.delete(id):openToday.add(id);render();return}
+  if(t.closest('[data-todaymore]')){todayAllOrders=!todayAllOrders;render();return}
   const cmt=t.closest('[data-cmtog]');if(cmt){const id=cmt.dataset.cmtog;openCm.has(id)?openCm.delete(id):openCm.add(id);render();setTimeout(()=>document.querySelector('[data-cmtext="'+CSS.escape(id)+'"]')?.focus(),0);return}
   const cma=t.closest('[data-cmadd]');if(cma){addComment(cma.dataset.cmadd);return}
   const plt=t.closest('[data-plt]');if(plt&&canWrite){xPlType=plt.dataset.plt;renderXCats();if(xPlType==='Другая')$('x-pltype').focus();return}
