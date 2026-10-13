@@ -3,22 +3,21 @@ on:
   push:
     branches: [kaspi-probe]
 permissions:
-  contents: write
+  contents: read
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - name: Probe Kaspi API reachability (no real token)
+        shell: bash
         run: |
-          {
-            date -u
-            echo "runner country: $(curl -s -m 10 https://ipinfo.io/country)"
-            curl -g -sS -m 30 -o body.txt -w "code=%{http_code} ip=%{remote_ip} time=%{time_total}\n" \
+          set +e
+          C=$(curl -s -m 10 https://ipinfo.io/country)
+          R=$(curl -g -sS -m 30 -o body.txt -w "code=%{http_code} ip=%{remote_ip} time=%{time_total}" \
               -H "Content-Type: application/vnd.api+json" -H "X-Auth-Token: test" \
-              "https://kaspi.kz/shop/api/v2/orders?page[number]=0&page[size]=1" || echo "curl failed: $?"
-            head -c 500 body.txt 2>/dev/null; echo
-          } > probe.txt 2>&1
-          cat probe.txt
-          git config user.name "kaspi-probe"; git config user.email "kaspi-probe@users.noreply.github.com"
-          git add probe.txt && git commit -m "probe result" && git push
+              "https://kaspi.kz/shop/api/v2/orders?page[number]=0&page[size]=1" 2>&1)
+          B=$(head -c 200 body.txt 2>/dev/null | tr '\n' ' ')
+          echo "::notice title=kaspi::country=$C | $R | body=$B"
+          R2=$(curl -sS -m 20 -o /dev/null -w "code=%{http_code}" https://kaspi.kz/ 2>&1)
+          echo "::notice title=kaspi-home::$R2"
+          exit 0
