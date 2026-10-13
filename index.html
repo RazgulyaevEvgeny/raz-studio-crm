@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013115059">
+<meta name="app-build" content="20261013115849">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -314,17 +314,25 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .oi .ot b{font:600 14.5px/1.3 var(--f);overflow-wrap:anywhere}
 .oi .ot small{color:var(--muted);font-size:12.5px}
 .oi .os{font:700 14.5px var(--f);white-space:nowrap}
-.oi-add{display:grid;grid-template-columns:minmax(0,1fr) 112px 88px auto;gap:6px;align-items:center}
+.oi-add{display:grid;grid-template-columns:minmax(0,1fr) 112px 112px auto;gap:6px;align-items:center}
+.oi-add .oi-q span{font-size:11.5px}
 .oi-add input{border:0;background:var(--tile);border-radius:12px;min-height:44px;padding:0 12px;width:100%;min-width:0}
 .oi-add .combo input{padding-right:44px!important}
 .oi-add .suffix input{padding-right:30px}
 .oi-tot{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:2px 4px 0;font-size:13.5px;color:var(--muted)}
 .oi-tot b{font:800 17px var(--f);color:var(--ink);letter-spacing:-.02em}
+.oi-calc{background:var(--tile);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.oc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.oc-ch{display:flex;gap:6px}
+.oc-ch button{min-height:32px;padding:0 12px;border-radius:999px;background:var(--paper);font:600 13px var(--f);color:var(--ink)}
+.oc-ch button[aria-pressed="true"]{background:var(--blue);color:#fff}
+.oc-res{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px;font-size:12.5px;color:var(--muted)}
+.oc-res b{font:800 16px var(--f);color:var(--ink)}
 .dates-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px;align-items:start}
 .dates-row .range input{max-width:none;flex:1 1 0;min-width:0}
 .climenu .oi-src{font:600 11px var(--f);padding:2px 7px;border-radius:999px;background:var(--tile);color:var(--muted);margin-left:6px;white-space:nowrap}
 @media(max-width:600px){
-  .oi-add{grid-template-columns:minmax(0,1fr) 84px;gap:6px}
+  .oi-add{grid-template-columns:minmax(0,1fr) 112px;gap:6px}
   .oi-add .oi-n{grid-column:1/-1}
   .oi-add .btn{grid-column:1/-1;min-height:36px}
   .oi-add input{min-height:40px;border-radius:10px;padding:0 10px}
@@ -1201,6 +1209,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
           <div class="suffix oi-q"><input id="oi-qty" type="number" min="0" step="any" inputmode="decimal" placeholder="1" aria-label="Количество"><span id="oi-unit">шт</span></div>
           <button class="btn primary sm" type="button" id="oi-addbtn">Добавить</button>
         </div>
+        <div class="oi-calc" id="oi-calc" hidden></div>
         <span class="hint" id="oi-hint" hidden></span>
         <div class="oi-tot" id="oi-tot" hidden></div>
       </div>
@@ -1383,6 +1392,15 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="fld"><label for="q-unit">За что</label><input id="q-unit" data-sugg="units-dl" autocomplete="off" placeholder="шт"></div>
       </div>
       <datalist id="units-dl"><option value="шт"><option value="м²"><option value="пог. м"><option value="см²"><option value="лист A4"><option value="лист A3"><option value="принт"><option value="1000 стежков"><option value="заказ"><option value="час"></datalist>
+      <div class="calc" id="q-calc" hidden>
+        <b style="font:700 14px var(--f)">Расчёт цены за погонный метр</b>
+        <div class="grid2">
+          <div class="fld"><label for="qc-v">Плёнка винил, ₸ за пог. м</label><input id="qc-v" placeholder="1600, 3400" autocomplete="off"></div>
+          <div class="fld"><label for="qc-m">Монтажная плёнка, ₸ за пог. м</label><input id="qc-m" placeholder="1600, 2400" autocomplete="off"></div>
+        </div>
+        <div class="fld"><label for="qc-mk">Наценка, %</label><div class="suffix"><input id="qc-mk" type="number" min="0" step="1" inputmode="numeric"><span>%</span></div></div>
+        <span class="hint" id="qc-res"></span>
+      </div>
       <div class="fld"><span class="lb">Цена от количества</span>
         <div class="tiers" id="q-tiers"></div>
         <button class="linkbtn" type="button" id="q-tier-add" style="align-self:flex-start">+ Добавить цену от количества</button>
@@ -1455,7 +1473,11 @@ const mkPct=(price,cost)=>cost>0?Math.round((price-cost)/cost*100):null;
 const mkColor=m=>m===null?'--muted':m<50?'--danger':m<100?'--st-prod':'--ok';
 const priceTxt=x=>+x.price===0?'Бесплатно':(x.from?'от ':'')+money(x.price);
 const tiersOf=x=>(x&&x.tiers||[]).filter(t=>t.qty&&t.price!=null&&t.price!=='').map(t=>({qty:+t.qty,price:+t.price})).sort((a,b)=>a.qty-b.qty);
-function tierPrice(x,qty){let pr=+x.price||0;tiersOf(x).forEach(t=>{if((+qty||1)>=t.qty)pr=t.price});return pr}
+function tierPrice(x,qty){if(x&&x.calc)return calcPrice(x.calc);let pr=+x.price||0;tiersOf(x).forEach(t=>{if((+qty||1)>=t.qty)pr=t.price});return pr}
+/* винил: себестоимость плёнки + монтажной плёнки за пог. м, плюс наценка */
+const calcCost=c=>(+c.v||+(c.vinyl||[])[0]||0)+(+c.m||+(c.mount||[])[0]||0);
+const calcPrice=c=>Math.round(calcCost(c)*(1+(+c.markup||0)/100)/10)*10;
+const calcMin=c=>calcPrice({...c,v:Math.min(...(c.vinyl||[0])),m:Math.min(...(c.mount||[0]))});
 const PSTAT=[{id:'idea',label:'Идея',c:'--sky'},{id:'work',label:'В работе',c:'--st-prod'},{id:'launched',label:'Запущен',c:'--st-ready'},{id:'pause',label:'Пауза',c:'--muted'}];
 const PS=Object.fromEntries(PSTAT.map(x=>[x.id,x]));
 let projects=[],projLoaded=false,projFilter='active',pEditing=null,pStat='idea',pExp=[],pFiles=[],pFilesOrig=[],pTab='main',pCover=null,pCoverOrig=null,peEditId=null;
@@ -2068,7 +2090,7 @@ function renderPrices(){
       return `<button type="button" class="prow item" data-qopen="${esc(x.id)}">
         <div class="cell c-n"><b>${esc(x.name)}${x.hidden&&!client?'<span class="hid">скрыто</span>':''}</b>${x.desc?`<small style="white-space:normal">${esc(x.desc)}</small>`:''}</div>
         <div class="unit">${esc(x.unit||'шт')}</div>
-        <div class="pr"><b>${priceTxt(x)}</b>${tiers.map(t=>`<small>при заказе от ${t.qty} шт: ${money(t.price)}</small>`).join('')}</div>
+        <div class="pr"><b>${x.calc?'от '+money(calcMin(x.calc)):priceTxt(x)}</b>${x.calc?`<small>плёнка ${x.calc.vinyl.map(money).join(' / ')} + монтажная ${x.calc.mount.map(money).join(' / ')}, наценка ${x.calc.markup}%</small>`:''}${tiers.map(t=>`<small>при заказе от ${t.qty} шт: ${money(t.price)}</small>`).join('')}</div>
       </button>`}).join('')}</section>`).join('');
 }
 function prText(){
@@ -2087,11 +2109,17 @@ function openQ(id){
 
   $('q-hidden').checked=!!x.hidden;$('q-notes').value=x.notes||'';
   qTiers=(x.tiers||[]).filter(t=>t.qty&&t.price!=null).map(t=>({qty:t.qty,price:t.price}));renderQTiers();
+  qCalc=x.calc?{...x.calc}:null;$('q-calc').hidden=!qCalc;
+  if(qCalc){$('qc-v').value=qCalc.vinyl.join(', ');$('qc-m').value=qCalc.mount.join(', ');$('qc-mk').value=qCalc.markup;qcRes()}
   $('q-meta').textContent=x.updatedAt?'Цена обновлена '+new Date(x.updatedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}):'';
   $('q-err').hidden=true;renderQDel(false);
   document.querySelectorAll('#qed-form input,#qed-form textarea').forEach(el=>el.disabled=!canWrite);$('q-save').hidden=!canWrite;
   $('qed').hidden=false;document.querySelectorAll('#qed .ed-body').forEach(b=>b.scrollTop=0);setTimeout(()=>{if(canWrite&&id==='new')$('q-name').focus()},50);
 }
+let qCalc=null;
+const numsOf=v=>String(v||'').split(/[,;\s]+/).map(x=>+x).filter(x=>x>0);
+function readQCalc(){if(!qCalc)return null;const v=numsOf($('qc-v').value),m=numsOf($('qc-m').value),mk=+$('qc-mk').value||0;return v.length&&m.length?{vinyl:v,mount:m,markup:mk}:null}
+function qcRes(){const c=readQCalc();$('qc-res').textContent=c?'Цена за пог. м: '+c.vinyl.flatMap(v=>c.mount.map(m=>money(calcPrice({...c,v,m}))+' ('+money(v)+' + '+money(m)+')')).join(', '):'Впишите цены плёнок через запятую.';if(c)$('q-price').value=calcMin(c)}
 function renderQTiers(){
   $('q-tiers').innerHTML=qTiers.map((t,i)=>`<div class="tier"><div class="suffix"><input type="number" min="2" step="1" inputmode="numeric" data-tq="${i}" value="${esc(t.qty??'')}" placeholder="от, шт" aria-label="От количества"><span>шт</span></div><div class="suffix"><input type="number" min="0" step="1" inputmode="numeric" data-tp="${i}" value="${esc(t.price??'')}" placeholder="Цена" aria-label="Цена"><span>₸</span></div>${canWrite?`<button class="tdel" type="button" data-trm="${i}" aria-label="Убрать">×</button>`:'<span></span>'}</div>`).join('');
   $('q-tier-add').hidden=!canWrite;
@@ -2108,6 +2136,7 @@ async function saveQ(e){
   const n=v=>v===''?null:Math.max(0,+v);
   readQTiers();
   const d={svc:qSvc,name,desc:$('q-desc').value.trim(),price,unit:$('q-unit').value.trim()||'шт',from:$('q-from').checked,
+    ...(qCalc&&readQCalc()?{calc:readQCalc(),price:calcMin(readQCalc())}:{}),
     tiers:qTiers.filter(t=>+t.qty>1&&$('q-tiers')&&t.price!==''&&+t.price>=0).map(t=>({qty:+t.qty,price:+t.price})).sort((a,b)=>a.qty-b.qty),
     hidden:$('q-hidden').checked,notes:$('q-notes').value.trim(),updatedAt:Date.now()};
   const btn=$('q-save');btn.disabled=true;
@@ -2501,18 +2530,21 @@ async function importPendingReq(){
   }
 }
 /* прайс DTF (13.10): добавляется один раз, при входе руководителя */
+const PENDING_PRICES_2=[{"id": "emb-base", "svc": "embroidery", "name": "Вышивка", "desc": "Цена зависит от сложности и размера, в заказе вписывается вручную", "price": 4000, "unit": "шт", "from": true, "hidden": false, "notes": "", "tiers": [], "order": 1100}, {"id": "p3d-hour", "svc": "print3d", "name": "3D-печать своей модели", "desc": "Печать модели клиента, оплата за час работы принтера", "price": 1000, "unit": "час", "from": true, "hidden": false, "notes": "", "tiers": [], "order": 1110}, {"id": "vinyl-calc", "svc": "vinyl", "name": "Винил с монтажной плёнкой", "desc": "Плёнка винил + монтажная плёнка, цена за погонный метр", "price": 11200, "unit": "пог. м", "from": true, "hidden": false, "notes": "Себестоимость: винил 1 600 или 3 400 ₸, монтажная 1 600 или 2 400 ₸ за пог. м; наценка 250%", "tiers": [], "order": 1120, "calc": {"vinyl": [1600, 3400], "mount": [1600, 2400], "markup": 250}}];
 const PENDING_PRICES=[{"id": "dtf-a3", "svc": "dtf", "name": "DTF-печать A3", "desc": "27×37 см. Нанесение 2 частей макета входит в цену", "price": 4500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 3500}], "order": 1000}, {"id": "dtf-a4", "svc": "dtf", "name": "DTF-печать A4", "desc": "21×27 см. Нанесение 2 частей макета входит в цену", "price": 3500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 2500}], "order": 1001}, {"id": "dtf-a5", "svc": "dtf", "name": "DTF-печать A5", "desc": "21×15 см. Нанесение 2 частей макета входит в цену", "price": 2500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 1500}], "order": 1002}, {"id": "dtf-a6", "svc": "dtf", "name": "DTF-печать A6", "desc": "10×14 см. Нанесение 2 частей макета входит в цену", "price": 1500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 900}], "order": 1003}, {"id": "dtf-transfer", "svc": "dtf", "name": "Перенос DTF-наклейки", "desc": "Нанесение готовой наклейки на изделие", "price": 500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 250}], "order": 1004}, {"id": "dtf-prep", "svc": "dtf", "name": "Подготовка макета", "desc": "Удаление фона, изменение размера, раскладка изображений на печатный лист", "price": 0, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [], "order": 1005}, {"id": "dtf-fix", "svc": "dtf", "name": "Корректировка макета", "desc": "Цвет букв, трассировка, добавление текста и т.д.", "price": 2500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 1000}], "order": 1006}, {"id": "dtf-logo", "svc": "dtf", "name": "Разработка логотипа", "desc": "Разработка логотипа и фирменных элементов", "price": 10000, "unit": "шт", "from": true, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [], "order": 1007}];
 let pendingPricesDone=false;
 async function importPendingPrices(){
   if(pendingPricesDone||!pricesLoaded||!db||!canWrite||isMgr())return;pendingPricesDone=true;
-  try{const mk=await db.doc('blobs/_import_dtf_prices_v1').get();if(mk.exists)return}catch(_){return}
-  const now=Date.now();
-  for(const it of PENDING_PRICES){
-    const {id,...d}=it;
-    if(prices.some(x=>x.id===id||(x.svc==='dtf'&&String(x.name||'').trim().toLowerCase()===d.name.toLowerCase())))continue;
-    try{await db.doc('prices/'+id).set({...d,createdAt:now,updatedAt:now})}catch(e){try{console.warn('price import',id,e)}catch(_){}}
+  for(const [marker,list] of [['_import_dtf_prices_v1',PENDING_PRICES],['_import_prices_v2',PENDING_PRICES_2]]){
+    try{const mk=await db.doc('blobs/'+marker).get();if(mk.exists)continue}catch(_){continue}
+    const now=Date.now();
+    for(const it of list){
+      const {id,...d}=it;
+      if(prices.some(x=>x.id===id||(x.svc===d.svc&&String(x.name||'').trim().toLowerCase()===d.name.toLowerCase())))continue;
+      try{await db.doc('prices/'+id).set({...d,createdAt:now,updatedAt:now})}catch(e){try{console.warn('price import',id,e)}catch(_){}}
+    }
+    try{await db.doc('blobs/'+marker).set({done:true,at:now})}catch(_){}
   }
-  try{await db.doc('blobs/_import_dtf_prices_v1').set({done:true,at:now})}catch(_){}
 }
 async function rejectRequest(){
   if(!edReq)return;try{await db.doc('requests/'+edReq.id).update({status:'rejected',handledBy:ROLE().name||'',handledAt:Date.now()});closeEditor();toast('Заявка отклонена')}catch(er){showErr('f-err',handleWriteError(er))}
@@ -2529,14 +2561,15 @@ function renderItems(){
   if(edItems.length)t.innerHTML=`<span>${edItems.length} ${plural(edItems.length,'позиция','позиции','позиций')}</span><span>Итого: <b>${money(itemsTotal(edItems))}</b></span>`;
   $('oi-add').hidden=!canWrite;priceHint();
 }
-function oiClear(){oiPick=null;oiPriceTouched=false;if($('oi-hint'))$('oi-hint').hidden=true;oiEditId=null;$('oi-name').value='';$('oi-price').value='';$('oi-qty').value='';$('oi-unit').textContent='шт';$('oi-addbtn').textContent='Добавить'}
+function oiClear(){oiPick=null;oiPriceTouched=false;oiCalc=null;renderOiCalc();if($('oi-hint'))$('oi-hint').hidden=true;oiEditId=null;$('oi-name').value='';$('oi-price').value='';$('oi-qty').value='';$('oi-unit').textContent='шт';oiUnitPad();$('oi-addbtn').textContent='Добавить'}
 function addItem(){
   const name=$('oi-name').value.trim(),price=$('oi-price').value===''?NaN:+$('oi-price').value,qty=$('oi-qty').value===''?1:+$('oi-qty').value;
   if(!name){showErr('f-err','Впишите название позиции.');$('oi-name').focus();return false}
   if(!isFinite(price)){showErr('f-err','Впишите цену позиции.');$('oi-price').focus();return false}
   if(!(qty>0)){showErr('f-err','Впишите количество.');$('oi-qty').focus();return false}
   $('f-err').hidden=true;const prev=edAutoTotal();
-  const it={id:oiEditId||uid(),name,price,qty,unit:$('oi-unit').textContent||'шт',...(oiPick?{pid:oiPick.pid}:{})};
+  const nm=oiCalc&&!/плёнка \d/.test(name)?name+' (плёнка '+money(oiCalc.v)+' + монтажная '+money(oiCalc.m)+')':name;
+  const it={id:oiEditId||uid(),name:nm,price,qty,unit:$('oi-unit').textContent||'шт',...(oiPick?{pid:oiPick.pid}:{}),...(oiCalc?{calc:{v:+oiCalc.v,m:+oiCalc.m,markup:+oiCalc.markup}}:{})};
   const k=edItems.findIndex(x=>x.id===it.id);if(k>=0)edItems[k]=it;else edItems.push(it);
   oiClear();kSyncPrice(prev);renderItems();$('oi-name').focus();return true;
 }
@@ -2548,10 +2581,11 @@ function priceHint(){
 function itemCatalog(){
   const out=[],seen=new Set(),add=x=>{const k=x.name.trim().toLowerCase();if(!k||seen.has(k))return;seen.add(k);out.push(x)};
   const pr=prSorted().filter(x=>x.svc!=='kaspi');
-  pr.filter(x=>x.svc===edSvc).forEach(x=>add({name:x.name,price:+x.price||0,unit:x.unit||'шт',src:'Прайс',pid:x.id,tiers:tiersOf(x)}));
+  const fromPr=(x,src)=>({name:x.name,price:x.calc?calcMin(x.calc):+x.price||0,unit:x.unit||'шт',src,pid:x.id,tiers:tiersOf(x),from:!!x.from||!!x.calc,calc:x.calc||null});
+  pr.filter(x=>x.svc===edSvc).forEach(x=>add(fromPr(x,'Прайс')));
   const hist=[];orders.forEach(o=>{if(o.id===editing)return;(o.items||[]).forEach(i=>hist.push({...i,_t:o.updatedAt||o.createdAt||0}))});
   hist.sort((a,b)=>b._t-a._t).forEach(i=>add({name:i.name,price:+i.price||0,unit:i.unit||'шт',src:'Ранее'}));
-  pr.filter(x=>x.svc!==edSvc).forEach(x=>add({name:x.name,price:+x.price||0,unit:x.unit||'шт',src:svcLabel(x.svc),pid:x.id,tiers:tiersOf(x)}));
+  pr.filter(x=>x.svc!==edSvc).forEach(x=>add(fromPr(x,svcLabel(x.svc))));
   return out;
 }
 let oiItems=[];
@@ -2559,16 +2593,27 @@ function openItemMenu(){
   const btn=$('oi-name-btn'),q=$('oi-name').value.trim().toLowerCase();
   const all=itemCatalog();oiItems=all.filter(i=>!q||i.name.toLowerCase().includes(q));if(!oiItems.length)oiItems=all;
   const m=$('cs-menu');m.classList.add('climenu');
-  m.innerHTML=oiItems.length?oiItems.slice(0,60).map((c,i)=>`<button type="button" role="option" data-oipick="${i}"><span>${esc(c.name)}<span class="oi-src">${esc(c.src)}</span></span><small>${+c.price===0&&c.pid?'бесплатно':money(c.price)}${c.unit?' / '+esc(c.unit):''}${(c.tiers||[]).map(t=>' · от '+t.qty+': '+money(t.price)).join('')}</small></button>`).join('')
+  m.innerHTML=oiItems.length?oiItems.slice(0,60).map((c,i)=>`<button type="button" role="option" data-oipick="${i}"><span>${esc(c.name)}<span class="oi-src">${esc(c.src)}</span></span><small>${+c.price===0&&c.pid?'бесплатно':(c.from?'от ':'')+money(c.price)}${c.unit?' / '+esc(c.unit):''}${c.calc?' · расчёт':''}${(c.tiers||[]).map(t=>' · от '+t.qty+': '+money(t.price)).join('')}</small></button>`).join('')
     :`<div class="cli-empty">Список пока пуст. Добавьте позиции в «Прайс» или впишите название вручную: после сохранения заказа оно появится здесь.</div>`;
   csSel={_btn:btn};btn.setAttribute('aria-expanded','true');m.hidden=false;$('cs-back').hidden=false;
   if(innerWidth>560){const r=$('oi-name').getBoundingClientRect();m.style.minWidth=Math.max(r.width,300)+'px';const h=m.offsetHeight;let top=r.bottom+6;if(top+h>innerHeight-8)top=Math.max(8,r.top-h-6);m.style.top=top+'px';m.style.left=Math.max(8,Math.min(r.left,innerWidth-Math.max(r.width,300)-8))+'px'}
   m.querySelector('button')?.focus({preventScroll:true});
 }
-let oiPick=null,oiPriceTouched=false;
-function oiApply(c){$('oi-name').value=c.name;oiPick=c.pid?c:null;oiPriceTouched=false;$('oi-price').value=oiPick?tierPrice(oiPick,$('oi-qty').value||1):c.price;$('oi-unit').textContent=c.unit||'шт';oiTierHint()}
-function oiTierHint(){const h=$('oi-hint');if(!h)return;const t=oiPick?tiersOf(oiPick):[];h.hidden=!t.length;if(t.length)h.textContent='Цена по количеству: 1–'+(t[0].qty-1)+' шт — '+money(oiPick.price)+t.map((x,i)=>', '+(t[i+1]?x.qty+'–'+(t[i+1].qty-1):'от '+x.qty)+' шт — '+money(x.price)).join('')+(oiPriceTouched?'. Цена изменена вручную.':'.')}
-function oiQtyChanged(){if(oiPick&&!oiPriceTouched){$('oi-price').value=tierPrice(oiPick,$('oi-qty').value||1)}oiTierHint()}
+let oiPick=null,oiPriceTouched=false,oiCalc=null;
+function oiUnitPad(){const u=$('oi-unit').textContent||'';$('oi-qty').style.paddingRight=Math.max(30,u.length*7+18)+'px'}
+function oiApply(c){$('oi-name').value=c.name;oiPick=c.pid?c:null;oiPriceTouched=false;
+  oiCalc=oiPick&&oiPick.calc?{...oiPick.calc,v:oiPick.calc.vinyl[0],m:oiPick.calc.mount[0]}:null;
+  $('oi-price').value=oiCalc?calcPrice(oiCalc):oiPick?tierPrice(oiPick,$('oi-qty').value||1):c.price;$('oi-unit').textContent=c.unit||'шт';oiUnitPad();renderOiCalc();oiTierHint()}
+function renderOiCalc(){
+  const w=$('oi-calc');if(!w)return;w.hidden=!oiCalc;if(!oiCalc){w.innerHTML='';return}
+  const opt=(k,arr,lbl)=>`<div class="oc-row"><span>${lbl}</span><div class="oc-ch">${arr.map(v=>`<button type="button" data-oc="${k}" data-v="${v}" aria-pressed="${+oiCalc[k]===+v}">${money(v)}</button>`).join('')}</div></div>`;
+  w.innerHTML=opt('v',oiCalc.vinyl,'Плёнка винил, за пог. м')+opt('m',oiCalc.mount,'Монтажная плёнка, за пог. м')
+    +`<div class="oc-res"><span>Себестоимость ${money(calcCost(oiCalc))} + наценка ${oiCalc.markup}%</span><b>${money(calcPrice(oiCalc))} за пог. м</b></div>`;
+}
+function oiTierHint(){const h=$('oi-hint');if(!h)return;if(oiCalc){h.hidden=false;h.textContent='Впишите метраж в погонных метрах: сумма посчитается по цене за метр.'+(oiPriceTouched?' Цена изменена вручную.':'');return}
+  if(oiPick&&oiPick.from&&!tiersOf(oiPick).length){h.hidden=false;h.textContent='Цена '+priceTxt(oiPick)+' — уточните по сложности и впишите свою.';return}
+  const t=oiPick?tiersOf(oiPick):[];h.hidden=!t.length;if(t.length)h.textContent='Цена по количеству: 1–'+(t[0].qty-1)+' шт — '+money(oiPick.price)+t.map((x,i)=>', '+(t[i+1]?x.qty+'–'+(t[i+1].qty-1):'от '+x.qty)+' шт — '+money(x.price)).join('')+(oiPriceTouched?'. Цена изменена вручную.':'.')}
+function oiQtyChanged(){if(oiPick&&!oiPriceTouched&&!oiCalc){$('oi-price').value=tierPrice(oiPick,$('oi-qty').value||1)}oiTierHint()}
 
 /* ---------- ветка Каспи в заказе ---------- */
 const kFee=()=>{const v=$('k-fee').value;return v===''?KASPI_FEE*100:Math.min(100,Math.max(0,+v))};
@@ -2652,7 +2697,7 @@ function formData(){
   return {
     client:$('f-client').value.trim(),phone:$('f-phone').value.trim(),service:edSvc,
     customService:edSvc==='other'?$('f-custom').value.trim():'',
-    items:edItems.map(i=>({id:i.id,name:i.name,price:+i.price||0,qty:+i.qty||0,unit:i.unit||'шт',...(i.pid?{pid:i.pid}:{})})),
+    items:edItems.map(i=>({id:i.id,name:i.name,price:+i.price||0,qty:+i.qty||0,unit:i.unit||'шт',...(i.pid?{pid:i.pid}:{}),...(i.calc?{calc:i.calc}:{})})),
     unit:edItems.length?(edItems[0].unit||'шт'):(edOrig&&edOrig.unit||'шт'),
     expenses:edExp.map(e=>({id:e.id,title:e.title,amount:+e.amount||0})),files:edFiles,
     kaspi:edK.map(l=>({id:l.id,name:l.name,price:+l.price||0,qty:+l.qty||0,date:l.date||'',cost:+l.cost||0,src:l.src||''})),kaspiFee:kFee(),
@@ -2908,14 +2953,18 @@ $('cs-menu').addEventListener('click',e=>{const it=e.target.closest('[data-oipic
 $('oi-name').addEventListener('change',()=>{const n=$('oi-name').value.trim().toLowerCase();if(!n||$('oi-price').value!=='')return;const c=itemCatalog().find(x=>x.name.trim().toLowerCase()===n);if(c)oiApply({...c,name:$('oi-name').value.trim()})});
 $('oi-addbtn').addEventListener('click',()=>{addItem()});
 $('oi-qty').addEventListener('input',oiQtyChanged);
+$('oi-calc').addEventListener('click',e=>{const b=e.target.closest('[data-oc]');if(!b||!oiCalc)return;oiCalc[b.dataset.oc]=+b.dataset.v;oiPriceTouched=false;$('oi-price').value=calcPrice(oiCalc);
+  const n=$('oi-name').value.replace(/ \(плёнка .*\)$/,'');$('oi-name').value=n;renderOiCalc();oiTierHint()});
 $('oi-price').addEventListener('input',()=>{if(oiPick){oiPriceTouched=true;oiTierHint()}});
-$('oi-name').addEventListener('input',()=>{if(oiPick&&$('oi-name').value.trim()!==oiPick.name){oiPick=null;oiTierHint()}});
+$('oi-name').addEventListener('input',()=>{if(oiPick&&!$('oi-name').value.trim().startsWith(oiPick.name)){oiPick=null;oiCalc=null;renderOiCalc();oiTierHint()}});
 ['oi-name','oi-price','oi-qty'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addItem()}}));
 $('oi-list').addEventListener('click',e=>{
   const rm=e.target.closest('[data-oirm]');if(rm){const prev=edAutoTotal();edItems=edItems.filter(i=>i.id!==rm.dataset.oirm);if(oiEditId===rm.dataset.oirm)oiClear();kSyncPrice(prev);renderItems();return}
   const ed=e.target.closest('[data-oiedit]');if(ed&&canWrite){const i=edItems.find(x=>x.id===ed.dataset.oiedit);if(!i)return;oiEditId=i.id;
     $('oi-name').value=i.name;$('oi-price').value=i.price;$('oi-qty').value=i.qty;$('oi-unit').textContent=i.unit||'шт';$('oi-addbtn').textContent='Сохранить позицию';
-    const px=i.pid&&prices.find(x=>x.id===i.pid);oiPick=px?{pid:px.id,name:px.name,price:+px.price||0,tiers:tiersOf(px)}:null;oiPriceTouched=!!(px&&tierPrice(px,i.qty)!==+i.price);oiTierHint();
+    const px=i.pid&&prices.find(x=>x.id===i.pid);oiPick=px?{pid:px.id,name:px.name,price:+px.price||0,tiers:tiersOf(px),from:!!px.from,calc:px.calc||null}:null;
+    oiCalc=px&&px.calc?{...px.calc,v:i.calc?i.calc.v:px.calc.vinyl[0],m:i.calc?i.calc.m:px.calc.mount[0],markup:i.calc?i.calc.markup:px.calc.markup}:null;renderOiCalc();
+    oiPriceTouched=!!(px&&(oiCalc?calcPrice(oiCalc):tierPrice(px,i.qty))!==+i.price);oiTierHint();
     renderItems();$('oi-qty').focus()}
 });
 $('oi-list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-oiedit]')){e.preventDefault();e.target.click()}});
@@ -3029,6 +3078,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-oattach]')
 $('x-attach').onclick=()=>pickFiles({kind:'x'});
 $('p-attach').onclick=()=>pickFiles({kind:'p'});
 $('qed-form').addEventListener('submit',saveQ);
+['qc-v','qc-m','qc-mk'].forEach(i=>$(i).addEventListener('input',qcRes));
 $('q-tier-add').addEventListener('click',()=>{readQTiers();const last=qTiers[qTiers.length-1];qTiers.push({qty:last?(+last.qty||0)*2||10:10,price:''});renderQTiers();const el=document.querySelector('#q-tiers [data-tp="'+(qTiers.length-1)+'"]');el&&el.focus()});
 $('q-tiers').addEventListener('click',e=>{const b=e.target.closest('[data-trm]');if(!b)return;readQTiers();qTiers.splice(+b.dataset.trm,1);renderQTiers()});
 $('qed-close').onclick=$('qed-cancel').onclick=$('qed-back').onclick=closeQ;
