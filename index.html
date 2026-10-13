@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013133241">
+<meta name="app-build" content="20261013133511">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -2971,7 +2971,8 @@ function showErr(id,msg){const e=$(id);e.textContent=msg;e.hidden=false}
 function handleWriteError(e){
   const code=e&&e.code;
   if(code==='quota_exceeded')return 'База заполнена. Удалите старые выданные заказы или выполненные задачи и попробуйте снова.';
-  if(code==='invalid_argument'||code==='not_granted'){setReadOnly();return 'Нет доступа к записи. Выйдите и войдите снова или обратитесь к владельцу студии.'}
+  /* отказ базы в одном действии не переводит весь учёт в режим просмотра: остальное (заказы и т. д.) продолжает работать */
+  if(code==='invalid_argument'||code==='not_granted'){try{console.warn('write denied',e)}catch(_){}return isMgr()?'Нет прав на это действие: его может сделать только руководитель. Остальное работает как обычно.':'Нет прав на это действие. Обновите страницу и попробуйте ещё раз.'}
   try{console.error('write error',e)}catch(_){}
   return 'Не удалось сохранить: нет связи с базой. Проверьте интернет и попробуйте ещё раз.'+(e&&e.message?' ('+String(e.message).slice(0,140)+')':'');
 }
