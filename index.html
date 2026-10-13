@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013123536">
+<meta name="app-build" content="20261013124401">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -505,6 +505,10 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .who-pill{gap:0!important;background:transparent!important;box-shadow:inset 0 0 0 2px var(--line);color:var(--muted)!important;cursor:default}
 .blegend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
 .blegend span{display:flex;align-items:center;gap:6px}.blegend i{width:8px;height:8px;border-radius:50%;background:var(--sc)}
+.blegend i.now{width:14px;height:10px;border-radius:3px;background:color-mix(in srgb,var(--blue) 16%,var(--paper));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--blue) 35%,transparent)}
+.task.boss.now{background:color-mix(in srgb,var(--blue) 12%,var(--paper))}
+.task.boss.now .tdesc,.task.boss.now .cm,.task.boss.now .cm-add textarea{background:var(--paper)}
+.tnow{display:inline-block;vertical-align:2px;margin-right:6px;padding:2px 7px;border-radius:999px;background:var(--blue);color:#fff;font:700 10.5px/1.3 var(--f);letter-spacing:.01em}
 /* файлы */
 .files{display:flex;flex-wrap:wrap;gap:6px;grid-column:1/-1}
 .files:empty{display:none}
@@ -1835,8 +1839,9 @@ function bossParts(t){
   return {st,late,meta,del,cmBox,sel,att,files};
 }
 function bossRow(t){const b=bossParts(t);
-  return `<div class="task boss${t.done?' done':''}" style="--sc:var(${b.st.c})">
-    <span class="tt"><b>${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
+  const now=!t.done&&taskOn(t,todayStr());
+  return `<div class="task boss${t.done?' done':''}${now?' now':''}" style="--sc:var(${b.st.c})">
+    <span class="tt"><b>${now?'<span class="tnow">на сегодня</span>':''}${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
     ${b.sel}${b.att}${b.del}
     ${b.files}${b.cmBox}</div>`;
 }
@@ -1909,7 +1914,8 @@ function renderHome(){
   renderLedgerWidgets();renderProjWidget();
   // задачи от начальства
   const boss=tasks.filter(t=>t.kind==='boss');
-  const open=boss.filter(t=>!t.done).sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999'));
+  const tdy=todayStr(),isNow=t=>!t.done&&taskOn(t,tdy);
+  const open=boss.filter(t=>!t.done).sort((a,b)=>(isNow(b)-isNow(a))||(a.date||'9999').localeCompare(b.date||'9999'));
   const done=boss.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const acc=open.filter(t=>bossStatus(t)==='accepted').length;
   $('w-boss-c').textContent=open.length?open.length+' '+plural(open.length,'открыта','открыты','открыто')+(acc?', в работе '+acc:''):'';
@@ -1929,7 +1935,7 @@ function renderHome(){
   }
   $('w-cal-grid').innerHTML=h;
   // сегодня
-  const {os,ts}=itemsOn(t);
+  const {os,ts:tsAll}=itemsOn(t);const ts=tsAll.filter(x=>x.kind!=='boss');/* задачи от начальства живут в своём блоке */
   const lateO=orders.filter(isOverdue);
   const tsOpen=ts.filter(x=>!x.done).length;
   const parts=[];
