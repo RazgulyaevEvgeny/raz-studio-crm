@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013133511">
+<meta name="app-build" content="20261013133744">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1738,7 +1738,9 @@ let baseWrite=true;
 const ROLE=()=>window.APP_ROLE||{role:'admin',name:''};
 const isMgr=()=>ROLE().role==='manager';
 const MGR_LOCKED=['projects','prices'];
-function applyRoleWrite(){canWrite=baseWrite&&!(isMgr()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
+/* менеджер работает с такими же правами, как руководитель; true — вернуть прежние ограничения */
+const MGR_LIMITS=false;const mgrLimited=()=>MGR_LIMITS&&isMgr();
+function applyRoleWrite(){canWrite=baseWrite&&!(mgrLimited()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
 function go(p,opts={}){
   page=p;applyRoleWrite();
   ['home','orders','calendar','office','supplies','projects','prices','analytics'].forEach(x=>$('p-'+x).hidden=x!==p);
@@ -1855,7 +1857,7 @@ function bossParts(t){
   if(t.who)meta.push('кому: '+t.who);
   if(isMgrTask(t)&&t.by)meta.push('автор: '+t.by);
   if(t.done&&t.doneAt)meta.push('выполнено '+new Date(t.doneAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}));
-  const boss=canWrite&&(!isMgr()||isMgrTask(t));
+  const boss=canWrite&&(!mgrLimited()||isMgrTask(t));
   const del=!boss?'<span></span>':askDel===t.id?`<button class="tdel ask" type="button" data-tdel="${esc(t.id)}" data-confirm="1">Удалить</button>`:`<button class="tdel" type="button" data-tdel="${esc(t.id)}" aria-label="Удалить задачу">×</button>`;
   const cms=t.comments||[],open=openCm.has(t.id);
   const cmBox=`<div class="tcm">
@@ -2714,7 +2716,7 @@ const PENDING_PRICES_2=[{"id": "emb-base", "svc": "embroidery", "name": "Выш�
 const PENDING_PRICES=[{"id": "dtf-a3", "svc": "dtf", "name": "DTF-печать A3", "desc": "27×37 см. Нанесение 2 частей макета входит в цену", "price": 4500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 3500}], "order": 1000}, {"id": "dtf-a4", "svc": "dtf", "name": "DTF-печать A4", "desc": "21×27 см. Нанесение 2 частей макета входит в цену", "price": 3500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 2500}], "order": 1001}, {"id": "dtf-a5", "svc": "dtf", "name": "DTF-печать A5", "desc": "21×15 см. Нанесение 2 частей макета входит в цену", "price": 2500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 1500}], "order": 1002}, {"id": "dtf-a6", "svc": "dtf", "name": "DTF-печать A6", "desc": "10×14 см. Нанесение 2 частей макета входит в цену", "price": 1500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 900}], "order": 1003}, {"id": "dtf-transfer", "svc": "dtf", "name": "Перенос DTF-наклейки", "desc": "Нанесение готовой наклейки на изделие", "price": 500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 250}], "order": 1004}, {"id": "dtf-prep", "svc": "dtf", "name": "Подготовка макета", "desc": "Удаление фона, изменение размера, раскладка изображений на печатный лист", "price": 0, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [], "order": 1005}, {"id": "dtf-fix", "svc": "dtf", "name": "Корректировка макета", "desc": "Цвет букв, трассировка, добавление текста и т.д.", "price": 2500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 1000}], "order": 1006}, {"id": "dtf-logo", "svc": "dtf", "name": "Разработка логотипа", "desc": "Разработка логотипа и фирменных элементов", "price": 10000, "unit": "шт", "from": true, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [], "order": 1007}];
 let pendingPricesDone=false;
 async function importPendingPrices(){
-  if(pendingPricesDone||!pricesLoaded||!db||!canWrite||isMgr())return;pendingPricesDone=true;
+  if(pendingPricesDone||!pricesLoaded||!db||!canWrite||mgrLimited())return;pendingPricesDone=true;
   for(const [marker,list] of [['_import_dtf_prices_v1',PENDING_PRICES],['_import_prices_v2',PENDING_PRICES_2],['_import_prices_v4',PENDING_PRICES_4]]){
     try{const mk=await db.doc('blobs/'+marker).get();if(mk.exists)continue}catch(_){continue}
     const now=Date.now();
@@ -2972,7 +2974,7 @@ function handleWriteError(e){
   const code=e&&e.code;
   if(code==='quota_exceeded')return 'База заполнена. Удалите старые выданные заказы или выполненные задачи и попробуйте снова.';
   /* отказ базы в одном действии не переводит весь учёт в режим просмотра: остальное (заказы и т. д.) продолжает работать */
-  if(code==='invalid_argument'||code==='not_granted'){try{console.warn('write denied',e)}catch(_){}return isMgr()?'Нет прав на это действие: его может сделать только руководитель. Остальное работает как обычно.':'Нет прав на это действие. Обновите страницу и попробуйте ещё раз.'}
+  if(code==='invalid_argument'||code==='not_granted'){try{console.warn('write denied',e)}catch(_){}return mgrLimited()?'Нет прав на это действие: его может сделать только руководитель. Остальное работает как обычно.':'Нет прав на это действие. Обновите страницу и попробуйте ещё раз.'}
   try{console.error('write error',e)}catch(_){}
   return 'Не удалось сохранить: нет связи с базой. Проверьте интернет и попробуйте ещё раз.'+(e&&e.message?' ('+String(e.message).slice(0,140)+')':'');
 }
@@ -3299,10 +3301,10 @@ document.addEventListener('click',e=>{
   const ta=t.closest('[data-tattach]');if(ta){pickFiles({kind:'task',id:ta.dataset.tattach});return}
   const g=t.closest('[data-go]');
   if(g){if(g.dataset.f){view={f:g.dataset.f,svc:'all',q:'',day:''};$('q').value=''}go(g.dataset.go);return}
-  if(t.closest('[data-new]')){if(t.closest('.fab')&&isMgr()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
+  if(t.closest('[data-new]')){if(t.closest('.fab')&&mgrLimited()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
   const op=t.closest('[data-open]');if(op){openEditor(op.dataset.open);return}
   const dn=t.closest('[data-tdone]');if(dn){toggleTask(dn.dataset.tdone);return}
-  const td=t.closest('[data-tdel]');if(td&&isMgr()&&(x=>x&&x.kind==='boss'&&!isMgrTask(x))(tasks.find(x=>x.id===td.dataset.tdel))){toast('Удалять задачи от начальства может только руководитель');return}
+  const td=t.closest('[data-tdel]');if(td&&mgrLimited()&&(x=>x&&x.kind==='boss'&&!isMgrTask(x))(tasks.find(x=>x.id===td.dataset.tdel))){toast('Удалять задачи от начальства может только руководитель');return}
   if(td){if(td.dataset.confirm)deleteTask(td.dataset.tdel);else{askDel=td.dataset.tdel;render();setTimeout(()=>{if(askDel===td.dataset.tdel){askDel=null;render()}},4000)}return}
   const cd=t.closest('[data-cday]');if(cd){go('calendar',{day:cd.dataset.cday});return}
   if(t.closest('#w-cal')){go('calendar',{day:todayStr()});return}

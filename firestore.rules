@@ -1,20 +1,17 @@
 rules_version = '2';
 // Доступ только для сотрудников, вошедших по почте и паролю.
-// Менеджер (почта raz.brandstudio@...) работает с заказами, закупками и расходами офиса,
-// в задачах от начальства меняет статус и пишет комментарии, может ставить свои задачи («от менеджера»),
-// проекты и прайс только просматривает.
+// Руководитель и менеджер работают с одинаковыми правами.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function isManager() {
-      return signedIn() && request.auth.token.email != null
-        && request.auth.token.email.lower().matches('raz[.]brandstudio@.*');
-    }
 
-    // Заказы, закупки, расходы офиса, фото и файлы — всем сотрудникам
+    // Заказы, закупки, расходы офиса, проекты, прайс, задачи, фото и файлы — всем сотрудникам
     match /orders/{id}   { allow read, write: if signedIn(); }
     match /supplies/{id} { allow read, write: if signedIn(); }
     match /office/{id}   { allow read, write: if signedIn(); }
+    match /projects/{id} { allow read, write: if signedIn(); }
+    match /prices/{id}   { allow read, write: if signedIn(); }
+    match /tasks/{id}    { allow read, write: if signedIn(); }
     match /blobs/{id}    { allow read, write: if signedIn(); }
 
     // Заявки с сайта топперов: сайт может только создать новую заявку (без входа),
@@ -34,28 +31,6 @@ service cloud.firestore {
         && request.resource.data.customDesc is string && request.resource.data.customDesc.size() <= 2000
         && request.resource.data.qty is int && request.resource.data.qty >= 0 && request.resource.data.qty <= 1000000
         && request.resource.data.total is number && request.resource.data.total >= 0;
-    }
-
-    // Проекты и прайс — менеджер только смотрит
-    match /projects/{id} { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
-    match /prices/{id}   { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
-
-    // Задачи: календарные — всем. От начальства (kind = 'boss') — ставит и удаляет руководитель,
-    // менеджер меняет у них статус и пишет комментарии. Свои задачи в этом блоке
-    // («задача от менеджера», kind = 'mgr') менеджер ставит и ведёт полностью.
-    match /tasks/{id} {
-      function mgrTask(d) { return d.kind == 'boss' && d.get('src', '') == 'mgr'; }
-      allow read: if signedIn();
-      allow create: if signedIn() && (!isManager() || request.resource.data.kind != 'boss' || mgrTask(request.resource.data));
-      allow delete: if signedIn() && (!isManager() || resource.data.kind != 'boss' || mgrTask(resource.data));
-      allow update: if signedIn() && (
-        !isManager()
-        || (resource.data.kind != 'boss' && request.resource.data.kind != 'boss')
-        || (mgrTask(resource.data) && mgrTask(request.resource.data))
-        || (resource.data.kind == 'boss'
-            && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['status', 'done', 'doneAt', 'comments', 'updatedAt']))
-      );
     }
   }
 }
