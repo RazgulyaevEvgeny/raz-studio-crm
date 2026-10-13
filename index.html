@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013130617">
+<meta name="app-build" content="20261013133241">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1544,7 +1544,10 @@ const BS=Object.fromEntries(BSTAT.map(s=>[s.id,s]));
 const bossStatus=t=>t.done?'done':(BS[t.status]?t.status:'new');
 const openCm=new Set();
 /* время задачи: «13:00–17:00», «с 13:00» или «до 17:00» */
-const tmTxt=t=>t.time&&t.timeTo?t.time+'–'+t.timeTo:t.time?(t.kind==='boss'?'с ':'')+t.time:t.timeTo?'до '+t.timeTo:'';
+/* задачи блока «от начальства»: от руководителя (kind boss) и от менеджера (kind mgr — проходят по старым правилам базы) */
+const isMgrTask=t=>!!t&&(t.kind==='mgr'||t.src==='mgr');
+const isBossBlock=t=>!!t&&(t.kind==='boss'||t.kind==='mgr');
+const tmTxt=t=>t.time&&t.timeTo?t.time+'–'+t.timeTo:t.time?(isBossBlock(t)?'с ':'')+t.time:t.timeTo?'до '+t.timeTo:'';
 const CLOCK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
 let editTime=null,ttDraft=null;
 function normHM(v){v=String(v||'').trim();if(!v)return '';const d=v.replace(/\D/g,'');if(!d||d.length>4)return null;
@@ -1806,7 +1809,7 @@ function itemsOn(day){
 function dayMarks(day){
   const {os,ts}=itemsOn(day);const m=[];
   os.forEach(o=>m.push(isOverdue(o)?'--danger':'--blue'));
-  ts.filter(t=>!t.done).forEach(t=>m.push(taskLate(t)?'--danger':t.kind==='boss'?'--boss':'--task'));
+  ts.filter(t=>!t.done).forEach(t=>m.push(taskLate(t)?'--danger':isBossBlock(t)?'--boss':'--task'));
   return m;
 }
 
@@ -1850,9 +1853,9 @@ function bossParts(t){
   const tm=tmTxt(t);
   if(t.date){const rng=t.dateFrom&&t.dateFrom!==t.date?'с '+fmtDate(t.dateFrom)+' по '+fmtDate(t.date):(tm?'':'до ')+fmtDate(t.date);meta.push(rng+(t.done?'':', '+relWord(t.date)))}
   if(t.who)meta.push('кому: '+t.who);
-  if(t.src==='mgr'&&t.by)meta.push('автор: '+t.by);
+  if(isMgrTask(t)&&t.by)meta.push('автор: '+t.by);
   if(t.done&&t.doneAt)meta.push('выполнено '+new Date(t.doneAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}));
-  const boss=canWrite&&(!isMgr()||t.src==='mgr');
+  const boss=canWrite&&(!isMgr()||isMgrTask(t));
   const del=!boss?'<span></span>':askDel===t.id?`<button class="tdel ask" type="button" data-tdel="${esc(t.id)}" data-confirm="1">Удалить</button>`:`<button class="tdel" type="button" data-tdel="${esc(t.id)}" aria-label="Удалить задачу">×</button>`;
   const cms=t.comments||[],open=openCm.has(t.id);
   const cmBox=`<div class="tcm">
@@ -1875,7 +1878,7 @@ function bossParts(t){
 function bossRow(t){const b=bossParts(t);
   const now=!t.done&&taskOn(t,todayStr());
   return `<div class="task boss${t.done?' done':''}${now?' now':''}" style="--sc:var(${b.st.c})">
-    <span class="tt"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${t.src==='mgr'?'<span class="tsrc">задача от менеджера</span>':''}${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
+    <span class="tt"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${isMgrTask(t)?'<span class="tsrc">задача от менеджера</span>':''}${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
     ${b.sel}${b.att}${b.del}${b.ted}
     ${b.files}${b.cmBox}</div>`;
 }
@@ -1884,7 +1887,7 @@ const openToday=new Set();let todayAllOrders=false;
 const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 const CLIP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>';
 function todayTask(t){
-  const boss=t.kind==='boss',open=openToday.has(t.id),late=taskLate(t),b=boss?bossParts(t):null,id=esc(t.id);
+  const boss=isBossBlock(t),open=openToday.has(t.id),late=taskLate(t),b=boss?bossParts(t):null,id=esc(t.id);
   const meta=boss?[b.st.label.toLowerCase(),t.date?(t.done?'до '+fmtDate(t.date):relWord(t.date)):'',t.who]:[t.time,t.who];
   const nf=(t.files||[]).length,nc=(t.comments||[]).length;
   const icons=(nc?`<span>${CM_ICON}${nc}</span>`:'')+(nf?`<span>${CLIP_ICON}${nf}</span>`:'');
@@ -1904,11 +1907,11 @@ function todayTask(t){
     </div>${body}</div>`;
 }
 function taskRow(t){
-  if(t.kind==='boss')return bossRow(t);
+  if(isBossBlock(t))return bossRow(t);
   const late=taskLate(t);
   const meta=[];
-  if(t.kind==='boss'){if(t.date)meta.push('до '+fmtDate(t.date)+(t.done?'':', '+relWord(t.date)))}else if(t.time)meta.push(t.time);
-  if(t.who)meta.push(t.kind==='boss'?'кому: '+t.who:t.who);
+  if(isBossBlock(t)){if(t.date)meta.push('до '+fmtDate(t.date)+(t.done?'':', '+relWord(t.date)))}else if(t.time)meta.push(t.time);
+  if(t.who)meta.push(isBossBlock(t)?'кому: '+t.who:t.who);
   if(t.done&&t.doneAt)meta.push('выполнено '+new Date(t.doneAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}));
   const del=askDel===t.id?`<button class="tdel ask" type="button" data-tdel="${esc(t.id)}" data-confirm="1">Удалить</button>`:`<button class="tdel" type="button" data-tdel="${esc(t.id)}" aria-label="Удалить задачу">×</button>`;
   return `<div class="task${t.done?' done':''}">
@@ -1944,7 +1947,7 @@ function renderHome(){
   }
   renderLedgerWidgets();renderProjWidget();
   // задачи от начальства
-  const boss=tasks.filter(t=>t.kind==='boss');
+  const boss=tasks.filter(isBossBlock);
   const tdy=todayStr(),isNow=t=>!t.done&&taskOn(t,tdy);
   const open=boss.filter(t=>!t.done).sort((a,b)=>(isNow(b)-isNow(a))||(a.date||'9999').localeCompare(b.date||'9999'));
   const done=boss.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
@@ -1966,7 +1969,7 @@ function renderHome(){
   }
   $('w-cal-grid').innerHTML=h;
   // сегодня
-  const {os,ts:tsAll}=itemsOn(t);const ts=tsAll.filter(x=>x.kind!=='boss');/* задачи от начальства живут в своём блоке */
+  const {os,ts:tsAll}=itemsOn(t);const ts=tsAll.filter(x=>!isBossBlock(x));/* задачи от начальства живут в своём блоке */
   const lateO=orders.filter(isOverdue);
   const tsOpen=ts.filter(x=>!x.done).length;
   const parts=[];
@@ -2029,7 +2032,7 @@ function renderCalendar(){
   for(let i=0;i<42;i++){
     const d=new Date(start);d.setDate(start.getDate()+i);const k=ds(d);if(i===35&&d.getMonth()!==calM)break;
     const {os,ts}=itemsOn(k);
-    const ev=[...ts.map(x=>({t:(tmTxt(x)?tmTxt(x)+' ':'')+x.title,c:taskLate(x)?'--danger':x.kind==='boss'?'--boss':'--task',done:x.done,due:x.date===k})),
+    const ev=[...ts.map(x=>({t:(tmTxt(x)?tmTxt(x)+' ':'')+x.title,c:taskLate(x)?'--danger':isBossBlock(x)?'--boss':'--task',done:x.done,due:x.date===k})),
               ...os.map(o=>({t:o.client,c:isOverdue(o)?'--danger':'--blue',due:o.deadline===k}))];
     const mk=dayMarks(k);
     h+=`<button type="button" class="bday${d.getMonth()!==calM?' out':''}${k===t?' today':''}${k===selDay?' sel':''}" data-bday="${k}" aria-label="${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${ev.length?', записей: '+ev.length:''}">
@@ -3298,7 +3301,7 @@ document.addEventListener('click',e=>{
   if(t.closest('[data-new]')){if(t.closest('.fab')&&isMgr()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
   const op=t.closest('[data-open]');if(op){openEditor(op.dataset.open);return}
   const dn=t.closest('[data-tdone]');if(dn){toggleTask(dn.dataset.tdone);return}
-  const td=t.closest('[data-tdel]');if(td&&isMgr()&&(x=>x&&x.kind==='boss'&&x.src!=='mgr')(tasks.find(x=>x.id===td.dataset.tdel))){toast('Удалять задачи от начальства может только руководитель');return}
+  const td=t.closest('[data-tdel]');if(td&&isMgr()&&(x=>x&&x.kind==='boss'&&!isMgrTask(x))(tasks.find(x=>x.id===td.dataset.tdel))){toast('Удалять задачи от начальства может только руководитель');return}
   if(td){if(td.dataset.confirm)deleteTask(td.dataset.tdel);else{askDel=td.dataset.tdel;render();setTimeout(()=>{if(askDel===td.dataset.tdel){askDel=null;render()}},4000)}return}
   const cd=t.closest('[data-cday]');if(cd){go('calendar',{day:cd.dataset.cday});return}
   if(t.closest('#w-cal')){go('calendar',{day:todayStr()});return}
@@ -3423,7 +3426,7 @@ $('boss-form').addEventListener('submit',async e=>{
   try{
     let files=[];
     if(bossPending.length){try{files=await uploadAll(bossPending.map(p=>p.file))}catch(er){showErr('b-err',fileErrMsg(er));return}}
-    if(await addTask({kind:'boss',title,desc:$('b-desc').value.trim(),dateFrom:from,date:to,who,time:tf,timeTo:tt,status:'new',by:ROLE().name||'',...(isMgr()?{src:'mgr'}:{}),files,comments:[]},'b-err',null)){$('b-desc').value='';
+    if(await addTask({kind:isMgr()?'mgr':'boss',title,desc:$('b-desc').value.trim(),dateFrom:from,date:to,who,time:tf,timeTo:tt,status:'new',by:ROLE().name||'',...(isMgr()?{src:'mgr'}:{}),files,comments:[]},'b-err',null)){$('b-desc').value='';
       bossPending.forEach(p=>URL.revokeObjectURL(p.url));bossPending=[];renderBossPending();
       $('b-title').value='';setDM($('b-from'),'');setDM($('b-to'),'');$('b-tfrom').value='';$('b-tto').value='';$('b-who').value='';$('boss-form').hidden=true;toast('Задача поставлена');
     }

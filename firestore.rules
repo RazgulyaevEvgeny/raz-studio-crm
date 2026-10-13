@@ -40,9 +40,9 @@ service cloud.firestore {
     match /projects/{id} { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
     match /prices/{id}   { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
 
-    // Задачи: календарные — всем. От начальства — ставит и удаляет руководитель,
+    // Задачи: календарные — всем. От начальства (kind = 'boss') — ставит и удаляет руководитель,
     // менеджер меняет у них статус и пишет комментарии. Свои задачи в этом блоке
-    // (с пометкой src = 'mgr', «задача от менеджера») менеджер ставит и ведёт полностью.
+    // («задача от менеджера», kind = 'mgr') менеджер ставит и ведёт полностью.
     match /tasks/{id} {
       function mgrTask(d) { return d.kind == 'boss' && d.get('src', '') == 'mgr'; }
       allow read: if signedIn();
