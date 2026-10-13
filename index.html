@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013124401">
+<meta name="app-build" content="20261013125002">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -488,6 +488,18 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .icb{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
 .icb:hover{background:var(--tile);color:var(--blue)}
 .icb svg{width:17px;height:17px}
+.icb.on{color:var(--blue)}
+.tico{display:inline-flex;align-items:center;gap:2px}
+.ttm{display:inline-flex;align-items:center;gap:4px;vertical-align:1px;margin-right:6px;padding:2px 8px 2px 6px;border-radius:999px;background:color-mix(in srgb,var(--blue) 14%,var(--paper));color:var(--blue);font:700 11.5px/1.3 var(--f);white-space:nowrap}
+.ttm svg{width:12px;height:12px}
+.ttime-ed{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;background:var(--tile);border-radius:12px;padding:10px 12px}
+.task.boss.now .ttime-ed{background:var(--paper)}
+.ttime-ed .lb{font:600 12.5px var(--f);color:var(--muted)}
+.ttime-ed input{border:0;background:var(--paper);border-radius:10px;min-height:40px;padding:0 10px;font:inherit;min-width:0;flex:1 1 0;max-width:150px}
+.task.boss.now .ttime-ed input{background:var(--tile)}
+.ttime-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tform .b-time input{max-width:120px;text-align:left;padding-left:12px}
+.ttime-ed input{max-width:110px}
 @media(max-width:520px){.task.boss{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"tt tt tt" "st at dl"}.task.boss .tt{grid-area:tt}.task.boss .tstat-w{grid-area:st;justify-self:start}}
 .tasks{container-type:inline-size}
 @container (max-width:440px){.task.boss{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"tt tt tt" "st at dl"}.task.boss .tt{grid-area:tt}.task.boss .tstat-w{grid-area:st;justify-self:start}}
@@ -1089,10 +1101,12 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
           <form class="tform" id="boss-form" hidden novalidate>
             <input class="full" id="b-title" placeholder="Что сделать" autocomplete="off" aria-label="Задача">
             <div class="range full"><span>с</span><input id="b-from" data-dm data-range-to="b-to" placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off" aria-label="Начало, день и месяц"><span>по</span><input id="b-to" data-dm data-range-from="b-from" placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off" aria-label="Срок, день и месяц"></div>
+            <div class="range full b-time"><span>время с</span><input id="b-tfrom" type="text" data-hm inputmode="numeric" maxlength="5" placeholder="чч:мм" autocomplete="off" aria-label="Время с, необязательно"><span>до</span><input id="b-tto" type="text" data-hm inputmode="numeric" maxlength="5" placeholder="чч:мм" autocomplete="off" aria-label="Время до, необязательно"></div>
             <textarea class="full" id="b-desc" rows="2" placeholder="Описание: подробности, что важно учесть (необязательно)" aria-label="Описание задачи" style="border:0;background:var(--tile);border-radius:12px;padding:10px 12px;font:inherit;resize:vertical"></textarea>
             <input id="b-who" data-sugg="owners-dl" placeholder="Кому" autocomplete="off" aria-label="Кому">
             <button class="attach" type="button" id="b-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button>
             <div class="files" id="b-files"></div>
+            <div class="hint full">Время необязательно: например, с 13:00 до 17:00.</div>
             <div class="hint full" data-need-assets>Даты выбираются в календаре по нажатию. Файлы: фото, PDF до 700 КБ, STL и 3MF до 50 МБ.</div>
             <div class="err" id="b-err" hidden></div>
             <div class="acts"><button class="btn soft sm" type="button" id="b-cancel">Отмена</button><button class="btn primary sm" type="submit" id="b-save">Поставить задачу</button></div>
@@ -1526,6 +1540,15 @@ const BSTAT=[{id:'new',label:'Новая',c:'--st-new'},{id:'accepted',label:'П
 const BS=Object.fromEntries(BSTAT.map(s=>[s.id,s]));
 const bossStatus=t=>t.done?'done':(BS[t.status]?t.status:'new');
 const openCm=new Set();
+/* время задачи: «13:00–17:00», «с 13:00» или «до 17:00» */
+const tmTxt=t=>t.time&&t.timeTo?t.time+'–'+t.timeTo:t.time?(t.kind==='boss'?'с ':'')+t.time:t.timeTo?'до '+t.timeTo:'';
+const CLOCK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+let editTime=null,ttDraft=null;
+function normHM(v){v=String(v||'').trim();if(!v)return '';const d=v.replace(/\D/g,'');if(!d||d.length>4)return null;
+  const h=+(d.length<=2?d:d.length===3?d[0]:d.slice(0,2)),m=+(d.length<=2?0:d.slice(-2));
+  return h<24&&m<60?String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'):null}
+document.addEventListener('input',e=>{const el=e.target;if(!el.matches||!el.matches('[data-hm]'))return;const d=el.value.replace(/\D/g,'').slice(0,4);const v=d.length>2?d.slice(0,2)+':'+d.slice(2):d;if(v!==el.value)el.value=v});
+document.addEventListener('focusout',e=>{const el=e.target;if(!el.matches||!el.matches('[data-hm]'))return;const n=normHM(el.value);if(n)el.value=n});
 const CM_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
 let bossPending=[], fileTarget=null, askFile=null;
 let edUnitTouched=false;
@@ -1821,7 +1844,8 @@ function orderMini(o){
 function bossParts(t){
   const st=BS[bossStatus(t)];const late=taskLate(t);
   const meta=[];
-  if(t.date){const rng=t.dateFrom&&t.dateFrom!==t.date?'с '+fmtDate(t.dateFrom)+' по '+fmtDate(t.date):'до '+fmtDate(t.date);meta.push(rng+(t.done?'':', '+relWord(t.date)))}
+  const tm=tmTxt(t);
+  if(t.date){const rng=t.dateFrom&&t.dateFrom!==t.date?'с '+fmtDate(t.dateFrom)+' по '+fmtDate(t.date):(tm?'':'до ')+fmtDate(t.date);meta.push(rng+(t.done?'':', '+relWord(t.date)))}
   if(t.who)meta.push('кому: '+t.who);
   if(t.done&&t.doneAt)meta.push('выполнено '+new Date(t.doneAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}));
   const boss=canWrite&&!isMgr();
@@ -1834,15 +1858,21 @@ function bossParts(t){
       ${canWrite?`<div class="cm-add"><textarea data-cmtext="${esc(t.id)}" rows="2" placeholder="Что сделано, что мешает, вопрос начальству" aria-label="Комментарий к задаче"></textarea><button class="btn primary sm" type="button" data-cmadd="${esc(t.id)}">Отправить</button></div>`:''}</div>`:''}
   </div>`;
   const sel=`<span class="tstat-w" style="--sc:var(${st.c})"><select class="tstat" data-tstat="${esc(t.id)}" aria-label="Статус задачи" ${canWrite?'':'disabled'}>${BSTAT.map(x=>`<option value="${x.id}" data-c="${x.c}"${x.id===st.id?' selected':''}>${x.label}</option>`).join('')}</select></span>`;
-  const att=boss&&assets?`<button class="icb" type="button" data-tattach="${esc(t.id)}" aria-label="Прикрепить файл к задаче"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg></button>`:'<span></span>';
+  const clk=boss&&!t.done?`<button class="icb${tm?' on':''}" type="button" data-ttime="${esc(t.id)}" aria-label="${tm?'Изменить время задачи':'Поставить время задачи'}" title="${tm?'Изменить время':'Поставить время'}">${CLOCK_ICON}</button>`:'';
+  const att0=boss&&assets?`<button class="icb" type="button" data-tattach="${esc(t.id)}" aria-label="Прикрепить файл к задаче"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg></button>`:'';
+  const att=clk||att0?`<span class="tico">${clk}${att0}</span>`:'<span></span>';
+  let ted='';
+  if(boss&&editTime===t.id){const d=ttDraft&&ttDraft.id===t.id?ttDraft:{from:t.time||'',to:t.timeTo||''};
+    ted=`<div class="ttime-ed" data-tted="${esc(t.id)}"><span class="lb">Время</span><div class="range"><span>с</span><input type="text" data-hm inputmode="numeric" maxlength="5" placeholder="чч:мм" autocomplete="off" data-ttf value="${esc(d.from)}" aria-label="Время с"><span>до</span><input type="text" data-hm inputmode="numeric" maxlength="5" placeholder="чч:мм" autocomplete="off" data-ttt value="${esc(d.to)}" aria-label="Время до"></div>
+      <div class="ttime-acts">${tm?`<button class="linkbtn" type="button" data-ttclear="${esc(t.id)}" style="color:var(--danger)">Убрать время</button>`:''}<span style="flex:1"></span><button class="btn soft sm" type="button" data-ttcancel>Отмена</button><button class="btn primary sm" type="button" data-ttsave="${esc(t.id)}">Сохранить</button></div></div>`}
   const files=`<div class="files">${(t.files||[]).map(f=>fileTile(f,{rm:boss&&!!assets,owner:'t:'+t.id})).join('')}</div>`;
-  return {st,late,meta,del,cmBox,sel,att,files};
+  return {st,late,meta,del,cmBox,sel,att,files,tm,ted,boss};
 }
 function bossRow(t){const b=bossParts(t);
   const now=!t.done&&taskOn(t,todayStr());
   return `<div class="task boss${t.done?' done':''}${now?' now':''}" style="--sc:var(${b.st.c})">
-    <span class="tt"><b>${now?'<span class="tnow">на сегодня</span>':''}${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
-    ${b.sel}${b.att}${b.del}
+    <span class="tt"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
+    ${b.sel}${b.att}${b.del}${b.ted}
     ${b.files}${b.cmBox}</div>`;
 }
 /* задача в виджете «Сегодня»: компактная строка своего цвета, раскрывается по нажатию */
@@ -1997,7 +2027,7 @@ function renderCalendar(){
   for(let i=0;i<42;i++){
     const d=new Date(start);d.setDate(start.getDate()+i);const k=ds(d);if(i===35&&d.getMonth()!==calM)break;
     const {os,ts}=itemsOn(k);
-    const ev=[...ts.map(x=>({t:(x.time?x.time+' ':'')+x.title,c:taskLate(x)?'--danger':x.kind==='boss'?'--boss':'--task',done:x.done,due:x.date===k})),
+    const ev=[...ts.map(x=>({t:(tmTxt(x)?tmTxt(x)+' ':'')+x.title,c:taskLate(x)?'--danger':x.kind==='boss'?'--boss':'--task',done:x.done,due:x.date===k})),
               ...os.map(o=>({t:o.client,c:isOverdue(o)?'--danger':'--blue',due:o.deadline===k}))];
     const mk=dayMarks(k);
     h+=`<button type="button" class="bday${d.getMonth()!==calM?' out':''}${k===t?' today':''}${k===selDay?' sel':''}" data-bday="${k}" aria-label="${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${ev.length?', записей: '+ev.length:''}">
@@ -3015,6 +3045,13 @@ async function addComment(id){
   try{await db.doc('tasks/'+id).update({comments:[...(t.comments||[]),{by,text,at:Date.now()}],updatedAt:Date.now()});ta.value='';toast('Комментарий добавлен')}
   catch(er){toast(handleWriteError(er))}
 }
+async function saveTaskTime(id,from,to){
+  from=normHM(from);to=normHM(to);if(from===null||to===null){toast('Время пишите часами и минутами, например 13:00');return}
+  if(from&&to&&to<=from){toast('Время «до» должно быть позже, чем «с»');return}
+  try{await db.doc('tasks/'+id).update({time:from,timeTo:to,updatedAt:Date.now()});editTime=null;ttDraft=null;render();toast(from||to?'Время: '+tmTxt({kind:'boss',time:from,timeTo:to}):'Время убрано')}
+  catch(er){toast(handleWriteError(er))}
+}
+document.addEventListener('input',e=>{const w=e.target.closest('[data-tted]');if(!w)return;ttDraft={id:w.dataset.tted,from:w.querySelector('[data-ttf]').value,to:w.querySelector('[data-ttt]').value}});
 async function setBossStatus(id,st){
   const t=tasks.find(x=>x.id===id);if(!t||!canWrite)return;
   try{await db.doc('tasks/'+id).update({status:st,done:st==='done',doneAt:st==='done'?Date.now():null,updatedAt:Date.now()});toast('Статус: '+BS[st].label)}
@@ -3278,6 +3315,10 @@ document.addEventListener('click',e=>{
   const xn=t.closest('[data-xnew]');if(xn){openX(xn.dataset.xnew,'new');return}
   const xo=t.closest('[data-xopen]');if(xo){openX(xo.dataset.xkind,xo.dataset.xopen);return}
   const lc=t.closest('[data-lcat]');if(lc){lview[lc.dataset.lk].cat=lc.dataset.lcat;render();return}
+  const tme=t.closest('[data-ttime]');if(tme){const id=tme.dataset.ttime;editTime=editTime===id?null:id;ttDraft=null;render();setTimeout(()=>document.querySelector('[data-tted="'+CSS.escape(id)+'"] [data-ttf]')?.focus(),0);return}
+  if(t.closest('[data-ttcancel]')){editTime=null;ttDraft=null;render();return}
+  const tcl=t.closest('[data-ttclear]');if(tcl){saveTaskTime(tcl.dataset.ttclear,'','');return}
+  const tsv=t.closest('[data-ttsave]');if(tsv){const w=tsv.closest('[data-tted]');saveTaskTime(tsv.dataset.ttsave,w.querySelector('[data-ttf]').value||'',w.querySelector('[data-ttt]').value||'');return}
   const tg=t.closest('[data-ttog]');if(tg){const id=tg.dataset.ttog;openToday.has(id)?openToday.delete(id):openToday.add(id);render();return}
   if(t.closest('[data-todaymore]')){todayAllOrders=!todayAllOrders;render();return}
   const cmt=t.closest('[data-cmtog]');if(cmt){const id=cmt.dataset.cmtog;openCm.has(id)?openCm.delete(id):openCm.add(id);render();setTimeout(()=>document.querySelector('[data-cmtext="'+CSS.escape(id)+'"]')?.focus(),0);return}
@@ -3370,14 +3411,17 @@ $('boss-form').addEventListener('submit',async e=>{
   if(!from){showErr('b-err','Дата «с» не распознана. Пишите день и месяц, например 12.10.');$('b-from').focus();return}
   const to=valIso($('b-to'),from);
   if(!to){showErr('b-err','Укажите срок «по», например 15.10.');$('b-to').focus();return}
+  const tf=normHM($('b-tfrom').value),tt=normHM($('b-tto').value);
+  if(tf===null||tt===null){showErr('b-err','Время пишите часами и минутами, например 13:00.');$(tf===null?'b-tfrom':'b-tto').focus();return}
+  if(tf&&tt&&tt<=tf){showErr('b-err','Время «до» должно быть позже, чем «с».');$('b-tto').focus();return}
   const btn=$('b-save');btn.disabled=true;btn.textContent='Сохраняем…';
   try{
     let files=[];
     if(bossPending.length){try{files=await uploadAll(bossPending.map(p=>p.file))}catch(er){showErr('b-err',fileErrMsg(er));return}}
     if(isMgr()){showErr('b-err','Ставить задачи от начальства может только руководитель.');return}
-    if(await addTask({kind:'boss',title,desc:$('b-desc').value.trim(),dateFrom:from,date:to,who,time:'',status:'new',files,comments:[]},'b-err',null)){$('b-desc').value='';
+    if(await addTask({kind:'boss',title,desc:$('b-desc').value.trim(),dateFrom:from,date:to,who,time:tf,timeTo:tt,status:'new',files,comments:[]},'b-err',null)){$('b-desc').value='';
       bossPending.forEach(p=>URL.revokeObjectURL(p.url));bossPending=[];renderBossPending();
-      $('b-title').value='';setDM($('b-from'),'');setDM($('b-to'),'');$('b-who').value='';$('boss-form').hidden=true;toast('Задача поставлена');
+      $('b-title').value='';setDM($('b-from'),'');setDM($('b-to'),'');$('b-tfrom').value='';$('b-tto').value='';$('b-who').value='';$('boss-form').hidden=true;toast('Задача поставлена');
     }
   }finally{btn.disabled=false;btn.textContent='Поставить задачу'}
 });
