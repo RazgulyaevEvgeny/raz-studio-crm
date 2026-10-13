@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013125002">
+<meta name="app-build" content="20261013125321">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -706,6 +706,12 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .pcol{display:flex;flex-direction:column;gap:16px;min-width:0}
 .pcol>.w{flex:none}.pcol>.w.fill{flex:1 1 auto}
 .pack.m .pcol>.w{flex:none}
+.pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
+.psub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;flex:1 1 auto;align-items:stretch;min-width:0}
+.psub:not(:has(.w)){display:none}
+/* широкий «Сегодня»: заказы и задачи в две колонки */
+.tday-w{container-type:inline-size}
+@container (min-width:600px){.tday-w>.mini{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.tday-w>.tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:start}}
 /* прайс */
 .seg{display:inline-flex;background:var(--paper);border-radius:999px;padding:4px;gap:2px;flex:none}
 .seg button{min-height:38px;padding:0 16px;border-radius:999px;font:600 13.5px var(--f);color:var(--muted)}
@@ -1090,10 +1096,6 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
           <div class="mini" id="w-req-list"></div>
           <button class="done-tog" type="button" id="req-done-tog" hidden></button>
           <div class="mini" id="req-done" hidden></div>
-        </div>
-        <div class="w link" id="w-orders" role="link" tabindex="0" aria-label="Открыть ведомость">
-          <div class="w-h"><h2>Ведомость <span class="c" id="w-orders-c"></span></h2><span class="go">Открыть <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
-          <div class="mini" id="w-orders-list"></div>
         </div>
         <div class="w">
           <div class="w-h"><h2>Задачи от начальства <span class="c" id="w-boss-c"></span></h2><button class="go" type="button" id="boss-add-btn">+ Задача</button></div>
@@ -1876,7 +1878,7 @@ function bossRow(t){const b=bossParts(t);
     ${b.files}${b.cmBox}</div>`;
 }
 /* задача в виджете «Сегодня»: компактная строка своего цвета, раскрывается по нажатию */
-const openToday=new Set();let todayAllOrders=false;const TODAY_LIM=5;
+const openToday=new Set();let todayAllOrders=false;
 const CHEV='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 const CLIP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>';
 function todayTask(t){
@@ -1937,9 +1939,6 @@ function renderHome(){
     $('s-debt').textContent=money(orders.reduce((s,o)=>s+debtOf(o),0));
     const s=series();
     drawSpark($('sp-active'),s.active,'a');drawSpark($('sp-today'),s.today,'t');drawSpark($('sp-profit'),s.profit,'o');drawSpark($('sp-debt'),s.debt,'d');
-    const actOrders=orders.filter(o=>!CLOSED.has(o.status)).sort(sortOrders);
-    $('w-orders-c').textContent=actOrders.length?actOrders.length+' в работе':'';
-    $('w-orders-list').innerHTML=actOrders.length?actOrders.slice(0,5).map(orderMini).join('')+(actOrders.length>5?`<div class="meta" style="padding-left:6px">и ещё ${actOrders.length-5}, откройте ведомость</div>`:''):`<div class="w-empty">Активных заказов нет. Нажмите «Новый заказ», чтобы завести первый.</div>`;
   }
   renderLedgerWidgets();renderProjWidget();
   // задачи от начальства
@@ -1970,6 +1969,7 @@ function renderHome(){
   const tsOpen=ts.filter(x=>!x.done).length;
   const parts=[];
   if(ts.length)parts.push(`<div class="tsub"><span>Задачи</span><em>${tsOpen}${ts.length>tsOpen?' из '+ts.length:''}</em></div><div class="tasks">${ts.map(todayTask).join('')}</div>`);
+  const TODAY_LIM=innerWidth>=700?8:5;
   if(os.length){const lim=todayAllOrders?os.length:TODAY_LIM;
     parts.push(`<div class="tsub"><span>Заказы</span><em>${os.length}</em></div><div class="mini">${os.slice(0,lim).map(orderMini).join('')}</div>`
       +(os.length>TODAY_LIM?`<button class="done-tog" type="button" data-todaymore>${todayAllOrders?'Свернуть':'Показать ещё '+(os.length-TODAY_LIM)}</button>`:''))}
@@ -2197,22 +2197,27 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 /* ---------- раскладка главной ---------- */
 let packW=[];
 function initPack(){
-  packW=[$('w-today').closest('.w'),$('w-orders'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
+  packW=[$('w-today').closest('.w'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);packW.forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
   document.querySelectorAll('#p-home .home-grid,#p-home .home-grid2').forEach(el=>el.remove());
 }
+let packN=0;
 function packHome(){
   const pack=$('pack');if(!pack||$('p-home').hidden||!packW.length)return;
   const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1100?3:w>=700?2:1;
-  let cols=[...pack.children];
-  if(cols.length!==n){pack.innerHTML='';pack.style.setProperty('--cols',n);cols=[...Array(n)].map(()=>{const c=document.createElement('div');c.className='pcol';pack.appendChild(c);return c});packW.forEach(x=>cols[0].appendChild(x))}
+  const lead=packW[0],rest=packW.slice(1),mk=c=>{const d=document.createElement('div');d.className=c;return d};
+  if(packN!==n){packN=n;pack.innerHTML='';pack.style.setProperty('--cols',n);pack.dataset.n=n;
+    if(n===1){const c=mk('pcol');pack.appendChild(c);packW.forEach(x=>c.appendChild(x))}
+    else{const left=mk('pleft'),sub=mk('psub');sub.append(mk('pcol'),mk('pcol'));left.append(lead,sub);pack.appendChild(left);if(n===3)pack.appendChild(mk('pcol'));rest.forEach(x=>sub.firstChild.appendChild(x))}}
+  if(n===1){packW.forEach(x=>x.classList.remove('fill'));return}
   pack.classList.add('m');
-  const hs=packW.map(x=>x.offsetHeight);
-  const acc=Array(n).fill(0),assign=packW.map((_,i)=>{let k=acc.indexOf(Math.min(...acc));acc[k]+=hs[i]+16;return k});
-  packW.forEach((x,i)=>{const col=cols[assign[i]];if(x.parentNode!==col||[...col.children].indexOf(x)!==packW.filter((_,j)=>j<i&&assign[j]===assign[i]).length)col.appendChild(x)});
+  const cols=[...pack.querySelectorAll('.psub>.pcol'),...(n===3?[pack.lastElementChild]:[])];
+  const gap=parseFloat(getComputedStyle(pack).rowGap)||16,off=n===3?lead.offsetHeight+gap:0,base=cols.map((_,i)=>i<2?off:0);
+  const acc=[...base],assign=rest.map(x=>{const k=acc.indexOf(Math.min(...acc));acc[k]+=x.offsetHeight+gap;return k});
+  cols.forEach((c,k)=>{const want=rest.filter((_,i)=>assign[i]===k),cur=[...c.children];if(cur.length!==want.length||want.some((x,j)=>cur[j]!==x))want.forEach(x=>c.appendChild(x))});
   /* нижний блок колонки дотягивается до соседних, только если разница небольшая: без больших пустот внутри блоков */
-  const gap=parseFloat(getComputedStyle(cols[0]).rowGap)||16,colH=cols.map(c=>[...c.children].reduce((s,x)=>s+x.offsetHeight,0)+gap*Math.max(0,c.children.length-1)),mx=Math.max(...colH);
-  cols.forEach((c,i)=>{[...c.children].forEach(x=>x.classList.remove('fill'));const l=c.lastElementChild;if(l&&n>1&&mx-colH[i]<=140)l.classList.add('fill')});
+  const colH=cols.map((c,i)=>base[i]+[...c.children].reduce((t,x)=>t+x.offsetHeight,0)+gap*Math.max(0,c.children.length-1)),mx=Math.max(...colH);
+  cols.forEach((c,i)=>{[...c.children].forEach(x=>x.classList.remove('fill'));const l=c.lastElementChild;if(l&&mx-colH[i]<=140)l.classList.add('fill')});
   pack.classList.remove('m');
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
@@ -3295,7 +3300,6 @@ document.addEventListener('click',e=>{
   const td=t.closest('[data-tdel]');if(td&&isMgr()&&tasks.find(x=>x.id===td.dataset.tdel)?.kind==='boss'){toast('Удалять задачи от начальства может только руководитель');return}
   if(td){if(td.dataset.confirm)deleteTask(td.dataset.tdel);else{askDel=td.dataset.tdel;render();setTimeout(()=>{if(askDel===td.dataset.tdel){askDel=null;render()}},4000)}return}
   const cd=t.closest('[data-cday]');if(cd){go('calendar',{day:cd.dataset.cday});return}
-  if(t.closest('#w-orders')){go('orders');return}
   if(t.closest('#w-cal')){go('calendar',{day:todayStr()});return}
   const st=t.closest('.stat');if(st){view={f:st.dataset.f,svc:'all',q:'',day:''};$('q').value='';go('orders');return}
   const sv=t.closest('[data-svc]');if(sv){view.svc=sv.dataset.svc;render();return}
@@ -3330,7 +3334,7 @@ document.addEventListener('click',e=>{
   const bd=t.closest('[data-bday]');if(bd){selDay=bd.dataset.bday;const [y,m]=selDay.split('-').map(Number);if(m-1!==calM){calY=y;calM=m-1}render();setTimeout(()=>{if(matchMedia('(max-width:1060px)').matches)$('dp-title').scrollIntoView({block:'start',behavior:'auto'})},0);return}
   const pk=t.closest('[data-pick]');if(pk&&canWrite){edSvc=pk.dataset.pick;renderSvcPick();return}
 });
-['w-orders','w-cal','w-office','w-supplies','w-projects'].forEach(id=>$(id).addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.id===id){e.preventDefault();$(id).click()}}));
+['w-cal','w-office','w-supplies','w-projects'].forEach(id=>$(id).addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.id===id){e.preventDefault();$(id).click()}}));
 $('ed-close').onclick=$('ed-cancel').onclick=$('ed-back').onclick=closeEditor;
 $('ed-form').addEventListener('submit',saveOrder);
 ['f-price','f-paid','f-phone'].forEach(id=>$(id).addEventListener('input',updateRest));
