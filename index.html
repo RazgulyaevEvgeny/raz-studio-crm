@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013112132">
+<meta name="app-build" content="20261013114308">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -603,9 +603,29 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .pexp small{font:600 12.5px var(--f);color:var(--muted)}
 .pexp b{font:600 14.5px var(--f);overflow-wrap:anywhere}
 .pexp span{font:700 14.5px var(--f);white-space:nowrap}
-.pexp-add{display:grid;grid-template-columns:110px minmax(0,1fr) 120px auto;gap:8px;align-items:center}
+.pexp-add{display:grid;grid-template-columns:minmax(0,1fr) 90px 124px auto;gap:6px;align-items:center}
+.pexp-add #pe-title{grid-column:1/-1}
 .pexp-add input{border:0;background:var(--tile);border-radius:12px;min-height:44px;padding:0 12px;width:100%;min-width:0}
-@media(max-width:560px){.pexp-add{grid-template-columns:1fr 1fr}.pexp-add #pe-title{grid-column:1/-1;grid-row:1}.pexp-add .btn{grid-column:1/-1}}
+@media(max-width:640px){.pexp-add{grid-template-columns:1fr 1fr 1fr}.pexp-add #pe-title{grid-column:1/-1}.pexp-add .btn{grid-column:1/-1}}
+.pexp{cursor:pointer}.pexp:hover{background:var(--tile-2)}.pexp.edit{box-shadow:inset 0 0 0 2px var(--blue)}
+.pexp .pt{display:flex;flex-direction:column;min-width:0}
+.pexp .pt b{overflow-wrap:anywhere}.pexp .pt small{font:500 12px var(--fb);color:var(--muted)}
+/* обложка проекта */
+.pcov-w{display:block}
+.pcov{position:relative;height:190px;border-radius:18px;background:var(--tile) center/cover no-repeat;overflow:hidden}
+.pcov .pc-acts{position:absolute;right:10px;bottom:10px;display:flex;gap:6px}
+.pcov .pc-acts button{min-height:34px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.94);font:600 12.5px var(--f);color:var(--ink);box-shadow:0 4px 14px -6px rgba(0,0,0,.35)}
+.pcov .pc-acts button.del{color:var(--danger)}
+.pcov-add{width:100%;height:120px;border-radius:18px;background:var(--tile);border:2px dashed var(--tile-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font:600 13.5px var(--f)}
+.pcov-add:hover{color:var(--blue);border-color:color-mix(in srgb,var(--blue) 40%,transparent)}
+.pcov-add svg{width:28px;height:28px}
+.pcov-add small{font:500 12px var(--fb)}
+/* миниатюра проекта в виджете */
+.wproj{display:grid;grid-template-columns:52px minmax(0,1fr);gap:4px 12px;align-items:center}
+.wproj .th{grid-row:1/4;width:52px;height:52px;border-radius:12px;background:var(--tile) center/cover no-repeat;display:grid;place-items:center;color:#a5a8bf}
+.wproj .th svg{width:22px;height:22px}
+.wproj>.t,.wproj>.pbar{grid-column:2}
+@media(max-width:600px){.pcov{height:150px;border-radius:14px}.pcov-add{height:92px;border-radius:14px}.wproj{grid-template-columns:44px minmax(0,1fr);gap:3px 10px}.wproj .th{width:44px;height:44px;border-radius:10px}}
 /* плотная раскладка главной */
 .pack{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:16px;align-items:stretch}
 .pcol{display:flex;flex-direction:column;gap:16px;min-width:0}
@@ -1309,6 +1329,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <button class="tab" type="button" role="tab" id="ptab-files" aria-selected="false" data-ptab="files">Фото и файлы <em id="ptab-files-n"></em></button>
     </div>
     <div class="ed-body" id="ppane-main">
+      <div class="pcov-w" id="p-cover"></div>
       <div class="fld"><label for="p-name">Название *</label><input id="p-name" autocomplete="off" placeholder="Например: светящиеся таблички для кофеен"></div>
       <div class="fld"><span class="lb" id="p-st-lb">Статус</span><div class="svc-pick" id="p-stat" role="group" aria-labelledby="p-st-lb"></div></div>
       <div class="fld"><label for="p-desc">Описание продукта</label><textarea id="p-desc" style="min-height:160px" placeholder="Что это за продукт, для кого, чем отличается, как будем продавать, где брать материалы, какая цена"></textarea></div>
@@ -1327,16 +1348,18 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <div class="pbar" style="background:var(--tile)"><i id="pc-bar" style="width:0"></i></div>
       <div class="fld"><span class="lb">Расходы на проект</span><div class="exps" id="p-exps"></div></div>
       <div class="pexp-add" id="pexp-add">
+        <input id="pe-title" data-sugg="pexp-dl" placeholder="Наименование: ткань, образцы, реклама" autocomplete="off" aria-label="Наименование расхода">
         <input id="pe-date" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off" aria-label="Дата расхода">
-        <input id="pe-title" data-sugg="pexp-dl" placeholder="На что: образцы, реклама, форма" autocomplete="off" aria-label="Статья расхода">
-        <div class="suffix"><input id="pe-amount" type="number" min="0" step="1" inputmode="numeric" placeholder="Сумма" aria-label="Сумма"><span>₸</span></div>
+        <div class="suffix"><input id="pe-qty" type="number" min="0" step="any" inputmode="decimal" placeholder="1" aria-label="Количество"><span>шт</span></div>
+        <div class="suffix"><input id="pe-price" type="number" min="0" step="1" inputmode="numeric" placeholder="Цена" aria-label="Цена за единицу"><span>₸</span></div>
         <button class="btn primary sm" type="button" id="pe-add">Добавить</button>
       </div>
+      <div class="oi-tot" id="pe-sum" hidden></div>
       <datalist id="pexp-dl"><option value="Образцы"><option value="Материалы"><option value="Оборудование"><option value="Дизайн"><option value="Фотосъёмка"><option value="Реклама"><option value="Упаковка"><option value="Доставка"><option value="Сертификация"></datalist>
     </div>
     <div class="ed-body" id="ppane-files" hidden>
       <div class="files" id="p-files" style="gap:8px"></div>
-      <div class="w-empty" id="p-files-empty" style="background:var(--tile)">Здесь можно хранить фото образцов, макеты, референсы, PDF с расчётами. Первое фото станет обложкой проекта.</div>
+      <div class="w-empty" id="p-files-empty" style="background:var(--tile)">Здесь можно хранить фото образцов, макеты, референсы, PDF с расчётами. Обложка проекта ставится на вкладке «О проекте».</div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="attach" type="button" id="p-attach" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Прикрепить фото или файл</button><span class="hint" data-need-assets>Фото, PDF до 700 КБ, STL и 3MF до 50 МБ</span></div>
     </div>
     <div class="err" id="p-err" hidden style="padding:0 24px 8px"></div>
@@ -1424,7 +1447,7 @@ const mkColor=m=>m===null?'--muted':m<50?'--danger':m<100?'--st-prod':'--ok';
 const priceTxt=x=>+x.price===0?'Бесплатно':(x.from?'от ':'')+money(x.price);
 const PSTAT=[{id:'idea',label:'Идея',c:'--sky'},{id:'work',label:'В работе',c:'--st-prod'},{id:'launched',label:'Запущен',c:'--st-ready'},{id:'pause',label:'Пауза',c:'--muted'}];
 const PS=Object.fromEntries(PSTAT.map(x=>[x.id,x]));
-let projects=[],projLoaded=false,projFilter='active',pEditing=null,pStat='idea',pExp=[],pFiles=[],pFilesOrig=[],pTab='main';
+let projects=[],projLoaded=false,projFilter='active',pEditing=null,pStat='idea',pExp=[],pFiles=[],pFilesOrig=[],pTab='main',pCover=null,pCoverOrig=null,peEditId=null;
 const pSpent=p=>(p.expenses||[]).reduce((s,e)=>s+(+e.amount||0),0);
 const ledger={office:[],supplies:[]};let ledgerLoaded={office:false,supplies:false};
 const lview={office:{q:'',m:'',cat:'all'},supplies:{q:'',m:'',cat:'all'}};
@@ -2076,7 +2099,13 @@ async function delQ(){try{await db.doc('prices/'+qEditing).delete();closeQ();toa
 
 /* ---------- проекты ---------- */
 const PH_IMG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>';
-const coverOf=p=>(p.files||[]).find(f=>(f.type||'').startsWith('image/'));
+const coverOf=p=>p.cover||(p.files||[]).find(f=>(f.type||'').startsWith('image/'));
+const fileUrl=f=>f.url||('/_blob/'+f.id);
+function renderPCover(){
+  const w=$('p-cover');if(!w)return;
+  if(pCover){w.innerHTML=`<div class="pcov" style="background-image:url('${esc(fileUrl(pCover))}')" role="img" aria-label="Фото проекта">${canWrite&&assets?`<div class="pc-acts"><button type="button" data-pcov="change">Сменить фото</button><button type="button" class="del" data-pcov="remove">Убрать</button></div>`:''}</div>`;return}
+  w.innerHTML=canWrite&&assets?`<button type="button" class="pcov-add" data-pcov="change"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Добавить фото проекта</span><small>Будет видно в карточке проекта и на главной</small></button>`:'';
+}
 function projBar(p){const sp=pSpent(p),b=+p.budget||0;const w=b?Math.min(100,sp/b*100):(sp?100:0);return `<div class="pbar"><i class="${b&&sp>b?'over':''}" style="width:${w.toFixed(1)}%"></i></div>`}
 function renderProjWidget(){
   const ym=curMonth(),act=projects.filter(p=>p.status!=='launched'&&p.status!=='pause');
@@ -2084,7 +2113,7 @@ function renderProjWidget(){
   const total=projects.reduce((s,p)=>s+pSpent(p),0);
   $('w-projects-sum').innerHTML=`<span><small>Вложено за ${esc(monthName(ym))}</small><br><b>${money(month)}</b></span><small>всего ${money(total)}</small>`;
   const list=[...act].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,4);
-  $('w-projects-list').innerHTML=list.length?list.map(p=>{const st=PS[p.status]||PS.idea;return `<button type="button" class="wproj" data-popen="${esc(p.id)}"><span class="t"><b>${esc(p.name)}</b><small><span class="dotlbl" style="--sc:var(${st.c})">${st.label}</span></small></span>${projBar(p)}<span class="t"><small>потратили ${money(pSpent(p))}</small><small>${+p.budget?'из '+money(p.budget):''}</small></span></button>`}).join('')
+  $('w-projects-list').innerHTML=list.length?list.map(p=>{const st=PS[p.status]||PS.idea;return `<button type="button" class="wproj" data-popen="${esc(p.id)}">${(c=>`<span class="th"${c?` style="background-image:url('${esc(fileUrl(c))}')"`:''}>${c?'':PH_IMG}</span>`)(coverOf(p))}<span class="t"><b>${esc(p.name)}</b><small><span class="dotlbl" style="--sc:var(${st.c})">${st.label}</span></small></span>${projBar(p)}<span class="t"><small>потратили ${money(pSpent(p))}</small><small>${+p.budget?'из '+money(p.budget):''}</small></span></button>`}).join('')
     :`<div class="w-empty">${projects.length?'Активных проектов нет.':'Проектов пока нет. Откройте раздел и опишите первый продукт.'}</div>`;
 }
 function renderProjects(){
@@ -2100,13 +2129,13 @@ function renderProjects(){
   const rows=projects.filter(p=>projFilter==='all'||(projFilter==='active'?(p.status!=='launched'&&p.status!=='pause'):(p.status||'idea')===projFilter)).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
   $('proj-grid').innerHTML=rows.length?rows.map(p=>{const st=PS[p.status]||PS.idea;const cv=coverOf(p);const sp=pSpent(p),b=+p.budget||0;
     return `<button type="button" class="pcard" data-popen="${esc(p.id)}">
-      <div class="pcover${cv?'':' none'}" ${cv?`style="background-image:url('${esc(cv.url||('/_blob/'+cv.id))}')"`:''}>${cv?'':PH_IMG}</div>
+      <div class="pcover${cv?'':' none'}" ${cv?`style="background-image:url('${esc(fileUrl(cv))}')"`:''}>${cv?'':PH_IMG}</div>
       <span class="dotlbl" style="--sc:var(${st.c})">${st.label}${p.launch?', запуск к '+fmtDate(p.launch):''}</span>
       <h3>${esc(p.name)}</h3><p>${esc(p.desc||'Описания пока нет')}</p>
       ${projBar(p)}
       <div class="pmeta"><span>Потратили <b>${money(sp)}</b></span><span>${b?(sp>b?'<b class="late">сверх бюджета на '+money(sp-b)+'</b>':'бюджет '+money(b)):'бюджет не задан'}</span></div></button>`}).join('')
     :`<div class="empty" style="grid-column:1/-1"><h3>${projects.length?'Ничего не нашлось':'Проектов пока нет'}</h3><p>${projects.length?'В этом статусе проектов нет.':'Нажмите «Новый проект», опишите продукт, задайте бюджет и записывайте каждый расход на запуск.'}</p>${!projects.length&&canWrite?'<button class="btn primary" type="button" data-pnew>Новый проект</button>':''}</div>`;
-  $('proj-sub').textContent=projLoaded?'Продукты, которые готовим к запуску, и сколько в них вложено.':'Подключаемся к базе…';
+  $('proj-sub').textContent=projLoaded?'Продукты, которые готовим к запуску. Вложения в проекты считаются отдельно: в расходы и прибыль студии они не входят.':'Подключаемся к базе…';
   document.querySelectorAll('[data-pnew]').forEach(b=>b.hidden=!canWrite);
 }
 function setPTab(t){pTab=t;['main','exp','files'].forEach(x=>{$('ppane-'+x).hidden=x!==t;$('ptab-'+x).setAttribute('aria-selected',x===t)});renderPExtras()}
@@ -2117,7 +2146,9 @@ function renderPExtras(){
   const l=$('pc-left');l.textContent=b?money(b-sp):'—';l.className=b?(b-sp>=0?'pos':'neg'):'';
   const bar=$('pc-bar');bar.style.width=(b?Math.min(100,sp/b*100):(sp?100:0)).toFixed(1)+'%';bar.className=b&&sp>b?'over':'';
   const ex=[...pExp].sort((a,c)=>(c.date||'').localeCompare(a.date||''));
-  $('p-exps').innerHTML=ex.length?ex.map(e=>`<div class="pexp"><small>${e.date?fmtDate(e.date):'—'}</small><b>${esc(e.title)}</b><span>${money(e.amount)}</span>${canWrite?`<button class="tdel" type="button" data-rmpexp="${esc(e.id)}" aria-label="Убрать расход ${esc(e.title)}">×</button>`:'<span></span>'}</div>`).join(''):`<div class="w-empty" style="background:var(--tile)">Расходов пока нет. Добавьте дату, на что потратили и сумму.</div>`;
+  $('p-exps').innerHTML=ex.length?ex.map(e=>`<div class="pexp${peEditId===e.id?' edit':''}" role="button" tabindex="0" data-peedit="${esc(e.id)}"><small>${e.date?fmtDate(e.date):'—'}</small><span class="pt"><b>${esc(e.title)}</b>${e.price!=null&&e.qty!=null?`<small>${fmtQty(e.qty)} ${esc(e.unit||'шт')} × ${money(e.price)}</small>`:''}</span><span>${money(e.amount)}</span>${canWrite?`<button class="tdel" type="button" data-rmpexp="${esc(e.id)}" aria-label="Убрать расход ${esc(e.title)}">×</button>`:'<span></span>'}</div>`).join(''):`<div class="w-empty" style="background:var(--tile)">Расходов пока нет. Впишите наименование, количество и цену.</div>`;
+  const ps=$('pe-sum');ps.hidden=!ex.length;if(ex.length)ps.innerHTML=`<span>${ex.length} ${plural(ex.length,'позиция','позиции','позиций')}</span><span>Итого: <b>${money(sp)}</b></span>`;
+  renderPCover();
   $('pexp-add').hidden=!canWrite;
   $('p-files').innerHTML=pFiles.map(f=>fileTile(f,{rm:canWrite&&!!assets,owner:'p'})).join('');
   $('p-files-empty').hidden=!!pFiles.length;
@@ -2127,7 +2158,8 @@ function openP(id){
   pEditing=id;applyRoleWrite();const p=id==='new'?{status:'idea',start:todayStr()}:projects.find(x=>x.id===id);if(!p)return;
   $('p-h').textContent=id==='new'?'Новый проект':p.name;
   $('p-name').value=p.name||'';$('p-desc').value=p.desc||'';$('p-budget').value=p.budget??'';$('p-owner').value=p.owner||'';
-  setDM($('p-start'),p.start||'');setDM($('p-launch'),p.launch||'');setDM($('pe-date'),todayStr());$('pe-title').value='';$('pe-amount').value='';
+  setDM($('p-start'),p.start||'');setDM($('p-launch'),p.launch||'');peClear();
+  pCover=p.cover?{...p.cover}:null;pCoverOrig=pCover;
   pStat=p.status||'idea';renderPStat();
   pExp=(p.expenses||[]).map(e=>({...e}));pFiles=(p.files||[]).map(f=>({...f}));pFilesOrig=pFiles.map(f=>f.id);
   const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
@@ -2139,25 +2171,30 @@ function openP(id){
 function closeP(){dpClose();$('ped').hidden=true;pEditing=null;applyRoleWrite();render()}
 function renderPDel(conf){const b=$('p-del');if(!canWrite||pEditing==='new'){b.innerHTML='';return}
   b.innerHTML=conf?`<span class="err">Удалить проект?</span> <button class="btn danger solid sm" type="button" data-pdel="yes">Удалить</button> <button class="btn soft sm" type="button" data-pdel="no">Нет</button>`:`<button class="btn danger sm" type="button" data-pdel="ask">Удалить</button>`}
+function peClear(){peEditId=null;setDM($('pe-date'),todayStr());$('pe-title').value='';$('pe-qty').value='';$('pe-price').value='';$('pe-add').textContent='Добавить'}
 function addPExp(){
-  const title=$('pe-title').value.trim(),amount=+$('pe-amount').value,date=valIso($('pe-date'))||todayStr();
-  if(!title){showErr('p-err','Впишите, на что потратили.');$('pe-title').focus();return false}
-  if(!(amount>0)){showErr('p-err','Впишите сумму расхода.');$('pe-amount').focus();return false}
-  $('p-err').hidden=true;pExp.push({id:uid(),date,title,amount});$('pe-title').value='';$('pe-amount').value='';renderPExtras();$('pe-title').focus();return true;
+  const title=$('pe-title').value.trim(),qty=$('pe-qty').value===''?1:+$('pe-qty').value,price=+$('pe-price').value,date=valIso($('pe-date'))||todayStr();
+  if(!title){showErr('p-err','Впишите наименование расхода.');$('pe-title').focus();return false}
+  if(!(qty>0)){showErr('p-err','Впишите количество.');$('pe-qty').focus();return false}
+  if(!(price>0)){showErr('p-err','Впишите цену.');$('pe-price').focus();return false}
+  $('p-err').hidden=true;
+  const e={id:peEditId||uid(),date,title,qty,price,unit:'шт',amount:Math.round(qty*price*100)/100};
+  const k=pExp.findIndex(x=>x.id===e.id);if(k>=0)pExp[k]=e;else pExp.push(e);
+  peClear();renderPExtras();$('pe-title').focus();return true;
 }
 async function saveP(e){
   e.preventDefault();if(!db||!canWrite)return;$('p-err').hidden=true;
   const name=$('p-name').value.trim();
   if(!name){setPTab('main');showErr('p-err','Впишите название проекта.');$('p-name').focus();return}
-  if(($('pe-title').value.trim()||$('pe-amount').value)){setPTab('exp');if(!addPExp())return}
+  if(($('pe-title').value.trim()||$('pe-price').value)){setPTab('exp');if(!addPExp())return}
   const start=valIso($('p-start')),launch=valIso($('p-launch'));
   if(start===null||launch===null){setPTab('main');showErr('p-err','Дата не распознана. Выберите её в календаре.');return}
   const d={name,desc:$('p-desc').value.trim(),status:pStat,budget:$('p-budget').value===''?null:Math.max(0,+$('p-budget').value),start:start||'',launch:launch||'',owner:$('p-owner').value.trim(),
-    expenses:pExp.map(x=>({id:x.id,date:x.date||'',title:x.title,amount:+x.amount||0})),files:pFiles,updatedAt:Date.now()};
+    expenses:pExp.map(x=>({id:x.id,date:x.date||'',title:x.title,amount:+x.amount||0,...(x.price!=null?{qty:+x.qty||0,price:+x.price||0,unit:x.unit||'шт'}:{})})),files:pFiles,cover:pCover||null,updatedAt:Date.now()};
   const btn=$('p-save');btn.disabled=true;
   try{
     if(pEditing==='new')await db.collection('projects').doc().set({...d,createdAt:Date.now()});else await db.doc('projects/'+pEditing).update(d);
-    const kept=new Set(pFiles.map(f=>f.id));if(assets)pFilesOrig.filter(id=>!kept.has(id)).forEach(id=>assets.delete(id).catch(()=>{}));
+    const kept=new Set(pFiles.map(f=>f.id));if(pCover)kept.add(pCover.id);if(assets){pFilesOrig.filter(id=>!kept.has(id)).forEach(id=>assets.delete(id).catch(()=>{}));if(pCoverOrig&&!kept.has(pCoverOrig.id))assets.delete(pCoverOrig.id).catch(()=>{})}
     toast(pEditing==='new'?'Проект создан':'Сохранено');closeP();
   }catch(er){showErr('p-err',handleWriteError(er))}finally{btn.disabled=false}
 }
@@ -2909,7 +2946,7 @@ document.addEventListener('click',e=>{
   const pf=t.closest('[data-pf]');if(pf){projFilter=pf.dataset.pf;render();return}
   const pt=t.closest('[data-ptab]');if(pt){setPTab(pt.dataset.ptab);return}
   const pst=t.closest('[data-pst]');if(pst&&canWrite){pStat=pst.dataset.pst;renderPStat();return}
-  const rpe=t.closest('[data-rmpexp]');if(rpe){pExp=pExp.filter(x=>x.id!==rpe.dataset.rmpexp);renderPExtras();return}
+  const rpe=t.closest('[data-rmpexp]');if(rpe){pExp=pExp.filter(x=>x.id!==rpe.dataset.rmpexp);if(peEditId===rpe.dataset.rmpexp)peClear();renderPExtras();return}
   const xn=t.closest('[data-xnew]');if(xn){openX(xn.dataset.xnew,'new');return}
   const xo=t.closest('[data-xopen]');if(xo){openX(xo.dataset.xkind,xo.dataset.xopen);return}
   const lc=t.closest('[data-lcat]');if(lc){lview[lc.dataset.lk].cat=lc.dataset.lcat;render();return}
@@ -2960,7 +2997,11 @@ $('ped-form').addEventListener('submit',saveP);
 $('ped-close').onclick=$('ped-cancel').onclick=$('ped-back').onclick=closeP;
 $('p-del').addEventListener('click',e=>{const b=e.target.closest('[data-pdel]');if(!b)return;if(b.dataset.pdel==='ask')renderPDel(true);else if(b.dataset.pdel==='no')renderPDel(false);else delP()});
 $('pe-add').onclick=addPExp;
-['pe-title','pe-amount'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addPExp()}}));
+['pe-title','pe-qty','pe-price'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addPExp()}}));
+$('p-exps').addEventListener('click',e=>{if(e.target.closest('[data-rmpexp]'))return;const r=e.target.closest('[data-peedit]');if(!r||!canWrite)return;const x=pExp.find(y=>y.id===r.dataset.peedit);if(!x)return;
+  peEditId=x.id;$('pe-title').value=x.title;setDM($('pe-date'),x.date||'');$('pe-qty').value=x.qty??1;$('pe-price').value=x.price??x.amount;$('pe-add').textContent='Сохранить';renderPExtras();$('pe-price').focus()});
+$('p-exps').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-peedit]')){e.preventDefault();e.target.click()}});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pcov]');if(!b||!canWrite)return;if(b.dataset.pcov==='remove'){pCover=null;renderPCover();toast('Фото убрано. Нажмите «Сохранить».')}else pickFiles({kind:'pcover'})});
 $('p-budget').addEventListener('input',renderPExtras);
 $('xed-form').addEventListener('submit',saveX);
 $('xed-close').onclick=$('xed-cancel').onclick=$('xed-back').onclick=closeX;
@@ -2969,6 +3010,7 @@ document.addEventListener('input',e=>{const q=e.target.closest('[data-lq]');if(q
 document.addEventListener('change',e=>{const m=e.target.closest('[data-lm]');if(m){lview[m.dataset.lm].m=m.value;render()}});
 $('file-in').addEventListener('change',async e=>{
   const list=[...e.target.files];if(!list.length||!fileTarget)return;const tg=fileTarget;fileTarget=null;
+  if(tg.kind==='pcover'){list.splice(1);if(!(list[0].type||'').startsWith('image/')){showErr('p-err','Для фото проекта выберите картинку: JPG, PNG или WebP.');return}}
   const bad=list.find(f=>!okType(f)||f.size>maxSize(f));
   if(bad){const m=fileErrMsg({code:!okType(bad)?'unsupported_type':'too_large'});if(tg.kind==='boss-new')showErr('b-err',m);else if(tg.kind==='order')showErr('f-err',m);else toast(m);return}
   if(tg.kind==='boss-new'){list.forEach(f=>bossPending.push({file:f,url:URL.createObjectURL(f)}));renderBossPending();return}
@@ -2979,6 +3021,7 @@ $('file-in').addEventListener('change',async e=>{
     if(tg.kind==='order'){edFiles.push(...up.map(f=>({...f,fk:tg.fk||'mockup'})));renderOrderFiles();toast('Файлы добавлены. Нажмите «Сохранить».')}
     else if(tg.kind==='x'){xFiles.push(...up);renderXFiles();toast('Файлы добавлены. Нажмите «Сохранить».')}
     else if(tg.kind==='p'){pFiles.push(...up);renderPExtras();toast('Файлы добавлены. Нажмите «Сохранить».')}
+    else if(tg.kind==='pcover'){if(pCover&&pCover!==pCoverOrig&&assets)assets.delete(pCover.id).catch(()=>{});pCover=up[0];renderPCover();toast('Фото проекта добавлено. Нажмите «Сохранить».')}
     else if(tg.kind==='task'){const t=tasks.find(x=>x.id===tg.id);if(!t)return;await db.doc('tasks/'+t.id).update({files:[...(t.files||[]),...up]});toast('Файлы прикреплены')}
   }catch(er){const m=['invalid_argument','resource_exhausted','quota_exceeded','unavailable','revoked'].includes(er&&er.code)?handleWriteError(er):fileErrMsg(er);if(tg.kind==='order')showErr('f-err',m);else toast(m)}
 });
