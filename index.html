@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261013125321">
+<meta name="app-build" content="20261013130617">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%234358ef'/%3E%3Ctext x='16' y='22.5' font-family='Arial' font-weight='700' font-size='18' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -492,6 +492,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .tico{display:inline-flex;align-items:center;gap:2px}
 .ttm{display:inline-flex;align-items:center;gap:4px;vertical-align:1px;margin-right:6px;padding:2px 8px 2px 6px;border-radius:999px;background:color-mix(in srgb,var(--blue) 14%,var(--paper));color:var(--blue);font:700 11.5px/1.3 var(--f);white-space:nowrap}
 .ttm svg{width:12px;height:12px}
+.tsrc{display:inline-block;vertical-align:2px;margin-right:6px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--task) 16%,var(--paper));color:var(--task);font:700 10.5px/1.3 var(--f);white-space:nowrap}
 .ttime-ed{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;background:var(--tile);border-radius:12px;padding:10px 12px}
 .task.boss.now .ttime-ed{background:var(--paper)}
 .ttime-ed .lb{font:600 12.5px var(--f);color:var(--muted)}
@@ -1849,8 +1850,9 @@ function bossParts(t){
   const tm=tmTxt(t);
   if(t.date){const rng=t.dateFrom&&t.dateFrom!==t.date?'с '+fmtDate(t.dateFrom)+' по '+fmtDate(t.date):(tm?'':'до ')+fmtDate(t.date);meta.push(rng+(t.done?'':', '+relWord(t.date)))}
   if(t.who)meta.push('кому: '+t.who);
+  if(t.src==='mgr'&&t.by)meta.push('автор: '+t.by);
   if(t.done&&t.doneAt)meta.push('выполнено '+new Date(t.doneAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}));
-  const boss=canWrite&&!isMgr();
+  const boss=canWrite&&(!isMgr()||t.src==='mgr');
   const del=!boss?'<span></span>':askDel===t.id?`<button class="tdel ask" type="button" data-tdel="${esc(t.id)}" data-confirm="1">Удалить</button>`:`<button class="tdel" type="button" data-tdel="${esc(t.id)}" aria-label="Удалить задачу">×</button>`;
   const cms=t.comments||[],open=openCm.has(t.id);
   const cmBox=`<div class="tcm">
@@ -1873,7 +1875,7 @@ function bossParts(t){
 function bossRow(t){const b=bossParts(t);
   const now=!t.done&&taskOn(t,todayStr());
   return `<div class="task boss${t.done?' done':''}${now?' now':''}" style="--sc:var(${b.st.c})">
-    <span class="tt"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
+    <span class="tt"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${t.src==='mgr'?'<span class="tsrc">задача от менеджера</span>':''}${esc(t.title)}</b>${b.meta.length?`<small class="${b.late?'late':''}">${esc(b.meta.join(', '))}</small>`:''}</span>
     ${b.sel}${b.att}${b.del}${b.ted}
     ${b.files}${b.cmBox}</div>`;
 }
@@ -1948,7 +1950,7 @@ function renderHome(){
   const done=boss.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const acc=open.filter(t=>bossStatus(t)==='accepted').length;
   $('w-boss-c').textContent=open.length?open.length+' '+plural(open.length,'открыта','открыты','открыто')+(acc?', в работе '+acc:''):'';
-  $('boss-list').innerHTML=!tasksLoaded?'':open.length?open.map(taskRow).join(''):`<div class="w-empty">Открытых задач нет.${canWrite&&!isMgr()?' Новую можно поставить кнопкой «+ Задача».':''}</div>`;
+  $('boss-list').innerHTML=!tasksLoaded?'':open.length?open.map(taskRow).join(''):`<div class="w-empty">Открытых задач нет.${canWrite?' Новую можно поставить кнопкой «+ Задача».':''}</div>`;
   const tog=$('boss-done-tog');tog.hidden=!done.length;tog.textContent=(showBossDone?'Скрыть выполненные':'Показать выполненные')+' ('+done.length+')';
   $('boss-done').hidden=!showBossDone||!done.length;$('boss-done').innerHTML=showBossDone?done.slice(0,20).map(taskRow).join(''):'';
   $('boss-add-btn').hidden=!canWrite;
@@ -2058,7 +2060,6 @@ function render(){
   if(page==='analytics')renderAnalytics();
   enhanceSelects();
   keep.forEach(([id,v,f])=>{const x=document.querySelector('textarea[data-cmtext="'+CSS.escape(id)+'"]');if(x){x.value=v;if(f)x.focus()}});
-  if(isMgr()){const b=$('boss-add-btn');if(b)b.hidden=true;$('boss-form').hidden=true}
 }
 
 /* ---------- расходы офиса и закупки ---------- */
@@ -3297,7 +3298,7 @@ document.addEventListener('click',e=>{
   if(t.closest('[data-new]')){if(t.closest('.fab')&&isMgr()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
   const op=t.closest('[data-open]');if(op){openEditor(op.dataset.open);return}
   const dn=t.closest('[data-tdone]');if(dn){toggleTask(dn.dataset.tdone);return}
-  const td=t.closest('[data-tdel]');if(td&&isMgr()&&tasks.find(x=>x.id===td.dataset.tdel)?.kind==='boss'){toast('Удалять задачи от начальства может только руководитель');return}
+  const td=t.closest('[data-tdel]');if(td&&isMgr()&&(x=>x&&x.kind==='boss'&&x.src!=='mgr')(tasks.find(x=>x.id===td.dataset.tdel))){toast('Удалять задачи от начальства может только руководитель');return}
   if(td){if(td.dataset.confirm)deleteTask(td.dataset.tdel);else{askDel=td.dataset.tdel;render();setTimeout(()=>{if(askDel===td.dataset.tdel){askDel=null;render()}},4000)}return}
   const cd=t.closest('[data-cday]');if(cd){go('calendar',{day:cd.dataset.cday});return}
   if(t.closest('#w-cal')){go('calendar',{day:todayStr()});return}
@@ -3422,8 +3423,7 @@ $('boss-form').addEventListener('submit',async e=>{
   try{
     let files=[];
     if(bossPending.length){try{files=await uploadAll(bossPending.map(p=>p.file))}catch(er){showErr('b-err',fileErrMsg(er));return}}
-    if(isMgr()){showErr('b-err','Ставить задачи от начальства может только руководитель.');return}
-    if(await addTask({kind:'boss',title,desc:$('b-desc').value.trim(),dateFrom:from,date:to,who,time:tf,timeTo:tt,status:'new',files,comments:[]},'b-err',null)){$('b-desc').value='';
+    if(await addTask({kind:'boss',title,desc:$('b-desc').value.trim(),dateFrom:from,date:to,who,time:tf,timeTo:tt,status:'new',by:ROLE().name||'',...(isMgr()?{src:'mgr'}:{}),files,comments:[]},'b-err',null)){$('b-desc').value='';
       bossPending.forEach(p=>URL.revokeObjectURL(p.url));bossPending=[];renderBossPending();
       $('b-title').value='';setDM($('b-from'),'');setDM($('b-to'),'');$('b-tfrom').value='';$('b-tto').value='';$('b-who').value='';$('boss-form').hidden=true;toast('Задача поставлена');
     }

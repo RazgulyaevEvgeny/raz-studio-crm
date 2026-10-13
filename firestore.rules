@@ -1,7 +1,7 @@
 rules_version = '2';
 // Доступ только для сотрудников, вошедших по почте и паролю.
 // Менеджер (почта raz.brandstudio@...) работает с заказами, закупками и расходами офиса,
-// в задачах от начальства может только менять статус и писать комментарии,
+// в задачах от начальства меняет статус и пишет комментарии, может ставить свои задачи («от менеджера»),
 // проекты и прайс только просматривает.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -40,15 +40,18 @@ service cloud.firestore {
     match /projects/{id} { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
     match /prices/{id}   { allow read: if signedIn(); allow write: if signedIn() && !isManager(); }
 
-    // Задачи: календарные — всем; от начальства — ставит и удаляет только руководитель,
-    // менеджер меняет статус и добавляет комментарии
+    // Задачи: календарные — всем. От начальства — ставит и удаляет руководитель,
+    // менеджер меняет у них статус и пишет комментарии. Свои задачи в этом блоке
+    // (с пометкой src = 'mgr', «задача от менеджера») менеджер ставит и ведёт полностью.
     match /tasks/{id} {
+      function mgrTask(d) { return d.kind == 'boss' && d.get('src', '') == 'mgr'; }
       allow read: if signedIn();
-      allow create: if signedIn() && (!isManager() || request.resource.data.kind != 'boss');
-      allow delete: if signedIn() && (!isManager() || resource.data.kind != 'boss');
+      allow create: if signedIn() && (!isManager() || request.resource.data.kind != 'boss' || mgrTask(request.resource.data));
+      allow delete: if signedIn() && (!isManager() || resource.data.kind != 'boss' || mgrTask(resource.data));
       allow update: if signedIn() && (
         !isManager()
         || (resource.data.kind != 'boss' && request.resource.data.kind != 'boss')
+        || (mgrTask(resource.data) && mgrTask(request.resource.data))
         || (resource.data.kind == 'boss'
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['status', 'done', 'doneAt', 'comments', 'updatedAt']))
