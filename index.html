@@ -107,6 +107,14 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .mrow small{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow .r{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 .mrow .r b{font-size:13.5px}
+#w-print .prow{cursor:default;background:var(--paper);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}#w-print .prow:hover{box-shadow:none}
+#w-print .prow>span:first-child{min-width:0;display:flex;flex-direction:column;gap:2px}
+#w-print .prow small{white-space:normal}
+#w-print .pst2{justify-self:end;align-self:center}
+#w-print .go{text-decoration:none;white-space:nowrap;flex:none}
+.pst2{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--f);padding:5px 11px;border-radius:999px;background:color-mix(in srgb,var(--sc) 13%,transparent);color:var(--sc);white-space:nowrap}
+.pst2::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sc)}
+.pnote{color:var(--muted);font-size:12px;margin-top:-4px}
 .late{color:var(--danger)!important}.soon{color:var(--st-prod)!important}
 .dotlbl{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--f);color:var(--ink)}
 .dotlbl::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sc)}
@@ -1128,6 +1136,11 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="w">
           <div class="w-h"><h2>Сегодня</h2><button class="go" type="button" data-go="calendar">Все дни</button></div>
           <div class="tday-w" id="w-today"></div>
+        </div>
+        <div class="w" id="w-print">
+          <div class="w-h"><h2>Принтеры в мастерской</h2><a class="go" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">Вход в Bambu ↗</a></div>
+          <div class="mini" id="w-print-list"><div class="mrow prow"><span><b>Проверяем…</b></span><span></span></div></div>
+          <small class="pnote" id="w-print-note"></small>
         </div>
       </div>
     </div>
@@ -2203,7 +2216,7 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 /* ---------- раскладка главной ---------- */
 let packW=[];
 function initPack(){
-  packW=[$('w-today').closest('.w'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
+  packW=[$('w-today').closest('.w'),$('w-print'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);packW.forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
   document.querySelectorAll('#p-home .home-grid,#p-home .home-grid2').forEach(el=>el.remove());
 }
@@ -3471,6 +3484,33 @@ $('task-form').addEventListener('submit',async e=>{
   for(const k of ['office','supplies'])db.collection(k).onSnapshot(snap=>{ledger[k]=snap.docs.map(d=>({id:d.id,...d.data()}));ledgerLoaded[k]=true;render();if(xEditing&&xEditing!=='new'&&xKind===k&&!ledger[k].find(r=>r.id===xEditing)){closeX();toast('Эту запись удалили')}},fail);
 })();
 for(const n of ['openEditor','openX','openQ','openP']){const f=window[n];if(typeof f==='function')window[n]=function(...a){const r=f.apply(this,a);enhanceSelects();return r}}
+/* ---------- принтеры в мастерской (bambu-watch) ---------- */
+const PRINT_API='https://bambu-watch.design-onegin.workers.dev/api/status';
+function printWhen(ts){
+  if(!ts)return '';const d=new Date(ts),now=new Date(),min=Math.round((now-d)/6e4);
+  if(min<1)return 'только что';if(min<60)return min+' мин назад';
+  const hm=d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  const y=new Date(now);y.setDate(now.getDate()-1);
+  if(d.toDateString()===now.toDateString())return 'сегодня в '+hm;
+  if(d.toDateString()===y.toDateString())return 'вчера в '+hm;
+  return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+' в '+hm;
+}
+async function loadPrinters(){
+  const list=$('w-print-list'),note=$('w-print-note');if(!list)return;
+  try{
+    const r=await fetch(PRINT_API,{cache:'no-store'});const s=await r.json();
+    const ERR={noauth:'Вход в Bambu не выполнен',auth:'Вход в Bambu устарел, войдите заново',cloud:'Облако Bambu не ответило'};
+    list.innerHTML=s.printers.length?s.printers.map(p=>{
+      const c=p.online===null?'--muted':p.online?'--ok':'--danger',l=p.online===null?'нет данных':p.online?'в сети':'не в сети';
+      const sub=p.online?(p.since?'включился '+printWhen(p.since):'работает'):(p.lastOnline?'был в сети '+printWhen(p.lastOnline):'когда был в сети, пока неизвестно');
+      return `<div class="mrow prow"><span><b>${esc(p.name)}</b><small>${esc(sub)}</small></span><span class="pst2" style="--sc:var(${c})">${l}</span></div>`;
+    }).join(''):`<div class="mrow prow"><span><b>${esc(ERR[s.error]||'Принтеров нет')}</b></span><span></span></div>`;
+    note.textContent=[s.error&&s.printers.length?ERR[s.error]:'',s.pausedUntil?'тревога на паузе до '+new Date(s.pausedUntil).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'',s.lastCheck?'проверка '+printWhen(s.lastCheck):'автопроверка ещё не запускалась'].filter(Boolean).join(' · ');
+  }catch(e){list.innerHTML='<div class="mrow prow"><span><b>Нет связи с наблюдением</b><small>Попробуем снова через минуту</small></span><span></span></div>';note.textContent=''}
+  packHome();
+}
+loadPrinters();setInterval(()=>{if(!document.hidden&&!$('p-home').hidden)loadPrinters()},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadPrinters()});
 initPack();
 {const h=(location.hash||'').slice(1);go(['orders','calendar','office','supplies','projects','prices','analytics'].includes(h)?h:'home')}
 setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('input,select,textarea'))))render()},60000);
