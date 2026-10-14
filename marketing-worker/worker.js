@@ -13,7 +13,9 @@
      GEMINI_MODEL       — необязательно, по умолчанию gemini-flash-latest
      ANTHROPIC_API_KEY  — необязательно, платно; если задан, отвечает Claude
      ALLOWED_EMAILS     — необязательно: почты через запятую; пусто — пускать всех вошедших
-   Привязка AI (Settings → Bindings → Workers AI, имя AI) — необязательно, запасной бесплатный ИИ. */
+     IG_TOKEN           — необязательно, секрет: токен Instagram из Meta for Developers (60 дней)
+   Привязка IG_KV (KV namespace) — необязательно: тогда токен Instagram продлевается сам.
+   Привязка AI (Settings → Bindings → Workers AI, имя AI) — запасной бесплатный ИИ и фоны для креативов. */
 
 const GEMINI_DEFAULT = 'gemini-flash-latest';
 const CF_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
@@ -66,6 +68,16 @@ const ROLES = {
 Формат разбора конкурентов: таблица (название — что делают — цены — сильные стороны — слабые места) → где RAZ сильнее → где слабее → 3 возможности, которые можно забрать прямо сейчас.
 Если город студии не указан в брифе — спроси его одной строкой.`
   },
+  designer: {
+    name: 'Дизайнер креативов', json: true, ctx: true,
+    prompt: `Твоя роль — ДИЗАЙНЕР КРЕАТИВОВ студии для Instagram. Ты придумываешь тексты и раскладку для картинок-креативов (пост или сторис), а картинку по твоему описанию соберёт сайт по шаблону.
+Верни ТОЛЬКО JSON без пояснений:
+{"caption":"готовый текст публикации для Instagram: 3–6 коротких абзацев, призыв написать в Direct или WhatsApp, 5–8 хештегов (#оклейкаавто и т.п.)",
+ "variants":[{"template":"bold|photo|price|list","theme":"blue|dark|light","headline":"заголовок до 45 символов","sub":"подзаголовок до 100 символов или пусто","bullets":["до 4 пунктов по 40 символов, только для list"],"price":"цена из прайса, например «от 5 000 ₸», или пусто","cta":"призыв до 24 символов, например «Пиши в Direct»","badge":"плашка до 16 символов, например «Акция» или «Новинка», или пусто","bg_prompt":"English prompt for a photorealistic background photo matching the topic, no text, no letters, no logos"}]}
+Сделай 3 разных варианта: разные шаблоны и разные углы подачи (выгода, процесс или результат, цена или оффер).
+Шаблоны: bold — крупный заголовок на цветном фоне; photo — фото на весь экран, текст снизу; price — фото сверху и круглый ценник; list — заголовок и список преимуществ.
+Заголовок — цепляющий, разговорный, конкретный, без канцелярита. Цены бери только из прайса или офферов в данных ниже; если цены нет — оставь price пустым. Не выдумывай акции, которых нет в данных, если владелец сам о них не написал.`
+  },
   planner: {
     name: 'Планировщик', hidden: true, json: true,
     prompt: `Ты превращаешь маркетинговый план в записи календаря. Верни ТОЛЬКО JSON без пояснений, формат:
@@ -109,7 +121,7 @@ function systemText(role, context, brief, search) {
   const searchLine = search
     ? 'У тебя есть веб-поиск — используй его, прежде чем делать выводы о конкурентах и ценах рынка; каждая цена и факт — со ссылкой.'
     : 'Поиска в интернете у тебя нет. Работай с карточками раздела «Конкуренты» и с текстом, который владелец вставит в чат (описания, прайсы, отзывы конкурентов).';
-  if (R.json) return R.prompt;
+  if (R.json && !R.ctx) return R.prompt;
   return STUDIO + '\n\n' + R.prompt.replace('{SEARCH}', searchLine) +
     '\n\n## Бриф студии (заполняет владелец)\n' + (brief || 'Бриф пока не заполнен — если для задачи нужен город, ЦА или конкуренты, спроси.') +
     '\n\n## Данные из учёта и маркетингового раздела\n' + (context || 'Нет данных.') +
@@ -126,7 +138,7 @@ async function viaGemini(env, role, messages, system) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-      generationConfig: { maxOutputTokens: 8192, temperature: ROLES[role].json ? 0.2 : 0.7, ...(ROLES[role].json ? { responseMimeType: 'application/json' } : {}) }
+      generationConfig: { maxOutputTokens: 8192, temperature: ROLES[role].json && !ROLES[role].ctx ? 0.2 : 0.8, ...(ROLES[role].json ? { responseMimeType: 'application/json' } : {}) }
     })
   });
   const j = await r.json().catch(() => ({}));
@@ -140,7 +152,7 @@ async function viaGemini(env, role, messages, system) {
 
 /* ---------- ИИ: Cloudflare Workers AI (бесплатный запасной) ---------- */
 async function viaCloudflare(env, role, messages, system) {
-  const out = await env.AI.run(CF_MODEL, { messages: [{ role: 'system', content: system }, ...messages], max_tokens: 4000, temperature: ROLES[role].json ? 0.2 : 0.7 });
+  const out = await env.AI.run(CF_MODEL, { messages: [{ role: 'system', content: system }, ...messages], max_tokens: 4000, temperature: ROLES[role].json && !ROLES[role].ctx ? 0.2 : 0.8 });
   const text = typeof out.response === 'string' ? out.response : JSON.stringify(out.response || '');
   if (!text) throw new Error('Пустой ответ');
   return { text, sources: [], engine: 'Llama' };
@@ -183,6 +195,45 @@ async function answer(env, role, messages, context, brief) {
   throw new Error('На сервере не задан ключ GEMINI_API_KEY.');
 }
 
+/* ---------- картинка-фон от ИИ (Cloudflare Workers AI, бесплатно в дневной норме) ---------- */
+async function makeImage(env, prompt) {
+  if (!env.AI) throw new Error('Для фонов от ИИ подключите Workers AI: Settings → Bindings → Workers AI, имя AI.');
+  const out = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', { prompt: String(prompt).slice(0, 1500) + '. Professional commercial photography, natural light, high detail. No text, no letters, no words, no logos, no watermark.', steps: 6 });
+  if (!out || !out.image) throw new Error('ИИ не прислал картинку');
+  return 'data:image/jpeg;base64,' + out.image;
+}
+
+/* ---------- Instagram (официальный API, Instagram Login) ---------- */
+const IG = 'https://graph.instagram.com/v25.0';
+async function igToken(env) {
+  let t = env.IG_TOKEN || '';
+  if (!env.IG_KV) return t;
+  const saved = await env.IG_KV.get('token', 'json');
+  if (saved && saved.token && saved.src === t) t = saved.token;
+  // продлеваем токен раз в 7 дней, чтобы он не истёк через 60 дней
+  if (t && (!saved || saved.src !== env.IG_TOKEN || Date.now() - (saved.at || 0) > 7 * 864e5)) {
+    try {
+      const r = await fetch('https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=' + encodeURIComponent(t));
+      const j = await r.json();
+      if (j.access_token) { t = j.access_token; await env.IG_KV.put('token', JSON.stringify({ token: t, at: Date.now(), src: env.IG_TOKEN })); }
+    } catch (_) {}
+  }
+  return t;
+}
+async function instagram(env) {
+  const t = await igToken(env);
+  if (!t) throw new Error('Instagram не подключён: на сервере нет IG_TOKEN.');
+  const get = async u => { const r = await fetch(u); const j = await r.json(); if (j.error) throw new Error('Instagram: ' + (j.error.message || 'ошибка')); return j; };
+  const profile = await get(`${IG}/me?fields=user_id,username,name,account_type,profile_picture_url,followers_count,follows_count,media_count&access_token=${encodeURIComponent(t)}`);
+  const posts = [];
+  let next = `${IG}/me/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count,thumbnail_url,media_url&limit=50&access_token=${encodeURIComponent(t)}`;
+  for (let i = 0; i < 4 && next; i++) { const j = await get(next); posts.push(...(j.data || [])); next = j.paging && j.paging.next; }
+  return {
+    profile: { username: profile.username, name: profile.name || '', followers: profile.followers_count ?? null, follows: profile.follows_count ?? null, media: profile.media_count ?? null, avatar: profile.profile_picture_url || '' },
+    posts: posts.map(p => ({ id: p.id, caption: String(p.caption || '').slice(0, 2200), type: p.media_product_type === 'REELS' ? 'reels' : p.media_type === 'CAROUSEL_ALBUM' ? 'carousel' : p.media_type === 'VIDEO' ? 'reels' : 'photo', link: p.permalink || '', ts: p.timestamp || '', likes: p.like_count ?? null, comments: p.comments_count ?? null, thumb: p.thumbnail_url || (p.media_type === 'IMAGE' || p.media_type === 'CAROUSEL_ALBUM' ? p.media_url : '') || '' }))
+  };
+}
+
 /* ---------- обработчик ---------- */
 export default {
   async fetch(req, env) {
@@ -191,8 +242,8 @@ export default {
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json; charset=utf-8' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
-    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI });
-    if (url.pathname !== '/api/ask' || req.method !== 'POST') return json({ error: 'not found' }, 404);
+    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN });
+    if (!['/api/ask', '/api/image', '/api/instagram'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
 
     let user;
     try { user = await verifyFirebase((req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), env.FIREBASE_PROJECT || 'raz-studio-5a486'); }
@@ -202,6 +253,14 @@ export default {
 
     let b;
     try { b = await req.json(); } catch (_) { return json({ error: 'bad json' }, 400); }
+    if (url.pathname === '/api/image') {
+      try { return json({ image: await makeImage(env, b.prompt || 'branding studio workshop') }); }
+      catch (e) { return json({ error: e.message || 'Не удалось нарисовать фон' }, 502); }
+    }
+    if (url.pathname === '/api/instagram') {
+      try { return json(await instagram(env)); }
+      catch (e) { return json({ error: e.message || 'Не удалось получить данные Instagram' }, 502); }
+    }
     if (!ROLES[b.role]) return json({ error: 'Неизвестная роль' }, 400);
     const messages = (Array.isArray(b.messages) ? b.messages : [])
       .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim())
