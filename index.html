@@ -1208,30 +1208,35 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="pgrid" id="proj-grid"></div>
   </section>
 
-  <!-- МАРКЕТИНГ -->
+  <!-- МАРКЕТИНГ (наполняет marketing.js) -->
   <section id="p-marketing" class="page" style="gap:16px" hidden>
     <div class="ph">
-      <div><h1>Маркетинговый отдел</h1><p>Три ИИ-специалиста видят прайс и цифры из учёта: стратегия, контент и разбор конкурентов.</p></div>
-      <div class="btns"><button class="btn soft" type="button" id="mk-brief-btn">Бриф студии</button><button class="btn primary" type="button" id="mk-new">Новый разговор</button></div>
+      <div><h1>Маркетинговый отдел</h1><p>Календарь стратегии и продаж, конкуренты, идеи, офферы и ИИ-команда, которая видит цифры учёта.</p></div>
+      <div class="btns"><button class="btn soft" type="button" id="mk-brief-btn">Бриф студии</button><button class="btn primary" type="button" id="mk-add">Добавить</button></div>
     </div>
-    <div class="mk-team" id="mk-team" role="tablist" aria-label="Специалист"></div>
+    <div class="mk-tabs" id="mk-tabs" role="tablist" aria-label="Разделы маркетинга"></div>
     <div class="w mk-brief" id="mk-brief" hidden>
-      <div class="w-h"><h2>Бриф студии</h2><span class="c">его читают все три специалиста</span></div>
-      <textarea id="mk-brief-t" rows="9" placeholder="Город и район студии:\nКто наши клиенты сейчас:\nКонкуренты, которых знаем (названия, инстаграмы):\nЦель на 3 месяца:\nЧто уже пробовали и не сработало:\nОграничения (время, бюджет):"></textarea>
+      <div class="w-h"><h2>Бриф студии</h2><span class="c">его читает вся ИИ-команда</span></div>
+      <textarea id="mk-brief-t" rows="9" placeholder="Город и район студии:\nКто наши клиенты сейчас:\nЦель на 3 месяца:\nЧто уже пробовали и не сработало:\nОграничения (время, бюджет):"></textarea>
       <div class="mk-row"><small id="mk-brief-s"></small><button class="btn primary sm" type="button" id="mk-brief-save">Сохранить бриф</button></div>
     </div>
-    <div class="mk-wrap">
-      <aside class="mk-hist w" id="mk-hist"></aside>
-      <div class="mk-chat w">
-        <div class="mk-msgs" id="mk-msgs" aria-live="polite"></div>
-        <div class="chips mk-quick" id="mk-quick"></div>
-        <form class="mk-form" id="mk-form">
-          <textarea id="mk-in" rows="2" placeholder="Задача для отдела…" aria-label="Сообщение"></textarea>
-          <button class="btn primary" type="submit" id="mk-send">Отправить</button>
-        </form>
-        <small class="mk-foot" id="mk-foot"></small>
+    <div id="mk-view" class="mk-view"></div>
+    <div id="mk-chatv" class="mk-view" hidden>
+      <div class="mk-team" id="mk-team" role="tablist" aria-label="Специалист"></div>
+      <div class="mk-wrap">
+        <aside class="mk-hist w" id="mk-hist"></aside>
+        <div class="mk-chat w">
+          <div class="mk-msgs" id="mk-msgs" aria-live="polite"></div>
+          <div class="chips mk-quick" id="mk-quick"></div>
+          <form class="mk-form" id="mk-form">
+            <textarea id="mk-in" rows="2" placeholder="Задача для отдела…" aria-label="Сообщение"></textarea>
+            <button class="btn primary" type="submit" id="mk-send">Отправить</button>
+          </form>
+          <small class="mk-foot" id="mk-foot"></small>
+        </div>
       </div>
     </div>
+    <dialog class="mk-dlg" id="mk-dlg"><form method="dialog" id="mk-dform"></form></dialog>
   </section>
 
   <!-- ВЕДОМОСТЬ -->

@@ -1,19 +1,27 @@
-/* Маркетинговый отдел RAZ Brand Studio — сервер-посредник между сайтом учёта и Claude.
-   Хранит ключ Claude (секрет ANTHROPIC_API_KEY), пускает только сотрудников,
-   вошедших на сайт через Firebase, и задаёт роли трёх специалистов.
+/* Маркетинговый отдел RAZ Brand Studio — сервер-посредник между сайтом учёта и ИИ.
+   Пускает только сотрудников, вошедших на сайт через Firebase, и задаёт роли специалистов.
 
-   Переменные (Settings → Variables):
-     ANTHROPIC_API_KEY  — секрет, ключ из console.anthropic.com
+   БЕСПЛАТНО: Google Gemini (бесплатный тариф, ключ без карты на aistudio.google.com).
+   Если бесплатный лимит Gemini на сегодня кончился — запасной бесплатный вариант:
+   Cloudflare Workers AI (подключается привязкой AI, см. README).
+   По желанию, платно и умнее, с поиском в интернете — Claude (ключ ANTHROPIC_API_KEY).
+
+   Переменные (Settings → Variables and Secrets):
+     GEMINI_API_KEY     — секрет, ключ из aistudio.google.com (бесплатно)
      FIREBASE_PROJECT   — raz-studio-5a486
      ALLOWED_ORIGIN     — https://razgulyaevevgeny.github.io
-     MODEL              — необязательно, по умолчанию claude-sonnet-5-5
-     ALLOWED_EMAILS     — необязательно: почты через запятую; пусто — пускать всех вошедших */
+     GEMINI_MODEL       — необязательно, по умолчанию gemini-flash-latest
+     ANTHROPIC_API_KEY  — необязательно, платно; если задан, отвечает Claude
+     ALLOWED_EMAILS     — необязательно: почты через запятую; пусто — пускать всех вошедших
+   Привязка AI (Settings → Bindings → Workers AI, имя AI) — необязательно, запасной бесплатный ИИ. */
 
-const DEFAULT_MODEL = 'claude-sonnet-5-5';
+const GEMINI_DEFAULT = 'gemini-flash-latest';
+const CF_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const CLAUDE_MODEL = 'claude-sonnet-5-5';
 
 /* ---------- общая часть для всех ролей ---------- */
 const STUDIO = `Ты работаешь в маркетинговом отделе студии брендирования RAZ Brand Studio (Казахстан, Instagram @raz.brandstudio).
-Владелец — Евгений. В студии работают двое: Евгений и его жена (менеджер Милана тоже есть в учёте). Времени мало, поэтому всё, что предлагаешь, должно выполняться силами 1–2 человек.
+Владелец — Евгений. Команда студии — 2 человека (Евгений и его жена). Времени мало, поэтому всё, что предлагаешь, должно выполняться силами 1–2 человек.
 Рекламного бюджета сейчас НЕТ: таргет, платных блогеров и платные площадки не предлагай, пока об этом не попросят. Только бесплатные и почти бесплатные каналы: Instagram, WhatsApp, Telegram-чаты города, 2ГИС, Kaspi, сарафан, партнёрства, офлайн-визиты.
 Оборудование: 3D-принтер Bambu Lab A1, DTF-печать, плоттер для винила, вышивка.
 Приоритетные услуги (по ним просадка, их нужно продавать в первую очередь):
@@ -21,12 +29,13 @@ const STUDIO = `Ты работаешь в маркетинговом отдел
 2) DTF-печать на футболках — мерч для компаний, команд, мероприятий;
 3) 3D-печатные таблички и вывески, брендированные под заведения (кафе, кофейни, барбершопы, салоны) — направление только запускается.
 Также студия делает 3D-топперы (есть отдельный сайт для заявок), распечатку и продаёт на Kaspi.
-У студии есть собственный сайт учёта (CRM) — в нём ведутся заказы, прайс и аналитика. Ниже в разделе «Данные из учёта» — живые цифры оттуда. Опирайся на них, а не на выдуманные.
+У студии есть сайт учёта (CRM) с маркетинговым разделом: календарь, конкуренты, идеи, офферы. Ниже — живые данные оттуда. Опирайся на них, а не на выдуманные.
 
 Правила:
 - Пиши по-русски, просто и по делу, без воды и канцелярита. Казахский — только если попросят.
-- Не выдумывай цифры, цены конкурентов, факты о городе. Если данных нет — так и скажи и предложи, как их добыть. Любое допущение помечай «допущение».
+- Не выдумывай цифры, цены конкурентов, факты о городе. Если данных нет — так и скажи и подскажи, где и как их собрать. Любое допущение помечай «допущение».
 - Сначала готовый результат (план, тексты, таблица), потом коротко «почему так» в 1–3 строки.
+- Когда предлагаешь план по датам, пиши даты явно (например, 21.10) — владелец разложит их в календарь одной кнопкой.
 - Заканчивай блоком «Что сделать сегодня» — не больше 3 конкретных действий по 30–60 минут.
 - Оформление: markdown — заголовки ##, списки, **жирный**, таблицы. Без эмодзи-мусора.
 - Не обещай результат в цифрах (заявки, выручка) — давай гипотезы и способ их проверить.`;
@@ -34,31 +43,35 @@ const STUDIO = `Ты работаешь в маркетинговом отдел
 const ROLES = {
   marketer: {
     name: 'Маркетолог',
-    search: true,
     prompt: `Твоя роль — МАРКЕТОЛОГ-СТРАТЕГ студии.
-Отвечаешь за: маркетинговую стратегию и план на месяц/квартал, позиционирование, офферы и пакеты услуг, ценообразование, акции без демпинга, коммерческие предложения (КП) для заведений и компаний, скрипты продаж, воронку и работу с заявками, поиск клиентов без бюджета (холодные сообщения в Direct/WhatsApp, 2ГИС, партнёрства с автомойками, детейлингом, СТО, ивент-агентствами, спортклубами, открывающимися кафе).
-Анализ цен: сравнивай прайс студии с себестоимостью и наценкой из учёта, показывай где наценка низкая, где цену можно поднять, какие позиции собрать в пакеты. Цены конкурентов бери только из поиска с источником или из данных аналитика, иначе помечай как допущение.
-Для винила на авто владелец не понимает боли клиентов — не придумывай их как факт: давай гипотезы и вопросы для интервью с реальными клиентами.
-Формат стратегии: цель → сегменты → оффер для каждого → каналы → план по неделям → метрики (что считать в учёте).`
+Отвечаешь за: маркетинговую стратегию и план на месяц/квартал, цели по продажам и росту, позиционирование, офферы и пакеты услуг, ценообразование, акции без демпинга, коммерческие предложения (КП) для заведений и компаний, скрипты продаж, воронку и работу с заявками, поиск клиентов без бюджета (холодные сообщения в Direct/WhatsApp, 2ГИС, партнёрства с автомойками, детейлингом, СТО, ивент-агентствами, спортклубами, открывающимися кафе).
+Анализ цен: сравнивай прайс студии с себестоимостью и наценкой из учёта, показывай где наценка низкая, где цену можно поднять, какие позиции собрать в пакеты. Цены конкурентов бери из раздела «Конкуренты», иначе помечай как допущение.
+Для винила на авто владелец не понимает боли клиентов — не выдавай гипотезы за факт: давай гипотезы и вопросы для интервью с реальными клиентами.
+Формат стратегии: цель (в цифрах учёта) → сегменты → оффер для каждого → каналы → план по неделям с датами → что считать в учёте.`
   },
   smm: {
     name: 'SMM-менеджер',
-    search: false,
     prompt: `Твоя роль — SMM-МЕНЕДЖЕР студии, ведёшь Instagram @raz.brandstudio.
-Отвечаешь за: контент-план (неделя/месяц) таблицей «день — формат — тема — цель — призыв», сценарии Reels покадрово (хук в первые 2 секунды → процесс → результат → призыв; что снимать, сколько секунд кадр, текст на экране, звук), тексты постов и подписей, сторис с опросами и квизами для сбора заявок, рубрикатор, шапку профиля и Highlights, хештеги и гео, ответы на комментарии и в Direct, идеи коллабораций с местными аккаунтами.
-Главный бесплатный ресурс — сам процесс в мастерской: печать на 3D-принтере, нарезка и поклейка винила, перенос DTF. Это залипательный контент — строй план вокруг него, «до/после», кейсов клиентов и «сколько стоит».
-Учитывай, что снимает 1 человек на телефон между заказами: не больше 3–4 публикаций в неделю, сценарии на 15–30 секунд.
+Отвечаешь за: контент-план (неделя/месяц) таблицей «дата — формат — тема — цель — призыв», сценарии Reels покадрово (хук в первые 2 секунды → процесс → результат → призыв; что снимать, сколько секунд кадр, текст на экране, звук), тексты постов и подписей, сторис с опросами и квизами для сбора заявок, рубрикатор, шапку профиля и Highlights, хештеги и гео, ответы на комментарии и в Direct, идеи коллабораций с местными аккаунтами.
+Главный бесплатный ресурс — сам процесс в мастерской: печать на 3D-принтере, нарезка и поклейка винила, перенос DTF. Строй план вокруг него, «до/после», кейсов клиентов и «сколько стоит». Связывай контент с активными офферами и событиями календаря.
+Снимает 1 человек на телефон между заказами: не больше 3–4 публикаций в неделю, сценарии на 15–30 секунд.
 Стритвир-бренд владельца «РЗГ» (@wear.rzg) — отдельный аккаунт, его можно упоминать как кейс DTF-качества, но не смешивать.`
   },
   analyst: {
     name: 'Аналитик',
-    search: true,
     prompt: `Твоя роль — АНАЛИТИК РЫНКА И КОНКУРЕНТОВ.
-Отвечаешь за: поиск и разбор конкурентов (студии брендирования, оклейка авто, DTF и печать на одежде, 3D-печать, рекламные агентства, изготовители вывесок) в городе студии и по Казахстану; сбор их цен, ассортимента, сроков, позиционирования, активности в Instagram, отзывов в 2ГИС; сравнение с RAZ Brand Studio; спрос и сезонность; портреты целевых клиентов по каждой услуге.
-У тебя есть веб-поиск — ИСПОЛЬЗУЙ его, прежде чем делать выводы о конкурентах и ценах рынка. Ищи на русском, добавляй город. Смотри сайты, 2ГИС, Instagram, OLX, Satu, Kaspi.
-Правила: каждая цена и факт о конкуренте — с источником (ссылкой). Не нашёл — пиши «не нашёл в открытых источниках», не выдумывай. Отделяй факты от выводов.
-Формат разбора: таблица конкурентов (название — что делают — цены — сильные стороны — слабые места — ссылка) → где RAZ сильнее → где слабее → 3 возможности, которые можно забрать прямо сейчас.
-Если город студии не указан в брифе — спроси его одной строкой, прежде чем искать.`
+Отвечаешь за: разбор конкурентов (студии брендирования, оклейка авто, DTF и печать на одежде, 3D-печать, рекламные агентства, изготовители вывесок), сравнение их цен, ассортимента и подачи с RAZ Brand Studio; анализ продаж и роста по цифрам учёта (что растёт, что просело, где деньги); спрос и сезонность; портреты клиентов по каждой услуге.
+{SEARCH}
+Правила: отделяй факты от выводов. Чего нет в данных — пиши «нет данных» и говори, где взять: 2ГИС (цены, отзывы), Instagram конкурента (хайлайты «цены»), OLX, Satu, звонок «тайного покупателя» — давай готовый скрипт вопросов.
+Формат разбора конкурентов: таблица (название — что делают — цены — сильные стороны — слабые места) → где RAZ сильнее → где слабее → 3 возможности, которые можно забрать прямо сейчас.
+Если город студии не указан в брифе — спроси его одной строкой.`
+  },
+  planner: {
+    name: 'Планировщик', hidden: true, json: true,
+    prompt: `Ты превращаешь маркетинговый план в записи календаря. Верни ТОЛЬКО JSON без пояснений, формат:
+{"events":[{"date":"ГГГГ-ММ-ДД","title":"коротко, до 70 символов","type":"strategy|offer|content|sales|growth","notes":"1–2 предложения: что сделать"}]}
+type: strategy — этап стратегии или цель; offer — акция или запуск оффера; content — публикация, Reels, сторис; sales — продажи, аутрич, звонки, визиты, КП; growth — замер метрик, итоги, разбор цифр.
+Бери только то, что есть в тексте плана. Если у пункта нет даты, но есть день недели или «неделя 1/2…», вычисли дату от даты начала, указанной в запросе. Не больше 40 записей.`
   }
 };
 
@@ -90,37 +103,84 @@ async function verifyFirebase(token, project) {
   return body;
 }
 
-/* ---------- запрос к Claude ---------- */
-async function askClaude(env, role, messages, context, brief) {
+/* ---------- системная инструкция ---------- */
+function systemText(role, context, brief, search) {
   const R = ROLES[role];
-  const system = [
-    { type: 'text', text: STUDIO + '\n\n' + R.prompt, cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: '## Бриф студии (заполняет владелец)\n' + (brief || 'Бриф пока не заполнен — если для задачи нужен город, ЦА или конкуренты, спроси.') + '\n\n## Данные из учёта\n' + (context || 'Нет данных.') + '\n\nСегодня: ' + new Date().toISOString().slice(0, 10) }
-  ];
-  const tools = R.search ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: role === 'analyst' ? 8 : 4, user_location: { type: 'approximate', country: 'KZ', timezone: 'Asia/Almaty' } }] : undefined;
-  let msgs = messages.slice();
+  const searchLine = search
+    ? 'У тебя есть веб-поиск — используй его, прежде чем делать выводы о конкурентах и ценах рынка; каждая цена и факт — со ссылкой.'
+    : 'Поиска в интернете у тебя нет. Работай с карточками раздела «Конкуренты» и с текстом, который владелец вставит в чат (описания, прайсы, отзывы конкурентов).';
+  if (R.json) return R.prompt;
+  return STUDIO + '\n\n' + R.prompt.replace('{SEARCH}', searchLine) +
+    '\n\n## Бриф студии (заполняет владелец)\n' + (brief || 'Бриф пока не заполнен — если для задачи нужен город, ЦА или конкуренты, спроси.') +
+    '\n\n## Данные из учёта и маркетингового раздела\n' + (context || 'Нет данных.') +
+    '\n\nСегодня: ' + new Date().toISOString().slice(0, 10);
+}
+
+/* ---------- ИИ: Gemini (бесплатно) ---------- */
+class Quota extends Error {}
+async function viaGemini(env, role, messages, system) {
+  const model = env.GEMINI_MODEL || GEMINI_DEFAULT;
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+      generationConfig: { maxOutputTokens: 8192, temperature: ROLES[role].json ? 0.2 : 0.7, ...(ROLES[role].json ? { responseMimeType: 'application/json' } : {}) }
+    })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 429) throw new Quota('limit');
+  if (!r.ok) throw new Error((j.error && j.error.message) || ('Gemini ответил ' + r.status));
+  const c = (j.candidates || [])[0];
+  const text = ((c && c.content && c.content.parts) || []).map(p => p.text || '').join('');
+  if (!text) throw new Error(c && c.finishReason ? 'Gemini не ответил (' + c.finishReason + ')' : 'Пустой ответ');
+  return { text, sources: [], engine: 'Gemini' };
+}
+
+/* ---------- ИИ: Cloudflare Workers AI (бесплатный запасной) ---------- */
+async function viaCloudflare(env, role, messages, system) {
+  const out = await env.AI.run(CF_MODEL, { messages: [{ role: 'system', content: system }, ...messages], max_tokens: 4000, temperature: ROLES[role].json ? 0.2 : 0.7 });
+  const text = typeof out.response === 'string' ? out.response : JSON.stringify(out.response || '');
+  if (!text) throw new Error('Пустой ответ');
+  return { text, sources: [], engine: 'Llama' };
+}
+
+/* ---------- ИИ: Claude (платно, по желанию) ---------- */
+async function viaClaude(env, role, messages, system) {
+  const search = !ROLES[role].json && role !== 'smm';
+  const tools = search ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: role === 'analyst' ? 8 : 4, user_location: { type: 'approximate', country: 'KZ', timezone: 'Asia/Almaty' } }] : undefined;
+  let msgs = messages.slice(), text = '';
   const sources = new Map();
-  let text = '', usage = { input: 0, output: 0, searches: 0 };
   for (let round = 0; round < 4; round++) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: env.MODEL || DEFAULT_MODEL, max_tokens: 6000, system, messages: msgs, ...(tools ? { tools } : {}) })
+      body: JSON.stringify({ model: env.CLAUDE_MODEL || CLAUDE_MODEL, max_tokens: 6000, system, messages: msgs, ...(tools ? { tools } : {}) })
     });
     const j = await r.json();
     if (!r.ok) throw new Error((j.error && j.error.message) || ('Claude ответил ' + r.status));
-    usage.input += j.usage?.input_tokens || 0; usage.output += j.usage?.output_tokens || 0;
-    usage.searches += j.usage?.server_tool_use?.web_search_requests || 0;
-    for (const b of j.content || []) {
-      if (b.type === 'text') {
-        text += b.text;
-        (b.citations || []).forEach(c => c.url && !sources.has(c.url) && sources.set(c.url, c.title || c.url));
-      }
-    }
+    for (const b of j.content || []) if (b.type === 'text') { text += b.text; (b.citations || []).forEach(c => c.url && !sources.has(c.url) && sources.set(c.url, c.title || c.url)); }
     if (j.stop_reason !== 'pause_turn') break;
     msgs = [...msgs, { role: 'assistant', content: j.content }];
   }
-  return { text: text.trim(), sources: [...sources].map(([url, title]) => ({ url, title })).slice(0, 20), usage };
+  return { text: text.trim(), sources: [...sources].map(([url, title]) => ({ url, title })).slice(0, 20), engine: 'Claude' };
+}
+
+async function answer(env, role, messages, context, brief) {
+  if (env.ANTHROPIC_API_KEY) return viaClaude(env, role, messages, systemText(role, context, brief, role !== 'smm'));
+  const system = systemText(role, context, brief, false);
+  if (env.GEMINI_API_KEY) {
+    try { return await viaGemini(env, role, messages, system); }
+    catch (e) {
+      if (!env.AI) throw e instanceof Quota ? new Error('Бесплатный лимит Gemini на сегодня закончился. Попробуйте позже или подключите запасной Workers AI (см. README).') : e;
+    }
+  }
+  if (env.AI) {
+    try { return await viaCloudflare(env, role, messages, system); }
+    catch (e) { throw new Error('Бесплатные лимиты на сегодня закончились. Попробуйте завтра. (' + e.message + ')'); }
+  }
+  throw new Error('На сервере не задан ключ GEMINI_API_KEY.');
 }
 
 /* ---------- обработчик ---------- */
@@ -131,9 +191,8 @@ export default {
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json; charset=utf-8' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
-    if (url.pathname === '/api/roles') return json({ roles: Object.fromEntries(Object.entries(ROLES).map(([k, v]) => [k, { name: v.name, search: v.search }])) });
+    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI });
     if (url.pathname !== '/api/ask' || req.method !== 'POST') return json({ error: 'not found' }, 404);
-    if (!env.ANTHROPIC_API_KEY) return json({ error: 'На сервере не задан ключ ANTHROPIC_API_KEY.' }, 500);
 
     let user;
     try { user = await verifyFirebase((req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), env.FIREBASE_PROJECT || 'raz-studio-5a486'); }
@@ -147,15 +206,13 @@ export default {
     const messages = (Array.isArray(b.messages) ? b.messages : [])
       .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim())
       .slice(-16).map(m => ({ role: m.role, content: m.text.slice(0, 30000) }));
-    if (!messages.length || messages.at(-1).role !== 'user') return json({ error: 'Пустой вопрос' }, 400);
-    // подряд идущие сообщения одной роли склеиваем — так требует Claude
+    // подряд идущие сообщения одной роли склеиваем; разговор должен начинаться и заканчиваться вопросом
     const merged = [];
     for (const m of messages) { const l = merged.at(-1); if (l && l.role === m.role) l.content += '\n\n' + m.content; else merged.push({ ...m }); }
-    if (merged[0].role !== 'user') merged.shift();
+    while (merged.length && merged[0].role !== 'user') merged.shift();
+    if (!merged.length || merged.at(-1).role !== 'user') return json({ error: 'Пустой вопрос' }, 400);
 
-    try {
-      const out = await askClaude(env, b.role, merged, String(b.context || '').slice(0, 20000), String(b.brief || '').slice(0, 6000));
-      return json(out);
-    } catch (e) { return json({ error: 'Не удалось получить ответ: ' + e.message }, 502); }
+    try { return json(await answer(env, b.role, merged, String(b.context || '').slice(0, 24000), String(b.brief || '').slice(0, 6000))); }
+    catch (e) { return json({ error: e.message || 'Не удалось получить ответ' }, 502); }
   }
 };
