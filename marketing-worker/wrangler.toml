@@ -1,0 +1,10 @@
+name = "raz-marketing"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+FIREBASE_PROJECT = "raz-studio-5a486"
+ALLOWED_ORIGIN = "https://razgulyaevevgeny.github.io"
+# MODEL = "claude-sonnet-5-5"
+# ALLOWED_EMAILS = "design.onegin@gmail.com"
+# Ключ задаётся секретом: npx wrangler secret put ANTHROPIC_API_KEY
