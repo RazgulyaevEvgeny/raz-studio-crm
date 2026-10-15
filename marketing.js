@@ -62,7 +62,11 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
   const FORMS = {
     event: { h: 'Событие в календаре', f: [
       ['title', 'Что делаем *', 'text', 'Запуск акции «Наклейка на авто + логотип»'],
-      ['date', 'Дата *', 'date'], ['type', 'Тип', 'select', ETYPES], ['notes', 'Подробности', 'textarea', 'Что именно сделать, кто отвечает, какой результат ждём'], ['done', 'Сделано', 'check']] },
+      ['date', 'Дата *', 'date'], ['type', 'Тип', 'select', ETYPES],
+      ['goal', 'Зачем и какой результат ждём', 'textarea', 'Например: получить 5 заявок на винил от владельцев кофеен'],
+      ['steps', 'Шаги — каждый с новой строки', 'lines', 'Снять процесс поклейки 20 сек\nСмонтировать в CapCut\nОпубликовать в 19:00'],
+      ['details', 'Материалы: сценарий, раскадровка, тексты', 'textarea', 'Сюда — всё, что нужно для работы. Можно markdown: ### заголовки, списки, таблицы'],
+      ['time', 'Сколько займёт', 'text', '40 минут'], ['done', 'Сделано', 'check']] },
     competitor: { h: 'Конкурент', f: [
       ['name', 'Название *', 'text', 'Студия «Пример»'], ['services', 'Что делают', 'text', 'Оклейка авто, DTF, вывески'],
       ['link', 'Instagram, 2ГИС или сайт', 'text', 'https://instagram.com/…'], ['prices', 'Цены, которые знаем', 'textarea', 'Наклейка на стекло — 4 000 ₸, футболка DTF — 5 000 ₸'],
@@ -122,6 +126,20 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
   .mk-more{font:600 11px var(--f);color:var(--muted);padding-left:5px}
   .mk-dots{display:none;gap:3px;flex-wrap:wrap}
   .mk-agenda{display:flex;flex-direction:column;gap:8px}
+  .mk-ev2.open{background:var(--paper);box-shadow:inset 0 0 0 2px var(--tile-2)}
+  .mk-ev2.open .mk-acts{align-self:flex-start}
+  .mk-evd{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+  .mk-goal{margin:0;font-size:14px;color:var(--ink)}.mk-it .tx .mk-goal b{display:inline;font:700 14px var(--fb)}
+  .mk-steps{display:flex;flex-direction:column;gap:6px}
+  .mk-step{display:flex;align-items:flex-start;gap:10px;text-align:left;background:var(--tile);border-radius:12px;padding:9px 12px;font-size:14px;line-height:1.4}
+  .mk-step:hover{background:var(--tile-2)}
+  .mk-step i{flex:none;width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--line);display:grid;place-items:center;font-style:normal;font-size:13px;color:transparent;background:var(--paper)}
+  .mk-step.on i{background:var(--ok);box-shadow:none;color:#fff}.mk-step.on span{text-decoration:line-through;color:var(--muted)}
+  .mk-det{background:var(--tile);border-radius:14px;padding:12px 14px}.mk-det .mk-md th{background:var(--paper)}
+  .mk-a.pri{background:var(--blue);color:#fff}.mk-a.pri:hover{background:var(--blue-d)}
+  .mk-plr{background:var(--tile);border-radius:14px}.mk-plr>label{background:none!important}
+  .mk-plr details{padding:0 12px 10px 42px;font-size:13.5px}.mk-plr summary{cursor:pointer;color:var(--blue);font:600 13px var(--f)}
+  .mk-plr ol{margin:8px 0;padding-left:20px}.mk-plr .mk-md{font-size:13.5px}
   .mk-agh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;flex-wrap:wrap}
   .mk-agh h3{margin:0;font:800 18px/1.2 var(--f);letter-spacing:-.02em}
   .mk-it{display:flex;gap:12px;align-items:flex-start;background:var(--tile);border-radius:18px;padding:12px 14px;min-width:0}
@@ -230,6 +248,7 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
   let tab = 'cal', role = 'marketer', cur = null, busy = null, err = '';
   let calYM = '', selDay = '', typeOff = new Set(), ideaF = 'open', offerF = 'all';
   let dlg = null;
+  const openEv = new Set();
   try { tab = localStorage.getItem('mk-tab') || tab; role = localStorage.getItem('mk-role') || role; } catch (_) {}
   if (!TABS.some(t => t[0] === tab)) tab = 'cal';
   if (!ROLES[role]) role = 'marketer';
@@ -349,7 +368,7 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
     const offs = of('offer').filter(o => o.status !== 'archive');
     out.push('### Офферы студии\n' + (offs.length ? offs.map(o => `- ${o.title} [${OSTAT[o.status] || 'Черновик'}]${o.svc ? ', ' + (SVCS[o.svc] || '') : ''}${o.audience ? ', для: ' + o.audience : ''}${o.price ? ', цена: ' + o.price : ''}${o.until ? ', до ' + o.until : ''}${o.includes ? '\n  Входит: ' + one(o.includes).slice(0, 600) : ''}`).join('\n') : 'Пока нет.'));
     const evs = of('event').filter(e => e.date >= day(14) && e.date <= addDays(today(), 30)).sort((a, b) => a.date.localeCompare(b.date));
-    out.push('### Календарь маркетинга (−14…+30 дней)\n' + (evs.length ? evs.slice(0, 50).map(e => `- ${e.date} [${ETYPES[etype(e)].l}${e.done ? ', сделано' : ''}] ${e.title}`).join('\n') : 'Событий нет.'));
+    out.push('### Календарь маркетинга (−14…+30 дней)\n' + (evs.length ? evs.slice(0, 50).map(e => `- ${e.date} [${ETYPES[etype(e)].l}${e.done ? ', сделано' : (e.steps || []).length ? ', шаги ' + (e.stepsDone || []).length + '/' + e.steps.length : ''}] ${e.title}${e.goal ? ' — ' + String(e.goal).slice(0, 120) : ''}`).join('\n') : 'Событий нет.'));
     out.push(igContext());
     const ids = of('idea').filter(x => x.status === 'new' || x.status === 'work');
     out.push('### Идеи в работе и новые\n' + (ids.length ? ids.slice(0, 30).map(x => `- ${x.title} [${ISTAT[x.status]}]`).join('\n') : 'Пока нет.'));
@@ -361,7 +380,7 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
     const u = window.firebase && firebase.auth && firebase.auth().currentUser;
     if (!u) throw new Error('Войдите на сайт заново.');
     const token = await u.getIdToken();
-    const res = await fetch(MKT_API + '/api/ask', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify({ role: r, messages, context: r === 'planner' ? '' : context(), brief: aboutText() }) })
+    const res = await fetch(MKT_API + '/api/ask', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token }, body: JSON.stringify({ role: r, messages, context: context(), brief: aboutText() }) })
       .catch(() => { throw new Error('Нет связи с сервером ИИ-команды. Проверьте интернет или адрес MKT_API в marketing.js.'); });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(j.error || 'Сервер ответил ' + res.status);
@@ -401,13 +420,15 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
     const F = FORMS[kind], x = (id && items.find(i => i.id === id)) || {}, v = { ...x, ...(preset || {}) };
     if (kind === 'event' && !v.date) v.date = selDay || today();
     if (kind === 'event' && !v.type) v.type = 'strategy';
+    if (kind === 'event' && !v.details && v.notes) v.details = v.notes;
     if (kind === 'idea' && !v.status) v.status = 'new';
     if (kind === 'idea' && !v.cat) v.cat = 'other';
     if (kind === 'offer' && !v.status) v.status = 'draft';
     if (kind === 'offer' && !v.svc) v.svc = 'other';
     const field = ([k, l, t, ph]) => {
       const val = v[k] ?? '';
-      if (t === 'textarea') return `<label>${E(l)}<textarea name="${k}" rows="3" placeholder="${E(ph || '')}">${E(val)}</textarea></label>`;
+      if (t === 'textarea') return `<label>${E(l)}<textarea name="${k}" rows="${k === 'details' ? 10 : 3}" placeholder="${E(ph || '')}">${E(val)}</textarea></label>`;
+      if (t === 'lines') return `<label>${E(l)}<textarea name="${k}" rows="5" placeholder="${E(ph || '')}">${E(Array.isArray(val) ? val.join('\n') : val)}</textarea></label>`;
       if (t === 'select') return `<label>${E(l)}<select name="${k}">${Object.entries(ph).map(([o, ol]) => `<option value="${o}"${o === val ? ' selected' : ''}>${E(ol.l || ol)}</option>`).join('')}</select></label>`;
       if (t === 'file') return `<label>${E(l)}<input type="file" name="${k}" accept="image/*">${val ? `<img src="${E(val)}" alt="" style="max-width:160px;border-radius:12px;margin-top:6px">` : ''}</label>`;
       if (t === 'check') return `<label class="ck"><input type="checkbox" name="${k}"${val ? ' checked' : ''}> ${E(l)}</label>`;
@@ -424,6 +445,7 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
       <div class="er" id="mk-derr" role="alert"></div>
       <div class="ft">${id && kind !== 'goal' ? '<button type="button" class="btn danger sm" data-mkdfdel>Удалить</button>' : ''}<button type="button" class="btn soft sm" data-mkdfx>Отмена</button><button type="submit" class="btn primary sm">Сохранить</button></div>`;
     dlg = { kind, id };
+    $$('mk-dlg').classList.toggle('wide', kind === 'event');
     $$('mk-dlg').showModal();
     const first = $$('mk-dform').querySelector('input:not([type=checkbox]),textarea');
     if (first) setTimeout(() => first.focus(), 30);
@@ -432,7 +454,7 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
     const { kind, id } = dlg, F = FORMS[kind], fd = new FormData($$('mk-dform')), d = {};
     const old = (id && items.find(i => i.id === id)) || {};
     const files = [];
-    F.f.forEach(([k, , t]) => { if (t === 'file') { const f = fd.get(k); if (f && f.size) files.push([k, f]); else d[k] = old[k] || ''; } else d[k] = t === 'check' ? fd.get(k) === 'on' : t === 'number' ? (+fd.get(k) || 0) : String(fd.get(k) || '').trim(); });
+    F.f.forEach(([k, , t]) => { if (t === 'file') { const f = fd.get(k); if (f && f.size) files.push([k, f]); else d[k] = old[k] || ''; } else if (t === 'lines') d[k] = String(fd.get(k) || '').split('\n').map(x => x.replace(/^\s*([-*•]|\d+[.)])\s*/, '').trim()).filter(Boolean); else d[k] = t === 'check' ? fd.get(k) === 'on' : t === 'number' ? (+fd.get(k) || 0) : String(fd.get(k) || '').trim(); });
     const req = F.f.find(f => f[1].endsWith('*') && !d[f[0]]);
     if (req) { $$('mk-derr').textContent = 'Заполните поле «' + req[1].replace(' *', '') + '».'; return; }
     const btn = $$('mk-dform').querySelector('[type=submit]'); btn.disabled = true;
@@ -444,7 +466,15 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
         d[k] = (await assets.upload(f)).url;
       }
       if (kind === 'goal') await col.doc(id).set({ ...d, kind: 'goal', updatedAt: Date.now(), by: me() });
-      else await saveItem(kind, id, d);
+      else {
+        if (kind === 'event') {
+          const prev = old.steps || [], doneSet = new Set((old.stepsDone || []).map(i => prev[i]).filter(Boolean));
+          d.stepsDone = (d.steps || []).map((x, i) => doneSet.has(x) ? i : -1).filter(i => i >= 0);
+          if (old.notes && !d.details) d.details = old.notes;
+          d.notes = '';
+        }
+        await saveItem(kind, id, d);
+      }
       if (kind === 'event' && d.date) { calYM = d.date.slice(0, 7); selDay = d.date; }
       closeDlg(); toastMsg('Сохранено');
     } catch (e) { $$('mk-derr').textContent = (e && e.code === 'too_large' ? 'Фото слишком большое.' : 'Не сохранилось. Проверьте связь и правила базы.'); btn.disabled = false; btn.textContent = 'Сохранить'; }
@@ -452,31 +482,48 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
   function closeDlg() { dlg = null; $$('mk-dlg').classList.remove('wide'); try { $$('mk-dlg').close(); } catch (_) {} draw(); }
 
   /* план из ответа ИИ → события календаря */
-  async function planToCalendar(text, btn) {
-    const lbl = btn.textContent; btn.disabled = true; btn.textContent = 'Раскладываем…';
+  async function planToCalendar(text, btn, earlier) {
+    const lbl = btn.textContent; btn.disabled = true; btn.textContent = 'Раскладываем и расписываем…';
     try {
-      const r = await ask('planner', [{ role: 'user', text: `Дата начала: ${today()} (${WDS[new Date().getDay()]}).\n\nПлан:\n${text}` }]);
+      let prior = (earlier || []).map(m => m.role === 'user' ? `### Задача от владельца\n${m.text}` : `### ${(ROLES[m.agent] || ROLES.marketer).name}\n${m.text}`).join('\n\n');
+      if (prior.length > 30000) prior = '…' + prior.slice(-30000);
+      const r = await ask('planner', [{ role: 'user', text: `Дата начала: ${today()} (${WDS[new Date().getDay()]}).\n\n## План, который нужно разложить\n${text}` + (prior ? `\n\n## Вся переписка до этого (отсюда бери сценарии, тексты и детали, которые относятся к пунктам плана)\n${prior}` : '') }]);
       let j; try { j = JSON.parse(String(r.text).replace(/^\s*```(json)?/, '').replace(/```\s*$/, '').trim()); } catch (_) { throw new Error('ИИ вернул план в непонятном виде. Попробуйте ещё раз.'); }
-      const evs = (j.events || []).filter(e => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.title).slice(0, 40);
+      const evs = (j.events || []).filter(e => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.title).slice(0, 30);
       if (!evs.length) throw new Error('В ответе не нашлось пунктов с датами.');
       dlg = { kind: 'plan', evs };
-      $$('mk-dform').innerHTML = `<h2>Разложить в календарь</h2><p style="margin:0;color:var(--muted);font-size:14px">Нашли ${evs.length} ${plural(evs.length, 'пункт', 'пункта', 'пунктов')}. Снимите галочки с лишних.</p>
-        <div class="mk-pl">${evs.map((e, i) => { const T = ETYPES[e.type] || ETYPES.strategy; return `<label><input type="checkbox" name="e${i}" checked><span><b>${E(fmtShort(e.date))}</b> · ${E(e.title)}<small>${E(T.l)}${e.notes ? ' — ' + E(e.notes) : ''}</small></span></label>`; }).join('')}</div>
+      $$('mk-dform').innerHTML = `<h2>Разложить в календарь</h2><p style="margin:0;color:var(--muted);font-size:14px">Нашли ${evs.length} ${plural(evs.length, 'пункт', 'пункта', 'пунктов')}, каждый уже расписан: цель, шаги и материалы. Снимите галочки с лишних, нажмите на пункт, чтобы посмотреть.</p>
+        <div class="mk-pl">${evs.map((e, i) => { const T = ETYPES[e.type] || ETYPES.strategy, st = Array.isArray(e.steps) ? e.steps.length : 0; return `<div class="mk-plr"><label><input type="checkbox" name="e${i}" checked><span><b>${E(fmtShort(e.date))}</b> · ${E(e.title)}<small>${E(T.l)}${st ? ' · ' + st + ' ' + plural(st, 'шаг', 'шага', 'шагов') : ''}${e.details ? ' · есть материалы' : ''}${e.time ? ' · ' + E(e.time) : ''}</small></span></label>
+          <details><summary>Посмотреть</summary>${e.goal ? `<p class="mk-goal">${E(e.goal)}</p>` : ''}${st ? '<ol>' + e.steps.map(x => '<li>' + E(x) + '</li>').join('') + '</ol>' : ''}${e.details ? `<div class="mk-md">${md(e.details)}</div>` : ''}</details></div>`; }).join('')}</div>
         <div class="er" id="mk-derr" role="alert"></div>
         <div class="ft"><button type="button" class="btn soft sm" data-mkdfx>Отмена</button><button type="submit" class="btn primary sm">Добавить в календарь</button></div>`;
-      $$('mk-dlg').showModal();
+      $$('mk-dlg').classList.add('wide'); $$('mk-dlg').showModal();
     } catch (e) { toastMsg(e.message); err = e.message; draw(); }
     finally { btn.disabled = false; btn.textContent = lbl; }
   }
+  const cleanEv = e => ({ title: String(e.title).slice(0, 120), date: e.date, type: ETYPES[e.type] ? e.type : 'strategy', goal: String(e.goal || e.notes || '').slice(0, 1000), steps: (Array.isArray(e.steps) ? e.steps : []).map(x => String(x).slice(0, 400)).filter(Boolean).slice(0, 12), stepsDone: [], details: String(e.details || '').slice(0, 30000), time: String(e.time || '').slice(0, 40), notes: '', done: false });
   async function submitPlan() {
     const fd = new FormData($$('mk-dform')), pick = dlg.evs.filter((_, i) => fd.get('e' + i) === 'on');
     const btn = $$('mk-dform').querySelector('[type=submit]'); btn.disabled = true;
     try {
-      for (const e of pick) await saveItem('event', null, { title: String(e.title).slice(0, 120), date: e.date, type: ETYPES[e.type] ? e.type : 'strategy', notes: String(e.notes || ''), done: false });
+      for (const e of pick) await saveItem('event', null, cleanEv(e));
       const first = pick.map(e => e.date).sort()[0];
       if (first) { tab = 'cal'; calYM = first.slice(0, 7); selDay = ''; save(); }
       closeDlg(); toastMsg('Добавлено в календарь: ' + pick.length);
     } catch (_) { $$('mk-derr').textContent = 'Не сохранилось.'; btn.disabled = false; }
+  }
+  /* дописать подробности к уже созданному событию */
+  async function detailEvent(id, btn) {
+    const x = items.find(i => i.id === id); if (!x) return;
+    const lbl = btn.textContent; btn.disabled = true; btn.textContent = 'Расписываем…';
+    try {
+      const r = await ask('detailer', [{ role: 'user', text: `Задача: ${x.title}\nДата: ${x.date}\nТип: ${ETYPES[etype(x)].l}` + (x.goal ? `\nЦель: ${x.goal}` : '') + (x.notes ? `\nЗаметки: ${x.notes}` : '') + (x.details ? `\nЧто уже есть:\n${x.details}` : '') + ((x.steps || []).length ? `\nШаги, которые уже есть:\n- ${x.steps.join('\n- ')}` : '') }]);
+      let j; try { j = JSON.parse(String(r.text).replace(/^\s*```(json)?/, '').replace(/```\s*$/, '').trim()); } catch (_) { throw new Error('ИИ ответил в непонятном виде. Нажмите ещё раз.'); }
+      const c = cleanEv({ ...x, ...j, title: x.title, date: x.date, type: x.type });
+      await patchItem(id, { goal: c.goal || x.goal || '', steps: c.steps.length ? c.steps : (x.steps || []), stepsDone: c.steps.length ? [] : (x.stepsDone || []), details: c.details || x.details || '', time: c.time || x.time || '', notes: '' });
+      openEv.add(id); toastMsg('Расписано');
+    } catch (e) { toastMsg(e.message); }
+    finally { btn.disabled = false; btn.textContent = lbl; }
   }
 
   /* ---------- переход в чат с готовой задачей ---------- */
@@ -578,10 +625,15 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
     h += `<div class="mk-agh"><h3>${selDay ? E(fmtDay(selDay)) : 'Все события месяца'}</h3><div class="mk-acts">${selDay ? `<button class="mk-a" type="button" data-mkday="">Весь месяц</button>` : ''}<button class="mk-a" type="button" data-mkaddev="${selDay || ''}">+ Событие${selDay ? ' на этот день' : ''}</button></div></div>`;
     if (selDay && daySales.get(selDay)) h += `<div class="note">Продажи в этот день по учёту: <b>${money(daySales.get(selDay))}</b></div>`;
     h += '<div class="mk-agenda">' + (list.length ? list.map(e => {
-      const T = ETYPES[etype(e)];
-      return `<div class="mk-it${e.done ? ' done' : ''}" style="--ec:var(${T.c})"><button type="button" class="mk-chk${e.done ? ' on' : ''}" data-mkdone="${E(e.id)}" aria-label="${e.done ? 'Отметить как не сделано' : 'Отметить как сделано'}" aria-pressed="${!!e.done}">✓</button>
-        <div class="tx"><span class="tag"><i class="mk-dot"></i>${T.l}${selDay ? '' : ' · ' + E(fmtShort(e.date))}</span><b>${E(e.title)}</b>${e.notes ? `<small>${E(e.notes)}</small>` : ''}</div>
-        <div class="mk-acts"><button class="mk-a" type="button" data-mkedit="event:${E(e.id)}">Изменить</button><button class="mk-a del" type="button" data-mkdel="${E(e.id)}" data-what="событие">Удалить</button></div></div>`;
+      const T = ETYPES[etype(e)], steps = e.steps || [], sd = new Set(e.stepsDone || []), det = e.details || e.notes || '';
+      const has = steps.length || det || e.goal, open = openEv.has(e.id);
+      return `<div class="mk-it mk-ev2${e.done ? ' done' : ''}${open ? ' open' : ''}" style="--ec:var(${T.c})"><button type="button" class="mk-chk${e.done ? ' on' : ''}" data-mkdone="${E(e.id)}" aria-label="${e.done ? 'Отметить как не сделано' : 'Отметить как сделано'}" aria-pressed="${!!e.done}">✓</button>
+        <div class="tx"><span class="tag"><i class="mk-dot"></i>${T.l}${selDay ? '' : ' · ' + E(fmtShort(e.date))}${e.time ? ' · ' + E(e.time) : ''}${steps.length ? ` · шаги ${sd.size} из ${steps.length}` : ''}</span><b>${E(e.title)}</b>${e.goal && !open ? `<small>${E(e.goal)}</small>` : ''}
+        ${open ? `<div class="mk-evd">${e.goal ? `<p class="mk-goal"><b>Цель:</b> ${E(e.goal)}</p>` : ''}
+          ${steps.length ? `<div class="mk-steps">${steps.map((x, i) => `<button type="button" class="mk-step${sd.has(i) ? ' on' : ''}" data-mkstep="${E(e.id)}:${i}" aria-pressed="${sd.has(i)}"><i>✓</i><span>${E(x)}</span></button>`).join('')}</div>` : ''}
+          ${det ? `<div class="mk-md mk-det">${md(det)}</div>` : ''}
+          ${has ? '' : '<p class="mk-goal">Подробностей пока нет. Нажмите «Расписать подробно» — ИИ добавит шаги, сценарий и тексты.</p>'}</div>` : ''}</div>
+        <div class="mk-acts">${has ? `<button class="mk-a pri" type="button" data-mkevo="${E(e.id)}" aria-expanded="${open}">${open ? 'Свернуть' : 'Подробнее'}</button>` : ''}${!det || !steps.length ? `<button class="mk-a" type="button" data-mkevai="${E(e.id)}">Расписать подробно</button>` : ''}${open && det ? `<button class="mk-a" type="button" data-mkevcopy="${E(e.id)}">Копировать</button>` : ''}<button class="mk-a" type="button" data-mkedit="event:${E(e.id)}">Изменить</button><button class="mk-a del" type="button" data-mkdel="${E(e.id)}" data-what="событие">Удалить</button></div></div>`;
     }).join('') : `<div class="mk-empty"><b>${selDay ? 'На этот день ничего не запланировано' : 'В этом месяце пока пусто'}</b>Добавьте событие вручную или попросите ИИ-команду составить план с датами — потом нажмите «Разложить в календарь» под ответом.</div>`) + '</div>';
     return h;
   }
@@ -1000,6 +1052,10 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
     if (g('[data-mktype]', el => { const k = el.dataset.mktype; typeOff.has(k) ? typeOff.delete(k) : typeOff.add(k); draw(); })) return;
     if (g('[data-mkgoal]', () => openForm('goal', 'goal-' + calYM))) return;
     if (g('[data-mkaddev]', el => openForm('event', null, { date: el.dataset.mkaddev || (calYM === today().slice(0, 7) ? today() : calYM + '-01') }))) return;
+    if (g('[data-mkevo]', el => { const id = el.dataset.mkevo; openEv.has(id) ? openEv.delete(id) : openEv.add(id); draw(); })) return;
+    if (g('[data-mkevai]', el => detailEvent(el.dataset.mkevai, el))) return;
+    if (g('[data-mkevcopy]', async el => { const x = items.find(i => i.id === el.dataset.mkevcopy); if (!x) return; const txt = [x.title, x.goal ? 'Цель: ' + x.goal : '', (x.steps || []).map((s, i) => (i + 1) + '. ' + s).join('\n'), x.details || x.notes || ''].filter(Boolean).join('\n\n'); try { await navigator.clipboard.writeText(txt); el.textContent = 'Скопировано'; } catch (_) {} })) return;
+    if (g('[data-mkstep]', el => { const [id, n] = el.dataset.mkstep.split(':'), x = items.find(i => i.id === id); if (!x) return; const s = new Set(x.stepsDone || []); s.has(+n) ? s.delete(+n) : s.add(+n); const all = (x.steps || []).length && s.size === x.steps.length; patchItem(id, { stepsDone: [...s].sort((a, b) => a - b), ...(all && !x.done ? { done: true } : {}) }); if (all && !x.done) toastMsg('Все шаги сделаны — событие отмечено выполненным'); })) return;
     if (g('[data-mkdone]', el => { const x = items.find(i => i.id === el.dataset.mkdone); if (x) patchItem(x.id, { done: !x.done }); })) return;
     if (g('[data-mkedit]', el => { const [k, id] = el.dataset.mkedit.split(':'); openForm(k, id); })) return;
     if (g('[data-mkdel]', el => delItem(el.dataset.mkdel, el.dataset.what || 'запись'))) return;
@@ -1019,7 +1075,7 @@ function GLOBAL(name) { try { return (0, eval)(name); } catch (_) { return undef
       const th = curThread(), m = th && th.messages[+mb.dataset.i]; if (!m) return;
       const a = mb.dataset.mkmsg;
       if (a === 'copy') { try { await navigator.clipboard.writeText(m.text); mb.textContent = 'Скопировано'; setTimeout(() => (mb.textContent = 'Копировать'), 1500); } catch (_) {} }
-      if (a === 'cal') planToCalendar(m.text, mb);
+      if (a === 'cal') planToCalendar(m.text, mb, th.messages.slice(0, +mb.dataset.i));
       if (a === 'idea') openForm('idea', null, { title: firstLine(m.text), notes: m.text.slice(0, 4000), cat: m.agent === 'smm' ? 'content' : 'other' });
       if (a === 'offer') openForm('offer', null, { title: firstLine(m.text), includes: m.text.slice(0, 4000) });
       if (a === 'crt') toCreate(m.text.slice(0, 1500));

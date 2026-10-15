@@ -79,11 +79,26 @@ const ROLES = {
 Заголовок — цепляющий, разговорный, конкретный, без канцелярита. Цены бери только из прайса или офферов в данных ниже; если цены нет — оставь price пустым. Не выдумывай акции, которых нет в данных, если владелец сам о них не написал.`
   },
   planner: {
-    name: 'Планировщик', hidden: true, json: true,
-    prompt: `Ты превращаешь маркетинговый план в записи календаря. Верни ТОЛЬКО JSON без пояснений, формат:
-{"events":[{"date":"ГГГГ-ММ-ДД","title":"коротко, до 70 символов","type":"strategy|offer|content|sales|growth","notes":"1–2 предложения: что сделать"}]}
+    name: 'Планировщик', json: true, ctx: true,
+    prompt: `Ты превращаешь маркетинговый план в записи календаря так, чтобы по каждой записи можно было работать БЕЗ возврата к переписке.
+Верни ТОЛЬКО JSON без пояснений:
+{"events":[{"date":"ГГГГ-ММ-ДД","title":"коротко, до 70 символов","type":"strategy|offer|content|sales|growth","time":"сколько займёт, например «40 минут»","goal":"зачем это делаем и какой результат ждём — 1–2 предложения","steps":["конкретный шаг 1","шаг 2","… 3–8 шагов, каждый — одно действие, которое можно отметить галочкой"],"details":"markdown со всеми материалами для этого пункта"}]}
 type: strategy — этап стратегии или цель; offer — акция или запуск оффера; content — публикация, Reels, сторис; sales — продажи, аутрич, звонки, визиты, КП; growth — замер метрик, итоги, разбор цифр.
-Бери только то, что есть в тексте плана. Если у пункта нет даты, но есть день недели или «неделя 1/2…», вычисли дату от даты начала, указанной в запросе. Не больше 40 записей.`
+Что класть в details (markdown: заголовки ###, списки, таблицы):
+- content (Reels, пост, сторис): сценарий и раскадровка таблицей «Кадр | Что снимаем | Сек | Текст на экране», звук, готовая подпись к публикации, хештеги, призыв;
+- sales: кому писать или куда идти и сколько контактов, готовые тексты сообщений или скрипт звонка/визита, что ответить на возражения, что записать в учёт;
+- offer: условия, цена, срок, тексты для объявления, сторис и WhatsApp;
+- strategy / growth: что именно посчитать или решить, где взять цифры, критерий успеха.
+Главное правило: ПЕРЕНОСИ ИЗ ПЛАНА ДОСЛОВНО всё, что относится к этому пункту — сценарии, тексты, скрипты, раскадровки, цены. Ничего не сокращай. Если в плане деталей нет — допиши их сам по данным студии ниже, конкретно, готово к использованию.
+Если у пункта нет даты, но есть день недели или «неделя 1/2…», вычисли дату от даты начала из запроса. Одинаковые пункты в разные дни — отдельные записи. Не больше 25 записей.`
+  },
+  detailer: {
+    name: 'Расписать событие', json: true, ctx: true,
+    prompt: `Владелец поставил в календарь маркетинговую задачу. Распиши её так, чтобы её можно было выполнить, не задавая вопросов.
+Верни ТОЛЬКО JSON без пояснений:
+{"time":"сколько займёт","goal":"зачем и какой результат ждём — 1–2 предложения","steps":["3–8 конкретных шагов, каждый можно отметить галочкой"],"details":"markdown со всеми материалами"}
+Что класть в details: для контента — сценарий и раскадровку таблицей «Кадр | Что снимаем | Сек | Текст на экране», звук, готовую подпись, хештеги; для продаж — кому писать и сколько, готовые тексты или скрипт, ответы на возражения; для акций — условия, цену, тексты для сторис и WhatsApp; для стратегии и цифр — что посчитать, где взять данные, критерий успеха.
+Опирайся на данные студии ниже: прайс, офферы, Instagram, «О студии». Не выдумывай цены и акции, которых нет в данных.`
   }
 };
 
@@ -138,7 +153,7 @@ async function viaGemini(env, role, messages, system) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
       contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
-      generationConfig: { maxOutputTokens: 8192, temperature: ROLES[role].json && !ROLES[role].ctx ? 0.2 : 0.8, ...(ROLES[role].json ? { responseMimeType: 'application/json' } : {}) }
+      generationConfig: { maxOutputTokens: role === 'planner' ? 32768 : 8192, temperature: ROLES[role].json && !ROLES[role].ctx ? 0.2 : 0.8, ...(ROLES[role].json ? { responseMimeType: 'application/json' } : {}) }
     })
   });
   const j = await r.json().catch(() => ({}));
@@ -152,7 +167,7 @@ async function viaGemini(env, role, messages, system) {
 
 /* ---------- ИИ: Cloudflare Workers AI (бесплатный запасной) ---------- */
 async function viaCloudflare(env, role, messages, system) {
-  const out = await env.AI.run(CF_MODEL, { messages: [{ role: 'system', content: system }, ...messages], max_tokens: 4000, temperature: ROLES[role].json && !ROLES[role].ctx ? 0.2 : 0.8 });
+  const out = await env.AI.run(CF_MODEL, { messages: [{ role: 'system', content: system }, ...messages], max_tokens: ROLES[role].json ? 7000 : 4000, temperature: ROLES[role].json && !ROLES[role].ctx ? 0.2 : 0.8 });
   const text = typeof out.response === 'string' ? out.response : JSON.stringify(out.response || '');
   if (!text) throw new Error('Пустой ответ');
   return { text, sources: [], engine: 'Llama' };
@@ -168,7 +183,7 @@ async function viaClaude(env, role, messages, system) {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: env.CLAUDE_MODEL || CLAUDE_MODEL, max_tokens: 6000, system, messages: msgs, ...(tools ? { tools } : {}) })
+      body: JSON.stringify({ model: env.CLAUDE_MODEL || CLAUDE_MODEL, max_tokens: role === 'planner' ? 16000 : 6000, system, messages: msgs, ...(tools ? { tools } : {}) })
     });
     const j = await r.json();
     if (!r.ok) throw new Error((j.error && j.error.message) || ('Claude ответил ' + r.status));
@@ -264,7 +279,7 @@ export default {
     if (!ROLES[b.role]) return json({ error: 'Неизвестная роль' }, 400);
     const messages = (Array.isArray(b.messages) ? b.messages : [])
       .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim())
-      .slice(-16).map(m => ({ role: m.role, content: m.text.slice(0, 30000) }));
+      .slice(-16).map(m => ({ role: m.role, content: m.text.slice(0, b.role === 'planner' ? 60000 : 30000) }));
     // подряд идущие сообщения одной роли склеиваем; разговор должен начинаться и заканчиваться вопросом
     const merged = [];
     for (const m of messages) { const l = merged.at(-1); if (l && l.role === m.role) l.content += '\n\n' + m.content; else merged.push({ ...m }); }
