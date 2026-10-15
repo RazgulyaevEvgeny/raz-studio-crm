@@ -1082,7 +1082,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <button class="pill" type="button" data-go="projects">Проекты</button>
       <button class="pill" type="button" data-go="prices">Прайс</button>
       <button class="pill" type="button" data-go="analytics">Аналитика</button>
-      <button class="pill" type="button" data-go="marketing">Маркетинг</button>
+      <a class="pill" href="marketing/" target="_blank" rel="noopener" style="text-decoration:none">Маркетинг ↗</a>
     </nav>
   </header>
 
@@ -1206,32 +1206,6 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="kpis" id="proj-kpi"></div>
     <div class="filters"><div class="chips" id="proj-chips" aria-label="Статус проекта"></div></div>
     <div class="pgrid" id="proj-grid"></div>
-  </section>
-
-  <!-- МАРКЕТИНГ (наполняет marketing.js) -->
-  <section id="p-marketing" class="page" style="gap:16px" hidden>
-    <div class="ph">
-      <div><h1>Маркетинговый отдел</h1><p>Календарь, Instagram, креативы, конкуренты, идеи и офферы. ИИ-команда видит всё это и цифры учёта.</p></div>
-      <div class="btns"><button class="btn primary" type="button" id="mk-add">Добавить</button></div>
-    </div>
-    <div class="mk-tabs" id="mk-tabs" role="tablist" aria-label="Разделы маркетинга"></div>
-    <div id="mk-view" class="mk-view"></div>
-    <div id="mk-chatv" class="mk-view" hidden>
-      <div class="mk-team" id="mk-team" role="tablist" aria-label="Специалист"></div>
-      <div class="mk-wrap">
-        <aside class="mk-hist w" id="mk-hist"></aside>
-        <div class="mk-chat w">
-          <div class="mk-msgs" id="mk-msgs" aria-live="polite"></div>
-          <div class="chips mk-quick" id="mk-quick"></div>
-          <form class="mk-form" id="mk-form">
-            <textarea id="mk-in" rows="2" placeholder="Задача для отдела…" aria-label="Сообщение"></textarea>
-            <button class="btn primary" type="submit" id="mk-send">Отправить</button>
-          </form>
-          <small class="mk-foot" id="mk-foot"></small>
-        </div>
-      </div>
-    </div>
-    <dialog class="mk-dlg" id="mk-dlg"><form method="dialog" id="mk-dform"></form></dialog>
   </section>
 
   <!-- ВЕДОМОСТЬ -->
@@ -1788,7 +1762,7 @@ const MGR_LIMITS=false;const mgrLimited=()=>MGR_LIMITS&&isMgr();
 function applyRoleWrite(){canWrite=baseWrite&&!(mgrLimited()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
 function go(p,opts={}){
   page=p;applyRoleWrite();
-  ['home','orders','calendar','office','supplies','projects','prices','analytics','marketing'].forEach(x=>$('p-'+x).hidden=x!==p);
+  ['home','orders','calendar','office','supplies','projects','prices','analytics'].forEach(x=>$('p-'+x).hidden=x!==p);
   document.querySelectorAll('.pills [data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===p));
   if(p==='calendar'){selDay=opts.day||selDay||todayStr();const [y,m]=selDay.split('-').map(Number);calY=y;calM=m-1}
   render();
@@ -2108,7 +2082,6 @@ function render(){
   if(page==='projects')renderProjects();
   if(page==='prices')renderPrices();
   if(page==='analytics')renderAnalytics();
-  if(page==='marketing'&&window.renderMarketing)window.renderMarketing();
   enhanceSelects();
   keep.forEach(([id,v,f])=>{const x=document.querySelector('textarea[data-cmtext="'+CSS.escape(id)+'"]');if(x){x.value=v;if(f)x.focus()}});
 }
@@ -3548,8 +3521,7 @@ initPack();
 {const h=(location.hash||'').slice(1);go(['orders','calendar','office','supplies','projects','prices','analytics'].includes(h)?h:'home')}
 setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('input,select,textarea'))))render()},60000);
 </script>
-<script src="marketing-creative.js"></script>
-<script src="marketing.js"></script>
+
 <div id="upd-bar" hidden style="position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:200;background:#4358ef;color:#fff;border-radius:999px;padding:8px 8px 8px 18px;display:flex;gap:12px;align-items:center;font:600 14px 'Inter Tight',Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(67,88,239,.35);max-width:calc(100% - 24px)">
 <span>Вышла новая версия сайта</span><button type="button" onclick="location.reload()" style="border:0;border-radius:999px;background:#fff;color:#4358ef;font:inherit;padding:8px 14px;cursor:pointer">Обновить</button></div>
 <script>(function(){

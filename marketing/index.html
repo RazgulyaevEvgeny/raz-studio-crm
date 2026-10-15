@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Отдел маркетинга RAZ</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="../favicon.ico?v=2" sizes="48x48">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../firebase-config.js"></script>
+<style>
+:root{
+  --blue:#4358ef;--blue-d:#3346d8;--ink:#0a0b14;--paper:#fff;--tile:#f2f3f9;--tile-2:#e4e6f4;--muted:#5b5f7b;--line:#e3e5f1;
+  --danger:#e5484d;--ok:#1f9d5a;--warn:#e08a00;--violet:#8b5cf6;--sky:#0ea5e9;
+  --f:"Inter Tight","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --fb:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --drawer:560px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.5 var(--fb);font-variant-numeric:tabular-nums;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer}
+a{color:var(--blue)}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+img{max-width:100%}
+
+/* шапка */
+.top{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;gap:14px;padding:10px 20px;max-width:1600px;margin:0 auto}
+.logo{color:var(--blue);line-height:0;flex:none}.logo svg{height:40px;width:auto}
+.brand{font:800 15px/1.1 var(--f);letter-spacing:-.02em;padding-left:12px;border-left:1px solid var(--line);color:var(--ink);flex:none}
+.brand small{display:block;font:500 12px var(--fb);color:var(--muted);letter-spacing:0}
+.nav{display:flex;gap:4px;margin-left:auto;overflow-x:auto;scrollbar-width:none}.nav::-webkit-scrollbar{display:none}
+.nav button{flex:none;min-height:40px;padding:0 15px;border-radius:999px;font:600 14px var(--f);color:var(--muted)}
+.nav button:hover{background:var(--tile);color:var(--ink)}
+.nav button[aria-current="page"]{background:var(--ink);color:#fff}
+.who{flex:none;display:flex;align-items:center;gap:8px;font:600 13px var(--f);color:var(--muted)}
+.who button{min-height:36px;padding:0 12px;border-radius:999px;box-shadow:inset 0 0 0 2px var(--line)}
+.who button:hover{box-shadow:inset 0 0 0 2px var(--danger);color:var(--danger)}
+.wrap{max-width:1600px;margin:0 auto;padding:18px 20px 80px}
+
+/* общие */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;font:600 14.5px var(--f);white-space:nowrap}
+.btn.pri{background:var(--blue);color:#fff}.btn.pri:hover{background:var(--blue-d)}
+.btn.soft{background:var(--tile)}.btn.soft:hover{background:var(--tile-2)}
+.btn.out{box-shadow:inset 0 0 0 2px var(--blue);color:var(--blue)}
+.btn.ghost{color:var(--muted)}.btn.ghost:hover{color:var(--danger)}
+.btn.sm{min-height:36px;padding:0 14px;font-size:13.5px}
+.btn:disabled{opacity:.55;cursor:default}
+.lnk{font:600 13px var(--f);color:var(--blue);padding:6px 10px;border-radius:999px;background:var(--tile);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.lnk:hover{background:var(--tile-2)}.lnk.del{color:var(--muted)}.lnk.del:hover{color:var(--danger)}
+.chip{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 13px;border-radius:999px;background:var(--tile);font:600 13px var(--f);white-space:nowrap}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip em{font-style:normal;opacity:.6;font-weight:500}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--c,var(--muted));flex:none;display:inline-block}
+.h1{margin:0;font:800 32px/1.05 var(--f);letter-spacing:-.04em}
+.sub{margin:4px 0 0;color:var(--muted);font-size:14.5px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sp{flex:1}
+.card{background:var(--tile);border-radius:22px;padding:16px}
+.empty{background:var(--tile);border-radius:22px;padding:26px;color:var(--muted);text-align:center}
+.empty b{display:block;color:var(--ink);font:700 16px var(--f);margin-bottom:4px}
+.note{padding:12px 16px;border-radius:16px;background:#fff4e0;font-size:14px}
+.err{color:var(--danger);font-size:14px}
+.muted{color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px;font:600 13px var(--f);color:var(--muted);min-width:0}
+.inp{width:100%;border:0;background:var(--tile);border-radius:12px;padding:10px 12px;min-height:44px;color:var(--ink);font:400 15px/1.45 var(--fb)}
+textarea.inp{resize:vertical}
+.inp:focus{outline:3px solid var(--blue);outline-offset:0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:999px;font:600 14px var(--f);z-index:100;max-width:calc(100vw - 32px);text-align:center;box-shadow:0 10px 30px rgba(10,11,20,.25)}
+.spin{display:inline-flex;gap:4px}.spin i{width:6px;height:6px;border-radius:50%;background:currentColor;animation:bl 1.2s infinite;opacity:.3}
+.spin i:nth-child(2){animation-delay:.2s}.spin i:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.spin i{animation:none;opacity:.7}}
+
+/* вход */
+.login{position:fixed;inset:0;z-index:200;background:#fff;display:grid;place-items:center;padding:24px 16px}
+.login form{width:min(400px,100%);display:flex;flex-direction:column;gap:14px}
+.login h1{margin:8px 0 0;font:800 32px/1.05 var(--f);letter-spacing:-.04em}
+
+/* календарь */
+.today{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-bottom:18px}
+.today-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.today-h h2{margin:0;font:800 22px/1.1 var(--f);letter-spacing:-.03em}
+.tcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.tc{text-align:left;background:var(--tile);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;border-left:6px solid var(--c);min-width:0}
+.tc:hover{background:var(--tile-2)}
+.tc .k{display:block;font:600 12px/1.4 var(--f);color:var(--muted)}.tc .k .dot{margin-right:6px;vertical-align:1px}
+.tc b{font:700 16px/1.25 var(--f)}
+.tc p{margin:0;font-size:13.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tc.late{background:#fff1f1}
+.bar{height:6px;border-radius:99px;background:var(--paper);overflow:hidden}.bar i{display:block;height:100%;background:var(--ok)}
+.ctool{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.ctool h2{margin:0 6px;font:800 26px/1 var(--f);letter-spacing:-.035em;min-width:190px}
+.ib{width:42px;height:42px;border-radius:50%;background:var(--tile);display:grid;place-items:center;font:700 18px var(--f)}.ib:hover{background:var(--tile-2)}
+.seg{display:inline-flex;background:var(--tile);border-radius:999px;padding:4px;gap:2px}
+.seg button{min-height:34px;padding:0 14px;border-radius:999px;font:600 13px var(--f);color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 4px rgba(10,11,20,.08)}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.wd{font:700 12px var(--f);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:0 8px 2px}
+.day{min-height:142px;background:var(--tile);border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:4px;min-width:0;position:relative}
+.day.out{opacity:.45}.day.dragover{box-shadow:inset 0 0 0 3px var(--blue)}
+.day .dn{display:flex;align-items:center;justify-content:space-between;font:700 13px var(--f)}
+.day.today .dn b{background:var(--blue);color:#fff;border-radius:99px;padding:1px 8px}
+.day .add{width:26px;height:26px;border-radius:50%;color:var(--muted);font:600 18px/1 var(--f);display:grid;place-items:center;opacity:0}
+.day:hover .add,.day .add:focus-visible{opacity:1}.day .add:hover{background:var(--paper);color:var(--blue)}
+.ev{display:flex;align-items:center;gap:6px;text-align:left;width:100%;min-width:0;padding:5px 8px;border-radius:9px;font:600 12.5px/1.25 var(--f);background:color-mix(in srgb,var(--c) 15%,var(--paper));border-left:3px solid var(--c);cursor:pointer}
+.ev:hover{background:color-mix(in srgb,var(--c) 26%,var(--paper))}
+.ev span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev.done span{text-decoration:line-through;opacity:.6}
+.ev .st{flex:none;font-size:11px}
+.ev[draggable="true"]{cursor:grab}
+.more{font:600 11.5px var(--f);color:var(--muted);padding-left:6px;text-align:left}
+.mdots{display:none;gap:3px;justify-content:center;flex-wrap:wrap}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.wcol{background:var(--tile);border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:340px;min-width:0}
+.wcol.today{box-shadow:inset 0 0 0 2.5px var(--blue)}
+.wcol h3{margin:0;font:800 15px var(--f);display:flex;justify-content:space-between;align-items:center}
+.wcol h3 small{font:600 12px var(--fb);color:var(--muted)}
+.wcard{text-align:left;background:var(--paper);border-radius:14px;padding:10px;border-left:4px solid var(--c);display:flex;flex-direction:column;gap:4px;min-width:0}
+.wcard:hover{box-shadow:0 2px 10px rgba(10,11,20,.08)}
+.wcard b{font:700 13.5px/1.25 var(--f);overflow-wrap:anywhere}.wcard small{font-size:12px;color:var(--muted)}
+.wcard p{margin:0;font-size:12.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.list{display:flex;flex-direction:column;gap:8px}
+.lday{margin:12px 0 2px;font:800 17px var(--f)}
+.lcard{text-align:left;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--tile);border-radius:16px;padding:12px 14px;border-left:5px solid var(--c)}
+.lcard:hover{background:var(--tile-2)}
+.lcard b{font:700 15px var(--f)}.lcard p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+
+/* панель события */
+.scrim{position:fixed;inset:0;background:rgba(10,11,20,.35);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(var(--drawer),100vw);background:var(--paper);z-index:41;display:flex;flex-direction:column;box-shadow:-20px 0 60px rgba(10,11,20,.18)}
+.dh{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.db{flex:1;overflow:auto;padding:16px 18px 40px;display:flex;flex-direction:column;gap:16px}
+.db>*,.secs>*,.sec>*{flex-shrink:0}
+.ttl{width:100%;border:0;font:800 24px/1.15 var(--f);letter-spacing:-.03em;resize:none;padding:4px 0;background:none;overflow:hidden}
+.ttl:focus{outline:none;box-shadow:0 2px 0 var(--blue)}
+.meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.meta .inp{min-height:40px;padding:8px 10px;font-size:14px}
+.secs{display:flex;flex-direction:column;gap:16px}
+.sec{display:flex;flex-direction:column;gap:8px}
+.sec>h3{margin:0;display:flex;align-items:center;gap:8px;font:800 15px var(--f);letter-spacing:-.01em}
+.sec>h3 small{font:500 12.5px var(--fb);color:var(--muted)}
+.sec>h3 .sp{flex:1}
+.ta{width:100%;border:0;background:var(--tile);border-radius:14px;padding:11px 13px;font:400 14.5px/1.5 var(--fb);resize:none;overflow:hidden;min-height:46px;color:var(--ink)}
+.ta:focus{outline:3px solid var(--blue);outline-offset:0;background:var(--paper)}
+.ta::placeholder{color:#9a9db5}
+.ai-box{background:linear-gradient(135deg,#eef0ff,#f6f2ff);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.ai-box b{font:700 15px var(--f)}
+.ck{display:flex;flex-direction:column;gap:4px}
+.ckr{display:flex;align-items:flex-start;gap:8px;background:var(--tile);border-radius:12px;padding:6px 6px 6px 10px}
+.ckr input[type=checkbox]{width:20px;height:20px;margin-top:4px;flex:none;accent-color:var(--ok)}
+.ckr .ta{background:none;padding:3px 4px;min-height:30px;border-radius:8px}
+.ckr .ta:focus{background:var(--paper)}
+.ckr.on .ta{text-decoration:line-through;color:var(--muted)}
+.x{flex:none;width:30px;height:30px;border-radius:50%;color:var(--muted);font-size:18px;display:grid;place-items:center}.x:hover{color:var(--danger);background:var(--paper)}
+.addrow{display:flex;gap:6px}.addrow .inp{min-height:38px;padding:6px 10px;font-size:14px}
+.shots{display:flex;flex-direction:column;gap:8px}
+.shot{background:var(--tile);border-radius:14px;padding:10px;display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px}
+.shot .n{width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;font:700 13px var(--f);display:grid;place-items:center}
+.shot .f{display:grid;grid-template-columns:minmax(0,1fr) 70px;gap:6px}
+.shot .f .full{grid-column:1/-1}
+.shot label{display:flex;flex-direction:column;gap:2px;font:600 11.5px var(--f);color:var(--muted)}
+.shot .ta{background:var(--paper);padding:7px 9px;min-height:36px;font-size:14px;border-radius:10px}
+.shot .tools{grid-column:2;display:flex;gap:4px;justify-content:flex-end}
+.md{font-size:14.5px;line-height:1.55;overflow-wrap:anywhere;background:var(--tile);border-radius:14px;padding:12px 14px}
+.md>:first-child{margin-top:0}.md>:last-child{margin-bottom:0}
+.md h1,.md h2,.md h3,.md h4{font-family:var(--f);margin:12px 0 6px;line-height:1.2;font-size:16px}
+.md p{margin:6px 0}.md ul,.md ol{margin:6px 0;padding-left:22px}
+.md table{border-collapse:collapse;font-size:13.5px;width:100%}.md th,.md td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}.md th{background:var(--paper)}
+.md .tw{overflow-x:auto}
+.copy{font:600 12.5px var(--f);color:var(--blue);padding:4px 10px;border-radius:999px;background:var(--tile)}.copy:hover{background:var(--tile-2)}
+.saved{font:500 12px var(--fb);color:var(--muted)}
+
+/* модальное окно */
+dialog.dlg{border:0;border-radius:24px;padding:0;width:min(640px,calc(100vw - 24px));max-height:calc(100vh - 32px);background:var(--paper);color:var(--ink);box-shadow:0 24px 70px rgba(10,11,20,.3)}
+dialog.dlg.wide{width:min(980px,calc(100vw - 24px))}
+dialog.dlg::backdrop{background:rgba(10,11,20,.4)}
+.dlg form,.dlg .in{display:flex;flex-direction:column;gap:12px;padding:20px}
+.dlg h2{margin:0;font:800 22px/1.15 var(--f);letter-spacing:-.03em}
+.dlg .ft{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;position:sticky;bottom:0;background:var(--paper);padding-top:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.plist{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto}
+.prow{display:grid;grid-template-columns:auto 130px minmax(0,1fr) 130px 120px;gap:6px;align-items:center;background:var(--tile);border-radius:12px;padding:6px 8px}
+.prow input[type=checkbox]{width:20px;height:20px;accent-color:var(--blue)}
+.prow .inp{min-height:36px;padding:6px 8px;font-size:13.5px;background:var(--paper)}
+.prog{display:flex;flex-direction:column;gap:6px}
+.prog .bar{height:10px;background:var(--tile)}
+.plog{display:flex;flex-direction:column;gap:4px;max-height:40vh;overflow:auto;font-size:13.5px}
+.plog div{display:flex;gap:8px;align-items:center}
+.ckl{display:flex;flex-wrap:wrap;gap:6px}
+.ckl label{display:inline-flex;align-items:center;gap:6px;background:var(--tile);border-radius:999px;padding:6px 12px;font:600 13px var(--f);color:var(--ink);cursor:pointer}
+.ckl input{accent-color:var(--blue)}
+
+/* агенты */
+.ag{display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px;align-items:start}
+.roles{display:flex;flex-direction:column;gap:6px}
+.role{display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;border-radius:16px;background:var(--tile)}
+.role:hover{background:var(--tile-2)}.role[aria-pressed="true"]{background:var(--ink);color:#fff}.role[aria-pressed="true"] small{color:#c9cbe0}
+.ava{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;font:800 14px var(--f);background:var(--c)}
+.role b{display:block;font:700 14.5px var(--f)}.role small{display:block;font-size:12px;color:var(--muted)}
+.threads{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+.threads h4{margin:6px 4px;font:700 12px var(--f);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.th{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:12px;text-align:left;width:100%}
+.th:hover{background:var(--tile)}.th[aria-current="true"]{background:var(--tile-2)}
+.th span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 13.5px var(--f)}
+.th em{font-style:normal;font-size:12px;color:var(--muted)}
+.chat{background:var(--tile);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px;min-height:65vh}
+.msgs{display:flex;flex-direction:column;gap:14px}
+.msg{display:flex;gap:10px;align-items:flex-start}
+.msg .bub{flex:1;min-width:0;background:var(--paper);border-radius:18px;padding:12px 16px}
+.msg.me{justify-content:flex-end}.msg.me .bub{flex:0 1 auto;max-width:85%;background:var(--blue);color:#fff;white-space:pre-wrap}
+.msg .who2{font:700 13px var(--f);margin-bottom:4px;display:flex;gap:8px}.msg .who2 em{font-style:normal;font-weight:500;color:var(--muted)}
+.msg .md{background:none;padding:0}
+.msg .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.compose{display:flex;gap:10px;align-items:flex-end}
+.compose textarea{flex:1;min-height:56px;max-height:40vh;background:var(--paper)}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.quick button{background:var(--paper);border-radius:999px;padding:8px 13px;font:600 13px var(--f);text-align:left}.quick button:hover{background:var(--tile-2)}
+
+/* справочник, instagram, креативы */
+.tabs2{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.icard{background:var(--tile);border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.icard h3{margin:0;font:800 17px/1.2 var(--f);overflow-wrap:anywhere}
+.icard dl{margin:0;display:grid;gap:6px}.icard dt{font:600 12px var(--f);color:var(--muted)}.icard dd{margin:0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.icard .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.about{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kpi{background:var(--tile);border-radius:20px;padding:14px 16px}.kpi span{font:600 13px var(--f);color:var(--muted)}.kpi b{display:block;font:800 24px/1.1 var(--f)}.kpi small{color:var(--muted);font-size:12.5px}
+.kpi b.down{color:var(--danger)}
+.igp{display:flex;align-items:center;gap:14px;background:var(--tile);border-radius:22px;padding:14px 16px;flex-wrap:wrap;margin-bottom:12px}
+.igp .av{width:60px;height:60px;border-radius:50%;object-fit:cover;background:var(--blue);display:grid;place-items:center;color:#fff;font:800 15px var(--f);flex:none}
+.igp b{display:block;font:800 20px var(--f)}
+.igp .btn.soft,.card .btn.soft{background:var(--paper)}
+.cov{display:flex;flex-direction:column;gap:6px;background:var(--tile);border-radius:22px;padding:14px;margin:12px 0}
+.covr{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:12px;padding:9px 12px;flex-wrap:wrap}
+.covr b{font:700 14.5px var(--f)}.covr small{color:var(--muted);flex:1;min-width:140px}
+.igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.igc{background:var(--tile);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.igi{position:relative;aspect-ratio:4/5;background:linear-gradient(135deg,var(--tile-2),var(--line))}
+.igi img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.igi span{position:absolute;left:8px;top:8px;background:rgba(10,11,20,.7);color:#fff;font:600 11.5px var(--f);padding:3px 8px;border-radius:99px}
+.igt{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1}.igt small{color:var(--muted);font-size:12px}
+.igt p{margin:0;font-size:13.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+.cgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.cc{background:var(--tile);border-radius:20px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.cimg{border-radius:14px;overflow:hidden;background:var(--paper);aspect-ratio:4/5;display:grid;place-items:center}
+.cimg.story{aspect-ratio:9/16}.cimg.square{aspect-ratio:1}
+.cimg img{width:100%;height:100%;object-fit:cover}
+
+@media(max-width:1100px){.prow{grid-template-columns:auto 120px minmax(0,1fr);}.prow .tp,.prow .fm{grid-column:2/-1}}
+@media(max-width:900px){
+  .kpis{grid-template-columns:1fr 1fr}.cgrid{grid-template-columns:1fr 1fr}
+  .ag{grid-template-columns:minmax(0,1fr)}.roles{flex-direction:row;overflow-x:auto}.role{flex:none}.threads{flex-direction:row;overflow-x:auto;margin-top:0}.threads h4{display:none}.th{flex:none;width:auto;max-width:220px;background:var(--tile)}
+  .week{grid-template-columns:minmax(0,1fr)}.wcol{min-height:0}
+}
+@media(max-width:700px){
+  .top-in{padding:8px 12px;gap:8px;flex-wrap:wrap}.logo svg{height:30px}.brand{display:none}
+  .nav{order:3;width:100%;margin:0}.who{margin-left:auto}
+  .wrap{padding:14px 12px 80px}
+  .h1{font-size:26px}
+  .grid{gap:3px}.day{min-height:58px;padding:5px;border-radius:12px;align-items:center;cursor:pointer}
+  .day .dn{justify-content:center}.day .add,.day .ev,.day .more{display:none}.day .mdots{display:flex}
+  .wd{text-align:center;padding:0}
+  .ctool h2{font-size:20px;min-width:0;flex:1}
+  .meta{grid-template-columns:1fr 1fr}
+  .about,.two{grid-template-columns:1fr}
+  .compose{flex-direction:column;align-items:stretch}.msg .ava{display:none}
+  .shot{grid-template-columns:minmax(0,1fr)}.shot .n{width:26px;height:26px}.shot .tools{grid-column:1}
+  .prow{grid-template-columns:auto minmax(0,1fr)}.prow>*:not(:first-child){grid-column:2}
+  .cgrid{grid-template-columns:1fr 1fr}.igrid{grid-template-columns:1fr 1fr}
+  dialog.dlg,dialog.dlg.wide{width:100vw;max-width:100vw;max-height:94vh;margin:auto 0 0;border-radius:22px 22px 0 0}
+}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+  <span class="logo" aria-hidden="true"><svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="44.1 51.2 200.6 60.6" role="img" aria-label="Студия брендирования Разгуляев"><defs><g id="g0_0"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.3 -7.9 3 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.8 -8.7 7.5 -8.3C8.1 -8 8.6 -7.6 8.9 -7L7.7 -6.2C7.4 -6.6 7.1 -6.9 6.7 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.8 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.7C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.8 -1.3 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.7 -1.6C7.1 -1.8 7.4 -2.1 7.7 -2.5L8.9 -1.8C8.6 -1.2 8.1 -0.7 7.5 -0.4C6.8 -0.1 6.1 0.1 5.3 0.1Z"/></g><g id="g0_1"><path d="M 8 -7.4L4.8 -7.4L4.8 0L3.3 0L3.3 -7.4L0.1 -7.4L0.1 -8.7L8 -8.7Z"/></g><g id="g0_2"><path d="M 9.3 -8.7L5.1 0.9C4.7 1.8 4.3 2.4 3.8 2.8C3.3 3.1 2.7 3.3 2 3.3C1.5 3.3 1.1 3.2 0.7 3.1C0.3 3 0 2.8 -0.3 2.5L0.4 1.3C0.9 1.7 1.4 2 2 2C2.4 2 2.7 1.8 2.9 1.6C3.2 1.4 3.4 1.1 3.6 0.6L3.9 0L0.1 -8.7L1.7 -8.7L4.8 -1.7L7.8 -8.7Z"/></g><g id="g0_3"><path d="M 10.4 -1.4L10.4 2L8.9 2L8.9 0L1.6 0L1.6 2L0.1 2L0.1 -1.4L0.6 -1.4C1.2 -1.4 1.5 -1.8 1.8 -2.6C2 -3.3 2.1 -4.4 2.2 -5.8L2.3 -8.7L9.1 -8.7L9.1 -1.4ZM 3.6 -5.7C3.6 -4.6 3.5 -3.7 3.4 -2.9C3.2 -2.2 3 -1.7 2.6 -1.4L7.5 -1.4L7.5 -7.4L3.7 -7.4Z"/></g><g id="g0_4"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -2.4L8.5 -8.7L9.9 -8.7L9.9 0L8.3 0L8.3 -6.4L3 0L1.5 0Z"/></g><g id="g0_5"><path d="M 8.5 -8.7L8.5 0L7.1 0L7.1 -2.8L4.4 -2.8L2.5 0L0.8 0L2.9 -3C2.3 -3.2 1.8 -3.5 1.4 -4C1.1 -4.4 0.9 -5 0.9 -5.7C0.9 -6.7 1.2 -7.4 1.9 -8C2.6 -8.5 3.5 -8.7 4.7 -8.7ZM 2.5 -5.6C2.5 -5 2.7 -4.6 3 -4.3C3.4 -4 4 -3.9 4.7 -3.9L7.1 -3.9L7.1 -7.4L4.8 -7.4C3.2 -7.4 2.5 -6.8 2.5 -5.6Z"/></g><g id="g0_6"><path d="M 6 -8.5C6.8 -8.5 7.5 -8.3 8.2 -7.9C8.8 -7.5 9.3 -7 9.7 -6.4C10 -5.7 10.2 -5 10.2 -4.2C10.2 -3.3 10 -2.6 9.6 -1.9C9.3 -1.3 8.7 -0.8 8 -0.4C7.3 -0.1 6.6 0.1 5.7 0.1C4.2 0.1 3 -0.4 2.2 -1.4C1.4 -2.4 1 -3.8 1 -5.7C1 -7.5 1.4 -8.9 2.1 -9.9C2.9 -10.9 4 -11.6 5.5 -11.9L9.5 -12.8L9.7 -11.4L6.1 -10.6C4.9 -10.3 4.1 -9.9 3.5 -9.3C2.9 -8.7 2.6 -7.8 2.5 -6.7C2.9 -7.2 3.4 -7.7 4 -8C4.6 -8.3 5.3 -8.5 6 -8.5ZM 5.7 -1.2C6.3 -1.2 6.8 -1.3 7.2 -1.6C7.6 -1.8 8 -2.2 8.2 -2.6C8.5 -3.1 8.6 -3.6 8.6 -4.1C8.6 -5 8.3 -5.7 7.8 -6.2C7.3 -6.8 6.6 -7 5.7 -7C4.8 -7 4.2 -6.8 3.6 -6.2C3.1 -5.7 2.8 -5 2.8 -4.1C2.8 -3.6 2.9 -3.1 3.2 -2.6C3.4 -2.2 3.8 -1.8 4.2 -1.6C4.7 -1.3 5.2 -1.2 5.7 -1.2Z"/></g><g id="g0_7"><path d="M 6.2 -8.8C7 -8.8 7.8 -8.6 8.4 -8.3C9.1 -7.9 9.6 -7.4 10 -6.7C10.4 -6 10.6 -5.2 10.6 -4.4C10.6 -3.5 10.4 -2.7 10 -2C9.6 -1.4 9.1 -0.8 8.4 -0.5C7.8 -0.1 7 0.1 6.2 0.1C5.5 0.1 5 0 4.4 -0.3C3.9 -0.5 3.5 -0.9 3.1 -1.3L3.1 3.2L1.5 3.2L1.5 -8.7L3 -8.7L3 -7.4C3.4 -7.8 3.8 -8.2 4.4 -8.5C4.9 -8.7 5.5 -8.8 6.2 -8.8ZM 6 -1.3C6.6 -1.3 7.1 -1.4 7.5 -1.7C8 -1.9 8.3 -2.3 8.6 -2.8C8.9 -3.2 9 -3.8 9 -4.4C9 -5 8.9 -5.5 8.6 -6C8.3 -6.5 8 -6.8 7.5 -7.1C7.1 -7.3 6.6 -7.4 6 -7.4C5.5 -7.4 5 -7.3 4.5 -7C4.1 -6.8 3.7 -6.4 3.5 -6C3.2 -5.5 3.1 -5 3.1 -4.4C3.1 -3.8 3.2 -3.2 3.5 -2.8C3.7 -2.3 4.1 -1.9 4.5 -1.7C5 -1.4 5.5 -1.3 6 -1.3Z"/></g><g id="g0_8"><path d="M 9.4 -4.3C9.4 -4.2 9.4 -4 9.4 -3.8L2.3 -3.8C2.4 -3.1 2.7 -2.5 3.3 -2C3.9 -1.5 4.6 -1.3 5.5 -1.3C6.5 -1.3 7.4 -1.6 8 -2.3L8.9 -1.3C8.5 -0.9 8 -0.5 7.4 -0.3C6.8 0 6.1 0.1 5.4 0.1C4.5 0.1 3.7 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.5 -8.6 4.3 -8.8 5.1 -8.8C6 -8.8 6.7 -8.6 7.3 -8.2C8 -7.9 8.5 -7.3 8.9 -6.7C9.3 -6 9.4 -5.2 9.4 -4.3ZM 5.1 -7.5C4.3 -7.5 3.7 -7.3 3.2 -6.8C2.7 -6.3 2.4 -5.7 2.3 -5L7.9 -5C7.8 -5.7 7.5 -6.3 7 -6.8C6.5 -7.2 5.9 -7.5 5.1 -7.5Z"/></g><g id="g0_9"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -5L8.1 -5L8.1 -8.7L9.7 -8.7L9.7 0L8.1 0L8.1 -3.7L3.1 -3.7L3.1 0L1.5 0Z"/></g><g id="g0_10"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 2.9 -0.5C2.2 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.9 -8.6 7.6 -8.2C8.3 -7.9 8.8 -7.3 9.2 -6.7C9.6 -6 9.8 -5.2 9.8 -4.4C9.8 -3.5 9.6 -2.7 9.2 -2.1C8.8 -1.4 8.3 -0.9 7.6 -0.5C6.9 -0.1 6.1 0.1 5.3 0.1ZM 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.8 -1.7C7.2 -1.9 7.6 -2.3 7.8 -2.8C8.1 -3.2 8.2 -3.8 8.2 -4.4C8.2 -5 8.1 -5.5 7.8 -6C7.6 -6.5 7.2 -6.8 6.8 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.7 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.8C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.7 -1.3 5.3 -1.3Z"/></g><g id="g0_11"><path d="M 7.5 -4.5C8.6 -4.2 9.2 -3.5 9.2 -2.4C9.2 -1.6 8.9 -1 8.3 -0.6C7.7 -0.2 6.9 0 5.7 0L1.5 0L1.5 -8.7L5.6 -8.7C6.6 -8.7 7.4 -8.6 8 -8.2C8.6 -7.8 8.9 -7.2 8.9 -6.5C8.9 -6 8.8 -5.6 8.5 -5.3C8.3 -5 7.9 -4.7 7.5 -4.5ZM 3.1 -5L5.5 -5C6.1 -5 6.5 -5.1 6.8 -5.3C7.2 -5.5 7.3 -5.8 7.3 -6.3C7.3 -7.1 6.7 -7.5 5.5 -7.5L3.1 -7.5ZM 5.6 -1.2C6.3 -1.2 6.8 -1.3 7.1 -1.5C7.4 -1.7 7.6 -2.1 7.6 -2.5C7.6 -3 7.5 -3.3 7.2 -3.5C6.9 -3.7 6.4 -3.8 5.7 -3.8L3.1 -3.8L3.1 -1.2Z"/></g><g id="g0_12"><path d="M 4.7 -8.8C5.9 -8.8 6.8 -8.5 7.4 -7.9C8.1 -7.3 8.4 -6.5 8.4 -5.3L8.4 0L6.9 0L6.9 -1.2C6.6 -0.7 6.3 -0.4 5.8 -0.2C5.3 0 4.7 0.1 4 0.1C3.1 0.1 2.3 -0.1 1.7 -0.6C1.1 -1.1 0.8 -1.7 0.8 -2.5C0.8 -3.2 1.1 -3.9 1.6 -4.3C2.2 -4.8 3.1 -5 4.3 -5L6.8 -5L6.8 -5.3C6.8 -6 6.6 -6.6 6.2 -6.9C5.8 -7.3 5.2 -7.5 4.5 -7.5C4 -7.5 3.5 -7.4 3 -7.2C2.5 -7 2 -6.8 1.7 -6.5L1 -7.7C1.5 -8.1 2 -8.3 2.7 -8.5C3.3 -8.7 3.9 -8.8 4.7 -8.8ZM 4.3 -1.1C4.9 -1.1 5.4 -1.3 5.9 -1.5C6.3 -1.8 6.6 -2.2 6.8 -2.7L6.8 -3.9L4.4 -3.9C3 -3.9 2.4 -3.4 2.4 -2.5C2.4 -2.1 2.5 -1.7 2.9 -1.5C3.2 -1.2 3.7 -1.1 4.3 -1.1Z"/></g><g id="g1_0"><path d="M 6.4 -11.5C7.5 -11.5 8.3 -11.4 9.1 -11C9.8 -10.7 10.4 -10.2 10.8 -9.6C11.2 -9 11.5 -8.2 11.5 -7.4C11.5 -6.5 11.2 -5.8 10.8 -5.1C10.4 -4.5 9.8 -4 9.1 -3.7C8.3 -3.4 7.5 -3.2 6.4 -3.2L4.1 -3.2L4.1 0L1.4 0L1.4 -11.5ZM 6.3 -5.4C7.1 -5.4 7.7 -5.5 8.1 -5.9C8.5 -6.2 8.7 -6.7 8.7 -7.4C8.7 -8 8.5 -8.5 8.1 -8.8C7.7 -9.2 7.1 -9.4 6.3 -9.4L4.1 -9.4L4.1 -5.4Z"/></g><g id="g1_1"><path d="M 4.7 -9C6.1 -9 7.1 -8.7 7.9 -8C8.6 -7.4 9 -6.4 9 -5.1L9 0L6.6 0L6.6 -1.1C6.1 -0.3 5.2 0.1 3.8 0.1C3.2 0.1 2.6 0 2.1 -0.2C1.6 -0.4 1.2 -0.8 0.9 -1.2C0.7 -1.6 0.5 -2 0.5 -2.6C0.5 -3.4 0.8 -4 1.5 -4.5C2.1 -5 3 -5.2 4.3 -5.2L6.4 -5.2C6.4 -5.8 6.2 -6.2 5.9 -6.5C5.5 -6.8 5 -7 4.3 -7C3.9 -7 3.4 -6.9 3 -6.7C2.5 -6.6 2.1 -6.4 1.8 -6.1L0.9 -7.9C1.3 -8.3 1.9 -8.5 2.6 -8.7C3.3 -8.9 4 -9 4.7 -9ZM 4.5 -1.6C4.9 -1.6 5.3 -1.7 5.7 -1.9C6 -2.1 6.2 -2.4 6.4 -2.8L6.4 -3.7L4.6 -3.7C3.6 -3.7 3 -3.4 3 -2.7C3 -2.3 3.2 -2.1 3.4 -1.9C3.7 -1.7 4 -1.6 4.5 -1.6Z"/></g><g id="g1_2"><path d="M 7 -4.6C7.5 -4.5 7.9 -4.2 8.2 -3.9C8.5 -3.5 8.7 -3.1 8.7 -2.6C8.7 -2.1 8.5 -1.6 8.1 -1.2C7.7 -0.7 7.2 -0.4 6.5 -0.2C5.8 0.1 5.1 0.2 4.2 0.2C3.5 0.2 2.8 0.1 2.2 0C1.5 -0.2 0.9 -0.4 0.3 -0.7L1 -2.5C1.9 -2 3 -1.8 4.1 -1.8C4.7 -1.8 5.2 -1.9 5.5 -2.1C5.9 -2.3 6.1 -2.5 6.1 -2.9C6.1 -3.1 5.9 -3.4 5.7 -3.5C5.4 -3.7 5.1 -3.7 4.6 -3.7L2.8 -3.7L2.8 -5.3L4.4 -5.3C4.9 -5.3 5.2 -5.4 5.4 -5.5C5.7 -5.7 5.8 -5.9 5.8 -6.2C5.8 -6.5 5.7 -6.7 5.4 -6.8C5.1 -7 4.6 -7.1 4.1 -7.1C3.2 -7.1 2.3 -6.9 1.3 -6.5L0.6 -8.2C1.9 -8.8 3.1 -9 4.2 -9C5 -9 5.7 -8.9 6.4 -8.7C7 -8.6 7.5 -8.3 7.9 -7.9C8.2 -7.5 8.4 -7.1 8.4 -6.5C8.4 -6.1 8.3 -5.8 8 -5.4C7.8 -5.1 7.4 -4.8 7 -4.6Z"/></g><g id="g1_3"><path d="M 8.3 -6.8L3.8 -6.8L3.8 0L1.2 0L1.2 -8.9L8.3 -8.9Z"/></g><g id="g1_4"><path d="M 10.1 -8.9L6.1 0.5C5.7 1.6 5.2 2.3 4.6 2.7C4 3.1 3.3 3.3 2.4 3.3C2 3.3 1.5 3.3 1.1 3.1C0.6 3 0.2 2.8 0 2.5L0.9 0.7C1.1 0.9 1.3 1 1.6 1.1C1.8 1.2 2.1 1.3 2.4 1.3C2.7 1.3 3 1.2 3.2 1C3.4 0.8 3.6 0.6 3.8 0.2L3.8 0.1L0 -8.9L2.7 -8.9L5.1 -2.9L7.7 -8.9Z"/></g><g id="g1_5"><path d="M 9.8 -8.9L9.8 0L7.2 0L7.2 -6.8L4.4 -6.8L4.3 -5.2C4.2 -4 4.1 -3.1 4 -2.3C3.8 -1.5 3.5 -0.9 3.1 -0.5C2.7 0 2.2 0.2 1.5 0.2C1.1 0.2 0.6 0.1 0.1 0L0.3 -2.1C0.4 -2.1 0.6 -2.1 0.6 -2.1C1 -2.1 1.3 -2.2 1.5 -2.5C1.7 -2.8 1.8 -3.1 1.9 -3.6C1.9 -4 2 -4.6 2 -5.3L2.2 -8.9Z"/></g><g id="g1_6"><path d="M 9.1 -8.9L9.1 0L6.8 0L6.8 -2.5L4.9 -2.5L3.3 0L0.5 0L2.5 -2.9C1.9 -3.1 1.4 -3.5 1.1 -4C0.8 -4.4 0.6 -5 0.6 -5.6C0.6 -6.6 1 -7.5 1.8 -8C2.5 -8.6 3.6 -8.9 4.9 -8.9ZM 4.9 -6.8C4.4 -6.8 4 -6.7 3.7 -6.5C3.4 -6.3 3.3 -6 3.3 -5.5C3.3 -5.1 3.4 -4.8 3.7 -4.6C3.9 -4.4 4.4 -4.2 4.9 -4.2L6.8 -4.2L6.8 -6.8Z"/></g><g id="g1_7"><path d="M 9.9 -4.4C9.9 -4.4 9.9 -4.1 9.8 -3.7L3.1 -3.7C3.2 -3.2 3.5 -2.7 4 -2.4C4.4 -2.1 5 -1.9 5.6 -1.9C6.1 -1.9 6.5 -2 6.9 -2.1C7.2 -2.3 7.6 -2.5 7.9 -2.8L9.2 -1.3C8.4 -0.3 7.2 0.1 5.6 0.1C4.6 0.1 3.7 -0.1 2.9 -0.5C2.1 -0.8 1.6 -1.4 1.1 -2.1C0.7 -2.8 0.5 -3.6 0.5 -4.4C0.5 -5.3 0.7 -6.1 1.1 -6.8C1.5 -7.5 2.1 -8 2.8 -8.4C3.5 -8.8 4.4 -9 5.3 -9C6.1 -9 6.9 -8.8 7.6 -8.5C8.3 -8.1 8.9 -7.5 9.3 -6.8C9.7 -6.1 9.9 -5.3 9.9 -4.4ZM 5.3 -7.1C4.7 -7.1 4.2 -6.9 3.8 -6.6C3.4 -6.2 3.2 -5.8 3.1 -5.2L7.4 -5.2C7.4 -5.8 7.1 -6.2 6.7 -6.6C6.3 -6.9 5.8 -7.1 5.3 -7.1Z"/></g><g id="g1_8"><path d="M 8 -4.6C9.1 -4.3 9.6 -3.6 9.6 -2.5C9.6 -1.7 9.3 -1.1 8.7 -0.7C8.1 -0.2 7.2 0 6 0L1.2 0L1.2 -8.9L5.8 -8.9C6.9 -8.9 7.8 -8.7 8.4 -8.3C9 -7.9 9.3 -7.3 9.3 -6.6C9.3 -6.1 9.2 -5.8 9 -5.4C8.8 -5.1 8.4 -4.8 8 -4.6ZM 3.6 -5.2L5.5 -5.2C6.4 -5.2 6.9 -5.6 6.9 -6.2C6.9 -6.8 6.4 -7.1 5.5 -7.1L3.6 -7.1ZM 5.8 -1.7C6.7 -1.7 7.2 -2.1 7.2 -2.7C7.2 -3.1 7.1 -3.3 6.8 -3.5C6.6 -3.6 6.3 -3.7 5.8 -3.7L3.6 -3.7L3.6 -1.7Z"/></g><g id="g1_9"><path d="M 2.2 0.1C1.7 0.1 1.3 0 1 -0.3C0.7 -0.6 0.6 -1 0.6 -1.5C0.6 -2 0.7 -2.3 1 -2.6C1.3 -2.9 1.7 -3.1 2.2 -3.1C2.6 -3.1 3 -2.9 3.3 -2.6C3.6 -2.3 3.8 -2 3.8 -1.5C3.8 -1 3.6 -0.6 3.3 -0.3C3 0 2.6 0.1 2.2 0.1Z"/></g></defs><g fill="currentColor"><path d="M 67.7 87.3C71.2 87.3 75.3 87.7 78.2 85.3C80.8 83.1 81.3 78.8 79.5 75.9C76.2 70.9 68 72.9 63 72.5L63 92.8L67.7 92.8ZM 86.8 62.5C83.2 62.7 83.5 68.4 87.3 68.1C90.9 67.8 90.6 62.3 86.8 62.5M70.4 60.3C76.3 60.2 82.3 60.6 88.2 60.4C90.2 60.7 91.7 62.3 92 64.3C91.8 70.3 92.3 76.3 92.1 82.3C92.1 83.7 91.7 85.1 91 86.3C84.3 93.5 77.2 100.4 70.1 107.2C68.3 108.3 66.4 108 64.8 106.7C59.6 101.5 54.3 96.3 49.2 91.1C45.6 87.4 42.7 85.6 47.1 80.7C52.9 74.4 59.6 68.7 65.5 62.4C66.8 61.2 68.6 60.4 70.4 60.3"/><path d="M 67.7 83.5L67.7 76.3L72 76.3C72.3 76.3 73.4 76.6 73.8 76.7C76.7 77.8 76.6 82.1 73.7 83.1C73.3 83.3 72.2 83.5 71.8 83.5Z"/><use xlink:href="#g0_0" x="104.3" y="73.3"/><use xlink:href="#g0_1" x="113.6" y="73.3"/><use xlink:href="#g0_2" x="121.8" y="73.3"/><use xlink:href="#g0_3" x="130.8" y="73.3"/><use xlink:href="#g0_4" x="141.7" y="73.3"/><use xlink:href="#g0_5" x="153.2" y="73.3"/><use xlink:href="#g0_6" x="104.3" y="88.9"/><use xlink:href="#g0_7" x="115.2" y="88.9"/><use xlink:href="#g0_8" x="126.6" y="88.9"/><use xlink:href="#g0_9" x="136.9" y="88.9"/><use xlink:href="#g0_3" x="148.2" y="88.9"/><use xlink:href="#g0_4" x="159.1" y="88.9"/><use xlink:href="#g0_7" x="170.6" y="88.9"/><use xlink:href="#g0_10" x="181.9" y="88.9"/><use xlink:href="#g0_11" x="192.5" y="88.9"/><use xlink:href="#g0_12" x="202.6" y="88.9"/><use xlink:href="#g0_9" x="212.4" y="88.9"/><use xlink:href="#g0_4" x="223.6" y="88.9"/><use xlink:href="#g0_5" x="235" y="88.9"/><use xlink:href="#g1_0" x="104.3" y="104.5"/><use xlink:href="#g1_1" x="116" y="104.5"/><use xlink:href="#g1_2" x="125.9" y="104.5"/><use xlink:href="#g1_3" x="135.2" y="104.5"/><use xlink:href="#g1_4" x="143.7" y="104.5"/><use xlink:href="#g1_5" x="153.2" y="104.5"/><use xlink:href="#g1_6" x="164.2" y="104.5"/><use xlink:href="#g1_7" x="174.6" y="104.5"/><use xlink:href="#g1_8" x="185.2" y="104.5"/><use xlink:href="#g1_9" x="195.5" y="104.5"/></g><path fill="none" stroke-width="0.5" stroke="currentColor" d="M 99.1 52.3L99.1 111"/></svg></span>
+  <span class="brand">Отдел маркетинга<small>RAZ Brand Studio</small></span>
+  <nav class="nav" id="nav" aria-label="Разделы"></nav>
+  <div class="who" id="who"></div>
+</div></header>
+<main class="wrap" id="view"><div class="empty"><b>Загружаем…</b></div></main>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Событие"></aside>
+<dialog class="dlg" id="dlg"></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="login" id="login" hidden>
+  <form id="login-form">
+    <span class="logo"><svg class="logo-svg2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="44.1 51.2 200.6 60.6" role="img" aria-label="Студия брендирования Разгуляев"><defs><g id="g0_0"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.3 -7.9 3 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.8 -8.7 7.5 -8.3C8.1 -8 8.6 -7.6 8.9 -7L7.7 -6.2C7.4 -6.6 7.1 -6.9 6.7 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.8 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.7C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.8 -1.3 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.7 -1.6C7.1 -1.8 7.4 -2.1 7.7 -2.5L8.9 -1.8C8.6 -1.2 8.1 -0.7 7.5 -0.4C6.8 -0.1 6.1 0.1 5.3 0.1Z"/></g><g id="g0_1"><path d="M 8 -7.4L4.8 -7.4L4.8 0L3.3 0L3.3 -7.4L0.1 -7.4L0.1 -8.7L8 -8.7Z"/></g><g id="g0_2"><path d="M 9.3 -8.7L5.1 0.9C4.7 1.8 4.3 2.4 3.8 2.8C3.3 3.1 2.7 3.3 2 3.3C1.5 3.3 1.1 3.2 0.7 3.1C0.3 3 0 2.8 -0.3 2.5L0.4 1.3C0.9 1.7 1.4 2 2 2C2.4 2 2.7 1.8 2.9 1.6C3.2 1.4 3.4 1.1 3.6 0.6L3.9 0L0.1 -8.7L1.7 -8.7L4.8 -1.7L7.8 -8.7Z"/></g><g id="g0_3"><path d="M 10.4 -1.4L10.4 2L8.9 2L8.9 0L1.6 0L1.6 2L0.1 2L0.1 -1.4L0.6 -1.4C1.2 -1.4 1.5 -1.8 1.8 -2.6C2 -3.3 2.1 -4.4 2.2 -5.8L2.3 -8.7L9.1 -8.7L9.1 -1.4ZM 3.6 -5.7C3.6 -4.6 3.5 -3.7 3.4 -2.9C3.2 -2.2 3 -1.7 2.6 -1.4L7.5 -1.4L7.5 -7.4L3.7 -7.4Z"/></g><g id="g0_4"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -2.4L8.5 -8.7L9.9 -8.7L9.9 0L8.3 0L8.3 -6.4L3 0L1.5 0Z"/></g><g id="g0_5"><path d="M 8.5 -8.7L8.5 0L7.1 0L7.1 -2.8L4.4 -2.8L2.5 0L0.8 0L2.9 -3C2.3 -3.2 1.8 -3.5 1.4 -4C1.1 -4.4 0.9 -5 0.9 -5.7C0.9 -6.7 1.2 -7.4 1.9 -8C2.6 -8.5 3.5 -8.7 4.7 -8.7ZM 2.5 -5.6C2.5 -5 2.7 -4.6 3 -4.3C3.4 -4 4 -3.9 4.7 -3.9L7.1 -3.9L7.1 -7.4L4.8 -7.4C3.2 -7.4 2.5 -6.8 2.5 -5.6Z"/></g><g id="g0_6"><path d="M 6 -8.5C6.8 -8.5 7.5 -8.3 8.2 -7.9C8.8 -7.5 9.3 -7 9.7 -6.4C10 -5.7 10.2 -5 10.2 -4.2C10.2 -3.3 10 -2.6 9.6 -1.9C9.3 -1.3 8.7 -0.8 8 -0.4C7.3 -0.1 6.6 0.1 5.7 0.1C4.2 0.1 3 -0.4 2.2 -1.4C1.4 -2.4 1 -3.8 1 -5.7C1 -7.5 1.4 -8.9 2.1 -9.9C2.9 -10.9 4 -11.6 5.5 -11.9L9.5 -12.8L9.7 -11.4L6.1 -10.6C4.9 -10.3 4.1 -9.9 3.5 -9.3C2.9 -8.7 2.6 -7.8 2.5 -6.7C2.9 -7.2 3.4 -7.7 4 -8C4.6 -8.3 5.3 -8.5 6 -8.5ZM 5.7 -1.2C6.3 -1.2 6.8 -1.3 7.2 -1.6C7.6 -1.8 8 -2.2 8.2 -2.6C8.5 -3.1 8.6 -3.6 8.6 -4.1C8.6 -5 8.3 -5.7 7.8 -6.2C7.3 -6.8 6.6 -7 5.7 -7C4.8 -7 4.2 -6.8 3.6 -6.2C3.1 -5.7 2.8 -5 2.8 -4.1C2.8 -3.6 2.9 -3.1 3.2 -2.6C3.4 -2.2 3.8 -1.8 4.2 -1.6C4.7 -1.3 5.2 -1.2 5.7 -1.2Z"/></g><g id="g0_7"><path d="M 6.2 -8.8C7 -8.8 7.8 -8.6 8.4 -8.3C9.1 -7.9 9.6 -7.4 10 -6.7C10.4 -6 10.6 -5.2 10.6 -4.4C10.6 -3.5 10.4 -2.7 10 -2C9.6 -1.4 9.1 -0.8 8.4 -0.5C7.8 -0.1 7 0.1 6.2 0.1C5.5 0.1 5 0 4.4 -0.3C3.9 -0.5 3.5 -0.9 3.1 -1.3L3.1 3.2L1.5 3.2L1.5 -8.7L3 -8.7L3 -7.4C3.4 -7.8 3.8 -8.2 4.4 -8.5C4.9 -8.7 5.5 -8.8 6.2 -8.8ZM 6 -1.3C6.6 -1.3 7.1 -1.4 7.5 -1.7C8 -1.9 8.3 -2.3 8.6 -2.8C8.9 -3.2 9 -3.8 9 -4.4C9 -5 8.9 -5.5 8.6 -6C8.3 -6.5 8 -6.8 7.5 -7.1C7.1 -7.3 6.6 -7.4 6 -7.4C5.5 -7.4 5 -7.3 4.5 -7C4.1 -6.8 3.7 -6.4 3.5 -6C3.2 -5.5 3.1 -5 3.1 -4.4C3.1 -3.8 3.2 -3.2 3.5 -2.8C3.7 -2.3 4.1 -1.9 4.5 -1.7C5 -1.4 5.5 -1.3 6 -1.3Z"/></g><g id="g0_8"><path d="M 9.4 -4.3C9.4 -4.2 9.4 -4 9.4 -3.8L2.3 -3.8C2.4 -3.1 2.7 -2.5 3.3 -2C3.9 -1.5 4.6 -1.3 5.5 -1.3C6.5 -1.3 7.4 -1.6 8 -2.3L8.9 -1.3C8.5 -0.9 8 -0.5 7.4 -0.3C6.8 0 6.1 0.1 5.4 0.1C4.5 0.1 3.7 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.5 -8.6 4.3 -8.8 5.1 -8.8C6 -8.8 6.7 -8.6 7.3 -8.2C8 -7.9 8.5 -7.3 8.9 -6.7C9.3 -6 9.4 -5.2 9.4 -4.3ZM 5.1 -7.5C4.3 -7.5 3.7 -7.3 3.2 -6.8C2.7 -6.3 2.4 -5.7 2.3 -5L7.9 -5C7.8 -5.7 7.5 -6.3 7 -6.8C6.5 -7.2 5.9 -7.5 5.1 -7.5Z"/></g><g id="g0_9"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -5L8.1 -5L8.1 -8.7L9.7 -8.7L9.7 0L8.1 0L8.1 -3.7L3.1 -3.7L3.1 0L1.5 0Z"/></g><g id="g0_10"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 2.9 -0.5C2.2 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.9 -8.6 7.6 -8.2C8.3 -7.9 8.8 -7.3 9.2 -6.7C9.6 -6 9.8 -5.2 9.8 -4.4C9.8 -3.5 9.6 -2.7 9.2 -2.1C8.8 -1.4 8.3 -0.9 7.6 -0.5C6.9 -0.1 6.1 0.1 5.3 0.1ZM 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.8 -1.7C7.2 -1.9 7.6 -2.3 7.8 -2.8C8.1 -3.2 8.2 -3.8 8.2 -4.4C8.2 -5 8.1 -5.5 7.8 -6C7.6 -6.5 7.2 -6.8 6.8 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.7 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.8C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.7 -1.3 5.3 -1.3Z"/></g><g id="g0_11"><path d="M 7.5 -4.5C8.6 -4.2 9.2 -3.5 9.2 -2.4C9.2 -1.6 8.9 -1 8.3 -0.6C7.7 -0.2 6.9 0 5.7 0L1.5 0L1.5 -8.7L5.6 -8.7C6.6 -8.7 7.4 -8.6 8 -8.2C8.6 -7.8 8.9 -7.2 8.9 -6.5C8.9 -6 8.8 -5.6 8.5 -5.3C8.3 -5 7.9 -4.7 7.5 -4.5ZM 3.1 -5L5.5 -5C6.1 -5 6.5 -5.1 6.8 -5.3C7.2 -5.5 7.3 -5.8 7.3 -6.3C7.3 -7.1 6.7 -7.5 5.5 -7.5L3.1 -7.5ZM 5.6 -1.2C6.3 -1.2 6.8 -1.3 7.1 -1.5C7.4 -1.7 7.6 -2.1 7.6 -2.5C7.6 -3 7.5 -3.3 7.2 -3.5C6.9 -3.7 6.4 -3.8 5.7 -3.8L3.1 -3.8L3.1 -1.2Z"/></g><g id="g0_12"><path d="M 4.7 -8.8C5.9 -8.8 6.8 -8.5 7.4 -7.9C8.1 -7.3 8.4 -6.5 8.4 -5.3L8.4 0L6.9 0L6.9 -1.2C6.6 -0.7 6.3 -0.4 5.8 -0.2C5.3 0 4.7 0.1 4 0.1C3.1 0.1 2.3 -0.1 1.7 -0.6C1.1 -1.1 0.8 -1.7 0.8 -2.5C0.8 -3.2 1.1 -3.9 1.6 -4.3C2.2 -4.8 3.1 -5 4.3 -5L6.8 -5L6.8 -5.3C6.8 -6 6.6 -6.6 6.2 -6.9C5.8 -7.3 5.2 -7.5 4.5 -7.5C4 -7.5 3.5 -7.4 3 -7.2C2.5 -7 2 -6.8 1.7 -6.5L1 -7.7C1.5 -8.1 2 -8.3 2.7 -8.5C3.3 -8.7 3.9 -8.8 4.7 -8.8ZM 4.3 -1.1C4.9 -1.1 5.4 -1.3 5.9 -1.5C6.3 -1.8 6.6 -2.2 6.8 -2.7L6.8 -3.9L4.4 -3.9C3 -3.9 2.4 -3.4 2.4 -2.5C2.4 -2.1 2.5 -1.7 2.9 -1.5C3.2 -1.2 3.7 -1.1 4.3 -1.1Z"/></g><g id="g1_0"><path d="M 6.4 -11.5C7.5 -11.5 8.3 -11.4 9.1 -11C9.8 -10.7 10.4 -10.2 10.8 -9.6C11.2 -9 11.5 -8.2 11.5 -7.4C11.5 -6.5 11.2 -5.8 10.8 -5.1C10.4 -4.5 9.8 -4 9.1 -3.7C8.3 -3.4 7.5 -3.2 6.4 -3.2L4.1 -3.2L4.1 0L1.4 0L1.4 -11.5ZM 6.3 -5.4C7.1 -5.4 7.7 -5.5 8.1 -5.9C8.5 -6.2 8.7 -6.7 8.7 -7.4C8.7 -8 8.5 -8.5 8.1 -8.8C7.7 -9.2 7.1 -9.4 6.3 -9.4L4.1 -9.4L4.1 -5.4Z"/></g><g id="g1_1"><path d="M 4.7 -9C6.1 -9 7.1 -8.7 7.9 -8C8.6 -7.4 9 -6.4 9 -5.1L9 0L6.6 0L6.6 -1.1C6.1 -0.3 5.2 0.1 3.8 0.1C3.2 0.1 2.6 0 2.1 -0.2C1.6 -0.4 1.2 -0.8 0.9 -1.2C0.7 -1.6 0.5 -2 0.5 -2.6C0.5 -3.4 0.8 -4 1.5 -4.5C2.1 -5 3 -5.2 4.3 -5.2L6.4 -5.2C6.4 -5.8 6.2 -6.2 5.9 -6.5C5.5 -6.8 5 -7 4.3 -7C3.9 -7 3.4 -6.9 3 -6.7C2.5 -6.6 2.1 -6.4 1.8 -6.1L0.9 -7.9C1.3 -8.3 1.9 -8.5 2.6 -8.7C3.3 -8.9 4 -9 4.7 -9ZM 4.5 -1.6C4.9 -1.6 5.3 -1.7 5.7 -1.9C6 -2.1 6.2 -2.4 6.4 -2.8L6.4 -3.7L4.6 -3.7C3.6 -3.7 3 -3.4 3 -2.7C3 -2.3 3.2 -2.1 3.4 -1.9C3.7 -1.7 4 -1.6 4.5 -1.6Z"/></g><g id="g1_2"><path d="M 7 -4.6C7.5 -4.5 7.9 -4.2 8.2 -3.9C8.5 -3.5 8.7 -3.1 8.7 -2.6C8.7 -2.1 8.5 -1.6 8.1 -1.2C7.7 -0.7 7.2 -0.4 6.5 -0.2C5.8 0.1 5.1 0.2 4.2 0.2C3.5 0.2 2.8 0.1 2.2 0C1.5 -0.2 0.9 -0.4 0.3 -0.7L1 -2.5C1.9 -2 3 -1.8 4.1 -1.8C4.7 -1.8 5.2 -1.9 5.5 -2.1C5.9 -2.3 6.1 -2.5 6.1 -2.9C6.1 -3.1 5.9 -3.4 5.7 -3.5C5.4 -3.7 5.1 -3.7 4.6 -3.7L2.8 -3.7L2.8 -5.3L4.4 -5.3C4.9 -5.3 5.2 -5.4 5.4 -5.5C5.7 -5.7 5.8 -5.9 5.8 -6.2C5.8 -6.5 5.7 -6.7 5.4 -6.8C5.1 -7 4.6 -7.1 4.1 -7.1C3.2 -7.1 2.3 -6.9 1.3 -6.5L0.6 -8.2C1.9 -8.8 3.1 -9 4.2 -9C5 -9 5.7 -8.9 6.4 -8.7C7 -8.6 7.5 -8.3 7.9 -7.9C8.2 -7.5 8.4 -7.1 8.4 -6.5C8.4 -6.1 8.3 -5.8 8 -5.4C7.8 -5.1 7.4 -4.8 7 -4.6Z"/></g><g id="g1_3"><path d="M 8.3 -6.8L3.8 -6.8L3.8 0L1.2 0L1.2 -8.9L8.3 -8.9Z"/></g><g id="g1_4"><path d="M 10.1 -8.9L6.1 0.5C5.7 1.6 5.2 2.3 4.6 2.7C4 3.1 3.3 3.3 2.4 3.3C2 3.3 1.5 3.3 1.1 3.1C0.6 3 0.2 2.8 0 2.5L0.9 0.7C1.1 0.9 1.3 1 1.6 1.1C1.8 1.2 2.1 1.3 2.4 1.3C2.7 1.3 3 1.2 3.2 1C3.4 0.8 3.6 0.6 3.8 0.2L3.8 0.1L0 -8.9L2.7 -8.9L5.1 -2.9L7.7 -8.9Z"/></g><g id="g1_5"><path d="M 9.8 -8.9L9.8 0L7.2 0L7.2 -6.8L4.4 -6.8L4.3 -5.2C4.2 -4 4.1 -3.1 4 -2.3C3.8 -1.5 3.5 -0.9 3.1 -0.5C2.7 0 2.2 0.2 1.5 0.2C1.1 0.2 0.6 0.1 0.1 0L0.3 -2.1C0.4 -2.1 0.6 -2.1 0.6 -2.1C1 -2.1 1.3 -2.2 1.5 -2.5C1.7 -2.8 1.8 -3.1 1.9 -3.6C1.9 -4 2 -4.6 2 -5.3L2.2 -8.9Z"/></g><g id="g1_6"><path d="M 9.1 -8.9L9.1 0L6.8 0L6.8 -2.5L4.9 -2.5L3.3 0L0.5 0L2.5 -2.9C1.9 -3.1 1.4 -3.5 1.1 -4C0.8 -4.4 0.6 -5 0.6 -5.6C0.6 -6.6 1 -7.5 1.8 -8C2.5 -8.6 3.6 -8.9 4.9 -8.9ZM 4.9 -6.8C4.4 -6.8 4 -6.7 3.7 -6.5C3.4 -6.3 3.3 -6 3.3 -5.5C3.3 -5.1 3.4 -4.8 3.7 -4.6C3.9 -4.4 4.4 -4.2 4.9 -4.2L6.8 -4.2L6.8 -6.8Z"/></g><g id="g1_7"><path d="M 9.9 -4.4C9.9 -4.4 9.9 -4.1 9.8 -3.7L3.1 -3.7C3.2 -3.2 3.5 -2.7 4 -2.4C4.4 -2.1 5 -1.9 5.6 -1.9C6.1 -1.9 6.5 -2 6.9 -2.1C7.2 -2.3 7.6 -2.5 7.9 -2.8L9.2 -1.3C8.4 -0.3 7.2 0.1 5.6 0.1C4.6 0.1 3.7 -0.1 2.9 -0.5C2.1 -0.8 1.6 -1.4 1.1 -2.1C0.7 -2.8 0.5 -3.6 0.5 -4.4C0.5 -5.3 0.7 -6.1 1.1 -6.8C1.5 -7.5 2.1 -8 2.8 -8.4C3.5 -8.8 4.4 -9 5.3 -9C6.1 -9 6.9 -8.8 7.6 -8.5C8.3 -8.1 8.9 -7.5 9.3 -6.8C9.7 -6.1 9.9 -5.3 9.9 -4.4ZM 5.3 -7.1C4.7 -7.1 4.2 -6.9 3.8 -6.6C3.4 -6.2 3.2 -5.8 3.1 -5.2L7.4 -5.2C7.4 -5.8 7.1 -6.2 6.7 -6.6C6.3 -6.9 5.8 -7.1 5.3 -7.1Z"/></g><g id="g1_8"><path d="M 8 -4.6C9.1 -4.3 9.6 -3.6 9.6 -2.5C9.6 -1.7 9.3 -1.1 8.7 -0.7C8.1 -0.2 7.2 0 6 0L1.2 0L1.2 -8.9L5.8 -8.9C6.9 -8.9 7.8 -8.7 8.4 -8.3C9 -7.9 9.3 -7.3 9.3 -6.6C9.3 -6.1 9.2 -5.8 9 -5.4C8.8 -5.1 8.4 -4.8 8 -4.6ZM 3.6 -5.2L5.5 -5.2C6.4 -5.2 6.9 -5.6 6.9 -6.2C6.9 -6.8 6.4 -7.1 5.5 -7.1L3.6 -7.1ZM 5.8 -1.7C6.7 -1.7 7.2 -2.1 7.2 -2.7C7.2 -3.1 7.1 -3.3 6.8 -3.5C6.6 -3.6 6.3 -3.7 5.8 -3.7L3.6 -3.7L3.6 -1.7Z"/></g><g id="g1_9"><path d="M 2.2 0.1C1.7 0.1 1.3 0 1 -0.3C0.7 -0.6 0.6 -1 0.6 -1.5C0.6 -2 0.7 -2.3 1 -2.6C1.3 -2.9 1.7 -3.1 2.2 -3.1C2.6 -3.1 3 -2.9 3.3 -2.6C3.6 -2.3 3.8 -2 3.8 -1.5C3.8 -1 3.6 -0.6 3.3 -0.3C3 0 2.6 0.1 2.2 0.1Z"/></g></defs><g fill="currentColor"><path d="M 67.7 87.3C71.2 87.3 75.3 87.7 78.2 85.3C80.8 83.1 81.3 78.8 79.5 75.9C76.2 70.9 68 72.9 63 72.5L63 92.8L67.7 92.8ZM 86.8 62.5C83.2 62.7 83.5 68.4 87.3 68.1C90.9 67.8 90.6 62.3 86.8 62.5M70.4 60.3C76.3 60.2 82.3 60.6 88.2 60.4C90.2 60.7 91.7 62.3 92 64.3C91.8 70.3 92.3 76.3 92.1 82.3C92.1 83.7 91.7 85.1 91 86.3C84.3 93.5 77.2 100.4 70.1 107.2C68.3 108.3 66.4 108 64.8 106.7C59.6 101.5 54.3 96.3 49.2 91.1C45.6 87.4 42.7 85.6 47.1 80.7C52.9 74.4 59.6 68.7 65.5 62.4C66.8 61.2 68.6 60.4 70.4 60.3"/><path d="M 67.7 83.5L67.7 76.3L72 76.3C72.3 76.3 73.4 76.6 73.8 76.7C76.7 77.8 76.6 82.1 73.7 83.1C73.3 83.3 72.2 83.5 71.8 83.5Z"/><use xlink:href="#g0_0" x="104.3" y="73.3"/><use xlink:href="#g0_1" x="113.6" y="73.3"/><use xlink:href="#g0_2" x="121.8" y="73.3"/><use xlink:href="#g0_3" x="130.8" y="73.3"/><use xlink:href="#g0_4" x="141.7" y="73.3"/><use xlink:href="#g0_5" x="153.2" y="73.3"/><use xlink:href="#g0_6" x="104.3" y="88.9"/><use xlink:href="#g0_7" x="115.2" y="88.9"/><use xlink:href="#g0_8" x="126.6" y="88.9"/><use xlink:href="#g0_9" x="136.9" y="88.9"/><use xlink:href="#g0_3" x="148.2" y="88.9"/><use xlink:href="#g0_4" x="159.1" y="88.9"/><use xlink:href="#g0_7" x="170.6" y="88.9"/><use xlink:href="#g0_10" x="181.9" y="88.9"/><use xlink:href="#g0_11" x="192.5" y="88.9"/><use xlink:href="#g0_12" x="202.6" y="88.9"/><use xlink:href="#g0_9" x="212.4" y="88.9"/><use xlink:href="#g0_4" x="223.6" y="88.9"/><use xlink:href="#g0_5" x="235" y="88.9"/><use xlink:href="#g1_0" x="104.3" y="104.5"/><use xlink:href="#g1_1" x="116" y="104.5"/><use xlink:href="#g1_2" x="125.9" y="104.5"/><use xlink:href="#g1_3" x="135.2" y="104.5"/><use xlink:href="#g1_4" x="143.7" y="104.5"/><use xlink:href="#g1_5" x="153.2" y="104.5"/><use xlink:href="#g1_6" x="164.2" y="104.5"/><use xlink:href="#g1_7" x="174.6" y="104.5"/><use xlink:href="#g1_8" x="185.2" y="104.5"/><use xlink:href="#g1_9" x="195.5" y="104.5"/></g><path fill="none" stroke-width="0.5" stroke="currentColor" d="M 99.1 52.3L99.1 111"/></svg></span>
+    <h1>Отдел маркетинга</h1>
+    <p class="muted" style="margin:0">Войдите той же почтой и паролем, что и в учёт студии.</p>
+    <label class="field">Почта<input class="inp" id="l-email" type="email" autocomplete="username" required></label>
+    <label class="field">Пароль<input class="inp" id="l-pass" type="password" autocomplete="current-password" required></label>
+    <div class="err" id="l-err" role="alert"></div>
+    <button class="btn pri" type="submit" id="l-btn">Войти</button>
+  </form>
+</div>
+<script src="../marketing-creative.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

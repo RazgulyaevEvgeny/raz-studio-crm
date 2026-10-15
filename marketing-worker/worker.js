@@ -218,6 +218,64 @@ async function makeImage(env, prompt) {
   return 'data:image/jpeg;base64,' + out.image;
 }
 
+/* ---------- универсальный запрос для сайта отдела маркетинга ----------
+   Инструкции агентов приходят с сайта, поэтому менять их можно без обновления воркера.
+   Повторяет запрос при лимитах Gemini, при неудаче отвечает запасной моделью Cloudflare. */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function geminiGen(env, system, messages, o) {
+  const model = env.GEMINI_MODEL || GEMINI_DEFAULT;
+  let schema = o.schema || null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+        generationConfig: { maxOutputTokens: o.maxTokens, temperature: o.temperature, ...(o.json ? { responseMimeType: 'application/json' } : {}), ...(o.json && schema ? { responseSchema: schema } : {}) }
+      })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 400 && schema) { schema = null; continue; }            // схема не подошла — просим JSON без схемы
+    if (r.status === 429 || r.status === 503 || r.status === 500) { if (attempt < 3) { await sleep([3000, 8000, 15000][attempt]); continue; } throw new Quota('limit'); }
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('Gemini ответил ' + r.status));
+    const c = (j.candidates || [])[0];
+    const text = ((c && c.content && c.content.parts) || []).filter(p => !p.thought).map(p => p.text || '').join('');
+    if (!text) { if (attempt < 3) { await sleep(2000); continue; } throw new Error('Gemini не ответил' + (c && c.finishReason ? ' (' + c.finishReason + ')' : '')); }
+    return { text, engine: 'Gemini', truncated: !!(c && c.finishReason === 'MAX_TOKENS') };
+  }
+  throw new Quota('limit');
+}
+async function cfGen(env, system, messages, o) {
+  const sys = system.length > 14000 ? system.slice(0, 14000) + '\n…' : system;
+  const out = await env.AI.run(CF_MODEL, { messages: [{ role: 'system', content: sys + (o.json ? '\n\nОтветь ТОЛЬКО валидным JSON без пояснений и без ```.' : '') }, ...messages.map(m => ({ role: m.role, content: m.content.slice(0, 12000) }))], max_tokens: Math.min(o.maxTokens, 6000), temperature: o.temperature });
+  const text = typeof out.response === 'string' ? out.response : JSON.stringify(out.response || '');
+  if (!text) throw new Error('Пустой ответ');
+  return { text, engine: 'Llama' };
+}
+async function claudeGen(env, system, messages, o) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: env.CLAUDE_MODEL || CLAUDE_MODEL, max_tokens: Math.min(o.maxTokens, 16000), system: system + (o.json ? '\n\nОтветь ТОЛЬКО валидным JSON без пояснений.' : ''), messages })
+  });
+  const j = await r.json();
+  if (!r.ok) throw new Error((j.error && j.error.message) || ('Claude ответил ' + r.status));
+  return { text: (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim(), engine: 'Claude' };
+}
+async function generate(env, system, messages, o) {
+  if (env.ANTHROPIC_API_KEY) return claudeGen(env, system, messages, o);
+  if (env.GEMINI_API_KEY) {
+    try { return await geminiGen(env, system, messages, o); }
+    catch (e) { if (!env.AI) throw e instanceof Quota ? new Error('Бесплатный лимит Gemini сейчас исчерпан. Подождите минуту и повторите.') : e; }
+  }
+  if (env.AI) {
+    try { return await cfGen(env, system, messages, o); }
+    catch (e) { throw new Error('Бесплатные лимиты ИИ сейчас исчерпаны. Подождите пару минут и повторите. (' + e.message + ')'); }
+  }
+  throw new Error('На сервере не задан ключ GEMINI_API_KEY.');
+}
+
 /* ---------- Instagram (официальный API, Instagram Login) ---------- */
 const IG = 'https://graph.instagram.com/v25.0';
 async function igToken(env) {
@@ -257,8 +315,8 @@ export default {
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json; charset=utf-8' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
-    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN });
-    if (!['/api/ask', '/api/image', '/api/instagram'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
+    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN, gen: 2 });
+    if (!['/api/ask', '/api/gen', '/api/image', '/api/instagram'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
 
     let user;
     try { user = await verifyFirebase((req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), env.FIREBASE_PROJECT || 'raz-studio-5a486'); }
@@ -271,6 +329,18 @@ export default {
     if (url.pathname === '/api/image') {
       try { return json({ image: await makeImage(env, b.prompt || 'branding studio workshop') }); }
       catch (e) { return json({ error: e.message || 'Не удалось нарисовать фон' }, 502); }
+    }
+    if (url.pathname === '/api/gen') {
+      const msgs = (Array.isArray(b.messages) ? b.messages : [])
+        .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim())
+        .slice(-20).map(m => ({ role: m.role, content: m.text.slice(0, 60000) }));
+      const merged = [];
+      for (const m of msgs) { const l = merged.at(-1); if (l && l.role === m.role) l.content += '\n\n' + m.content; else merged.push({ ...m }); }
+      while (merged.length && merged[0].role !== 'user') merged.shift();
+      if (!merged.length || merged.at(-1).role !== 'user') return json({ error: 'Пустой вопрос' }, 400);
+      const o = { json: !!b.json, schema: b.schema && typeof b.schema === 'object' ? b.schema : null, maxTokens: Math.max(512, Math.min(+b.maxTokens || 8192, 32768)), temperature: typeof b.temperature === 'number' ? b.temperature : 0.7 };
+      try { return json(await generate(env, String(b.system || '').slice(0, 80000), merged, o)); }
+      catch (e) { return json({ error: e.message || 'Не удалось получить ответ' }, 502); }
     }
     if (url.pathname === '/api/instagram') {
       try { return json(await instagram(env)); }
