@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018002418">
+<meta name="app-build" content="20261018023531">
 <link rel="icon" href="favicon.ico?v=2" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
@@ -115,6 +115,8 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 #w-print .prow{cursor:default;background:var(--paper);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}#w-print .prow:hover{box-shadow:none}
 #w-print .prow>span:first-child{min-width:0;display:flex;flex-direction:column;gap:2px}
 #w-print .prow small{white-space:normal}
+#w-print .pbar{display:block;height:5px;border-radius:999px;margin-top:5px;background:color-mix(in srgb,var(--sc) 15%,var(--tile));overflow:hidden;max-width:260px}
+#w-print .pbar span{display:block;height:100%;border-radius:999px;background:var(--sc)}
 #w-print .pst2{justify-self:end;align-self:center}
 #w-print .go{text-decoration:none;white-space:nowrap;flex:none}
 .pst2{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--f);padding:5px 11px;border-radius:999px;background:color-mix(in srgb,var(--sc) 13%,transparent);color:var(--sc);white-space:nowrap}
@@ -3600,15 +3602,27 @@ function printWhen(ts){
   if(d.toDateString()===y.toDateString())return 'вчера в '+hm;
   return d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+' в '+hm;
 }
+const PSTATE={RUNNING:{k:'RUNNING',l:'печатает',c:'--blue',busy:1},PRINTING:{k:'RUNNING',l:'печатает',c:'--blue',busy:1},PREPARE:{k:'PREPARE',l:'готовится',c:'--st-prod',busy:1},SLICING:{k:'PREPARE',l:'готовится',c:'--st-prod',busy:1},
+  PAUSE:{k:'PAUSE',l:'пауза',c:'--st-prod',busy:1},PAUSED:{k:'PAUSE',l:'пауза',c:'--st-prod',busy:1},FINISH:{k:'FINISH',l:'свободен',c:'--ok'},FAILED:{k:'FAILED',l:'ошибка печати',c:'--danger'},IDLE:{k:'IDLE',l:'свободен',c:'--ok'}};
+function printDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+' мин';const h=Math.floor(m/60),r=m%60;return h+' ч'+(r?' '+r+' мин':'')}
 async function loadPrinters(){
   const list=$('w-print-list'),note=$('w-print-note');if(!list)return;
   try{
     const r=await fetch(PRINT_API,{cache:'no-store'});const s=await r.json();
     const ERR={noauth:'Вход в Bambu не выполнен',auth:'Вход в Bambu устарел, войдите заново',cloud:'Облако Bambu не ответило'};
     list.innerHTML=s.printers.length?s.printers.map(p=>{
-      const c=p.online===null?'--muted':p.online?'--ok':'--danger',l=p.online===null?'нет данных':p.online?'в сети':'не в сети';
-      const sub=p.online?(p.since?'включился '+printWhen(p.since):'работает'):(p.lastOnline?'был в сети '+printWhen(p.lastOnline):'когда был в сети, пока неизвестно');
-      return `<div class="mrow prow"><span><b>${esc(p.name)}</b><small>${esc(sub)}</small></span><span class="pst2" style="--sc:var(${c})">${l}</span></div>`;
+      let c=p.online===null?'--muted':p.online?'--ok':'--danger',l=p.online===null?'нет данных':p.online?'в сети':'не в сети';
+      let sub=p.online?(p.since?'включился '+printWhen(p.since):'работает'):(p.lastOnline?'был в сети '+printWhen(p.lastOnline):'когда был в сети, пока неизвестно');
+      /* состояние печати: приходит от наблюдения, если оно его знает (state, progress, remain в минутах, task) */
+      const st=p.online&&p.state?PSTATE[String(p.state).toUpperCase()]:null;let bar='';
+      if(st){c=st.c;l=st.l;
+        const pc=p.progress!=null&&p.progress!==''?Math.max(0,Math.min(100,Math.round(+p.progress))):null;
+        const base=p.updated||s.lastCheck||s.now||Date.now(),end=p.remain!=null&&p.remain!==''?base+(+p.remain)*6e4:null,left=end?Math.max(0,end-Date.now()):null;
+        if(st.busy){sub=[p.task?'«'+p.task+'»':'',pc!=null?pc+'%':'',left!=null?(left>0?'осталось '+printDur(left)+', до '+new Date(end).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'вот-вот закончит'):''].filter(Boolean).join(' · ')||sub;
+          if(pc!=null)bar=`<span class="pbar" style="--sc:var(${c})"><span style="width:${pc}%"></span></span>`}
+        else if(p.task&&(st.k==='FINISH'||st.k==='FAILED'))sub=(st.k==='FINISH'?'напечатал ':'не допечатал ')+'«'+p.task+'»';
+      }
+      return `<div class="mrow prow"><span><b>${esc(p.name)}</b><small>${esc(sub)}</small>${bar}</span><span class="pst2" style="--sc:var(${c})">${l}</span></div>`;
     }).join(''):`<div class="mrow prow"><span><b>${esc(ERR[s.error]||'Принтеров нет')}</b></span><span></span></div>`;
     note.textContent=[s.error&&s.printers.length?ERR[s.error]:'',s.pausedUntil?'тревога на паузе до '+new Date(s.pausedUntil).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'',s.lastCheck?'проверка '+printWhen(s.lastCheck):'автопроверка ещё не запускалась'].filter(Boolean).join(' · ');
   }catch(e){list.innerHTML='<div class="mrow prow"><span><b>Нет связи с наблюдением</b><small>Попробуем снова через минуту</small></span><span></span></div>';note.textContent=''}
