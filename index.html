@@ -112,21 +112,35 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .mrow small{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow .r{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 .mrow .r b{font-size:13.5px}
-#w-print .prow{cursor:default;background:var(--paper);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px}#w-print .prow:hover{box-shadow:none}
-#w-print .prow>span:first-child{min-width:0;display:flex;flex-direction:column;gap:2px}
-#w-print .prow small{white-space:normal}
-#w-print .pbar{display:block;height:5px;border-radius:999px;margin-top:5px;background:color-mix(in srgb,var(--sc) 15%,var(--tile));overflow:hidden;max-width:260px}
-#w-print .pbar span{display:block;height:100%;border-radius:999px;background:var(--sc)}
-#w-print .perr,#w-print .pwarn{display:flex;align-items:flex-start;gap:6px;margin-top:4px;font-weight:600;white-space:normal}
-#w-print .perr{color:var(--danger)}#w-print .pwarn{color:var(--st-prod)}
-#w-print .perr::before,#w-print .pwarn::before{content:"!";flex:none;width:15px;height:15px;border-radius:50%;background:var(--danger);color:#fff;font:800 10.5px/15px var(--f);text-align:center;margin-top:1px}
-#w-print .pwarn::before{background:var(--st-prod)}
-#w-print .perr-row{box-shadow:inset 3px 0 0 var(--danger)}
-#w-print .pst2{justify-self:end;align-self:center}
 #w-print .go{text-decoration:none;white-space:nowrap;flex:none}
-.pst2{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--f);padding:5px 11px;border-radius:999px;background:color-mix(in srgb,var(--sc) 13%,transparent);color:var(--sc);white-space:nowrap}
-.pst2::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sc)}
-.pnote{color:var(--muted);font-size:12px;margin-top:-4px}
+#w-print .bw-list{display:flex;flex-direction:column;gap:8px}
+.bw-card{background:var(--paper);border-radius:20px;padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:center;font-family:var(--f)}
+.bw-card.alert{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--danger) 55%,transparent)}
+.bw-ring{width:68px;height:68px;position:relative;grid-row:span 2;display:grid;place-items:center}
+.bw-ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.bw-ring .bg{stroke:color-mix(in srgb,var(--sc) 14%,var(--tile))}
+.bw-ring .fg{stroke:var(--sc);transition:stroke-dashoffset .8s var(--ease)}
+.bw-ring b{position:relative;font:800 19px/1 var(--f);letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.bw-ring b small{font-size:11px;font-weight:700;margin-left:1px;color:var(--muted)}
+.bw-ring.ico{border-radius:50%;background:color-mix(in srgb,var(--sc) 12%,var(--tile))}
+.bw-ring.ico svg{position:static;width:28px;height:28px;transform:none;color:var(--sc)}
+.bw-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.bw-head b{font:700 16.5px/1.15 var(--f);letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bw-chip{display:inline-flex;align-items:center;gap:6px;flex:none;font:600 12.5px var(--f);padding:5px 11px;border-radius:999px;background:color-mix(in srgb,var(--sc) 13%,transparent);color:var(--sc);white-space:nowrap}
+.bw-chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--sc)}
+.bw-chip.live::before{animation:bwpulse 1.6s ease-in-out infinite}
+@keyframes bwpulse{50%{opacity:.25}}
+.bw-info{display:flex;gap:6px;min-width:0;flex-wrap:wrap}
+.bw-stat{display:flex;flex-direction:column;gap:1px;background:var(--tile);border-radius:12px;padding:6px 10px;min-width:0}
+.bw-stat span{font:500 11px var(--fb);color:var(--muted)}
+.bw-stat em{font:700 14.5px/1.15 var(--f);font-style:normal;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bw-meta{font:500 12.5px var(--fb);color:var(--muted)}
+.bw-err{grid-column:1/-1;display:flex;gap:8px;align-items:flex-start;margin-top:8px;padding:9px 12px;border-radius:12px;background:color-mix(in srgb,var(--danger) 9%,transparent);color:var(--danger);font:600 13px/1.3 var(--fb)}
+.bw-err.warn{background:color-mix(in srgb,var(--st-prod) 10%,transparent);color:var(--st-prod)}
+.bw-err::before{content:"!";flex:none;width:17px;height:17px;border-radius:50%;background:var(--danger);color:#fff;font:800 11px/17px var(--f);text-align:center}
+.bw-err.warn::before{background:var(--st-prod)}
+.bw-note{color:var(--muted);font:500 12px var(--fb);margin-top:-4px}
+@media(max-width:520px){.bw-ring{width:60px;height:60px}.bw-ring b{font-size:17px}.bw-card{padding:12px 13px;gap:4px 12px}}
 .late{color:var(--danger)!important}.soon{color:var(--st-prod)!important}
 .dotlbl{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--f);color:var(--ink)}
 .dotlbl::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--sc)}
@@ -1162,8 +1176,8 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         </div>
         <div class="w" id="w-print">
           <div class="w-h"><h2>Принтеры в мастерской</h2><a class="go" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">Вход в Bambu ↗</a></div>
-          <div class="mini" id="w-print-list"><div class="mrow prow"><span><b>Проверяем…</b></span><span></span></div></div>
-          <small class="pnote" id="w-print-note"></small>
+          <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем принтеры…</span></div></div>
+          <small class="bw-note" id="w-print-note"></small>
         </div>
       </div>
     </div>
@@ -3618,31 +3632,44 @@ const PERR={'0300_8004':'Закончился пластик: вставьте �
 function perrKey(e){if(e==null||e===''||e===0||e==='0')return '';const h=(typeof e==='number'?e.toString(16):String(e).replace(/[^0-9a-f]/gi,'')).toUpperCase().padStart(8,'0').slice(-8);return /^0+$/.test(h)?'':h.slice(0,4)+'_'+h.slice(4)}
 function perrText(e,txt){const k=perrKey(e);if(!k&&!txt)return '';if(k&&PERR[k])return PERR[k];if(/^07[0-9A-F]{2}_8011$/.test(k))return 'В AMS закончился пластик';if(txt)return String(txt);return 'Ошибка принтера, код '+k+': подробности в Bambu Handy'}
 function printDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+' мин';const h=Math.floor(m/60),r=m%60;return h+' ч'+(r?' '+r+' мин':'')}
+/* время Павлодара (UTC+5) */
+const bwPTZ='Asia/Almaty';
+const bwPDay=ts=>new Date(ts).toLocaleDateString('ru-RU',{timeZone:bwPTZ});
+const bwPHM=ts=>new Date(ts).toLocaleTimeString('ru-RU',{timeZone:bwPTZ,hour:'2-digit',minute:'2-digit'});
+function bwPFinish(ts){const t=Date.now();if(bwPDay(ts)===bwPDay(t))return bwPHM(ts);if(bwPDay(ts)===bwPDay(t+864e5))return 'завтра '+bwPHM(ts);return new Date(ts).toLocaleDateString('ru-RU',{timeZone:bwPTZ,day:'numeric',month:'short'})+' '+bwPHM(ts)}
+const bwPICO={ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  off:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>',
+  err:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 6v8"/><path d="M12 18.5v.01"/></svg>',
+  wait:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>'};
+function bwPRing(pc,c){const R=29,L=2*Math.PI*R;return `<div class="bw-ring" style="--sc:var(${c})"><svg viewBox="0 0 68 68"><circle class="bg" cx="34" cy="34" r="${R}" fill="none" stroke-width="7"/><circle class="fg" cx="34" cy="34" r="${R}" fill="none" stroke-width="7" stroke-linecap="round" stroke-dasharray="${L.toFixed(1)}" stroke-dashoffset="${(L*(1-pc/100)).toFixed(1)}"/></svg><b>${pc}<small>%</small></b></div>`}
+const bwPIco=(k,c)=>`<div class="bw-ring ico" style="--sc:var(${c})">${bwPICO[k]}</div>`;
+const bwPStat=(l,v)=>`<div class="bw-stat"><span>${l}</span><em>${esc(v)}</em></div>`;
 async function loadPrinters(){
   const list=$('w-print-list'),note=$('w-print-note');if(!list)return;
   try{
     const r=await fetch(PRINT_API,{cache:'no-store'});const s=await r.json();
     const ERR={noauth:'Вход в Bambu не выполнен',auth:'Вход в Bambu устарел, войдите заново',cloud:'Облако Bambu не ответило'};
     list.innerHTML=s.printers.length?s.printers.map(p=>{
-      let c=p.online===null?'--muted':p.online?'--ok':'--danger',l=p.online===null?'нет данных':p.online?'в сети':'не в сети';
-      let sub=p.online?(p.since?'включился '+printWhen(p.since):'работает'):(p.lastOnline?'был в сети '+printWhen(p.lastOnline):'когда был в сети, пока неизвестно');
-      /* состояние печати: приходит от наблюдения, если оно его знает (state, progress, remain в минутах, task) */
-      const st=p.online&&p.state?PSTATE[String(p.state).toUpperCase()]:null;let bar='';
-      if(st){c=st.c;l=st.l;
-        const pc=p.progress!=null&&p.progress!==''?Math.max(0,Math.min(100,Math.round(+p.progress))):null;
-        const base=p.updated||s.lastCheck||s.now||Date.now(),end=p.remain!=null&&p.remain!==''?base+(+p.remain)*6e4:null,left=end?Math.max(0,end-Date.now()):null;
-        if(st.busy){sub=[p.task?'«'+p.task+'»':'',pc!=null?pc+'%':'',st.k==='PAUSE'&&p.remain!=null&&p.remain!==''?'осталось '+printDur((+p.remain)*6e4)+' печати':left!=null?(left>0?'осталось '+printDur(left)+', до '+new Date(end).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'вот-вот закончит'):''].filter(Boolean).join(' · ')||sub;
-          if(pc!=null)bar=`<span class="pbar" style="--sc:var(${c})"><span style="width:${pc}%"></span></span>`}
-        else if(p.task&&(st.k==='FINISH'||st.k==='FAILED'))sub=(st.k==='FINISH'?'напечатал ':'не допечатал ')+'«'+p.task+'»';
-      }
-      /* ошибка печати и предупреждения принтера (HMS) */
+      const st=p.online&&p.state?PSTATE[String(p.state).toUpperCase()]:null;
       const er=p.online?perrText(p.error,p.errorText):'';
-      const hm=p.online&&Array.isArray(p.hms)?p.hms:[];const hmTxt=hm.length?(hm.map(h=>h&&(h.text||h.ru)).filter(Boolean)[0]||'Есть предупреждения принтера ('+hm.length+'): смотрите в Bambu Handy'):'';
-      if(er&&st&&st.k!=='FAILED'&&st.k!=='FINISH'&&st.k!=='IDLE'){c='--danger';l=st.k==='PAUSE'?'остановился':l}
-      return `<div class="mrow prow${er?' perr-row':''}"><span><b>${esc(p.name)}</b><small>${esc(sub)}</small>${bar}${er?`<small class="perr">${esc(er)}</small>`:''}${hmTxt&&!er?`<small class="pwarn">${esc(hmTxt)}</small>`:''}</span><span class="pst2" style="--sc:var(${c})">${l}</span></div>`;
-    }).join(''):`<div class="mrow prow"><span><b>${esc(ERR[s.error]||'Принтеров нет')}</b></span><span></span></div>`;
-    note.textContent=[s.error&&s.printers.length?ERR[s.error]:'',s.pausedUntil?'тревога на паузе до '+new Date(s.pausedUntil).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'',s.lastCheck?'проверка '+printWhen(s.lastCheck):'автопроверка ещё не запускалась'].filter(Boolean).join(' · ');
-  }catch(e){list.innerHTML='<div class="mrow prow"><span><b>Нет связи с наблюдением</b><small>Попробуем снова через минуту</small></span><span></span></div>';note.textContent=''}
+      const hm=p.online&&Array.isArray(p.hms)?p.hms:[];const hmTxt=hm.length?(hm.map(h=>h&&(h.text||h.ru)).filter(Boolean)[0]||'Есть предупреждения принтера: смотрите в Bambu Handy'):'';
+      let c,l,live=false,left='',info='';
+      if(!p.online){c=p.online===null?'--muted':'--danger';l=p.online===null?'нет данных':'не в сети';left=bwPIco('off',c);
+        info=`<span class="bw-meta">${p.lastOnline?'был в сети '+esc(printWhen(p.lastOnline)):'нет связи с принтером'}</span>`}
+      else if(st&&st.busy){c=er?'--danger':st.c;l=er&&st.k==='PAUSE'?'остановился':st.l;live=st.k==='RUNNING'&&!er;
+        const pc=p.progress!=null&&p.progress!==''?Math.max(0,Math.min(100,Math.round(+p.progress))):0;left=bwPRing(pc,c);
+        const rem=p.remain!=null&&p.remain!==''?+p.remain:null,base=p.updated||s.now||Date.now();
+        if(st.k==='PAUSE')info=(rem!=null?bwPStat('Осталось',printDur(rem*6e4)):'')+bwPStat('Закончит','на паузе');
+        else if(st.k==='PREPARE')info=`<span class="bw-meta">греется и калибруется${rem?', печать займёт '+esc(printDur(rem*6e4)):''}</span>`;
+        else if(rem!=null){const end=base+rem*6e4,lf=Math.max(0,end-Date.now());info=lf>6e4?bwPStat('Осталось',printDur(lf))+bwPStat('Закончит',bwPFinish(end)):bwPStat('Осталось','меньше минуты')+bwPStat('Закончит','вот-вот')}
+      }
+      else if(st){c=er||st.k==='FAILED'?'--danger':st.c;l=st.l;left=bwPIco(er||st.k==='FAILED'?'err':'ok',c);
+        info=`<span class="bw-meta">${st.k==='FINISH'?'печать завершена, ':''}${p.since?'включился '+esc(printWhen(p.since)):'готов к печати'}</span>`}
+      else{c='--ok';l='в сети';left=bwPIco('wait',c);info=`<span class="bw-meta">${p.since?'включился '+esc(printWhen(p.since)):'состояние печати пока неизвестно'}</span>`}
+      return `<div class="bw-card${er?' alert':''}">${left}<div class="bw-head"><b>${esc(p.name)}</b><span class="bw-chip${live?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${info}</div>${er?`<div class="bw-err">${esc(er)}</div>`:hmTxt?`<div class="bw-err warn">${esc(hmTxt)}</div>`:''}</div>`;
+    }).join(''):`<div class="bw-card"><span class="bw-meta">${esc(ERR[s.error]||'Принтеров нет')}</span></div>`;
+    note.textContent=[s.error&&s.printers.length?ERR[s.error]:'',s.pausedUntil?'тревога на паузе до '+bwPHM(s.pausedUntil):'',s.lastCheck?'проверка '+printWhen(s.lastCheck):'автопроверка ещё не запускалась'].filter(Boolean).join(' · ');
+  }catch(e){list.innerHTML='<div class="bw-card"><span class="bw-meta">Нет связи с наблюдением, попробуем снова через минуту</span></div>';note.textContent=''}
   packHome();
 }
 loadPrinters();setInterval(()=>{if(!document.hidden&&!$('p-home').hidden)loadPrinters()},60000);
