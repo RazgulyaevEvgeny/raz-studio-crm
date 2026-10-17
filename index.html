@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018000911">
+<meta name="app-build" content="20261018001308">
 <link rel="icon" href="favicon.ico?v=2" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
@@ -365,6 +365,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .oi-pr.full{color:var(--ok)}.oi-pr.full label{color:var(--ok)}
 .mrow small .mt{color:var(--ok);font-weight:600}
 .oi-all{font:600 12px var(--f);color:var(--blue);padding:4px 6px}
+.oi-conv{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;background:color-mix(in srgb,var(--ok) 10%,var(--paper));border-radius:12px;padding:9px 12px;font-size:12.5px;color:var(--ink)}
 @media(max-width:600px){.oi-pr{display:grid;grid-template-columns:auto 56px auto auto;justify-content:start;gap:5px 6px}.oi-pr input{min-height:30px;height:30px;width:56px}.oi-pr .bar{grid-column:1/-1;max-width:none;order:9}}
 .oi-add{display:grid;grid-template-columns:minmax(0,1fr) 112px 112px auto;gap:6px;align-items:center}
 .oi-add .oi-q span{font-size:11.5px}
@@ -1302,6 +1303,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="fld"><label for="f-owner">Ответственный</label><input id="f-owner" data-sugg="owners-dl" autocomplete="off" placeholder="Кто ведёт заказ"></div>
       </div>
       <div class="fld oi-box"><span class="lb" id="oi-lb">Что сделать: позиции заказа</span>
+        <div class="oi-conv" id="oi-conv" hidden></div>
         <div class="oitems" id="oi-list" aria-labelledby="oi-lb"></div>
         <div class="oi-add" id="oi-add">
           <div class="combo oi-n"><input id="oi-name" autocomplete="off" placeholder="Позиция: футболка, DTF-лист, доставка" aria-label="Название позиции"><button class="combo-btn" type="button" id="oi-name-btn" aria-label="Выбрать из прайса и прошлых заказов" aria-haspopup="listbox" data-x="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div>
@@ -1595,7 +1597,7 @@ const CM_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 let bossPending=[], fileTarget=null, askFile=null;
 let edUnitTouched=false;
 let edExp=[], edFiles=[], edFilesOrig=[], edTab='main', edK=[], kEditId=null, kSrcCost=null;
-let edItems=[], oiEditId=null, edOrig=null;
+let edItems=[], oiEditId=null, edOrig=null, edConvFrom=null;
 let requests=[], requestsLoaded=false, edReq=null, showReqDone=false, reqAskReject=false;
 const LEDGERS={
   office:{title:'Расходы офиса',one:'расход',add:'Добавить расход',newH:'Новый расход',what:'Что оплатили *',ph:'Аренда за октябрь, интернет, вода',
@@ -2523,7 +2525,8 @@ function openEditor(id,preset={}){
   edExp=(o.expenses||[]).map(e=>({...e}));edFiles=(o.files||[]).map(f=>({...f}));edFilesOrig=edFiles.map(f=>f.id);askFile=null;
   $('e-title').value='';$('e-amount').value='';
   edK=(o.kaspi||[]).map(l=>({...l}));$('k-fee').value=kaspiFeeOf(o);kClear();
-  edOrig=o;edItems=(o.items||[]).map(i=>({...i}));
+  edOrig=o;edItems=(o.items||[]).map(i=>({...i}));edConvFrom=null;
+  if(id!=='new'&&canWrite){const sp=splitOldTopItems(o);if(sp){edConvFrom=edItems;edItems=sp}}
   edItems.forEach(i=>{if(i.top&&(i.cost==null||i.cost==='')){const tc=topperItemCost(i);if(tc){i.cost=tc.cost;i.p3d=tc.p3d;if(!i.pid)i.pid=tc.pid}}});
   oiClear();renderItems();
   $('f-desc').value=o.desc||'';
@@ -2680,13 +2683,31 @@ function topperItemCost(it){
   const px=it.top&&topperPrice(it.top.m,it.top.n);if(!px||!px.t3d)return null;const c=t3dCost(px.t3d,it.top.c);if(!c)return null;
   return {cost:c.cost,pid:px.id,p3d:{g:+px.t3d.g||0,h:Math.round((+px.t3d.min||0)/60*1000)/1000,ppg:Math.round(c.ppg*100)/100,pl:c.pl,hr:c.hr,u:1}};
 }
+function mkTopItem(model,modelId,color,qty,price){
+  const it={id:uid(),name:model+(color?' — '+String(color).toLowerCase():''),price:+price||0,qty:+qty||0,unit:'шт',made:0,top:{m:modelId||'',n:model||'',c:color||''}};
+  const tc=topperItemCost(it);if(tc){it.cost=tc.cost;it.pid=tc.pid;it.p3d=tc.p3d}else{const px=topperPrice(it.top.m,it.top.n);if(px)it.pid=px.id}
+  return it;
+}
+function reqItemsSplit(r){const out=[];(r.items||[]).forEach(i=>{const cls=(i.colors||[]).filter(c=>+c.qty>0);
+  (cls.length?cls.map(c=>({c:c.name||'',q:+c.qty||0})):[{c:'',q:+i.qty||0}]).forEach(rw=>out.push(mkTopItem(i.model,i.modelId,rw.c,rw.q,i.price)))});return out}
+/* старые заказы из заявок: одна позиция на модель («Тыква (оранжевый 300)») → модель и цвет отдельно.
+   Цены, которые меняли руками, и прочие позиции (доставка и т. п.) сохраняются */
+function splitOldTopItems(o){
+  if(!o||!(o.requestId||o.source==='toppers'))return null;
+  const items=o.items||[];if(items.some(i=>i.top))return null;
+  const r=o.requestId&&requests.find(x=>x.id===o.requestId);
+  const mOld=items.map(i=>String(i.name||'').match(/^(.+?)\s*\((.+)\)\s*$/));
+  let base=r?reqItemsSplit(r):[];
+  if(!base.length)items.forEach((i,k)=>{const m=mOld[k];if(!m)return;const parts=m[2].split(',').map(t=>t.trim().match(/^(.+?)\s+(\d+)$/)).filter(Boolean);
+    parts.forEach(pt=>base.push(mkTopItem(m[1].trim(),'',pt[1].charAt(0).toUpperCase()+pt[1].slice(1),+pt[2],+i.price||0)))});
+  if(!base.length)return null;
+  const models=[...new Set(base.map(b=>b.top.n))].sort((a,b)=>b.length-a.length),rest=[];
+  items.forEach(i=>{const n=normClr(i.name);const mdl=models.find(m=>n===normClr(m)||n.startsWith(normClr(m)+' ')||n.startsWith(normClr(m)+'('));
+    if(mdl){base.filter(b=>b.top.n===mdl).forEach(b=>{if(+i.price>0)b.price=+i.price})}else rest.push({...i})});
+  return [...base,...rest];
+}
 function reqToOrder(r){
-  const items=r.items||[],oitems=[];
-  items.forEach(i=>{const cls=(i.colors||[]).filter(c=>+c.qty>0);
-    const rows=cls.length?cls.map(c=>({c:c.name||'',q:+c.qty||0})):[{c:'',q:+i.qty||0}];
-    rows.forEach(rw=>{const it={id:uid(),name:i.model+(rw.c?' — '+String(rw.c).toLowerCase():''),price:+i.price||0,qty:rw.q,unit:'шт',made:0,top:{m:i.modelId||'',n:i.model||'',c:rw.c}};
-      const tc=topperItemCost(it);if(tc){it.cost=tc.cost;it.pid=tc.pid;it.p3d=tc.p3d}else{const px=topperPrice(it.top.m,it.top.n);if(px)it.pid=px.id}
-      oitems.push(it)})});
+  const oitems=reqItemsSplit(r);
   const desc=r.customDesc?'Своя модель: '+r.customDesc:'';
   const notes=[r.name?'Контакт: '+r.name:'',r.note?'Комментарий клиента: '+r.note:'','Заявка с сайта топперов № '+(r.code||r.id)].filter(Boolean).join('\n');
   return {client:r.cafe||r.name||'Заявка с сайта',service:'print3d',items:oitems,unit:'шт',desc,price:+r.total||null,notes,status:'new',
@@ -2811,6 +2832,7 @@ function oiProg(i){const q=+i.qty||0,m=Math.min(+i.made||0,q),pc=q?Math.round(m/
   return `<span class="oi-pr${m>=q&&q?' full':''}"><label>сделано</label><input type="number" min="0" max="${q}" step="1" inputmode="numeric" data-oimade="${esc(i.id)}" value="${m}" aria-label="Сколько сделано: ${esc(i.name)}" ${canWrite?'':'disabled'}><span>из ${fmtQty(q)}</span><span class="bar"><span class="fill" style="width:${pc}%"></span></span>${canWrite?`<button type="button" class="oi-all" data-oiall="${esc(i.id)}" title="Отметить всё сделанным"${m>=q?' hidden':''}>всё</button>`:''}</span>`}
 function renderItems(){
   $('oi-list').innerHTML=edItems.map(i=>`<div class="oi${oiEditId===i.id?' edit':''}" role="button" tabindex="0" data-oiedit="${esc(i.id)}"><span class="ot"><b>${esc(i.name)}</b><small>${fmtQty(i.qty)} ${esc(i.unit||'шт')} × ${money(i.price)}</small>${tracked(i)?oiProg(i):''}</span><span class="os">${money((+i.price||0)*(+i.qty||0))}</span>${canWrite?`<button class="tdel" type="button" data-oirm="${esc(i.id)}" aria-label="Убрать позицию ${esc(i.name)}">×</button>`:'<span></span>'}</div>`).join('');
+  const cv=$('oi-conv');cv.hidden=!edConvFrom;if(edConvFrom)cv.innerHTML=`<span>Позиции из заявки разложены по моделям и цветам: можно отмечать, сколько сделано, удалять и добавлять позиции. Нажмите «Сохранить», чтобы оставить так.</span><button class="linkbtn" type="button" data-convundo>Вернуть как было</button>`;
   const t=$('oi-tot');t.hidden=!edItems.length;
   if(edItems.length)t.innerHTML=`<span>${edItems.length} ${plural(edItems.length,'позиция','позиции','позиций')}</span><span>Итого: <b>${money(itemsTotal(edItems))}</b></span>`;
   $('oi-add').hidden=!canWrite;priceHint();
@@ -3417,6 +3439,7 @@ document.addEventListener('click',e=>{
   if(t.closest('[data-ttcancel]')){editTime=null;ttDraft=null;render();return}
   const tcl=t.closest('[data-ttclear]');if(tcl){saveTaskTime(tcl.dataset.ttclear,'','');return}
   const tsv=t.closest('[data-ttsave]');if(tsv){const w=tsv.closest('[data-tted]');saveTaskTime(tsv.dataset.ttsave,w.querySelector('[data-ttf]').value||'',w.querySelector('[data-ttt]').value||'');return}
+  if(t.closest('[data-convundo]')&&edConvFrom){const prev=edAutoTotal();edItems=edConvFrom;edConvFrom=null;oiClear();kSyncPrice(prev);renderItems();toast('Позиции вернули как было');return}
   const tg=t.closest('[data-ttog]');if(tg){const id=tg.dataset.ttog;openToday.has(id)?openToday.delete(id):openToday.add(id);render();return}
   if(t.closest('[data-todaymore]')){todayAllOrders=!todayAllOrders;render();return}
   const cmt=t.closest('[data-cmtog]');if(cmt){const id=cmt.dataset.cmtog;openCm.has(id)?openCm.delete(id):openCm.add(id);render();setTimeout(()=>document.querySelector('[data-cmtext="'+CSS.escape(id)+'"]')?.focus(),0);return}
