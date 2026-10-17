@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018023531">
+<meta name="app-build" content="20261018025628">
 <link rel="icon" href="favicon.ico?v=2" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
@@ -117,6 +117,11 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 #w-print .prow small{white-space:normal}
 #w-print .pbar{display:block;height:5px;border-radius:999px;margin-top:5px;background:color-mix(in srgb,var(--sc) 15%,var(--tile));overflow:hidden;max-width:260px}
 #w-print .pbar span{display:block;height:100%;border-radius:999px;background:var(--sc)}
+#w-print .perr,#w-print .pwarn{display:flex;align-items:flex-start;gap:6px;margin-top:4px;font-weight:600;white-space:normal}
+#w-print .perr{color:var(--danger)}#w-print .pwarn{color:var(--st-prod)}
+#w-print .perr::before,#w-print .pwarn::before{content:"!";flex:none;width:15px;height:15px;border-radius:50%;background:var(--danger);color:#fff;font:800 10.5px/15px var(--f);text-align:center;margin-top:1px}
+#w-print .pwarn::before{background:var(--st-prod)}
+#w-print .perr-row{box-shadow:inset 3px 0 0 var(--danger)}
 #w-print .pst2{justify-self:end;align-self:center}
 #w-print .go{text-decoration:none;white-space:nowrap;flex:none}
 .pst2{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--f);padding:5px 11px;border-radius:999px;background:color-mix(in srgb,var(--sc) 13%,transparent);color:var(--sc);white-space:nowrap}
@@ -3604,6 +3609,14 @@ function printWhen(ts){
 }
 const PSTATE={RUNNING:{k:'RUNNING',l:'печатает',c:'--blue',busy:1},PRINTING:{k:'RUNNING',l:'печатает',c:'--blue',busy:1},PREPARE:{k:'PREPARE',l:'готовится',c:'--st-prod',busy:1},SLICING:{k:'PREPARE',l:'готовится',c:'--st-prod',busy:1},
   PAUSE:{k:'PAUSE',l:'пауза',c:'--st-prod',busy:1},PAUSED:{k:'PAUSE',l:'пауза',c:'--st-prod',busy:1},FINISH:{k:'FINISH',l:'свободен',c:'--ok'},FAILED:{k:'FAILED',l:'ошибка печати',c:'--danger'},IDLE:{k:'IDLE',l:'свободен',c:'--ok'}};
+/* ошибки печати Bambu (print_error): код → понятный текст */
+const PERR={'0300_8004':'Закончился пластик: вставьте новый','0700_8011':'В AMS закончился пластик: вставьте новую катушку в тот же слот','1201_8015':'Пластик застрял или оборвался в экструдере','07FF_8003':'Оборвался пластик: уберите остаток с держателя катушки',
+  '0300_4006':'Засорилось сопло','0300_8016':'Засорилось сопло','0700_8007':'Пластик не подаётся, возможно засор экструдера','0300_400C':'Печать отменена','0300_8001':'Печать на паузе: поставили вручную',
+  '0300_8009':'Проблема с нагревом стола','0300_8008':'Печать остановлена: проблема с температурой сопла','0500_403A':'Слишком холодно в помещении, принтер не печатает','0300_4008':'AMS не смог сменить пластик','0700_8004':'AMS не смог вытянуть пластик назад',
+  '0C00_8001':'Дефект первого слоя: проверьте и продолжите','0300_8002':'Дефект первого слоя: проверьте и продолжите','0300_8003':'Печать сорвалась («спагетти»)','0C00_8002':'Печать сорвалась («спагетти»)','0300_8017':'Посторонний предмет на столе: уберите и продолжите',
+  '0300_8005':'Слетела передняя крышка головы','0300_800F':'Открыта дверца, печать на паузе','0300_400D':'Не удалось продолжить после отключения света','0300_8007':'Печать прервана отключением света','0300_4009':'Ошибка калибровки осей X и Y','0300_4000':'Ошибка калибровки оси Z'};
+function perrKey(e){if(e==null||e===''||e===0||e==='0')return '';const h=(typeof e==='number'?e.toString(16):String(e).replace(/[^0-9a-f]/gi,'')).toUpperCase().padStart(8,'0').slice(-8);return /^0+$/.test(h)?'':h.slice(0,4)+'_'+h.slice(4)}
+function perrText(e,txt){const k=perrKey(e);if(!k&&!txt)return '';if(k&&PERR[k])return PERR[k];if(/^07[0-9A-F]{2}_8011$/.test(k))return 'В AMS закончился пластик';if(txt)return String(txt);return 'Ошибка принтера, код '+k+': подробности в Bambu Handy'}
 function printDur(ms){const m=Math.round(ms/6e4);if(m<60)return m+' мин';const h=Math.floor(m/60),r=m%60;return h+' ч'+(r?' '+r+' мин':'')}
 async function loadPrinters(){
   const list=$('w-print-list'),note=$('w-print-note');if(!list)return;
@@ -3618,11 +3631,15 @@ async function loadPrinters(){
       if(st){c=st.c;l=st.l;
         const pc=p.progress!=null&&p.progress!==''?Math.max(0,Math.min(100,Math.round(+p.progress))):null;
         const base=p.updated||s.lastCheck||s.now||Date.now(),end=p.remain!=null&&p.remain!==''?base+(+p.remain)*6e4:null,left=end?Math.max(0,end-Date.now()):null;
-        if(st.busy){sub=[p.task?'«'+p.task+'»':'',pc!=null?pc+'%':'',left!=null?(left>0?'осталось '+printDur(left)+', до '+new Date(end).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'вот-вот закончит'):''].filter(Boolean).join(' · ')||sub;
+        if(st.busy){sub=[p.task?'«'+p.task+'»':'',pc!=null?pc+'%':'',st.k==='PAUSE'&&p.remain!=null&&p.remain!==''?'осталось '+printDur((+p.remain)*6e4)+' печати':left!=null?(left>0?'осталось '+printDur(left)+', до '+new Date(end).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'вот-вот закончит'):''].filter(Boolean).join(' · ')||sub;
           if(pc!=null)bar=`<span class="pbar" style="--sc:var(${c})"><span style="width:${pc}%"></span></span>`}
         else if(p.task&&(st.k==='FINISH'||st.k==='FAILED'))sub=(st.k==='FINISH'?'напечатал ':'не допечатал ')+'«'+p.task+'»';
       }
-      return `<div class="mrow prow"><span><b>${esc(p.name)}</b><small>${esc(sub)}</small>${bar}</span><span class="pst2" style="--sc:var(${c})">${l}</span></div>`;
+      /* ошибка печати и предупреждения принтера (HMS) */
+      const er=p.online?perrText(p.error,p.errorText):'';
+      const hm=p.online&&Array.isArray(p.hms)?p.hms:[];const hmTxt=hm.length?(hm.map(h=>h&&(h.text||h.ru)).filter(Boolean)[0]||'Есть предупреждения принтера ('+hm.length+'): смотрите в Bambu Handy'):'';
+      if(er&&st&&st.k!=='FAILED'&&st.k!=='FINISH'&&st.k!=='IDLE'){c='--danger';l=st.k==='PAUSE'?'остановился':l}
+      return `<div class="mrow prow${er?' perr-row':''}"><span><b>${esc(p.name)}</b><small>${esc(sub)}</small>${bar}${er?`<small class="perr">${esc(er)}</small>`:''}${hmTxt&&!er?`<small class="pwarn">${esc(hmTxt)}</small>`:''}</span><span class="pst2" style="--sc:var(${c})">${l}</span></div>`;
     }).join(''):`<div class="mrow prow"><span><b>${esc(ERR[s.error]||'Принтеров нет')}</b></span><span></span></div>`;
     note.textContent=[s.error&&s.printers.length?ERR[s.error]:'',s.pausedUntil?'тревога на паузе до '+new Date(s.pausedUntil).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'',s.lastCheck?'проверка '+printWhen(s.lastCheck):'автопроверка ещё не запускалась'].filter(Boolean).join(' · ');
   }catch(e){list.innerHTML='<div class="mrow prow"><span><b>Нет связи с наблюдением</b><small>Попробуем снова через минуту</small></span><span></span></div>';note.textContent=''}
