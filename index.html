@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018001308">
+<meta name="app-build" content="20261018002418">
 <link rel="icon" href="favicon.ico?v=2" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
@@ -1698,7 +1698,8 @@ function kaspiSum(lines,fee){
   const rev=(lines||[]).reduce((s,l)=>s+(+l.price||0)*(+l.qty||0),0),cost=(lines||[]).reduce((s,l)=>s+(+l.cost||0)*(+l.qty||0),0),com=rev*(+fee||0)/100;
   return {rev,cost,com,total:cost+com,profit:rev-cost-com,n:(lines||[]).reduce((s,l)=>s+(+l.qty||0),0)};
 }
-const itemsCost=list=>(list||[]).reduce((s,i)=>s+(+i.cost||0)*(+i.qty||0),0);
+const itemCostOf=i=>i.cost!=null&&i.cost!==''?+i.cost||0:i.top&&typeof topperItemCost==='function'?((topperItemCost(i)||{}).cost||0):0;
+const itemsCost=list=>(list||[]).reduce((s,i)=>s+itemCostOf(i)*(+i.qty||0),0);
 const costOf=o=>(o.expenses||[]).reduce((s,e)=>s+(+e.amount||0),0)+itemsCost(o.items)+((o.kaspi||[]).length?kaspiSum(o.kaspi,kaspiFeeOf(o)).total:0);
 const uid=()=>Math.random().toString(36).slice(2,10);
 /* дд.мм -> ГГГГ-ММ-ДД, год текущий */
@@ -2292,7 +2293,7 @@ function renderPrices(){
       return `<button type="button" class="prow item" data-qopen="${esc(x.id)}">
         <div class="cell c-n"><b>${esc(x.name)}${x.hidden&&!client?'<span class="hid">скрыто</span>':''}</b>${x.desc?`<small style="white-space:normal">${esc(x.desc)}</small>`:''}</div>
         <div class="unit">${esc(x.unit||'шт')}</div>
-        <div class="pr"><b>${x.calc?'от '+money(calcMin(x.calc)):priceTxt(x)}</b>${!client&&x.t3d&&!x.calc3d?((+x.t3d.g>0||+x.t3d.min>0)?`<small>себестоимость ≈ ${money(Math.round(unitCostOf(x)*10)/10)}: ${fmtQty(+x.t3d.g||0)} г, ${fmtQty(+x.t3d.min||0)} мин</small>`:'<small class="warn">себестоимость: впишите граммы и минуты на 1 шт</small>'):''}${x.calc3d?`<small>по расчёту: пластик из закупок + принтер ${money(x.calc3d.hour)}/ч, наценка ${x.calc3d.markup}%</small>`:''}${!client&&!x.calc&&!x.calc3d&&!x.t3d&&unitCostOf(x)?`<small>себестоимость ${money(unitCostOf(x))}</small>`:''}${x.calc?`<small>плёнка ${x.calc.vinyl.map(money).join(' / ')} + монтажная ${x.calc.mount.map(money).join(' / ')}, наценка ${x.calc.markup}%</small>`:''}${tiers.map(t=>`<small>при заказе от ${t.qty} шт: ${money(t.price)}</small>`).join('')}</div>
+        <div class="pr"><b>${x.calc?'от '+money(calcMin(x.calc)):priceTxt(x)}</b>${!client&&x.t3d&&!x.calc3d?((+x.t3d.g>0||+x.t3d.min>0)?`<small>себестоимость ≈ ${money(Math.round(unitCostOf(x)*10)/10)}: ${fmtQty(+x.t3d.g||0)} г, ${fmtQty(+x.t3d.min||0)} мин</small>`:x.cost!=null&&x.cost!==''?`<small>себестоимость ${money(+x.cost)}</small>`:'<small class="warn">себестоимость: впишите сумму или граммы и минуты на 1 шт</small>'):''}${x.calc3d?`<small>по расчёту: пластик из закупок + принтер ${money(x.calc3d.hour)}/ч, наценка ${x.calc3d.markup}%</small>`:''}${!client&&!x.calc&&!x.calc3d&&!x.t3d&&unitCostOf(x)?`<small>себестоимость ${money(unitCostOf(x))}</small>`:''}${x.calc?`<small>плёнка ${x.calc.vinyl.map(money).join(' / ')} + монтажная ${x.calc.mount.map(money).join(' / ')}, наценка ${x.calc.markup}%</small>`:''}${tiers.map(t=>`<small>при заказе от ${t.qty} шт: ${money(t.price)}</small>`).join('')}</div>
       </button>`}).join('')}</section>`).join('');
 }
 function prText(){
@@ -2328,7 +2329,7 @@ const readQt=()=>({g:$('qt-g').value===''?null:Math.max(0,+$('qt-g').value),min:
 function qtShow(){const on=qtOn();$('q-t3d').hidden=!on;const t=readQt(),has=on&&(+t.g>0||+t.min>0);$('q-cost-w').hidden=!!qCalc||!!qCalc3d||has;if(on)qtRes()}
 function qtRes(){const t=readQt(),c=t3dCost(t);
   $('qt-res').textContent=c?`≈ ${money(Math.round(c.cost*100)/100)} за 1 шт: ${fmtQty(+t.g||0)} г × ${ppgTxt(c.ppg)} ₸ (${c.noPl?'закупок пластика пока нет':c.pl}) + ${fmtQty(+t.min||0)} мин работы принтера по ${money(c.hr)}/ч. В заказе пластик берётся по цвету.`
-    :'Впишите, сколько грамм уходит на 1 шт и сколько минут она печатается (время стола ÷ количество штук на столе). Себестоимость будет считаться сама.'}
+    :'Необязательно. Можно вписать готовую себестоимость за 1 шт ниже. Или граммы и минуты печати (время стола ÷ штук на столе), тогда она будет считаться сама.'}
 const readQ3=()=>({markup:$('q3-mk').value===''?250:Math.max(0,+$('q3-mk').value),hour:$('q3-hr').value===''?PRINTER_HOUR:Math.max(0,+$('q3-hr').value)});
 function q3Res(){const c=readQ3(),pl=plasticPrices()[0],ppg=pl?pl.ppg:10,o={g:100,h:3,ppg,mk:c.markup,hr:c.hour};
   $('q3-res').textContent=`В заказе менеджер вписывает граммы и часы печати на 1 шт, цена грамма берётся из закупок пластика. Цена = (граммы × цена грамма + часы × ${money(c.hour)}) + наценка ${c.markup}%. Например, 100 г ${pl?esc(pl.name)+' по '+ppgTxt(ppg)+' ₸':'по 10 ₸ (для примера)'} и 3 часа: себестоимость ${money(Math.round(p3dCost(o)))}, цена ${money(p3dPrice(o))}. Цена выше — это «от» для клиентов в прайсе.`}
@@ -2527,7 +2528,7 @@ function openEditor(id,preset={}){
   edK=(o.kaspi||[]).map(l=>({...l}));$('k-fee').value=kaspiFeeOf(o);kClear();
   edOrig=o;edItems=(o.items||[]).map(i=>({...i}));edConvFrom=null;
   if(id!=='new'&&canWrite){const sp=splitOldTopItems(o);if(sp){edConvFrom=edItems;edItems=sp}}
-  edItems.forEach(i=>{if(i.top&&(i.cost==null||i.cost==='')){const tc=topperItemCost(i);if(tc){i.cost=tc.cost;i.p3d=tc.p3d;if(!i.pid)i.pid=tc.pid}}});
+  edItems.forEach(i=>{if(i.top&&(i.cost==null||i.cost==='')){const tc=topperItemCost(i);if(tc){i.cost=tc.cost;if(tc.p3d)i.p3d=tc.p3d;if(!i.pid)i.pid=tc.pid}}});
   oiClear();renderItems();
   $('f-desc').value=o.desc||'';
   setDM($('f-deadline'),o.deadline||'');setDM($('f-dfrom'),o.deadlineFrom||'');
@@ -2680,12 +2681,14 @@ function renderReqBadge(){const n=requests.filter(r=>(r.status||'new')==='new').
 function topperPrice(modelId,name){const n=normClr(name);return prices.find(x=>x.topper&&modelId&&x.topper===modelId)||prices.find(x=>x.topper&&n&&(normClr(x.name).includes('«'+n+'»')||normClr(x.name)===n))||null}
 /* себестоимость позиции-топпера: граммы и минуты из прайса, пластик по цвету */
 function topperItemCost(it){
-  const px=it.top&&topperPrice(it.top.m,it.top.n);if(!px||!px.t3d)return null;const c=t3dCost(px.t3d,it.top.c);if(!c)return null;
-  return {cost:c.cost,pid:px.id,p3d:{g:+px.t3d.g||0,h:Math.round((+px.t3d.min||0)/60*1000)/1000,ppg:Math.round(c.ppg*100)/100,pl:c.pl,hr:c.hr,u:1}};
+  const px=it.top&&topperPrice(it.top.m,it.top.n);if(!px)return null;
+  const c=px.t3d&&t3dCost(px.t3d,it.top.c);
+  if(c)return {cost:c.cost,pid:px.id,p3d:{g:+px.t3d.g||0,h:Math.round((+px.t3d.min||0)/60*1000)/1000,ppg:Math.round(c.ppg*100)/100,pl:c.pl,hr:c.hr,u:1}};
+  return px.cost!=null&&px.cost!==''?{cost:+px.cost,pid:px.id,p3d:null}:null;
 }
 function mkTopItem(model,modelId,color,qty,price){
   const it={id:uid(),name:model+(color?' — '+String(color).toLowerCase():''),price:+price||0,qty:+qty||0,unit:'шт',made:0,top:{m:modelId||'',n:model||'',c:color||''}};
-  const tc=topperItemCost(it);if(tc){it.cost=tc.cost;it.pid=tc.pid;it.p3d=tc.p3d}else{const px=topperPrice(it.top.m,it.top.n);if(px)it.pid=px.id}
+  const tc=topperItemCost(it);if(tc){it.cost=tc.cost;it.pid=tc.pid;if(tc.p3d)it.p3d=tc.p3d}else{const px=topperPrice(it.top.m,it.top.n);if(px)it.pid=px.id}
   return it;
 }
 function reqItemsSplit(r){const out=[];(r.items||[]).forEach(i=>{const cls=(i.colors||[]).filter(c=>+c.qty>0);
@@ -2811,6 +2814,10 @@ async function importPendingPrices(){
   try{const mk=await db.doc('blobs/_import_costs_v3').get();if(!mk.exists){
     for(const [id,c] of Object.entries(PRICE_COSTS_3)){const x=prices.find(y=>y.id===id);if(x&&(x.cost==null||x.cost==='')){try{await db.doc('prices/'+id).update({cost:c})}catch(_){}}}
     await db.doc('blobs/_import_costs_v3').set({done:true,at:Date.now()})}}catch(_){}
+  try{const mk=await db.doc('blobs/_import_topper_costs_v7').get();if(!mk.exists){
+    for(const it of PENDING_PRICES_6){const ref=db.doc('prices/'+it.id),cur=await ref.get();if(!cur.exists)continue;const d=cur.data()||{};
+      if(d.cost!=null&&d.cost!=='')continue;await ref.update({cost:(+d.price||+it.price)>=35?8:6,updatedAt:Date.now()})}
+    await db.doc('blobs/_import_topper_costs_v7').set({done:true,at:Date.now()})}}catch(_){}
   try{const mk=await db.doc('blobs/_import_p3d_calc_v5').get();if(!mk.exists){
     const ref=db.doc('prices/p3d-hour'),cur=await ref.get(),now=Date.now();
     if(cur.exists&&!(cur.data()||{}).calc3d)await ref.update({unit:'шт',from:true,desc:'Пластик по граммам и работа принтера по часам, плюс наценка',calc3d:{markup:250,hour:PRINTER_HOUR},updatedAt:now});
