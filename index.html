@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261014153138">
+<meta name="app-build" content="20261018000911">
 <link rel="icon" href="favicon.ico?v=2" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
@@ -357,6 +357,15 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .oi .ot b{font:600 14.5px/1.3 var(--f);overflow-wrap:anywhere}
 .oi .ot small{color:var(--muted);font-size:12.5px}
 .oi .os{font:700 14.5px var(--f);white-space:nowrap}
+.oi-pr{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:12px;color:var(--muted);cursor:default;flex-wrap:wrap}
+.oi-pr label{font-weight:600}
+.oi-pr input{width:64px;min-height:30px;border:0;border-radius:8px;background:var(--paper);padding:0 8px;font:600 13px var(--f);color:var(--ink)}
+.oi-pr .bar{flex:1 1 60px;min-width:50px;max-width:160px;height:6px;border-radius:999px;background:color-mix(in srgb,var(--ok) 16%,var(--paper));overflow:hidden}
+.oi-pr .bar .fill{display:block;height:100%;background:var(--ok);border-radius:999px;transition:width .2s}
+.oi-pr.full{color:var(--ok)}.oi-pr.full label{color:var(--ok)}
+.mrow small .mt{color:var(--ok);font-weight:600}
+.oi-all{font:600 12px var(--f);color:var(--blue);padding:4px 6px}
+@media(max-width:600px){.oi-pr{display:grid;grid-template-columns:auto 56px auto auto;justify-content:start;gap:5px 6px}.oi-pr input{min-height:30px;height:30px;width:56px}.oi-pr .bar{grid-column:1/-1;max-width:none;order:9}}
 .oi-add{display:grid;grid-template-columns:minmax(0,1fr) 112px 112px auto;gap:6px;align-items:center}
 .oi-add .oi-q span{font-size:11.5px}
 .oi-add input{border:0;background:var(--tile);border-radius:12px;min-height:44px;padding:0 12px;width:100%;min-width:0}
@@ -1501,6 +1510,14 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         </div>
         <span class="hint" id="qc-res"></span>
       </div>
+      <div class="calc" id="q-t3d" hidden>
+        <b style="font:700 14px var(--f)">Себестоимость 1 шт по 3D-печати</b>
+        <div class="grid2">
+          <div class="fld"><label for="qt-g">Пластик на 1 шт</label><div class="suffix"><input id="qt-g" type="number" min="0" step="any" inputmode="decimal" placeholder="Граммы"><span>г</span></div></div>
+          <div class="fld"><label for="qt-min">Печать 1 шт</label><div class="suffix"><input id="qt-min" type="number" min="0" step="any" inputmode="decimal" placeholder="Минуты"><span>мин</span></div></div>
+        </div>
+        <span class="hint" id="qt-res"></span>
+      </div>
       <div class="calc" id="q-calc3d" hidden>
         <b style="font:700 14px var(--f)">Расчёт цены 3D-печати</b>
         <div class="grid2">
@@ -1590,7 +1607,7 @@ let prices=[],pricesLoaded=false,prMode='studio',prSvc='all',prQ='',qEditing=nul
 const KASPI_FEE=0.30;
 const qCost=x=>(+x.mat||0)+(+x.work||0)+(+x.extra||0);
 /* себестоимость единицы по прайсу: поле cost, расчёт винила или старые поля mat/work/extra */
-const unitCostOf=x=>!x?0:x.calc?calcCost(x.calc):x.cost!=null&&x.cost!==''?+x.cost:qCost(x);
+const unitCostOf=x=>!x?0:x.calc?calcCost(x.calc):x.t3d&&(+x.t3d.g>0||+x.t3d.min>0)?(t3dCost(x.t3d)||{cost:0}).cost:x.cost!=null&&x.cost!==''?+x.cost:qCost(x);
 const mkPct=(price,cost)=>cost>0?Math.round((price-cost)/cost*100):null;
 const mkColor=m=>m===null?'--muted':m<50?'--danger':m<100?'--st-prod':'--ok';
 const priceTxt=x=>+x.price===0?'Бесплатно':(x.from?'от ':'')+money(x.price);
@@ -1862,10 +1879,11 @@ function sortOrders(a,b){
 }
 
 /* ---------- общие куски ---------- */
+function madeTxt(o){const r=madeOf(o);return r.q&&(r.m>0||o.source==='toppers')?'сделано '+fmtQty(r.m)+' из '+fmtQty(r.q):''}
 function orderMini(o){
-  const due=relDue(o);const s=ST[o.status]||ST.new;
+  const due=relDue(o);const s=ST[o.status]||ST.new;const mt=madeTxt(o);
   return `<button type="button" class="mrow" data-open="${esc(o.id)}">
-    <span style="min-width:0;display:flex;flex-direction:column"><b>${esc(o.client)}</b><small>№ ${String(o.num||0).padStart(3,'0')}, ${esc(svcLabel(o.service,o))}${itemsText(o)||o.desc?', '+esc(itemsText(o)||o.desc):''}</small></span>
+    <span style="min-width:0;display:flex;flex-direction:column"><b>${esc(o.client)}</b><small>№ ${String(o.num||0).padStart(3,'0')}, ${mt?`<span class="mt">${esc(mt)}</span>, `:''}${esc(svcLabel(o.service,o))}${itemsText(o)||o.desc?', '+esc(itemsText(o)||o.desc):''}</small></span>
     <span class="r"><span class="dotlbl" style="--sc:var(${s.c})">${s.label}</span><small class="${due.cls}">${o.deadline?fmtRange(o.deadlineFrom,o.deadline)+', ':''}${due.txt}</small></span></button>`;
 }
 function bossParts(t){
@@ -2272,7 +2290,7 @@ function renderPrices(){
       return `<button type="button" class="prow item" data-qopen="${esc(x.id)}">
         <div class="cell c-n"><b>${esc(x.name)}${x.hidden&&!client?'<span class="hid">скрыто</span>':''}</b>${x.desc?`<small style="white-space:normal">${esc(x.desc)}</small>`:''}</div>
         <div class="unit">${esc(x.unit||'шт')}</div>
-        <div class="pr"><b>${x.calc?'от '+money(calcMin(x.calc)):priceTxt(x)}</b>${x.calc3d?`<small>по расчёту: пластик из закупок + принтер ${money(x.calc3d.hour)}/ч, наценка ${x.calc3d.markup}%</small>`:''}${!client&&!x.calc&&!x.calc3d&&unitCostOf(x)?`<small>себестоимость ${money(unitCostOf(x))}</small>`:''}${x.calc?`<small>плёнка ${x.calc.vinyl.map(money).join(' / ')} + монтажная ${x.calc.mount.map(money).join(' / ')}, наценка ${x.calc.markup}%</small>`:''}${tiers.map(t=>`<small>при заказе от ${t.qty} шт: ${money(t.price)}</small>`).join('')}</div>
+        <div class="pr"><b>${x.calc?'от '+money(calcMin(x.calc)):priceTxt(x)}</b>${!client&&x.t3d&&!x.calc3d?((+x.t3d.g>0||+x.t3d.min>0)?`<small>себестоимость ≈ ${money(Math.round(unitCostOf(x)*10)/10)}: ${fmtQty(+x.t3d.g||0)} г, ${fmtQty(+x.t3d.min||0)} мин</small>`:'<small class="warn">себестоимость: впишите граммы и минуты на 1 шт</small>'):''}${x.calc3d?`<small>по расчёту: пластик из закупок + принтер ${money(x.calc3d.hour)}/ч, наценка ${x.calc3d.markup}%</small>`:''}${!client&&!x.calc&&!x.calc3d&&!x.t3d&&unitCostOf(x)?`<small>себестоимость ${money(unitCostOf(x))}</small>`:''}${x.calc?`<small>плёнка ${x.calc.vinyl.map(money).join(' / ')} + монтажная ${x.calc.mount.map(money).join(' / ')}, наценка ${x.calc.markup}%</small>`:''}${tiers.map(t=>`<small>при заказе от ${t.qty} шт: ${money(t.price)}</small>`).join('')}</div>
       </button>`}).join('')}</section>`).join('');
 }
 function prText(){
@@ -2282,7 +2300,7 @@ function prText(){
       (x.tiers||[]).filter(r=>r.qty&&r.price).sort((a,b)=>a.qty-b.qty).forEach(r=>{t+='   при заказе от '+r.qty+' шт: '+money(r.price)+'\n'})})});
   return t+'\nInstagram: @raz.brandstudio';
 }
-function renderQSvc(){$('q-svc').innerHTML=SERVICES.map(s=>`<button type="button" data-qsvc="${s.id}" aria-pressed="${qSvc===s.id}" ${canWrite?'':'disabled'}>${esc(s.label)}</button>`).join('')}
+function renderQSvc(){$('q-svc').innerHTML=SERVICES.map(s=>`<button type="button" data-qsvc="${s.id}" aria-pressed="${qSvc===s.id}" ${canWrite?'':'disabled'}>${esc(s.label)}</button>`).join('');if($('q-t3d'))qtShow()}
 function openQ(id){
   qEditing=id;applyRoleWrite();const x=id==='new'?{svc:prSvc!=='all'?prSvc:'vinyl',unit:'шт',cost:{}}:prices.find(r=>r.id===id);if(!x)return;
   $('q-h').textContent=id==='new'?'Новая позиция':x.name;
@@ -2293,6 +2311,7 @@ function openQ(id){
   qTiers=(x.tiers||[]).filter(t=>t.qty&&t.price!=null).map(t=>({qty:t.qty,price:t.price}));renderQTiers();
   qCalc=x.calc?{...x.calc}:null;$('q-calc').hidden=!qCalc;qCalc3d=x.calc3d?{...x.calc3d}:null;$('q-calc3d').hidden=!qCalc3d;$('q-cost-w').hidden=!!qCalc||!!qCalc3d;
   if(qCalc3d){$('q3-mk').value=qCalc3d.markup??250;$('q3-hr').value=qCalc3d.hour??PRINTER_HOUR;q3Res()}
+  $('qt-g').value=x.t3d&&x.t3d.g!=null?x.t3d.g:'';$('qt-min').value=x.t3d&&x.t3d.min!=null?x.t3d.min:'';qtShow();
   $('q-cost').value=x.calc?'':(x.cost!=null&&x.cost!==''?x.cost:(qCost(x)||''));
   if(qCalc){$('qc-v').value=qCalc.vinyl.join(', ');$('qc-m').value=qCalc.mount.join(', ');$('qc-mk').value=qCalc.markup;$('qc-roll').value=qCalc.roll||126;qcRes()}
   $('q-meta').textContent=x.updatedAt?'Цена обновлена '+new Date(x.updatedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}):'';
@@ -2301,6 +2320,13 @@ function openQ(id){
   $('qed').hidden=false;document.querySelectorAll('#qed .ed-body').forEach(b=>b.scrollTop=0);setTimeout(()=>{if(canWrite&&id==='new')$('q-name').focus()},50);
 }
 let qCalc=null,qCalc3d=null;
+/* граммы и минуты печати на 1 шт — для 3D-позиций (топперы, брелоки…), кроме «3D-печати своей модели» */
+const qtOn=()=>P3D_SVC.has(qSvc)&&!qCalc3d;
+const readQt=()=>({g:$('qt-g').value===''?null:Math.max(0,+$('qt-g').value),min:$('qt-min').value===''?null:Math.max(0,+$('qt-min').value)});
+function qtShow(){const on=qtOn();$('q-t3d').hidden=!on;const t=readQt(),has=on&&(+t.g>0||+t.min>0);$('q-cost-w').hidden=!!qCalc||!!qCalc3d||has;if(on)qtRes()}
+function qtRes(){const t=readQt(),c=t3dCost(t);
+  $('qt-res').textContent=c?`≈ ${money(Math.round(c.cost*100)/100)} за 1 шт: ${fmtQty(+t.g||0)} г × ${ppgTxt(c.ppg)} ₸ (${c.noPl?'закупок пластика пока нет':c.pl}) + ${fmtQty(+t.min||0)} мин работы принтера по ${money(c.hr)}/ч. В заказе пластик берётся по цвету.`
+    :'Впишите, сколько грамм уходит на 1 шт и сколько минут она печатается (время стола ÷ количество штук на столе). Себестоимость будет считаться сама.'}
 const readQ3=()=>({markup:$('q3-mk').value===''?250:Math.max(0,+$('q3-mk').value),hour:$('q3-hr').value===''?PRINTER_HOUR:Math.max(0,+$('q3-hr').value)});
 function q3Res(){const c=readQ3(),pl=plasticPrices()[0],ppg=pl?pl.ppg:10,o={g:100,h:3,ppg,mk:c.markup,hr:c.hour};
   $('q3-res').textContent=`В заказе менеджер вписывает граммы и часы печати на 1 шт, цена грамма берётся из закупок пластика. Цена = (граммы × цена грамма + часы × ${money(c.hour)}) + наценка ${c.markup}%. Например, 100 г ${pl?esc(pl.name)+' по '+ppgTxt(ppg)+' ₸':'по 10 ₸ (для примера)'} и 3 часа: себестоимость ${money(Math.round(p3dCost(o)))}, цена ${money(p3dPrice(o))}. Цена выше — это «от» для клиентов в прайсе.`}
@@ -2325,6 +2351,7 @@ async function saveQ(e){
   const d={svc:qSvc,name,desc:$('q-desc').value.trim(),price,unit:$('q-unit').value.trim()||'шт',from:$('q-from').checked,
     ...(qCalc&&readQCalc()?{calc:readQCalc(),price:calcMin(readQCalc())}:{cost:$('q-cost').value===''?null:Math.max(0,+$('q-cost').value)}),
     ...(qCalc3d?{calc3d:readQ3(),cost:null}:{}),
+    ...(qtOn()?{t3d:readQt()}:{}),
     tiers:qTiers.filter(t=>+t.qty>1&&$('q-tiers')&&t.price!==''&&+t.price>=0).map(t=>({qty:+t.qty,price:+t.price})).sort((a,b)=>a.qty-b.qty),
     hidden:$('q-hidden').checked,notes:$('q-notes').value.trim(),updatedAt:Date.now()};
   const btn=$('q-save');btn.disabled=true;
@@ -2475,7 +2502,7 @@ function renderItemCosts(){
   const w=$('ic-w');if(!w)return;w.hidden=!edItems.length;if(!edItems.length)return;
   const L=$('ic-list'),ae=document.activeElement,keep=ae&&ae.dataset&&ae.dataset.icost;
   if(keep&&L.contains(ae)){L.querySelectorAll('[data-icsum]').forEach(el=>{const i=edItems.find(x=>x.id===el.dataset.icsum);if(i)el.textContent=money((+i.cost||0)*(+i.qty||0))});return}
-  L.innerHTML=edItems.map(i=>`<div class="exp ic"><b>${esc(i.name)}<small>${i.p3d?(i.p3d.u?'3D на 1 '+esc(i.unit||'шт')+': ':'3D: ')+fmtQty(i.p3d.g)+' г'+(i.p3d.pl?' '+esc(i.p3d.pl):'')+', '+fmtQty(i.p3d.h)+' ч печати · ':''}${fmtQty(i.qty)} ${esc(i.unit||'шт')} ×</small></b>
+  L.innerHTML=edItems.map(i=>`<div class="exp ic"><b>${esc(i.name)}<small>${i.p3d?(i.p3d.u?'3D на 1 '+esc(i.unit||'шт')+': ':'3D: ')+fmtQty(i.p3d.g)+' г'+(i.p3d.pl?' '+esc(i.p3d.pl):'')+', '+(+i.p3d.h<1?fmtQty(Math.round(i.p3d.h*600)/10)+' мин':fmtQty(i.p3d.h)+' ч')+' печати · ':''}${fmtQty(i.qty)} ${esc(i.unit||'шт')} ×</small></b>
     <div class="suffix ic-in"><input type="number" min="0" step="any" inputmode="decimal" data-icost="${esc(i.id)}" value="${i.cost!=null&&i.cost!==''?esc(i.cost):''}" placeholder="0" aria-label="Себестоимость за единицу: ${esc(i.name)}" ${canWrite?'':'disabled'}><span>₸</span></div>
     <span data-icsum="${esc(i.id)}">${money((+i.cost||0)*(+i.qty||0))}</span></div>`).join('');
 }
@@ -2496,7 +2523,9 @@ function openEditor(id,preset={}){
   edExp=(o.expenses||[]).map(e=>({...e}));edFiles=(o.files||[]).map(f=>({...f}));edFilesOrig=edFiles.map(f=>f.id);askFile=null;
   $('e-title').value='';$('e-amount').value='';
   edK=(o.kaspi||[]).map(l=>({...l}));$('k-fee').value=kaspiFeeOf(o);kClear();
-  edOrig=o;edItems=(o.items||[]).map(i=>({...i}));oiClear();renderItems();
+  edOrig=o;edItems=(o.items||[]).map(i=>({...i}));
+  edItems.forEach(i=>{if(i.top&&(i.cost==null||i.cost==='')){const tc=topperItemCost(i);if(tc){i.cost=tc.cost;i.p3d=tc.p3d;if(!i.pid)i.pid=tc.pid}}});
+  oiClear();renderItems();
   $('f-desc').value=o.desc||'';
   setDM($('f-deadline'),o.deadline||'');setDM($('f-dfrom'),o.deadlineFrom||'');
   setDM($('f-received'),id==='new'?(o.receivedAt||todayStr()):receivedOf(o));
@@ -2644,9 +2673,20 @@ function renderReqWidget(){
   $('req-done').hidden=!showReqDone||!done.length;$('req-done').innerHTML=showReqDone?done.slice(0,30).map(reqRow).join(''):'';
 }
 function renderReqBadge(){const n=requests.filter(r=>(r.status||'new')==='new').length,b=$('n-req');b.hidden=!n;b.textContent=n}
+/* модель топпера в прайсе: по id с сайта или по названию */
+function topperPrice(modelId,name){const n=normClr(name);return prices.find(x=>x.topper&&modelId&&x.topper===modelId)||prices.find(x=>x.topper&&n&&(normClr(x.name).includes('«'+n+'»')||normClr(x.name)===n))||null}
+/* себестоимость позиции-топпера: граммы и минуты из прайса, пластик по цвету */
+function topperItemCost(it){
+  const px=it.top&&topperPrice(it.top.m,it.top.n);if(!px||!px.t3d)return null;const c=t3dCost(px.t3d,it.top.c);if(!c)return null;
+  return {cost:c.cost,pid:px.id,p3d:{g:+px.t3d.g||0,h:Math.round((+px.t3d.min||0)/60*1000)/1000,ppg:Math.round(c.ppg*100)/100,pl:c.pl,hr:c.hr,u:1}};
+}
 function reqToOrder(r){
-  const items=r.items||[];
-  const oitems=items.map(i=>({id:uid(),name:i.model+((i.colors||[]).length?' ('+i.colors.map(c=>(c.name||'').toLowerCase()+' '+(+c.qty||0)).join(', ')+')':''),price:+i.price||0,qty:+i.qty||0,unit:'шт'}));
+  const items=r.items||[],oitems=[];
+  items.forEach(i=>{const cls=(i.colors||[]).filter(c=>+c.qty>0);
+    const rows=cls.length?cls.map(c=>({c:c.name||'',q:+c.qty||0})):[{c:'',q:+i.qty||0}];
+    rows.forEach(rw=>{const it={id:uid(),name:i.model+(rw.c?' — '+String(rw.c).toLowerCase():''),price:+i.price||0,qty:rw.q,unit:'шт',made:0,top:{m:i.modelId||'',n:i.model||'',c:rw.c}};
+      const tc=topperItemCost(it);if(tc){it.cost=tc.cost;it.pid=tc.pid;it.p3d=tc.p3d}else{const px=topperPrice(it.top.m,it.top.n);if(px)it.pid=px.id}
+      oitems.push(it)})});
   const desc=r.customDesc?'Своя модель: '+r.customDesc:'';
   const notes=[r.name?'Контакт: '+r.name:'',r.note?'Комментарий клиента: '+r.note:'','Заявка с сайта топперов № '+(r.code||r.id)].filter(Boolean).join('\n');
   return {client:r.cafe||r.name||'Заявка с сайта',service:'print3d',items:oitems,unit:'шт',desc,price:+r.total||null,notes,status:'new',
@@ -2730,13 +2770,14 @@ async function importPendingReq(){
 }
 /* прайс DTF (13.10): добавляется один раз, при входе руководителя */
 const PRICE_COSTS_3={"dtf-a3": 1500, "dtf-a4": 850, "dtf-a5": 470, "dtf-a6": 210, "dtf-transfer": 0, "dtf-prep": 0, "dtf-fix": 0, "dtf-logo": 0};
+const PENDING_PRICES_6=[{"id": "top-ghost-hat", "svc": "print3d", "name": "Топпер «Призрак в шапке»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 33, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 32}, {"qty": 200, "price": 31}], "order": 1300, "topper": "ghost_hat", "t3d": {"g": null, "min": null}}, {"id": "top-pig", "svc": "print3d", "name": "Топпер «Свинка»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 43, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 42}, {"qty": 200, "price": 41}], "order": 1301, "topper": "pig", "t3d": {"g": null, "min": null}}, {"id": "top-ghost-scarf", "svc": "print3d", "name": "Топпер «Призрак с шарфом»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 33, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 32}, {"qty": 200, "price": 31}], "order": 1302, "topper": "ghost_scarf", "t3d": {"g": null, "min": null}}, {"id": "top-heart-knit", "svc": "print3d", "name": "Топпер «Вязаное сердечко»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 38, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 37}, {"qty": 200, "price": 36}], "order": 1303, "topper": "heart_knit", "t3d": {"g": null, "min": null}}, {"id": "top-ghost", "svc": "print3d", "name": "Топпер «Призрак»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 30, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 29}, {"qty": 200, "price": 28}], "order": 1304, "topper": "ghost", "t3d": {"g": null, "min": null}}, {"id": "top-heart", "svc": "print3d", "name": "Топпер «Сердечко»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 32, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 31}, {"qty": 200, "price": 30}], "order": 1305, "topper": "heart", "t3d": {"g": null, "min": null}}, {"id": "top-ghost-broom", "svc": "print3d", "name": "Топпер «Призрак с метлой»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 33, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 32}, {"qty": 200, "price": 31}], "order": 1306, "topper": "ghost_broom", "t3d": {"g": null, "min": null}}, {"id": "top-vampire-cat", "svc": "print3d", "name": "Топпер «Кот-вампир»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 35, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 34}, {"qty": 200, "price": 33}], "order": 1307, "topper": "vampire_cat", "t3d": {"g": null, "min": null}}, {"id": "top-pumpkin", "svc": "print3d", "name": "Топпер «Тыква»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 35, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 34}, {"qty": 200, "price": 33}], "order": 1308, "topper": "pumpkin", "t3d": {"g": null, "min": null}}, {"id": "top-kitten", "svc": "print3d", "name": "Топпер «Кошечка»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 33, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 32}, {"qty": 200, "price": 31}], "order": 1309, "topper": "kitten", "t3d": {"g": null, "min": null}}, {"id": "top-witch-hat", "svc": "print3d", "name": "Топпер «Ведьмина шляпа»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 33, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 32}, {"qty": 200, "price": 31}], "order": 1310, "topper": "witch_hat", "t3d": {"g": null, "min": null}}, {"id": "top-skull", "svc": "print3d", "name": "Топпер «Черепок»", "desc": "Модель с сайта топперов. Цена: от 50 шт, от 100 шт и от 200 шт", "price": 33, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [{"qty": 100, "price": 32}, {"qty": 200, "price": 31}], "order": 1311, "topper": "skull", "t3d": {"g": null, "min": null}}];
 const PENDING_PRICES_4=[{"id": "delivery", "svc": "other", "name": "Доставка", "desc": "Доставка заказа по городу", "price": 800, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 900}, {"id": "print-01", "svc": "printing", "name": "Простая бумага ч/б", "desc": "Цена за 1 лист", "price": 50, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1200}, {"id": "print-02", "svc": "printing", "name": "Простая бумага цвет", "desc": "Цена за 1 лист", "price": 80, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1201}, {"id": "print-03", "svc": "printing", "name": "Самоклейка", "desc": "Цена за 1 лист", "price": 200, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1202}, {"id": "print-04", "svc": "printing", "name": "Фотобумага тонкая 135 г", "desc": "Цена за 1 лист", "price": 200, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1203}, {"id": "print-05", "svc": "printing", "name": "Фотобумага плотная 300 г", "desc": "Цена за 1 лист", "price": 250, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1204}, {"id": "print-06", "svc": "printing", "name": "Фотобумага матовая 300 г", "desc": "Цена за 1 лист", "price": 280, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1205}, {"id": "print-07", "svc": "printing", "name": "Фотобумага дизайнерская", "desc": "Цена за 1 лист", "price": 300, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1206}, {"id": "print-08", "svc": "printing", "name": "Копия", "desc": "Цена за 1 лист", "price": 50, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1207}, {"id": "print-09", "svc": "printing", "name": "Сканирование", "desc": "Цена за 1 лист", "price": 50, "unit": "лист", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1208}, {"id": "print-10", "svc": "printing", "name": "Файл", "desc": "Файл-вкладыш, за 1 шт", "price": 20, "unit": "шт", "from": false, "hidden": false, "notes": "", "tiers": [], "order": 1209}];
 const PENDING_PRICES_2=[{"id": "emb-base", "svc": "embroidery", "name": "Вышивка", "desc": "Цена зависит от сложности и размера, в заказе вписывается вручную", "price": 4000, "unit": "шт", "from": true, "hidden": false, "notes": "", "tiers": [], "order": 1100}, {"id": "p3d-hour", "svc": "print3d", "name": "3D-печать своей модели", "desc": "Пластик по граммам и работа принтера по часам, плюс наценка", "price": 1000, "unit": "шт", "from": true, "hidden": false, "notes": "", "tiers": [], "order": 1110, "calc3d": {"markup": 250, "hour": 100}}, {"id": "vinyl-calc", "svc": "vinyl", "name": "Винил с монтажной плёнкой", "desc": "Плёнка винил + монтажная плёнка, цена за погонный метр", "price": 11200, "unit": "пог. м", "from": true, "hidden": false, "notes": "Себестоимость: винил 1 600 или 3 400 ₸, монтажная 1 600 или 2 400 ₸ за пог. м; наценка 250%", "tiers": [], "order": 1120, "calc": {"vinyl": [1600, 3400], "mount": [1600, 2400], "markup": 250, "roll": 126}}];
 const PENDING_PRICES=[{"id": "dtf-a3", "svc": "dtf", "name": "DTF-печать A3", "desc": "27×37 см. Нанесение 2 частей макета входит в цену", "price": 4500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 3500}], "order": 1000}, {"id": "dtf-a4", "svc": "dtf", "name": "DTF-печать A4", "desc": "21×27 см. Нанесение 2 частей макета входит в цену", "price": 3500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 2500}], "order": 1001}, {"id": "dtf-a5", "svc": "dtf", "name": "DTF-печать A5", "desc": "21×15 см. Нанесение 2 частей макета входит в цену", "price": 2500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 1500}], "order": 1002}, {"id": "dtf-a6", "svc": "dtf", "name": "DTF-печать A6", "desc": "10×14 см. Нанесение 2 частей макета входит в цену", "price": 1500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 900}], "order": 1003}, {"id": "dtf-transfer", "svc": "dtf", "name": "Перенос DTF-наклейки", "desc": "Нанесение готовой наклейки на изделие", "price": 500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 250}], "order": 1004}, {"id": "dtf-prep", "svc": "dtf", "name": "Подготовка макета", "desc": "Удаление фона, изменение размера, раскладка изображений на печатный лист", "price": 0, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [], "order": 1005}, {"id": "dtf-fix", "svc": "dtf", "name": "Корректировка макета", "desc": "Цвет букв, трассировка, добавление текста и т.д.", "price": 2500, "unit": "шт", "from": false, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [{"qty": 10, "price": 1000}], "order": 1006}, {"id": "dtf-logo", "svc": "dtf", "name": "Разработка логотипа", "desc": "Разработка логотипа и фирменных элементов", "price": 10000, "unit": "шт", "from": true, "hidden": false, "notes": "Прайс DTF от 13.10: от 1 до 10 шт и от 10 до 30 шт", "tiers": [], "order": 1007}];
 let pendingPricesDone=false;
 async function importPendingPrices(){
   if(pendingPricesDone||!pricesLoaded||!db||!canWrite||mgrLimited())return;pendingPricesDone=true;
-  for(const [marker,list] of [['_import_dtf_prices_v1',PENDING_PRICES],['_import_prices_v2',PENDING_PRICES_2],['_import_prices_v4',PENDING_PRICES_4]]){
+  for(const [marker,list] of [['_import_dtf_prices_v1',PENDING_PRICES],['_import_prices_v2',PENDING_PRICES_2],['_import_prices_v4',PENDING_PRICES_4],['_import_toppers_v6',PENDING_PRICES_6]]){
     try{const mk=await db.doc('blobs/'+marker).get();if(mk.exists)continue}catch(_){continue}
     const now=Date.now();
     for(const it of list){
@@ -2763,8 +2804,13 @@ const itemsTotal=list=>(list||[]).reduce((s,i)=>s+(+i.price||0)*(+i.qty||0),0);
 const edAutoTotal=()=>itemsTotal(edItems)+kaspiSum(edK,0).rev;
 const fmtQty=q=>String(+q||0).replace('.',',');
 function itemsText(o){return (o.items||[]).map(i=>i.name+(+i.qty!==1?' × '+fmtQty(i.qty)+(i.unit&&i.unit!=='шт'?' '+i.unit:''):'')).join(', ')}
+/* учёт «сколько сделано»: топперы, позиции из заявок и штучные позиции от 2 шт */
+const tracked=i=>!!i&&(!!i.top||(+i.made>0)||((i.unit||'шт')==='шт'&&+i.qty>=2));
+function madeOf(o){let m=0,q=0;(o.items||[]).forEach(i=>{if(tracked(i)){m+=Math.min(+i.made||0,+i.qty||0);q+=+i.qty||0}});return {m,q}}
+function oiProg(i){const q=+i.qty||0,m=Math.min(+i.made||0,q),pc=q?Math.round(m/q*100):0;
+  return `<span class="oi-pr${m>=q&&q?' full':''}"><label>сделано</label><input type="number" min="0" max="${q}" step="1" inputmode="numeric" data-oimade="${esc(i.id)}" value="${m}" aria-label="Сколько сделано: ${esc(i.name)}" ${canWrite?'':'disabled'}><span>из ${fmtQty(q)}</span><span class="bar"><span class="fill" style="width:${pc}%"></span></span>${canWrite?`<button type="button" class="oi-all" data-oiall="${esc(i.id)}" title="Отметить всё сделанным"${m>=q?' hidden':''}>всё</button>`:''}</span>`}
 function renderItems(){
-  $('oi-list').innerHTML=edItems.map(i=>`<div class="oi${oiEditId===i.id?' edit':''}" role="button" tabindex="0" data-oiedit="${esc(i.id)}"><span class="ot"><b>${esc(i.name)}</b><small>${fmtQty(i.qty)} ${esc(i.unit||'шт')} × ${money(i.price)}</small></span><span class="os">${money((+i.price||0)*(+i.qty||0))}</span>${canWrite?`<button class="tdel" type="button" data-oirm="${esc(i.id)}" aria-label="Убрать позицию ${esc(i.name)}">×</button>`:'<span></span>'}</div>`).join('');
+  $('oi-list').innerHTML=edItems.map(i=>`<div class="oi${oiEditId===i.id?' edit':''}" role="button" tabindex="0" data-oiedit="${esc(i.id)}"><span class="ot"><b>${esc(i.name)}</b><small>${fmtQty(i.qty)} ${esc(i.unit||'шт')} × ${money(i.price)}</small>${tracked(i)?oiProg(i):''}</span><span class="os">${money((+i.price||0)*(+i.qty||0))}</span>${canWrite?`<button class="tdel" type="button" data-oirm="${esc(i.id)}" aria-label="Убрать позицию ${esc(i.name)}">×</button>`:'<span></span>'}</div>`).join('');
   const t=$('oi-tot');t.hidden=!edItems.length;
   if(edItems.length)t.innerHTML=`<span>${edItems.length} ${plural(edItems.length,'позиция','позиции','позиций')}</span><span>Итого: <b>${money(itemsTotal(edItems))}</b></span>`;
   $('oi-add').hidden=!canWrite;priceHint();
@@ -2787,7 +2833,8 @@ function addItem(){
   const pxCost=oiCalc?calcCost(oiCalc):oiPick?(pickPx&&pickPx.calc3d?null:unitCostOf(pickPx||oiPick)):null;
   const p3dOn=oiP3d&&!$('oi-p3d').hidden&&p3dHas(oiP3d);
   const cost=p3dOn?Math.round(p3dCost(oiP3d)*100)/100:pxCost!=null?pxCost:prevIt&&prevIt.cost!=null?+prevIt.cost:null;
-  const it={id:oiEditId||uid(),name:nm,price,qty,unit:$('oi-unit').textContent||'шт',...(cost!=null?{cost}:{}),...(oiPick?{pid:oiPick.pid}:{}),...(p3dOn?{p3d:{g:+oiP3d.g||0,h:+oiP3d.h||0,ppg:Math.round((+oiP3d.ppg||0)*100)/100,pl:oiP3d.pl||'',mk:+oiP3d.mk||0,hr:+oiP3d.hr||0,u:1}}:{}),...(oiCalc?{calc:{v:+oiCalc.v,m:+oiCalc.m,markup:+oiCalc.markup,...(+oiCalc.L&&+oiCalc.H?{L:+oiCalc.L,H:+oiCalc.H,N:+oiCalc.N||1}:{})}}:{})};
+  const keep={...(prevIt&&prevIt.made!=null?{made:Math.min(+prevIt.made||0,qty)}:{}),...(prevIt&&prevIt.top?{top:prevIt.top}:{})};
+  const it={id:oiEditId||uid(),...keep,name:nm,price,qty,unit:$('oi-unit').textContent||'шт',...(cost!=null?{cost}:{}),...(oiPick?{pid:oiPick.pid}:{}),...(p3dOn?{p3d:{g:+oiP3d.g||0,h:+oiP3d.h||0,ppg:Math.round((+oiP3d.ppg||0)*100)/100,pl:oiP3d.pl||'',mk:+oiP3d.mk||0,hr:+oiP3d.hr||0,u:1}}:{}),...(oiCalc?{calc:{v:+oiCalc.v,m:+oiCalc.m,markup:+oiCalc.markup,...(+oiCalc.L&&+oiCalc.H?{L:+oiCalc.L,H:+oiCalc.H,N:+oiCalc.N||1}:{})}}:{})};
   const k=edItems.findIndex(x=>x.id===it.id);if(k>=0)edItems[k]=it;else edItems.push(it);
   oiClear();kSyncPrice(prev);renderItems();if(edTab==='cost')renderCost();$('oi-name').focus();return true;
 }
@@ -2825,14 +2872,29 @@ function plasticPrices(){
   const g={};let tA=0,tG=0;
   ledger.supplies.filter(x=>x.cat==='plastic'&&+x.amount>0).forEach(x=>{
     const u=String(x.unit||'').toLowerCase(),q=+x.qty||0;const grams=u==='г'?q:(u==='кг'||u==='катушка'||u==='шт')?q*1000:0;if(!grams)return;
-    const k=[x.plType||'Пластик',x.color||''].filter(Boolean).join(' ');const o=g[k]||(g[k]={name:k,a:0,g:0});o.a+=+x.amount;o.g+=grams;tA+=+x.amount;tG+=grams});
-  const list=Object.values(g).map(o=>({name:o.name,ppg:o.a/o.g,grams:o.g})).sort((a,b)=>b.grams-a.grams);
+    const k=[x.plType||'Пластик',x.color||''].filter(Boolean).join(' ');const o=g[k]||(g[k]={name:k,a:0,g:0,color:x.color||'',type:x.plType||''});o.a+=+x.amount;o.g+=grams;tA+=+x.amount;tG+=grams});
+  const list=Object.values(g).map(o=>({name:o.name,ppg:o.a/o.g,grams:o.g,color:o.color,type:o.type})).sort((a,b)=>b.grams-a.grams);
   if(list.length>1)list.push({name:'Средняя',ppg:tA/tG,grams:tG});
   return list;
 }
 /* настройки расчёта 3D-печати берутся из прайса: наценка и работа принтера */
 function p3dCfg(){const x=oiPick&&oiPick.calc3d?oiPick:prices.find(y=>y.id==='p3d-hour'&&y.calc3d)||prices.find(y=>y.calc3d);const c=x&&x.calc3d||{};
   return{markup:c.markup!=null&&c.markup!==''?+c.markup:250,hour:c.hour!=null&&c.hour!==''?+c.hour:PRINTER_HOUR}}
+/* пластик нужного цвета из закупок (по названию цвета), иначе средняя цена */
+const normClr=c=>String(c||'').toLowerCase().replace(/ё/g,'е').trim();
+function plasticFor(color){
+  const pl=plasticPrices().filter(x=>x.name!=='Средняя');if(!pl.length)return null;
+  const c=normClr(color);
+  const hit=c&&pl.find(x=>{const k=normClr(x.color);return k&&(k===c||k.includes(c)||c.includes(k)||(k.length>=4&&c.length>=4&&k.slice(0,4)===c.slice(0,4)))});
+  if(hit)return hit;
+  const A=pl.reduce((t,x)=>t+x.ppg*x.grams,0),G=pl.reduce((t,x)=>t+x.grams,0);
+  return {name:pl.length>1?'средняя цена пластика':pl[0].name,ppg:A/G,grams:G,color:'',type:''};
+}
+/* себестоимость 1 шт по граммам и минутам печати из прайса */
+function t3dCost(t,color){
+  if(!t||!(+t.g>0||+t.min>0))return null;const pl=plasticFor(color);const hr=p3dCfg().hour;
+  const ppg=pl?pl.ppg:0;return {cost:Math.round(((+t.g||0)*ppg+(+t.min||0)/60*hr)*100)/100,ppg,pl:pl?pl.name:'',hr,noPl:!pl};
+}
 const p3dCost=o=>o?(+o.g||0)*(+o.ppg||0)+(+o.h||0)*(o.hr!=null?+o.hr:PRINTER_HOUR):0;
 const p3dPrice=o=>Math.round(p3dCost(o)*(1+(+o.mk||0)/100)/10)*10;
 const p3dHas=o=>!!o&&(+o.g>0||+o.h>0);
@@ -2872,7 +2934,9 @@ function oiUnitPad(){const u=$('oi-unit').textContent||'';$('oi-qty').style.padd
 function oiApply(c){$('oi-name').value=c.name;oiPick=c.pid?c:null;oiPriceTouched=false;
   oiCalc=oiPick&&oiPick.calc?{...oiPick.calc,v:oiPick.calc.vinyl[0],m:oiPick.calc.mount[0]}:null;
   $('oi-price').value=oiCalc?calcPrice(oiCalc):oiPick?tierPrice(oiPick,$('oi-qty').value||1):c.price;$('oi-unit').textContent=c.unit||'шт';oiUnitPad();renderOiCalc();renderOiP3d();
-  if(oiPick&&oiPick.calc3d){$('oi-price').value=p3dHas(oiP3d)?p3dPrice(oiP3d):'';p3dOut()}oiTierHint()}
+  if(oiPick&&oiPick.calc3d){$('oi-price').value=p3dHas(oiP3d)?p3dPrice(oiP3d):'';p3dOut()}
+  const tpx=oiPick&&prices.find(x=>x.id===oiPick.pid);if(tpx&&tpx.t3d&&(+tpx.t3d.g>0||+tpx.t3d.min>0)&&!oiPick.calc3d){const pl=plasticFor('');oiP3d={g:+tpx.t3d.g||null,h:(+tpx.t3d.min||0)/60||null,ppg:pl?pl.ppg:null,pl:pl?pl.name:''};renderOiP3d()}
+  oiTierHint()}
 function renderOiCalc(){
   const w=$('oi-calc');if(!w)return;w.hidden=!oiCalc;if(!oiCalc){w.innerHTML='';return}
   const opt=(k,arr,lbl)=>`<div class="oc-row"><span>${lbl}</span><div class="oc-ch">${arr.map(v=>`<button type="button" data-oc="${k}" data-v="${v}" aria-pressed="${+oiCalc[k]===+v}">${money(v)}</button>`).join('')}</div></div>`;
@@ -2979,7 +3043,7 @@ function formData(){
   return {
     client:$('f-client').value.trim(),phone:$('f-phone').value.trim(),service:edSvc,
     customService:edSvc==='other'?$('f-custom').value.trim():'',
-    items:edItems.map(i=>({id:i.id,name:i.name,price:+i.price||0,qty:+i.qty||0,unit:i.unit||'шт',...(i.p3d?{p3d:i.p3d}:{}),...(i.cost!=null&&i.cost!==''?{cost:+i.cost}:{}),...(i.pid?{pid:i.pid}:{}),...(i.calc?{calc:i.calc}:{})})),
+    items:edItems.map(i=>({id:i.id,name:i.name,price:+i.price||0,qty:+i.qty||0,unit:i.unit||'шт',...(i.made!=null&&i.made!==''?{made:Math.max(0,+i.made||0)}:{}),...(i.top?{top:i.top}:{}),...(i.p3d?{p3d:i.p3d}:{}),...(i.cost!=null&&i.cost!==''?{cost:+i.cost}:{}),...(i.pid?{pid:i.pid}:{}),...(i.calc?{calc:i.calc}:{})})),
     unit:edItems.length?(edItems[0].unit||'шт'):(edOrig&&edOrig.unit||'шт'),
     expenses:edExp.map(e=>({id:e.id,title:e.title,amount:+e.amount||0})),files:edFiles,
     kaspi:edK.map(l=>({id:l.id,name:l.name,price:+l.price||0,qty:+l.qty||0,date:l.date||'',cost:+l.cost||0,src:l.src||''})),kaspiFee:kFee(),
@@ -3262,6 +3326,7 @@ $('oi-name').addEventListener('input',()=>{if(oiPick&&!$('oi-name').value.trim()
 ['oi-name','oi-price','oi-qty'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addItem()}}));
 $('oi-list').addEventListener('click',e=>{
   const rm=e.target.closest('[data-oirm]');if(rm){const prev=edAutoTotal();edItems=edItems.filter(i=>i.id!==rm.dataset.oirm);if(oiEditId===rm.dataset.oirm)oiClear();kSyncPrice(prev);renderItems();return}
+  if(e.target.closest('.oi-pr')){const a=e.target.closest('[data-oiall]');if(a){const i=edItems.find(x=>x.id===a.dataset.oiall);if(i){i.made=+i.qty||0;renderItems()}}return}
   const ed=e.target.closest('[data-oiedit]');if(ed&&canWrite){const i=edItems.find(x=>x.id===ed.dataset.oiedit);if(!i)return;oiEditId=i.id;
     $('oi-name').value=i.name;$('oi-price').value=i.price;$('oi-qty').value=i.qty;$('oi-unit').textContent=i.unit||'шт';$('oi-addbtn').textContent='Сохранить позицию';
     const px=i.pid&&prices.find(x=>x.id===i.pid);oiPick=px?{pid:px.id,name:px.name,price:+px.price||0,unit:px.unit||'шт',tiers:tiersOf(px),from:!!px.from,calc:px.calc||null,calc3d:px.calc3d||null}:null;
@@ -3271,7 +3336,10 @@ $('oi-list').addEventListener('click',e=>{
     renderOiP3d();if(p3dHas(oiP3d)&&p3dAuto())oiPriceTouched=p3dPrice(oiP3d)!==+i.price;oiTierHint();p3dOut();
     renderItems();$('oi-qty').focus()}
 });
-$('oi-list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-oiedit]')){e.preventDefault();e.target.click()}});
+$('oi-list').addEventListener('input',e=>{const el=e.target.closest('[data-oimade]');if(!el)return;const i=edItems.find(x=>x.id===el.dataset.oimade);if(!i)return;
+  i.made=el.value===''?0:Math.max(0,Math.min(+i.qty||0,Math.round(+el.value)||0));const w=el.closest('.oi-pr');const q=+i.qty||0;w.querySelector('.bar .fill').style.width=(q?Math.round(i.made/q*100):0)+'%';w.classList.toggle('full',q>0&&i.made>=q);const a=w.querySelector('[data-oiall]');if(a)a.hidden=i.made>=q});
+$('oi-list').addEventListener('change',e=>{const el=e.target.closest('[data-oimade]');if(!el)return;const i=edItems.find(x=>x.id===el.dataset.oimade);if(i)el.value=i.made});
+$('oi-list').addEventListener('keydown',e=>{if(e.target.closest('[data-oimade]')){if(e.key==='Enter'){e.preventDefault();e.target.blur()}return}if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-oiedit]')){e.preventDefault();e.target.click()}});
 document.addEventListener('click',e=>{if(e.target.closest('#f-price-reset')){$('f-price').value=edAutoTotal()||'';updateRest();priceHint()}});
 $('f-price').addEventListener('input',priceHint);
 {const _cc3=csClose;csClose=function(r){$('oi-name-btn').setAttribute('aria-expanded','false');return _cc3(r)}}
@@ -3389,6 +3457,7 @@ $('p-attach').onclick=()=>pickFiles({kind:'p'});
 $('qed-form').addEventListener('submit',saveQ);
 ['qc-v','qc-m','qc-mk','qc-roll'].forEach(i=>$(i).addEventListener('input',qcRes));
 ['q3-mk','q3-hr'].forEach(i=>$(i).addEventListener('input',q3Res));
+['qt-g','qt-min'].forEach(i=>$(i).addEventListener('input',qtShow));
 $('q-tier-add').addEventListener('click',()=>{readQTiers();const last=qTiers[qTiers.length-1];qTiers.push({qty:last?(+last.qty||0)*2||10:10,price:''});renderQTiers();const el=document.querySelector('#q-tiers [data-tp="'+(qTiers.length-1)+'"]');el&&el.focus()});
 $('q-tiers').addEventListener('click',e=>{const b=e.target.closest('[data-trm]');if(!b)return;readQTiers();qTiers.splice(+b.dataset.trm,1);renderQTiers()});
 $('qed-close').onclick=$('qed-cancel').onclick=$('qed-back').onclick=closeQ;
@@ -3521,7 +3590,6 @@ initPack();
 {const h=(location.hash||'').slice(1);go(['orders','calendar','office','supplies','projects','prices','analytics'].includes(h)?h:'home')}
 setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('input,select,textarea'))))render()},60000);
 </script>
-
 <div id="upd-bar" hidden style="position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:200;background:#4358ef;color:#fff;border-radius:999px;padding:8px 8px 8px 18px;display:flex;gap:12px;align-items:center;font:600 14px 'Inter Tight',Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(67,88,239,.35);max-width:calc(100% - 24px)">
 <span>Вышла новая версия сайта</span><button type="button" onclick="location.reload()" style="border:0;border-radius:999px;background:#fff;color:#4358ef;font:inherit;padding:8px 14px;cursor:pointer">Обновить</button></div>
 <script>(function(){
