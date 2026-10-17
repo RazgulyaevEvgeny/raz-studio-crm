@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018032250">
+<meta name="app-build" content="20261018043929">
 <link rel="icon" href="favicon.ico?v=2" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
@@ -100,6 +100,16 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .w-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .w-h h2{margin:0;font:800 22px/1.1 var(--f);letter-spacing:-.035em;display:flex;align-items:center;gap:10px}
 .w-h h2 .c{font:600 13px var(--f);color:var(--muted);letter-spacing:0}
+.msum,.mf-x{display:none}
+@media(max-width:600px){
+  #pack .w.mfold>.w-h{cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:34px}
+  #pack .w.mfold:not(.mopen){gap:0;padding-top:10px;padding-bottom:10px}
+  #pack .w.mfold:not(.mopen)>:not(.w-h){display:none!important}
+  #pack .w.mfold .msum{display:inline}
+  #pack .w.mfold .mf-x{display:grid;place-items:center;flex:none;width:28px;height:28px;margin-right:-4px}
+  #pack .w.mfold .mf-x::before{content:"";width:8px;height:8px;border-right:2.4px solid var(--muted);border-bottom:2.4px solid var(--muted);transform:translateY(-2px) rotate(45deg);transition:transform .2s}
+  #pack .w.mfold.mopen .mf-x::before{transform:translateY(2px) rotate(-135deg)}
+}
 .go{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;background:var(--paper);font:600 13.5px var(--f);color:var(--blue)}
 .go:hover{background:var(--blue);color:#fff}
 .go svg{width:14px;height:14px}
@@ -1195,11 +1205,11 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
           <div class="legend"><span style="--sc:var(--blue)"><i></i>заказы</span><span style="--sc:var(--boss)"><i></i>задачи</span><span style="--sc:var(--task)"><i></i>дела дня</span><span style="--sc:var(--danger)"><i></i>просрочено</span></div>
         </div>
         <div class="w">
-          <div class="w-h"><h2>Сегодня</h2><button class="go" type="button" data-go="calendar">Все дни</button></div>
+          <div class="w-h"><h2>Сегодня <span class="c msum" id="w-today-m"></span></h2><button class="go" type="button" data-go="calendar">Все дни</button></div>
           <div class="tday-w" id="w-today"></div>
         </div>
         <div class="w" id="w-print">
-          <div class="w-h"><h2>Принтеры в мастерской</h2><a class="go" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">Вход в Bambu ↗</a></div>
+          <div class="w-h"><h2>Принтеры <span class="c msum" id="w-print-m"></span></h2><a class="go" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">Вход в Bambu ↗</a></div>
           <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем принтеры…</span></div></div>
           <small class="bw-note" id="w-print-note"></small>
         </div>
@@ -1207,17 +1217,17 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     </div>
     <div class="home-grid2 three">
       <div class="w link" id="w-office" role="link" tabindex="0" aria-label="Открыть расходы офиса" data-wl="office">
-        <div class="w-h"><h2>Расходы офиса</h2><span class="go">Открыть <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+        <div class="w-h"><h2>Расходы офиса <span class="c msum" id="w-office-m"></span></h2><span class="go">Открыть <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
         <div class="wsum" id="w-office-sum"></div>
         <div class="mini" id="w-office-list"></div>
       </div>
       <div class="w link" id="w-supplies" role="link" tabindex="0" aria-label="Открыть закупку расходников" data-wl="supplies">
-        <div class="w-h"><h2>Закупка расходников</h2><span class="go">Открыть <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+        <div class="w-h"><h2>Закупка расходников <span class="c msum" id="w-supplies-m"></span></h2><span class="go">Открыть <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
         <div class="wsum" id="w-supplies-sum"></div>
         <div class="mini" id="w-supplies-list"></div>
       </div>
       <div class="w link" id="w-projects" role="link" tabindex="0" aria-label="Открыть проекты" data-wl="projects">
-        <div class="w-h"><h2>Проекты</h2><span class="go">Открыть <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+        <div class="w-h"><h2>Проекты <span class="c msum" id="w-projects-m"></span></h2><span class="go">Открыть <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
         <div class="wsum" id="w-projects-sum"></div>
         <div class="mini" id="w-projects-list"></div>
       </div>
@@ -2077,6 +2087,8 @@ function renderHome(){
       +(os.length>TODAY_LIM?`<button class="done-tog" type="button" data-todaymore>${todayAllOrders?'Свернуть':'Показать ещё '+(os.length-TODAY_LIM)}</button>`:''))}
   if(lateO.length)parts.push(`<button type="button" class="mrow" data-go="orders" data-f="overdue"><span style="min-width:0;display:flex;flex-direction:column"><b class="late">Просрочено заказов: ${lateO.length}</b><small>Открыть список в ведомости</small></span><span></span></button>`);
   $('w-today').innerHTML=parts.length?parts.join(''):`<div class="w-empty">На сегодня ни сроков, ни задач.</div>`;
+  $('w-today-m').textContent=[os.length?os.length+' '+plural(os.length,'заказ','заказа','заказов'):'',ts.length?ts.length+' '+plural(ts.length,'дело','дела','дел'):''].filter(Boolean).join(', ')||'пусто';
+  [['office','w-office-sum'],['supplies','w-supplies-sum'],['projects','w-projects-sum']].forEach(([k,id])=>{const b=$(id)&&$(id).querySelector('b');const m=$('w-'+k+'-m');if(m)m.textContent=b?b.textContent:''});
 }
 function renderOrders(){
   const base=orders.filter(o=>(!view.day||o.deadline===view.day));
@@ -2299,10 +2311,19 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 let packW=[];
 function initPack(){
   packW=[$('w-today').closest('.w'),$('w-print'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
+  $('w-today').closest('.w').id||=('w-today-box');$('boss-list').closest('.w').id||=('w-boss');
+  packW.forEach(w=>{w.classList.add('mfold');const h=w.querySelector(':scope>.w-h');if(h)h.insertAdjacentHTML('beforeend','<span class="mf-x" aria-hidden="true"></span>')});mfApply();
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);packW.forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
   document.querySelectorAll('#p-home .home-grid,#p-home .home-grid2').forEach(el=>el.remove());
 }
 let packN=0;
+/* телефон: блоки главной сворачиваются, открываются нажатием на заголовок; что открыто — запоминается на этом устройстве */
+const MF_KEY='raz.home.open';let mOpen=new Set();try{mOpen=new Set(JSON.parse(localStorage.getItem(MF_KEY)||'[]'))}catch(_){}
+const isPhone=()=>matchMedia('(max-width:600px)').matches;
+function mfApply(){packW.forEach(w=>{const o=mOpen.has(w.id);w.classList.toggle('mopen',o);const h=w.querySelector(':scope>.w-h');if(h){h.setAttribute('aria-expanded',isPhone()?String(o):'true')}})}
+function mfToggle(id,force){const o=force!=null?force:!mOpen.has(id);o?mOpen.add(id):mOpen.delete(id);try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply()}
+document.addEventListener('click',e=>{if(!isPhone())return;const h=e.target.closest('#pack .w>.w-h');if(!h||e.target.closest('a,button,select,input,.go'))return;
+  e.preventDefault();e.stopPropagation();mfToggle(h.parentElement.id)},true);
 function packHome(){
   const pack=$('pack');if(!pack||$('p-home').hidden||!packW.length)return;
   const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1100?3:w>=700?2:1;
@@ -3590,7 +3611,7 @@ $('file-in').addEventListener('change',async e=>{
 });
 $('b-cancel').onclick=()=>{$('boss-form').hidden=true;packHome()};
 $('boss-done-tog').onclick=()=>{showBossDone=!showBossDone;render()};
-$('boss-add-btn').addEventListener('click',()=>packHome());
+$('boss-add-btn').addEventListener('click',()=>{if(isPhone()&&!$('boss-form').hidden)mfToggle('w-boss',true);packHome()});
 $('boss-form').addEventListener('submit',async e=>{
   e.preventDefault();$('b-err').hidden=true;
   const title=$('b-title').value.trim(),who=$('b-who').value.trim();
@@ -3706,6 +3727,8 @@ async function loadPrinters(){
       else{c='--ok';l='в сети';left=bwPIco('wait',c);info=`<span class="bw-meta">${p.since?'включился '+esc(printWhen(p.since)):'состояние печати пока неизвестно'}</span>`}
       return `<div class="bw-card${er?' alert':''}">${left}<div class="bw-head"><b>${esc(p.name)}</b><span class="bw-chip${live?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${info}</div>${er?`<div class="bw-err">${esc(er)}</div>`:hmTxt?`<div class="bw-err warn">${esc(hmTxt)}</div>`:''}</div>`;
     }).join(''):`<div class="bw-card"><span class="bw-meta">${esc(ERR[s.error]||'Принтеров нет')}</span></div>`;
+    {const P=s.printers||[],busy=P.filter(p=>p.online&&p.state&&PSTATE[String(p.state).toUpperCase()]?.busy).length,bad=P.filter(p=>p.online&&perrText(p.error,p.errorText)).length,on=P.filter(p=>p.online).length;
+      $('w-print-m').textContent=bad?bad+' с ошибкой':busy?busy+' '+plural(busy,'печатает','печатают','печатают'):P.length?on+' из '+P.length+' в сети':''}
     note.textContent=[s.error&&s.printers.length?ERR[s.error]:'',s.pausedUntil?'тревога на паузе до '+bwPHM(s.pausedUntil):'',s.lastCheck?'проверка '+printWhen(s.lastCheck):'автопроверка ещё не запускалась'].filter(Boolean).join(' · ');
   }catch(e){list.innerHTML='<div class="bw-card"><span class="bw-meta">Нет связи с наблюдением, попробуем снова через минуту</span></div>';note.textContent=''}
   packHome();
