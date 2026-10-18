@@ -21,6 +21,9 @@ service cloud.firestore {
     // переписка с клиентами и задания на уведомления о заказах
     match /wa_chats/{id} { allow read, write: if signedIn(); }
     match /wa_outbox/{id} { allow read, write: if signedIn(); }
+    // Менеджер Анна: сводка для главной, просьба обновить её и вопросы сотрудников
+    match /wa_anna/{id} { allow read, write: if signedIn(); }
+    match /wa_anna_q/{id} { allow read, write: if signedIn(); }
 
     // Заявки с сайта топперов: сайт может только создать новую заявку (без входа),
     // читать, подтверждать и удалять их могут только сотрудники
