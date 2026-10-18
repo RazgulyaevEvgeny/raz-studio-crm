@@ -6,6 +6,7 @@
 //   - отправляет клиентам уведомления о заказах: учёт кладёт задание в коллекцию wa_outbox, бот его забирает;
 //   - если менеджер сам написал клиенту, бот молчит в этом чате 30 минут, а потом снова отвечает на новые вопросы;
 //   - если бот позвал менеджера, а тот не ответил за 10 минут, бот извиняется перед клиентом (один раз);
+//   - готовит для учёта сводку «Менеджер Анна» (утром и по кнопке «Обновить») и отвечает на вопросы сотрудников (anna.js);
 //   - сообщения не отмечает прочитанными, чтобы менеджеры видели новые чаты в телефоне.
 // Состояние и QR-код: http://localhost:3777 на этом компьютере.
 //
@@ -20,6 +21,7 @@ import makeWASocket, { downloadMediaMessage, useMultiFileAuthState, DisconnectRe
 import pino from 'pino';
 import QRCode from 'qrcode';
 import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, PAUSE_AFTER_MANAGER } from './brain.js';
+import { makeDigest, digestDue, answerQuestions } from './anna.js';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = join(DIR, 'auth');          // вход в WhatsApp; если удалить папку — снова попросит QR
@@ -235,6 +237,28 @@ async function checkWaitingChats() {
   }
 }
 
+/* ---------- «Менеджер Анна» в учёте: сводка и вопросы ---------- */
+
+let annaBusy = false, annaErr = '';
+async function checkAnna() {
+  if (annaBusy || missing.length || !aiOn) return;
+  annaBusy = true;
+  try {
+    const n = await answerQuestions(fs, env);
+    if (n) log('Анна ответила на вопросы из учёта:', n);
+    const why = await digestDue(fs);
+    if (why) { await makeDigest(fs, env); log('Анна подготовила сводку для учёта (' + why + ')'); }
+    annaErr = '';
+  } catch (e) {
+    // Одна и та же ошибка (например, правила wa_anna ещё не опубликованы) — пишем в журнал один раз
+    const msg = String(e?.message || e);
+    if (msg !== annaErr) log('ошибка сводки Анны', msg);
+    annaErr = msg;
+  } finally {
+    annaBusy = false;
+  }
+}
+
 /* ---------- уведомления о заказах (задания от учёта в wa_outbox) ---------- */
 
 let outboxBusy = false;
@@ -303,8 +327,9 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   connect().catch(e => log('ошибка подключения', e?.message || e));
   setInterval(processOutbox, OUTBOX_EVERY);
   setInterval(checkWaitingChats, 60e3);
+  setInterval(checkAnna, 30e3);
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
-  for (const f of ['brain.js', 'bot.js', '.env']) {
+  for (const f of ['brain.js', 'anna.js', 'bot.js', '.env']) {
     watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
       if (cur.mtimeMs !== prev.mtimeMs) { log('Файл ' + f + ' изменился, перезапускаюсь'); process.exit(0); }
     });

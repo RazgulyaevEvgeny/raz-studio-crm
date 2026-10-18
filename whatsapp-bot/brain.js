@@ -23,7 +23,7 @@ const NOTICES = {
 // Клиенту бот называет стандарт 2–3 дня (кроме вышивки), точный срок в заказе потом правит менеджер.
 const ORDER_DAYS = { embroidery: 5 };
 const ORDER_DAYS_DEFAULT = 3;
-const SERVICE_NAMES = {
+export const SERVICE_NAMES = {
   vinyl: 'Винил на авто', dtf: 'DTF-печать', print3d: '3D-печать', sign3d: '3D-вывеска',
   embroidery: 'Вышивка', printing: 'Распечатка', other: 'Другое',
 };
@@ -162,7 +162,7 @@ export async function markNoticeSent(fs, orderId, n) {
 // По умолчанию отвечает Google Gemini на бесплатном тарифе (ключ без карты на aistudio.google.com).
 // Если бесплатный лимит основной модели кончился, пробуем следующую из списка, у неё свой лимит.
 // Claude (платно) включается, только если в .env задан ANTHROPIC_API_KEY.
-const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
+export const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
 
 // Ответ бота на последние сообщения клиента: {text, handoff}
 export async function runAgent(fs, env, phone, chat) {
@@ -354,7 +354,7 @@ async function runTool(name, input, { fs, phone, chat }) {
   return { error: 'unknown tool' };
 }
 
-async function openOrders(fs) {
+export async function openOrders(fs) {
   return fs.query('orders', {
     where: { fieldFilter: { field: { fieldPath: 'status' }, op: 'IN', value: { arrayValue: { values: OPEN.map(s => ({ stringValue: s })) } } } },
   });
