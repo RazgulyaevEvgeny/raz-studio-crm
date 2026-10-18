@@ -1493,7 +1493,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="tabs" role="tablist">
       <button class="tab" type="button" role="tab" id="tab-main" aria-selected="true" data-tab="main">Заказ</button>
       <button class="tab" type="button" role="tab" id="tab-cost" aria-selected="false" data-tab="cost"><span class="lf">Сколько мы потратили</span><span class="ls">Расходы</span> <em id="tab-cost-n"></em></button>
-      <button class="tab" type="button" role="tab" id="tab-kaspi" aria-selected="false" data-tab="kaspi">Kaspi</button>
+      <button class="tab" type="button" role="tab" id="tab-kaspi" aria-selected="false" data-tab="kaspi" hidden>Kaspi</button>
     </div>
     <div class="ed-body" id="pane-main">
       <div class="reqbox" id="req-box" hidden></div>
@@ -1862,6 +1862,8 @@ for(const k of ['office','supplies']){const c=LEDGERS[k];document.getElementById
       <div class="lrow head" id="${k}-head"><div>Дата</div><div>${k==='supplies'?'Что купили':'Что оплатили'}</div><div>Категория</div><div>${k==='supplies'?'Поставщик':'Кто оплатил'}</div><div style="text-align:right">Сумма</div></div>
       <div class="rows" id="${k}-list"></div>
     </div>`}
+var ordersRaw=[];
+const isKaspiLedger=o=>o.source==='kaspi'||o.service==='kaspi'||((o.kaspi||[]).length>0)||/^kaspi(\s|·|$)/i.test(String(o.client||'').trim());
 let db=null, ordersCol=null, tasksCol=null, canWrite=true, loaded=false, tasksLoaded=false;
 let orders=[], tasks=[];
 let page='home';
@@ -2192,7 +2194,7 @@ function renderHome(){
     $('tag').textContent=`Сегодня ${WD_FULL[t.getDay()]}, ${t.getDate()} ${MONTHS_GEN[t.getMonth()]}. В работе ${act} ${plural(act,'заказ','заказа','заказов')}.`;
     $('s-active').textContent=act;
     $('s-today').textContent=orders.filter(isToday).length;
-    const ym=curMonth(),pr=orders.filter(o=>inMonth(o,ym)).reduce((s,o)=>s+profitOf(o),0);
+    const ym=curMonth(),pr=[...orders,...kVirtualOrders()].filter(o=>inMonth(o,ym)).reduce((s,o)=>s+profitOf(o),0);
     const offM=lsum('office',ym),supM=lsum('supplies',ym),net=pr-offM-supM;
     $('s-profit-l').textContent='Прибыль за '+monthName(ym);
     const pb=$('s-profit');pb.textContent=money(pr);pb.classList.toggle('neg',pr<0);
@@ -2244,7 +2246,7 @@ function renderHome(){
 function renderOrders(){
   const base=orders.filter(o=>(!view.day||o.deadline===view.day));
   const sel=$('svc-sel');
-  sel.innerHTML=[{id:'all',label:'Все услуги',n:base.filter(o=>!CLOSED.has(o.status)).length},...SERVICES.map(s=>({id:s.id,label:s.label,n:base.filter(o=>o.service===s.id&&!CLOSED.has(o.status)).length}))]
+  sel.innerHTML=[{id:'all',label:'Все услуги',n:base.filter(o=>!CLOSED.has(o.status)).length},...SERVICES.filter(s=>s.id!=='kaspi').map(s=>({id:s.id,label:s.label,n:base.filter(o=>o.service===s.id&&!CLOSED.has(o.status)).length}))]
     .map(i=>`<option value="${i.id}"${view.svc===i.id?' selected':''}>${esc(i.label)}${i.n?' ('+i.n+')':''}</option>`).join('');
   sel.classList.toggle('on',view.svc!=='all');
   const b2=base.filter(o=>view.svc==='all'||o.service===view.svc);
@@ -2700,7 +2702,7 @@ async function delP(){try{await db.doc('projects/'+pEditing).delete();closeP();t
 
 /* ---------- редактор заказа ---------- */
 function renderSvcPick(){
-  $('svc-pick').innerHTML=SERVICES.map(s=>`<button type="button" data-pick="${s.id}" aria-pressed="${edSvc===s.id}" ${canWrite?'':'disabled'}>${esc(s.label)}</button>`).join('');
+  $('svc-pick').innerHTML=SERVICES.filter(s=>s.id!=='kaspi').map(s=>`<button type="button" data-pick="${s.id}" aria-pressed="${edSvc===s.id}" ${canWrite?'':'disabled'}>${esc(s.label)}</button>`).join('');
   $('custom-wrap').hidden=edSvc!=='other';
   if($('oi-p3d'))renderOiP3d();
 }
@@ -2808,7 +2810,7 @@ function bump(map,k,v,extra){const o=map.get(k)||{v:0,n:0,x:0};o.v+=v;o.n++;if(e
 function renderAnalytics(){
   $('an-per').innerHTML=AN_PER.map(([id,l])=>`<button type="button" class="chip${anPer===id?' on':''}" data-anper="${id}">${l}</button>`).join('');
   const [from,to]=anRange(),inR=d=>d&&d>=from&&d<=to;
-  const os=orders.filter(o=>o.status!=='cancel'&&inR(receivedOf(o)));
+  const os=[...orders,...kVirtualOrders()].filter(o=>o.status!=='cancel'&&inR(receivedOf(o)));
   const rev=os.reduce((s,o)=>s+(+o.price||0),0),prof=os.reduce((s,o)=>s+profitOf(o),0),paid=os.reduce((s,o)=>s+Math.min(+o.paid||0,+o.price||0),0);
   const expL=['office','supplies'].flatMap(k=>ledger[k].filter(x=>inR(x.date)).map(x=>({...x,k})));
   const exp=expL.reduce((s,x)=>s+(+x.amount||0),0),net=prof-exp;
@@ -3228,7 +3230,7 @@ const kFee=()=>{const v=$('k-fee').value;return v===''?KASPI_FEE*100:Math.min(10
 function kaspiCatalog(){
   const items=[];
   const hist=[];
-  orders.forEach(o=>{if(o.id===editing)return;(o.kaspi||[]).forEach(l=>hist.push({...l,_t:(l.date||'')+'|'+String(o.updatedAt||o.createdAt||0).padStart(15,'0')}))});
+  ordersRaw.forEach(o=>{if(o.id===editing)return;(o.kaspi||[]).forEach(l=>hist.push({...l,_t:(l.date||'')+'|'+String(o.updatedAt||o.createdAt||0).padStart(15,'0')}))});
   edK.forEach(l=>hist.push({...l,_t:(l.date||'')+'|'+'9'.repeat(15)}));
   hist.sort((a,b)=>b._t.localeCompare(a._t)).forEach(l=>items.push({name:l.name,price:+l.price||0,cost:+l.cost?+l.cost:null,qty:+l.qty||1,src:'Ранее'+(l.date?' '+fmtDate(l.date):''),key:'h'+l.id}));
   prices.filter(x=>x.svc==='kaspi').forEach(x=>{const c=qCost(x);items.push({name:x.name,price:+x.price||0,cost:c>0?c:null,src:'Прайс',key:'p'+x.id})});
@@ -3351,7 +3353,7 @@ async function saveOrder(ev){
   const now=Date.now();const btn=$('ed-save');btn.disabled=true;
   try{
     if(editing==='new'){
-      const nextNum=orders.reduce((m,o)=>Math.max(m,o.num||0),0)+1;
+      const nextNum=ordersRaw.reduce((m,o)=>Math.max(m,o.num||0),0)+1;
       const ref=ordersCol.doc();const rq=edReq;
       if(rq){d.requestId=rq.id;d.source='toppers'}
       await ref.set({...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||''});
@@ -3815,7 +3817,8 @@ $('task-form').addEventListener('submit',async e=>{
   ordersCol=db.collection('orders');tasksCol=db.collection('tasks');
   const fail=()=>banner('Связь с базой прервалась. Обновите страницу, чтобы видеть свежие данные.');
   ordersCol.onSnapshot(snap=>{
-    orders=snap.docs.map(d=>({id:d.id,...d.data()}));
+    ordersRaw=snap.docs.map(d=>({id:d.id,...d.data()}));
+    orders=ordersRaw.filter(o=>!isKaspiLedger(o)); // заказы Kaspi теперь в разделе Kaspi, в ведомости их не показываем
     loaded=true;render();
     if(editing&&editing!=='new'&&!orders.find(o=>o.id===editing)){closeEditor();toast('Этот заказ удалили')}
   },fail);
@@ -3845,6 +3848,20 @@ var kaspiOrders=[],kaspiMeta={},kaspiLoaded=false,kaspiDbErr='',kaspiCol=null;
 var kTab='packing',kSel=new Set(),kHist={busy:false,msg:'',started:false},kBusy=new Set(),kCleanAsk=false,kPer=4,kPrintBusy=false,kPrintFails=[];
 
 const kDay=ms=>ms?ds(new Date(+ms)):'';
+/* выданные заказы Kaspi как заказы для прибыли и аналитики (в ведомости их нет):
+   дата — день выдачи, себестоимость — из закупок и прайса Kaspi, комиссия — KASPI_FEE */
+function kVirtualOrders(){
+  const sold=(kaspiOrders||[]).filter(k=>kStage(k)==='sold');if(!sold.length)return [];
+  const cost=new Map();try{kaspiCatalog().forEach(i=>{const n=i.name.trim().toLowerCase();if(i.cost!=null&&!cost.has(n))cost.set(n,+i.cost)})}catch(_){}
+  return sold.map(k=>{
+    const day=kDay(k.completed||k.created);
+    const items=k.items&&k.items.length?k.items:[{name:'Заказ Kaspi № '+k.code,qty:1,price:+k.total||0}];
+    const lines=items.map(i=>({name:i.name||'Товар Kaspi',qty:+i.qty||1,price:+i.price||0,date:day,cost:cost.get(String(i.name||'').trim().toLowerCase())||0}));
+    if(!lines.some(l=>l.price))lines[0].price=Math.round((+k.total||0)/lines[0].qty);
+    return {id:'kv-'+k.id,virtual:true,client:'Kaspi',service:'kaspi',source:'kaspi',status:'done',price:+k.total||0,paid:+k.total||0,
+      receivedAt:day,createdAt:+k.completed||+k.created||0,items:[],expenses:[],kaspi:lines,kaspiFee:KASPI_FEE*100};
+  });
+}
 const kNet=k=>Math.round((+k.total||0)*(1-KASPI_FEE));
 const kWhat=k=>(k.items&&k.items.length)?k.items.map(i=>(i.name||'Товар')+(+i.qty>1?' × '+i.qty:'')).join(', '):'Заказ № '+(k.code||'');
 const kPayDay=k=>kDay(k.plannedDelivery)||kDay(k.transmitPlan);
@@ -4026,7 +4043,7 @@ async function kPrint(){
 }
 
 /* ---------- убрать старые заказы Kaspi из ведомости ---------- */
-const kLedger=()=>orders.filter(o=>o.source==='kaspi'||o.service==='kaspi');
+const kLedger=()=>ordersRaw.filter(isKaspiLedger);
 async function kCleanLedger(){
   const list=kLedger();if(!list.length||!canWrite)return;
   kCleanAsk=false;let n=0;
@@ -4071,9 +4088,9 @@ function renderKaspiPage(){
   $('k-sub').textContent=kaspiSync.err?'⚠ '+kaspiSync.err:t?'Проверено в '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+', обновляется само каждые 10 минут, пока учёт открыт.':'Заказы магазина на Kaspi: упаковка, передача курьеру, доставка и что уже продали.';
   /* старые заказы Kaspi в ведомости */
   const led=kLedger();
-  $('k-clean').innerHTML=led.length&&canWrite?`<div class="kclean"><span>В ведомости осталось заказов Kaspi: <b>${led.length}</b>. Теперь они ведутся здесь, а в ведомости только мешают.</span>
-    ${kCleanAsk?`<span class="kc-b"><b>Удалить ${led.length} из ведомости насовсем?</b> <button class="btn danger solid sm" type="button" data-kclean="yes">Удалить</button> <button class="btn soft sm" type="button" data-kclean="no">Нет</button></span>`
-      :`<button class="btn danger sm" type="button" data-kclean="ask">Убрать из ведомости</button>`}</div>`:'';
+  $('k-clean').innerHTML=led.length&&canWrite?`<div class="kclean"><span>В базе остались старые заказы Kaspi из ведомости: <b>${led.length}</b>. В ведомости они уже скрыты, кнопка удалит их насовсем.</span>
+    ${kCleanAsk?`<span class="kc-b"><b>Удалить ${led.length} старых заказов Kaspi насовсем?</b> <button class="btn danger solid sm" type="button" data-kclean="yes">Удалить</button> <button class="btn soft sm" type="button" data-kclean="no">Нет</button></span>`
+      :`<button class="btn danger sm" type="button" data-kclean="ask">Удалить насовсем</button>`}</div>`:'';
   /* цифры */
   const ym=curMonth(),soldM=g.sold.filter(k=>kDay(k.completed||k.created).slice(0,7)===ym);
   const waitPay=g.shipped.reduce((s,k)=>s+kNet(k),0);
