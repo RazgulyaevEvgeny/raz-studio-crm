@@ -28,7 +28,7 @@ if errorlevel 1 (
 echo [2/4] Настройки...
 if not exist .env (
   copy .env.example .env >nul
-  echo Сейчас откроется Блокнот. Заполните BOT_EMAIL, BOT_PASSWORD и ANTHROPIC_API_KEY, сохраните и закройте Блокнот.
+  echo Сейчас откроется Блокнот. Заполните BOT_EMAIL, BOT_PASSWORD и GEMINI_API_KEY, сохраните и закройте Блокнот.
   start /wait notepad .env
 )
 

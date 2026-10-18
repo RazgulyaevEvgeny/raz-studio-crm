@@ -1,5 +1,6 @@
 // Логика WhatsApp-бота студии: уведомления о заказах, ИИ-консультант, чаты в учёте.
 // Сама связь с WhatsApp — в bot.js. Здесь только то, что бот говорит и что пишет в учёт.
+// Нейросеть: бесплатный Google Gemini (GEMINI_API_KEY), либо платный Claude, если задан ANTHROPIC_API_KEY.
 
 import Anthropic from '@anthropic-ai/sdk';
 
@@ -148,11 +149,13 @@ export async function markNoticeSent(fs, orderId, n) {
 
 /* ---------- ИИ-консультант ---------- */
 
-let claude = null;
+// По умолчанию отвечает Google Gemini на бесплатном тарифе (ключ без карты на aistudio.google.com).
+// Если бесплатный лимит основной модели кончился, пробуем следующую из списка, у неё свой лимит.
+// Claude (платно) включается, только если в .env задан ANTHROPIC_API_KEY.
+const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
 
 // Ответ бота на последние сообщения клиента: {text, handoff}
 export async function runAgent(fs, env, phone, chat) {
-  claude ||= new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   const now = new Date(Date.now() + 5 * 3600e3); // время Казахстана, UTC+5
   const today = `Сейчас ${WD_FULL[now.getUTCDay()]}, ${now.getUTCDate()} ${MONTHS_GEN[now.getUTCMonth()]} ${now.getUTCFullYear()}, ` +
     `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} по Алматы.` +
@@ -160,51 +163,106 @@ export async function runAgent(fs, env, phone, chat) {
     (phone ? '' : ' Номер телефона клиента скрыт, его заказы по номеру не найти: спроси номер заказа или позови менеджера.');
   const messages = toClaudeMessages(chat.messages || []);
   if (!messages.length) return {};
-  let handoff = '';
+  const ctx = { fs, phone, chat, handoff: '' };
+  try {
+    const text = String(env.ANTHROPIC_API_KEY || '').trim()
+      ? await viaClaude(env, today, messages, ctx)
+      : await viaGemini(env, today, messages, ctx);
+    return text ? { text, handoff: ctx.handoff } : fallbackReply();
+  } catch (e) {
+    console.log('ИИ не ответил:', String(e?.message || e).slice(0, 300));
+    return fallbackReply();
+  }
+}
 
+async function useTool(name, input, ctx) {
+  try {
+    const out = await runTool(name, input || {}, ctx);
+    if (name === 'call_manager') ctx.handoff = String(input?.reason || 'нужен менеджер');
+    return out;
+  } catch (e) {
+    return { error: String(e && e.message || e) };
+  }
+}
+
+/* Gemini: бесплатно */
+const geminiTools = [{
+  functionDeclarations: TOOLS.map(t => {
+    const { additionalProperties, ...parameters } = t.input_schema; // Gemini не понимает additionalProperties
+    // и не принимает пустой список параметров
+    return { name: t.name, description: t.description, ...(Object.keys(parameters.properties).length ? { parameters } : {}) };
+  }),
+}];
+
+async function viaGemini(env, today, messages, ctx) {
+  if (!String(env.GEMINI_API_KEY || '').trim()) throw new Error('в .env нет GEMINI_API_KEY');
+  const models = env.GEMINI_MODEL ? [env.GEMINI_MODEL, ...GEMINI_MODELS.filter(m => m !== env.GEMINI_MODEL)] : GEMINI_MODELS;
+  const contents = messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
+  let mi = 0;
   for (let step = 0; step < 6; step++) {
-    let data;
-    try {
-      data = await claude.beta.messages.create({
-        model: env.MODEL || 'claude-opus-5-5',
-        max_tokens: 4000,
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default', // если модель откажется отвечать, запрос сам уйдёт на запасную модель Claude
-        output_config: { effort: 'low' },
-        system: [
-          { type: 'text', text: STUDIO, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: today },
-        ],
-        tools: TOOLS,
-        messages,
-      });
-    } catch (e) {
-      console.log('claude error', e?.status || '', String(e?.message || e).slice(0, 300));
-      return fallbackReply();
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${models[mi]}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': String(env.GEMINI_API_KEY).trim() },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: STUDIO + '\n\n' + today }] },
+        contents,
+        tools: geminiTools,
+        generationConfig: { temperature: 0.4, maxOutputTokens: 2048 },
+      }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 429 || r.status === 503) {
+      // Лимит или перегрузка: следующая модель, иначе сдаёмся и зовём менеджера
+      if (++mi < models.length) { step--; continue; }
+      throw new Error('бесплатный лимит Gemini исчерпан');
     }
-    if (data.stop_reason === 'refusal') return fallbackReply();
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('Gemini ответил ' + r.status));
+    const content = j.candidates?.[0]?.content;
+    const parts = content?.parts || [];
+    const calls = parts.filter(p => p.functionCall);
+    if (!calls.length) return parts.filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
+    contents.push(content); // возвращаем ответ модели как есть (в нём служебные подписи, без них Gemini ругается)
+    const results = [];
+    for (const { functionCall: c } of calls) {
+      const out = await useTool(c.name, c.args, ctx);
+      results.push({ functionResponse: { ...(c.id ? { id: c.id } : {}), name: c.name, response: Array.isArray(out) ? { items: out } : out } });
+    }
+    contents.push({ role: 'user', parts: results });
+  }
+  throw new Error('слишком много шагов');
+}
 
+/* Claude: платно, только если задан ANTHROPIC_API_KEY */
+let claude = null;
+async function viaClaude(env, today, messages, ctx) {
+  claude ||= new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  for (let step = 0; step < 6; step++) {
+    const data = await claude.beta.messages.create({
+      model: env.MODEL || 'claude-opus-5-5',
+      max_tokens: 4000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default', // если модель откажется отвечать, запрос сам уйдёт на запасную модель Claude
+      output_config: { effort: 'low' },
+      system: [
+        { type: 'text', text: STUDIO, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: today },
+      ],
+      tools: TOOLS,
+      messages,
+    });
+    if (data.stop_reason === 'refusal') return '';
     const content = data.content || [];
     const uses = content.filter(b => b.type === 'tool_use');
-    if (data.stop_reason !== 'tool_use' || !uses.length) {
-      const text = content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
-      return { text, handoff };
-    }
+    if (data.stop_reason !== 'tool_use' || !uses.length) return content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
     messages.push({ role: 'assistant', content });
     const results = [];
     for (const u of uses) {
-      let out;
-      try {
-        out = await runTool(u.name, u.input || {}, { fs, phone, chat });
-        if (u.name === 'call_manager') handoff = String(u.input?.reason || 'нужен менеджер');
-      } catch (e) {
-        out = { error: String(e && e.message || e) };
-      }
+      const out = await useTool(u.name, u.input, ctx);
       results.push({ type: 'tool_result', tool_use_id: u.id, content: JSON.stringify(out), ...(out && out.error ? { is_error: true } : {}) });
     }
     messages.push({ role: 'user', content: results });
   }
-  return fallbackReply();
+  throw new Error('слишком много шагов');
 }
 
 function fallbackReply() {

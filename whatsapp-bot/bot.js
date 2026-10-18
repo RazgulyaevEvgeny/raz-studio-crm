@@ -2,7 +2,7 @@
 // как связанное устройство (как WhatsApp Web): один раз сканируете QR-код с телефона.
 //
 // Что делает:
-//   - отвечает клиентам ИИ-консультантом (логика в brain.js);
+//   - отвечает клиентам ИИ-консультантом на бесплатном Google Gemini (логика в brain.js);
 //   - отправляет клиентам уведомления о заказах: учёт кладёт задание в коллекцию wa_outbox, бот его забирает;
 //   - если менеджер сам написал клиенту с телефона, бот молчит в этом чате 12 часов;
 //   - сообщения не отмечает прочитанными, чтобы менеджеры видели новые чаты в телефоне.
@@ -31,6 +31,7 @@ const SEND_GAP = 3e3;                        // не чаще одного со�
 const env = process.env;
 const missing = ['FIREBASE_API_KEY', 'FIREBASE_PROJECT', 'BOT_EMAIL', 'BOT_PASSWORD'].filter(k => !String(env[k] || '').trim());
 const fs = firestore(env);
+const aiOn = !!String(env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY || '').trim();
 
 const state = { status: 'starting', qr: '', since: Date.now(), note: missing.length ? 'В файле .env не заполнено: ' + missing.join(', ') : '' };
 const log = (...a) => console.log(new Date().toLocaleString('ru-RU'), ...a);
@@ -109,7 +110,7 @@ async function onMessage(m) {
   await appendChat(fs, chatId, { role: 'client', text, at, id: m.key.id || '' }, {
     phone, unread: true, ...(m.pushName ? { name: m.pushName } : {}),
   });
-  if (!String(env.ANTHROPIC_API_KEY || '').trim() || Date.now() - at > MAX_AGE) return;
+  if (!aiOn || Date.now() - at > MAX_AGE) return;
 
   // Клиенты часто пишут несколькими сообщениями подряд: отвечаем, когда допишет
   clearTimeout(pending.get(chatId));
@@ -231,7 +232,7 @@ createServer((req, res) => {
 <body style="font-family:system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 16px;color:#222">
 <h1 style="font-size:22px">WhatsApp-бот: ${TITLES[state.status] || state.status}</h1>
 ${state.note ? `<p style="color:#b00">${state.note}</p>` : ''}
-${!env.ANTHROPIC_API_KEY ? '<p style="color:#b60">ИИ-ответы выключены: в .env нет ANTHROPIC_API_KEY. Уведомления о заказах работают.</p>' : ''}
+${!aiOn ? '<p style="color:#b60">ИИ-ответы выключены: в .env нет GEMINI_API_KEY.</p>' : ''}
 ${state.status === 'qr' ? `<img src="${state.qr}" alt="QR" style="width:320px;height:320px">
 <ol><li>На телефоне с рабочим WhatsApp откройте <b>Настройки → Связанные устройства</b>.</li>
 <li>Нажмите <b>Привязка устройства</b> и наведите камеру на этот код.</li></ol>` : ''}
