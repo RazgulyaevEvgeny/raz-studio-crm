@@ -11,7 +11,10 @@ const ALLOWED_ORIGIN = 'https://razgulyaevevgeny.github.io';
 const KASPI = 'https://kaspi.kz/shop/api/v2';
 // Активные состояния заказа. ARCHIVE (выданные/отменённые) не берём.
 const STATES = ['NEW', 'SIGN_REQUIRED', 'PICKUP', 'DELIVERY', 'KASPI_DELIVERY'];
-const MAX_ENTRY_REQUESTS = 35; // лимит бесплатного Worker — 50 запросов наружу
+// Kaspi отдаёт заказы окнами не больше 14 дней — смотрим 3 окна подряд, то есть 6 недель назад.
+const WINDOWS = 3;
+const DAY = 24 * 3600 * 1000;
+const MAX_ENTRY_REQUESTS = 30; // лимит бесплатного Worker — 50 запросов наружу
 
 export default {
   async fetch(request, env) {
@@ -41,60 +44,77 @@ export default {
     const allowed = (env.ALLOWED_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
     if (!email || !allowed.includes(email)) return json({ error: 'forbidden' }, 403);
 
-    // 2. Забираем заказы из Kaspi (API отдаёт максимум за 14 дней)
+    // 2. Забираем заказы из Kaspi
     const kaspiHeaders = {
       'Content-Type': 'application/vnd.api+json',
-      'X-Auth-Token': env.KASPI_TOKEN,
+      'Accept': 'application/vnd.api+json',
+      'X-Auth-Token': String(env.KASPI_TOKEN || '').trim(),
       'User-Agent': 'Mozilla/5.0 (raz-studio-crm)',
     };
     const now = Date.now();
-    const from = now - 14 * 24 * 3600 * 1000 + 60 * 1000;
+    const seen = new Map();
+    const stats = {};
 
-    const orders = [];
     for (const state of STATES) {
-      const url =
-        `${KASPI}/orders?page[number]=0&page[size]=100` +
-        `&filter[orders][state]=${state}` +
-        `&filter[orders][creationDate][$ge]=${from}` +
-        `&filter[orders][creationDate][$le]=${now}` +
-        `&include[orders]=user`;
-      const r = await fetch(url, { headers: kaspiHeaders });
-      if (!r.ok) {
-        return json({ error: 'kaspi', state, status: r.status, body: (await r.text()).slice(0, 300) }, 502);
-      }
-      const d = await r.json();
-      for (const o of d.data || []) {
-        const a = o.attributes || {};
-        const c = a.customer || {};
-        orders.push({
-          id: o.id,
-          code: a.code,
-          state: a.state,
-          status: a.status,
-          total: a.totalPrice,
-          created: a.creationDate,
-          plannedDelivery: a.plannedDeliveryDate || null,
-          deliveryMode: a.deliveryMode || null,
-          customer: [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name || '',
-          phone: c.cellPhone || '',
-          items: [],
-        });
+      stats[state] = 0;
+      for (let w = 0; w < WINDOWS; w++) {
+        const to = now - w * 14 * DAY;
+        const from = to - 14 * DAY + 60 * 1000;
+        const url =
+          `${KASPI}/orders?page[number]=0&page[size]=100` +
+          `&filter[orders][state]=${state}` +
+          `&filter[orders][creationDate][$ge]=${from}` +
+          `&filter[orders][creationDate][$le]=${to}` +
+          `&include[orders]=user`;
+        const r = await fetch(url, { headers: kaspiHeaders });
+        if (!r.ok) {
+          return json({ error: 'kaspi', state, status: r.status, body: (await r.text()).slice(0, 300) }, 502);
+        }
+        const d = await r.json();
+        const users = new Map((d.included || []).map(x => [x.id, x.attributes || {}]));
+        for (const o of d.data || []) {
+          if (seen.has(o.id)) continue;
+          stats[state]++;
+          const a = o.attributes || {};
+          const uid = o.relationships?.user?.data?.id;
+          const c = { ...(uid && users.get(uid) || {}), ...(a.customer || {}) };
+          seen.set(o.id, {
+            id: o.id,
+            code: a.code,
+            state: a.state || state,
+            status: a.status,
+            total: a.totalPrice,
+            created: a.creationDate,
+            plannedDelivery: a.plannedDeliveryDate || a.kaspiDelivery?.courierTransmissionPlanningDate || null,
+            deliveryMode: a.deliveryMode || null,
+            customer: [c.firstName, c.lastName].filter(Boolean).join(' ') || c.name || '',
+            phone: c.cellPhone || '',
+            items: [],
+          });
+        }
       }
     }
+    const orders = [...seen.values()];
 
     // 3. Состав заказа (товары) — отдельный запрос на каждый заказ
     for (const o of orders.slice(0, MAX_ENTRY_REQUESTS)) {
-      const r = await fetch(`${KASPI}/orders/${o.id}/entries`, { headers: kaspiHeaders });
+      const r = await fetch(`${KASPI}/orders/${o.id}/entries?include[orderentries]=product`, { headers: kaspiHeaders });
       if (!r.ok) continue;
       const d = await r.json();
-      o.items = (d.data || []).map(e => ({
-        name: e.attributes?.offer?.name || e.attributes?.product?.name || '',
-        sku: e.attributes?.offer?.code || '',
-        qty: e.attributes?.quantity || 1,
-        price: e.attributes?.basePrice ?? e.attributes?.totalPrice ?? null,
-      }));
+      const prods = new Map((d.included || []).map(x => [x.id, x.attributes || {}]));
+      o.items = (d.data || []).map(e => {
+        const at = e.attributes || {};
+        const pid = e.relationships?.product?.data?.id;
+        const p = (pid && prods.get(pid)) || {};
+        return {
+          name: at.offer?.name || at.product?.name || p.name || '',
+          sku: at.offer?.code || p.code || '',
+          qty: at.quantity || 1,
+          price: at.basePrice ?? at.totalPrice ?? null,
+        };
+      });
     }
 
-    return json({ updated: now, count: orders.length, orders });
+    return json({ updated: now, count: orders.length, stats, orders });
   },
 };

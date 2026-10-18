@@ -3804,7 +3804,7 @@ async function syncKaspiOrders(manual){
         source:'kaspi',kaspiId:k.id,kaspiCode:k.code,kaspiState:k.state
       });made++;
     }
-    kaspiSync.at=Date.now();kaspiSync.err='';
+    kaspiSync.at=Date.now();kaspiSync.err='';kaspiSync.count=data.count||0;kaspiSync.stats=data.stats||null;
     if(manual||made)toast(made?'С Kaspi пришло новых заказов: '+made:'Новых заказов на Kaspi нет');
   }catch(e){
     kaspiSync.err=(e&&e.message)||'Нет связи с Kaspi';
@@ -3829,7 +3829,8 @@ function renderKaspiWidget(){
   const b=$('kaspi-sync-btn');b.disabled=kaspiSync.busy||!canWrite;b.textContent=kaspiSync.busy?'Обновляем…':'Обновить с Kaspi';
   const t=kaspiSync.at?new Date(kaspiSync.at):null;
   $('w-kaspi-note').textContent=kaspiSync.err?'⚠ '+kaspiSync.err
-    :t?'Проверено в '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+', обновляется само каждые 10 минут.':'';
+    :t?'Проверено в '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+', обновляется само каждые 10 минут.'
+      +(!kaspiSync.count?(kaspiSync.stats?' Kaspi за 6 недель вернул: '+Object.entries(kaspiSync.stats).map(([k,v])=>(KASPI_STATE[k]||k)+' '+v).join(', ')+'.':' Нужно обновить код воркера kaspi-orders (файл kaspi-worker/worker.js).'):''):'';
 }
 $('kaspi-sync-btn').addEventListener('click',()=>syncKaspiOrders(true));
 /* первая проверка — как только загрузятся заказы, дальше раз в 10 минут, пока учёт открыт */
