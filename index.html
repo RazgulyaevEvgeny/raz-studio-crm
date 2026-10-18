@@ -1033,17 +1033,15 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 @media(max-width:600px){#w-kaspi .kmark{width:24px;height:24px}#w-print .bmark{height:24px}}
 /* менеджер Анна — ИИ-менеджер в WhatsApp (whatsapp-bot): сводка, дела, кто ждёт человека, вопросы */
 /* шапка — как баннер «Заявки с сайта топперов»: аватар выглядывает поверх края, блок сворачивается нажатием на шапку на любом экране */
-#w-anna{container-type:inline-size;--ab:#4358ef;position:relative;margin-top:12px;padding:14px 16px 16px;border-radius:24px;background:radial-gradient(130px 100px at 62px 44px,rgba(255,255,255,.2),rgba(255,255,255,0) 70%),linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
+#w-anna{container-type:inline-size;--ab:#4358ef;position:relative;margin-top:12px;padding:14px 16px 16px;border-radius:24px;background:linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
 #pack #w-anna>.w-h{min-height:52px;padding-left:122px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;border-radius:16px;outline-offset:4px}
 #w-anna>.w-h:focus-visible{outline:2px solid #fff}
 #w-anna .w-h h2{flex:1 1 auto;min-width:0;color:#fff}
 #w-anna .at{display:flex;flex-direction:column;gap:4px;min-width:0}
 #w-anna .at .c{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.86)}
-#w-anna .at .c::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--sc,#c9cfff);box-shadow:0 0 0 2px rgba(255,255,255,.9)}
-#w-anna .go{flex:none;white-space:nowrap;background:#fff;color:var(--ab)}
-#w-anna .go:hover{background:#e6e9ff}
-#w-anna .go:focus-visible,#w-anna .an-ask .btn:focus-visible,#w-anna .mrow:focus-visible,#w-anna .an-nb .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
-#w-anna .go:disabled{opacity:.55;cursor:default;background:#fff;color:var(--ab)}
+/* точка статуса без белого кольца: обрезанное overflow кольцо читалось светлой полоской рядом с аватаром */
+#w-anna .at .c::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--sc,#c9cfff)}
+#w-anna .an-ref:focus-visible,#w-anna .an-ask .btn:focus-visible,#w-anna .mrow:focus-visible,#w-anna .an-nb .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
 #pack #w-anna .mf-x{display:grid;place-items:center;flex:none;width:36px;height:36px;margin:0;border-radius:50%;background:rgba(255,255,255,.17);transition:background .15s}
 #w-anna>.w-h:hover .mf-x{background:rgba(255,255,255,.28)}
 #pack #w-anna .mf-x::before{content:"";width:8px;height:8px;border-right:2.4px solid #fff;border-bottom:2.4px solid #fff;transform:translateY(-2px) rotate(45deg);transition:transform .2s}
@@ -1054,7 +1052,8 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .an-av{position:absolute;left:12px;top:-26px;width:101px;height:106px;pointer-events:none;transform-origin:50% 100%;transition:transform .25s}
 #w-anna>.w-h:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
 .an-av .ci{position:absolute;left:10%;top:23.8%;width:80%;height:76.2%;border-radius:50%;background:radial-gradient(circle at 38% 30%,#fff,#dde3ff 75%);box-shadow:0 8px 18px rgba(16,24,120,.38)}
-.an-av .fg{position:absolute;inset:0;filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(16,24,120,.4))}
+/* всё, что торчит справа за кругом (кончики волос и их белая обводка), срезаем по дуге круга: между стикером и текстом ничего светлого */
+.an-av .fg{position:absolute;inset:0;clip-path:polygon(0 0,68% 0,68% 23.5%,64.2% 26.1%,69.8% 28.6%,74.7% 31.7%,78.9% 35.3%,82.8% 39.7%,85.9% 44.4%,88.3% 49.6%,89.8% 55.6%,90.3% 61.9%,100% 61.9%,100% 100%,0 100%);filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(16,24,120,.4))}
 .an-av .fg img{position:absolute;inset:0;display:block;width:100%;height:100%}
 .an-av .mv{position:absolute;inset:0;transform-origin:64.4% 84.3%}
 .an-av .mv img{clip-path:polygon(49% 77.5%,65% 77%,87% 83.5%,88% 94%,76% 94%,49% 89%)}
@@ -1064,8 +1063,9 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .an-av .sm b{left:-6px;top:-6px;width:12px;height:12px;opacity:0;animation:ansm 4.2s cubic-bezier(.3,.2,.4,1) infinite}
 .an-av .sm b:nth-child(2){animation-delay:-1.4s;animation-name:ansm2}
 .an-av .sm b:nth-child(3){animation-delay:-2.8s}
-@keyframes ansm{0%{transform:translate(0,0) scale(.3);opacity:0}10%{opacity:.95}45%{transform:translate(-4px,-22px) scale(1.5);opacity:.75}100%{transform:translate(10px,-54px) scale(3);opacity:0}}
-@keyframes ansm2{0%{transform:translate(0,0) scale(.3);opacity:0}10%{opacity:.9}50%{transform:translate(5px,-24px) scale(1.6);opacity:.7}100%{transform:translate(4px,-52px) scale(2.8);opacity:0}}
+/* дымок короткий и уходит влево, на круг: длинный столбик дыма справа от головы выглядел полосой */
+@keyframes ansm{0%{transform:translate(0,0) scale(.3);opacity:0}12%{opacity:.9}50%{transform:translate(-5px,-13px) scale(1.4);opacity:.6}100%{transform:translate(-10px,-26px) scale(2.1);opacity:0}}
+@keyframes ansm2{0%{transform:translate(0,0) scale(.3);opacity:0}12%{opacity:.85}50%{transform:translate(-3px,-14px) scale(1.5);opacity:.55}100%{transform:translate(-8px,-25px) scale(2);opacity:0}}
 .an-av .pf{left:58%;top:85%;width:22%;height:15%;margin:-7.5% 0 0 -11%;opacity:0}
 /* затяжка: сигарета приподнимается, кончик разгорается, потом выдох */
 .an-av.puff .mv{animation:anpuff 1.5s ease-in-out}
@@ -1131,7 +1131,13 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .an-q .a{align-self:flex-start;max-width:92%;background:rgba(255,255,255,.16);color:#fff;border-radius:4px 16px 16px 16px;padding:8px 12px;white-space:pre-line;overflow-wrap:anywhere}
 .an-q .a.wait{color:rgba(255,255,255,.78);font-style:italic}
 .an-q .a.wait::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:#fff;vertical-align:1px;animation:bwpulse 1.2s ease-in-out infinite}
-#w-anna .bw-note{margin-top:-8px;color:#fff;opacity:.85}
+/* низ карточки: пометка и маленькая кнопка «Обновить» */
+.an-ft{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin-top:14px}
+#w-anna .bw-note{margin:0;color:#fff;opacity:.85}
+.an-ref{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;flex:none;min-height:28px;padding:0 11px;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:600 12px var(--f);cursor:pointer;transition:background .15s}
+.an-ref:hover{background:rgba(255,255,255,.24)}
+.an-ref:disabled{opacity:.5;cursor:default;background:rgba(255,255,255,.14)}
+.an-ref svg{width:12px;height:12px}
 @media(prefers-reduced-motion:reduce){.an-q .a.wait::after{animation:none}}
 @media(max-width:600px){
   #pack #w-anna{margin-top:14px;padding:10px 12px 12px;border-radius:18px;gap:10px}
@@ -1147,8 +1153,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   .an-body,.an-col{gap:10px}
   .an-say{font-size:13.5px;padding:10px 12px;border-radius:5px 16px 16px 16px}
   .an-todo li{padding:8px 10px;border-radius:12px;font-size:13px;gap:8px}
-  #w-anna .go{width:34px;min-height:34px;padding:0;justify-content:center}#w-anna .go span{display:none}#w-anna .go svg{width:15px;height:15px}
-  #w-anna .bw-note{margin-top:-5px}
+  .an-ft{margin-top:10px}
   .an-stats{display:grid;grid-template-columns:1fr 1fr}
   .an-stats .bw-stat{padding:5px 9px}.an-stats .bw-stat em{font-size:15px}
   .an-ask input,.an-ask .btn{min-height:40px}
@@ -1464,16 +1469,16 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="home-grid">
       <div class="home-col">
         <div class="w" id="w-anna">
-          <div class="w-h"><h2><span class="an-av" id="anna-av" aria-hidden="true"><span class="ci"></span><span class="fg"><img src="anna-avatar-0.webp?v=2" alt="" width="240" height="252"><span class="mv"><img src="anna-avatar.webp?v=2" alt="" width="240" height="252"><i class="gl"></i></span></span><i class="sm"><b></b><b></b><b></b></i><i class="pf"></i></span><span class="at">Менеджер Анна<span class="c" id="w-anna-c">подключаемся…</span></span></h2><button class="go" type="button" id="anna-ref-btn" aria-label="Обновить сводку Анны"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span>Обновить</span></button></div>
+          <div class="w-h"><h2><span class="an-av" id="anna-av" aria-hidden="true"><span class="ci"></span><span class="fg"><img src="anna-avatar-0.webp?v=2" alt="" width="240" height="252"><span class="mv"><img src="anna-avatar.webp?v=2" alt="" width="240" height="252"><i class="gl"></i></span></span><i class="sm"><b></b><b></b><b></b></i><i class="pf"></i></span><span class="at">Менеджер Аня<span class="c" id="w-anna-c">подключаемся…</span></span></h2></div>
           <div class="an-body" id="w-anna-body">
             <div class="an-col"><div class="an-say" id="w-anna-say">Загружаем сводку…</div><div id="w-anna-todo"></div><div class="an-stats" id="w-anna-stats"></div></div>
             <div class="an-col">
               <div id="w-anna-need"></div>
-              <form class="an-ask" id="anna-ask" novalidate><input id="anna-q" placeholder="Спросить Анну" autocomplete="off" maxlength="500" aria-label="Вопрос Анне"><button class="btn primary sm" type="submit" id="anna-q-btn">Спросить</button></form>
-              <small class="bw-note">Анна отвечает, когда включён рабочий компьютер.</small>
+              <form class="an-ask" id="anna-ask" novalidate><input id="anna-q" placeholder="Спросить Аню" autocomplete="off" maxlength="500" aria-label="Вопрос Ане"><button class="btn primary sm" type="submit" id="anna-q-btn">Спросить</button></form>
               <div class="an-qs" id="w-anna-qs"></div>
             </div>
           </div>
+          <div class="an-ft"><small class="bw-note">Аня отвечает, когда включён рабочий компьютер.</small><button class="an-ref" type="button" id="anna-ref-btn" aria-label="Обновить сводку Ани"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить</button></div>
         </div>
         <div class="w" id="w-req">
           <div class="w-h"><img class="rcup" src="topper-cup.svg?v=1" alt="" width="74" height="102"><h2><span class="rt">Заявки с сайта топперов</span><span class="c" id="w-req-c"></span></h2></div>
@@ -4733,7 +4738,7 @@ function renderAnna(){
   c.style.setProperty('--sc',annaErr?'var(--danger)':d.at&&Date.now()-d.at<3*3600e3?'var(--ok)':'var(--muted)');
   if(annaErr){say.textContent='Нужно обновить правила базы Firestore: добавить строки wa_anna и wa_anna_q из firestore.rules.';$('w-anna-todo').innerHTML=$('w-anna-need').innerHTML=$('w-anna-stats').innerHTML='';}
   else if(!annaLoaded)say.textContent='Загружаем сводку…';
-  else if(!annaD)say.textContent='Анна ещё не готовила сводку. Нажмите «Обновить», когда рабочий компьютер включён.';
+  else if(!annaD)say.textContent='Аня ещё не готовила сводку. Нажмите «Обновить» внизу, когда рабочий компьютер включён.';
   else say.textContent=String(d.summary||'').trim()||'Пока без новостей.';
   if(!annaErr){
     const td=todo.map(t=>typeof t==='string'?{text:t}:t).filter(t=>t&&t.text).slice(0,6);
@@ -4742,17 +4747,17 @@ function renderAnna(){
         :t.kaspiId?`<li><button type="button" class="an-lk" data-ankas="${esc(String(t.kaspiId))}" title="Открыть заказ на странице Kaspi">${x}<i aria-hidden="true">→</i></button></li>`:`<li>${x}</li>`}).join('')}</ul>`:'';
     $('w-anna-need').innerHTML=need.length?`<p class="an-h">Ждут менеджера <em>${need.length}</em></p><div class="mini">${need.slice(0,8).map((n,i)=>{
       const ph=String(n.phone||'').replace(/\D/g,''),who=esc(n.name||(ph?'+'+ph:'Клиент')),key=ph||n.name||'#'+i,op=annaNm===key;
-      const say=String(n.brief||n.reason||'').trim()||'Клиент просит менеджера, подробностей Анна не записала.';
+      const say=String(n.brief||n.reason||'').trim()||'Клиент просит менеджера, подробностей Аня не записала.';
       return `<div class="an-nm${op?' open':''}"><button type="button" class="mrow" data-annm="${esc(key)}" aria-expanded="${op}"><span class="an-w"><b>${who}</b><small>${esc(n.reason||'')}</small></span><span class="r">${n.since?`<small>${annaAgo(+n.since)}</small>`:''}<i class="ch" aria-hidden="true"></i></span></button>`
         +`<div class="an-nb"><div><p>${esc(say)}</p>${ph?`<a class="btn sm" href="https://wa.me/${ph}" target="_blank" rel="noopener">Перейти в чат WhatsApp ↗</a>`:''}</div></div></div>`}).join('')}</div>`:'';
-    const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Анны'],[st.needManager,'ждут ответа'],[st.voice,'голосовых']].filter(x=>x[0]!=null&&x[0]!=='');
+    const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Ани'],[st.needManager,'ждут ответа'],[st.voice,'голосовых']].filter(x=>x[0]!=null&&x[0]!=='');
     $('w-anna-stats').innerHTML=S.map(([v,l])=>bwPStat(l,String(v))).join('');
   }
-  $('w-anna-qs').innerHTML=annaQ.map(q=>`<div class="an-q"><span class="q">${esc(q.q)}</span>${q.status==='done'?`<span class="a">${esc(q.a||'Ответа нет.')}</span>`:'<span class="a wait">Анна думает…</span>'}</div>`).join('');
+  $('w-anna-qs').innerHTML=annaQ.map(q=>`<div class="an-q"><span class="q">${esc(q.q)}</span>${q.status==='done'?`<span class="a">${esc(q.a||'Ответа нет.')}</span>`:'<span class="a wait">Аня думает…</span>'}</div>`).join('');
 }
 $('anna-ref-btn').addEventListener('click',async()=>{
   const fs=annaFs();if(!fs||!canWrite)return;
-  try{await fs.doc('wa_anna/request').set({refreshAt:Date.now(),by:annaWho()},{merge:true});toast('Анна готовит свежую сводку…')}
+  try{await fs.doc('wa_anna/request').set({refreshAt:Date.now(),by:annaWho()},{merge:true});toast('Аня готовит свежую сводку…')}
   catch(e){toast('Не получилось: обновите правила базы (wa_anna)')}
 });
 $('anna-ask').addEventListener('submit',async e=>{

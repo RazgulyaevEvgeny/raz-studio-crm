@@ -1,10 +1,17 @@
-// Уведомления команде на телефон через бесплатного бота в Telegram:
+// Бот команды в Telegram (бесплатно). Уведомления:
 //   - Анна позвала менеджера в WhatsApp;
 //   - пришёл новый заказ Kaspi (бот сам раз в 5 минут спрашивает воркер kaspi-orders, учёт открывать не нужно).
 // Подписка: открыть своего бота в Telegram и отправить ему /start. Список подписчиков — wa_anna/telegram.
+// Подписчики могут писать или наговаривать Ане вопросы и задачи (ответ готовит tgAssistant в anna.js).
 // В .env: TELEGRAM_BOT_TOKEN (выдаёт @BotFather). Для Kaspi почта бота (BOT_EMAIL) должна быть в ALLOWED_EMAILS воркера.
 
+import { tgAssistant } from './anna.js';
+import { transcribe } from './brain.js';
+
 const KASPI_API = 'https://kaspi-orders.design-onegin.workers.dev';
+// Как Аня обращается к сотрудникам в Telegram (по имени в Telegram)
+const CALL = [[/мил/i, 'Милаша'], [/евген|женя/i, 'Евгений Кириллович']];
+const callOf = c => (CALL.find(([re]) => re.test(c.name || '')) || [])[1] || (c.name || '').split(' ')[0] || 'коллега';
 const KASPI_EVERY = 5 * 60e3;
 const tg = (env, method, body) => fetch(`https://api.telegram.org/bot${String(env.TELEGRAM_BOT_TOKEN).trim()}/${method}`, {
   method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
@@ -13,17 +20,18 @@ const tg = (env, method, body) => fetch(`https://api.telegram.org/bot${String(en
 export function startNotify(fs, env, idToken, log) {
   const on = !!String(env.TELEGRAM_BOT_TOKEN || '').trim();
   let chats = null;
+  // Номер чата храним в поле chat: поле id запись в базу отбрасывает (см. toFields в brain.js)
   const subscribers = async () => chats || (chats = ((await fs.get('wa_anna/telegram'))?.chats) || []);
 
   async function send(text) {
     if (!on) return;
-    for (const c of await subscribers()) {
-      const r = await tg(env, 'sendMessage', { chat_id: c.id, text, disable_web_page_preview: true }).catch(e => ({ description: e?.message }));
-      if (!r.ok) log('Telegram: не доставлено', c.name || c.id, '—', r.description || '');
+    for (const c of (await subscribers()).filter(c => c.chat)) {
+      const r = await tg(env, 'sendMessage', { chat_id: c.chat, text, disable_web_page_preview: true }).catch(e => ({ description: e?.message }));
+      if (!r.ok) log('Telegram: не доставлено', c.name || c.chat, '—', r.description || '');
     }
   }
 
-  // Новые подписчики: кто написал боту /start
+  // Сообщения боту: /start — подписка; от подписчиков текст или голосовое — вопрос или задача для Ани
   async function poll() {
     let offset = 0;
     for (;;) {
@@ -33,15 +41,23 @@ export function startNotify(fs, env, idToken, log) {
         for (const u of r.result) {
           offset = u.update_id + 1;
           const m = u.message;
-          if (!m?.chat || !/^\/start/.test(m.text || '')) continue;
+          if (!m?.chat) continue;
           const list = await subscribers();
           const name = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(' ') || m.from?.username || '';
-          if (!list.some(c => c.id === m.chat.id)) {
-            list.push({ id: m.chat.id, name, at: Date.now() });
-            await fs.set('wa_anna/telegram', { chats: list });
-            log('Telegram: подписался', name);
+          let me = list.find(c => c.chat === m.chat.id);
+          // Подписались до исправления (номер чата не сохранился) — узнаём по имени и дописываем номер
+          if (!me) { me = list.find(c => !c.chat && c.name === name); if (me) { me.chat = m.chat.id; await fs.set('wa_anna/telegram', { chats: list }); log('Telegram: восстановлен чат', name); } }
+          if (/^\/start/.test(m.text || '')) {
+            if (!me) {
+              list.push({ chat: m.chat.id, name, at: Date.now() });
+              await fs.set('wa_anna/telegram', { chats: list });
+              log('Telegram: подписался', name);
+            }
+            await tg(env, 'sendMessage', { chat_id: m.chat.id, text: 'Готово! Сюда будут приходить уведомления студии: новые заказы Kaspi и когда Аня зовёт менеджера в WhatsApp. А ещё мне можно писать или наговаривать голосовые: «Аня, запиши задачу на завтра…», «Аня, что по Kaspi?»' });
+            testOnce().catch(() => {});
+            continue;
           }
-          await tg(env, 'sendMessage', { chat_id: m.chat.id, text: 'Готово! Сюда будут приходить уведомления студии: новые заказы Kaspi и когда Анна зовёт менеджера в WhatsApp.' });
+          if (me) { testOnce().catch(() => {}); ask(m, me).catch(e => log('Telegram: ошибка ответа', e?.message || e)); }
         }
       } catch (e) {
         await new Promise(f => setTimeout(f, 30e3));
@@ -49,11 +65,48 @@ export function startNotify(fs, env, idToken, log) {
     }
   }
 
+  async function ask(m, me) {
+    let text = m.text || m.caption || '';
+    const voice = m.voice || m.audio;
+    if (voice) {
+      tg(env, 'sendChatAction', { chat_id: m.chat.id, action: 'typing' }).catch(() => {});
+      const f = await tg(env, 'getFile', { file_id: voice.file_id });
+      const buf = f.ok ? Buffer.from(await (await fetch(`https://api.telegram.org/file/bot${String(env.TELEGRAM_BOT_TOKEN).trim()}/${f.result.file_path}`)).arrayBuffer()) : null;
+      text = buf ? await transcribe(env, buf, voice.mime_type || 'audio/ogg') : '';
+      if (!text) return tg(env, 'sendMessage', { chat_id: m.chat.id, text: 'Не расслышала голосовое, повторите, пожалуйста, или напишите текстом.' });
+    }
+    if (!text.trim()) return;
+    tg(env, 'sendChatAction', { chat_id: m.chat.id, action: 'typing' }).catch(() => {});
+    const { reply, task } = await tgAssistant(fs, env, text, callOf(me));
+    await tg(env, 'sendMessage', { chat_id: m.chat.id, text: (voice ? `🎤 «${text.slice(0, 300)}»\n\n` : '') + reply, disable_web_page_preview: true });
+    log('Telegram: Аня ответила', me.name || me.chat, task ? '(записала задачу: ' + task.title + ')' : '');
+  }
+
+  // Один раз после обновления: тестовое уведомление всем подписчикам, чтобы проверить, что всё доходит
+  async function testOnce() {
+    const list = await subscribers();
+    const fresh = list.filter(c => c.chat && !c.tested);
+    if (!fresh.length) return;
+    for (const c of fresh) {
+      await tg(env, 'sendMessage', { chat_id: c.chat, text: '🛒 Тестовое уведомление: новый заказ Kaspi № 000000\nОшейник для прогулки — упаковать и передать курьеру\n(это проверка, настоящего заказа нет)' });
+      c.tested = Date.now();
+    }
+    await fs.set('wa_anna/telegram', { chats: list });
+    log('Telegram: отправлено тестовое уведомление', fresh.map(c => c.name).join(', '));
+  }
+
+  let kaspiErr = '';
   // Новые заказы Kaspi: сравниваем с уже виденными (wa_anna/kaspi_seen); при первом запуске просто запоминаем
   async function checkKaspi() {
     try {
       const r = await fetch(KASPI_API + '/?mode=active', { headers: { Authorization: 'Bearer ' + await idToken() } });
-      if (!r.ok) { log('Kaspi для уведомлений недоступен:', r.status === 403 ? 'почты бота нет в ALLOWED_EMAILS воркера' : r.status); return; }
+      if (!r.ok) {
+        const why = r.status === 403 ? 'почты бота нет в ALLOWED_EMAILS воркера' : String(r.status);
+        if (why !== kaspiErr) log('Kaspi для уведомлений недоступен:', why); // одна и та же причина — в журнал один раз
+        kaspiErr = why;
+        return;
+      }
+      kaspiErr = '';
       const { orders = [] } = await r.json();
       const doc = await fs.get('wa_anna/kaspi_seen');
       const seen = new Set(doc?.ids || []);
@@ -71,6 +124,7 @@ export function startNotify(fs, env, idToken, log) {
 
   if (on) {
     poll();
+    testOnce().catch(e => log('Telegram: тест не отправлен', e?.message || e));
     checkKaspi();
     setInterval(checkKaspi, KASPI_EVERY);
   }
