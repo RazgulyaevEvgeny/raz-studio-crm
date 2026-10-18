@@ -146,7 +146,7 @@ async function answer(jid, chatId, phone) {
   if (!chat || chat.lastRole !== 'client') return; // пока ждали, ответил менеджер
   // Менеджер недавно писал в этом чате: ждём конца паузы, и если клиенту так и не ответили — отвечаем сами
   const paused = (chat.botPausedUntil || 0) - Date.now();
-  if (paused > 0) {
+  if (paused > 0 && paused <= PAUSE_AFTER_MANAGER * 60e3) { // длиннее — пауза осталась от старой версии бота (12 ч), не считаем
     clearTimeout(pending.get(chatId));
     pending.set(chatId, setTimeout(() => {
       pending.delete(chatId);
