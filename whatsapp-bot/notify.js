@@ -80,7 +80,7 @@ export function startNotify(fs, env, idToken, log) {
     if (!text.trim()) return;
     tg(env, 'sendChatAction', { chat_id: m.chat.id, action: 'typing' }).catch(() => {});
     const { reply, task, watch } = await tgAssistant(fs, env, text, callOf(me), m.chat.id);
-    await tg(env, 'sendMessage', { chat_id: m.chat.id, text: (voice ? `🎤 «${text.slice(0, 300)}»\n\n` : '') + reply, disable_web_page_preview: true });
+    await tg(env, 'sendMessage', { chat_id: m.chat.id, text: ((voice ? `🎤 «${text.slice(0, 300)}»\n\n` : '') + reply).slice(0, 4000), disable_web_page_preview: true });
     log('Telegram: Аня ответила', me.name || me.chat, task ? '(записала задачу: ' + task.title + ')' : watch ? '(поставила оповещение: ' + watch.kind + ' ' + watch.ref + ')' : '');
   }
 

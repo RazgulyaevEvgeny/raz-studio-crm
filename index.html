@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018161037">
+<meta name="app-build" content="20261018182802">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1133,6 +1133,20 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .an-nb .btn{margin:0 14px 14px;background:#fff;color:var(--ab);text-decoration:none}
 .an-nb .btn:hover{background:#e6e9ff}
 .an-nb>div>:last-child:not(.btn){margin-bottom:14px}
+.an-per{display:flex;gap:6px;flex-wrap:wrap}
+.an-chip{all:unset;box-sizing:border-box;cursor:pointer;min-height:30px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font:600 12.5px var(--f);transition:background .15s}
+.an-chip:hover{background:rgba(255,255,255,.22)}.an-chip.on{background:#fff;color:var(--ab)}
+.an-chip:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.an-svc{display:flex;flex-wrap:wrap;gap:6px}
+.an-svc span{padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.16);font:600 12.5px var(--f)}
+.an-svc b{font-weight:800;margin-left:4px}
+.an-card{background:rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;font:400 13.5px/1.45 var(--fb);color:#fff;overflow-wrap:anywhere;min-width:0}
+.an-card b{font:600 14px/1.3 var(--f)}
+.an-card small{color:rgba(255,255,255,.78);font-size:12.5px}
+.an-card .btn{background:#fff;color:var(--ab);text-decoration:none}
+.an-card .btn:hover{background:#e6e9ff}
+.an-ins-f{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.an-ins-f small{color:rgba(255,255,255,.7);font-size:12px}
 .an-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 #w-anna .an-stats .bw-stat{background:rgba(255,255,255,.12)}
 #w-anna .an-stats .bw-stat span{color:rgba(255,255,255,.78)}
@@ -1492,7 +1506,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="w" id="w-anna">
           <div class="w-h"><h2><span class="an-av" id="anna-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="anna-avatar-0.webp?v=2" alt="" width="240" height="252"><span class="mv"><img src="anna-avatar.webp?v=2" alt="" width="240" height="252"><i class="gl"></i></span></span></span><i class="sm"><b></b><b></b><b></b></i><i class="pf"></i></span><span class="at">Менеджер Аня<span class="c" id="w-anna-c">подключаемся…</span></span></h2></div>
           <div class="an-body" id="w-anna-body">
-            <div class="an-col"><div class="an-say" id="w-anna-say">Загружаем сводку…</div><div id="w-anna-todo"></div><div class="an-stats" id="w-anna-stats"></div></div>
+            <div class="an-col"><div class="an-say" id="w-anna-say">Загружаем сводку…</div><div id="w-anna-todo"></div><div class="an-stats" id="w-anna-stats"></div><div id="w-anna-ins"></div></div>
             <div class="an-col">
               <div id="w-anna-need"></div>
               <div class="an-sec" id="anna-chat"><button type="button" class="an-tg" id="anna-chat-tg" aria-expanded="false" aria-controls="anna-chat-b"><span id="anna-chat-l">Открыть чат</span><i class="ch" aria-hidden="true"></i></button>
@@ -4735,7 +4749,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadPrinte
      orderId — id заказа студии (открываем карточку), kaspiId — id или номер заказа Kaspi (открываем страницу Kaspi на нём); brief — что хочет клиент, словами Анны.
    wa_anna/request — просьба обновить сводку {refreshAt, by}; wa_anna_q — вопросы {q, at, by, status:'new'|'done', a}.
    Обёртка db не умеет doc.onSnapshot, add и orderBy, поэтому здесь Firestore напрямую. */
-let annaD=null,annaQ=[],annaLoaded=false,annaErr='';
+let annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={};
 const annaFs=()=>window.firebase&&firebase.firestore&&firebase.firestore();
 const annaWho=()=>{const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;return (u&&u.email)||''};
 function annaAgo(ts){const m=Math.max(0,Math.round((Date.now()-ts)/6e4));if(m<1)return 'только что';if(m<60)return m+' мин назад';const h=Math.round(m/60);return h<48?h+' ч назад':Math.round(h/24)+' дн назад'}
@@ -4743,12 +4757,13 @@ function annaListen(){
   const fs=annaFs();if(!fs)return;
   const fail=e=>{annaLoaded=true;annaErr='rules';try{console.warn('wa_anna',e)}catch(_){}renderAnna()};
   fs.doc('wa_anna/digest').onSnapshot(s=>{annaD=s.exists?s.data():null;annaLoaded=true;annaErr='';renderAnna()},fail);
+  fs.doc('wa_anna/insights').onSnapshot(s=>{annaIns=s.exists?s.data():null;renderAnna()},()=>{});
   fs.collection('wa_anna_q').orderBy('at','desc').limit(30).onSnapshot(s=>{annaQ=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},fail);
 }
 /* затяжка на аватаре: при первом показе сводки и при открытии блока */
 let annaPuffed=false,annaPuffT,annaNm=null;
 /* свёртки внутри блока: «Сегодня сделать» и чат закрыты, пока их не открыли (помним в браузере); история чата — только на сеанс */
-const ANNA_UI='raz.anna.ui';let annaUi={todo:false,chat:false},annaHist=false;try{Object.assign(annaUi,JSON.parse(localStorage.getItem(ANNA_UI)||'{}'))}catch(_){}
+const ANNA_UI='raz.anna.ui';let annaUi={todo:false,chat:false,ins:false,per:'week'},annaHist=false;try{Object.assign(annaUi,JSON.parse(localStorage.getItem(ANNA_UI)||'{}'))}catch(_){}
 function annaUiSet(k,v){annaUi[k]=v;try{localStorage.setItem(ANNA_UI,JSON.stringify(annaUi))}catch(_){}renderAnna()}
 /* в чате видно только свежее (5 минут с вопроса или ответа), остальное — под «Историей»; из базы ничего не удаляем */
 const ANNA_Q_FRESH=5*6e4;
@@ -4764,6 +4779,9 @@ function annaKaspi(id){
 }
 $('w-anna').addEventListener('click',e=>{const t=e.target;
   if(t.closest('[data-antodo]')){annaUiSet('todo',!annaUi.todo);return}
+  if(t.closest('[data-anins]')){annaUiSet('ins',!annaUi.ins);return}
+  const pr=t.closest('[data-anper]');if(pr){annaUiSet('per',pr.dataset.anper);return}
+  if(t.closest('[data-aninsgo]')){annaInsGo();return}
   if(t.closest('#anna-chat-tg')){annaUiSet('chat',!annaUi.chat);if(annaUi.chat&&!isPhone())$('anna-q').focus();return}
   if(t.closest('#anna-hist-tg')){annaHist=!annaHist;renderAnna();return}
   const nm=t.closest('[data-annm]');if(nm){annaNm=annaNm===nm.dataset.annm?null:nm.dataset.annm;
@@ -4794,6 +4812,7 @@ function renderAnna(){
         +`<div class="an-nb"><div><p>${esc(say)}</p>${ph?`<a class="btn sm" href="https://wa.me/${ph}" target="_blank" rel="noopener">Перейти в чат WhatsApp ↗</a>`:''}</div></div></div>`}).join('')}</div>`:'';
     const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Ани'],[st.needManager,'ждут ответа']].filter(x=>x[0]!=null&&x[0]!=='');
     $('w-anna-stats').innerHTML=S.map(([v,l])=>bwPStat(l,String(v))).join('');
+    $('w-anna-ins').innerHTML=annaInsHtml();
   }
   const qNew=annaQ.filter(annaQFresh),qOld=annaQ.filter(q=>!annaQFresh(q)),co=!!annaUi.chat,hb=$('anna-hist-tg');
   $('anna-chat-tg').setAttribute('aria-expanded',co);$('anna-chat-b').hidden=!co;
@@ -4802,6 +4821,32 @@ function renderAnna(){
   if(!qOld.length)annaHist=false;
   hb.hidden=!qOld.length;hb.textContent=(annaHist?'Скрыть историю':'История')+' · '+qOld.length;hb.setAttribute('aria-expanded',annaHist);
   $('w-anna-hist').hidden=!annaHist;$('w-anna-hist').innerHTML=annaHist?qOld.map(q=>annaQHtml(q,1)).join(''):'';
+}
+/* аналитика переписок за неделю или месяц: wa_anna/insights {week, month}; новую просим через wa_anna/request {insights, insightsAt} */
+const annaWa=(ph,txt)=>'https://wa.me/'+String(ph||'').replace(/\D/g,'')+(txt?'?text='+encodeURIComponent(txt):'');
+function annaInsHtml(){
+  const per=annaUi.per==='month'?'month':'week',r=annaIns&&annaIns[per],op=!!annaUi.ins,wait=annaInsWait[per]&&(!r||r.at<annaInsWait[per]);
+  const L=x=>esc(String(x));let b='';
+  if(op){
+    b+=`<div class="an-per">${[['week','Неделя'],['month','Месяц']].map(([k,l])=>`<button type="button" class="an-chip${per===k?' on':''}" data-anper="${k}" aria-pressed="${per===k}">${l}</button>`).join('')}</div>`;
+    if(!r)b+=`<p class="an-qe">${wait?'Аня разбирает переписки, это займёт до минуты…':'Разбора за '+(per==='month'?'месяц':'неделю')+' пока нет. Аня сделает его сама по '+(per==='month'?'первым числам':'понедельникам')+' или по кнопке ниже.'}</p>`;
+    else{
+      b+=`<div class="an-say">${L(r.summary||'Без выводов.')}</div>`;
+      if((r.services||[]).length)b+=`<p class="an-h">Чаще заказывали</p><div class="an-svc">${r.services.map(x=>`<span>${L(x.name)}<b>${+x.count||0}</b></span>`).join('')}</div>`;
+      if((r.questions||[]).length)b+=`<p class="an-h">Часто спрашивали</p><ul class="an-todo">${r.questions.map(q=>`<li>${L(q)}</li>`).join('')}</ul>`;
+      if((r.offers||[]).length)b+=`<p class="an-h">Что предложить</p><ul class="an-todo">${r.offers.map(q=>`<li>${L(q)}</li>`).join('')}</ul>`;
+      if((r.lost||[]).length)b+=`<p class="an-h">Ушли без заказа <em>${r.lost.length}</em></p>${r.lost.map(x=>`<div class="an-card"><b>${L(x.name)}</b><span>${L(x.why)}</span>${x.suggest?`<small>Что написать: ${L(x.suggest)}</small>`:''}${x.phone?`<a class="btn sm" href="${annaWa(x.phone)}" target="_blank" rel="noopener">Перейти в чат WhatsApp ↗</a>`:''}</div>`).join('')}`;
+      if((r.followups||[]).length)b+=`<p class="an-h">Кому написать</p>${r.followups.map(x=>`<div class="an-card"><b>${L(x.name)}</b><span>«${L(x.text)}»</span>${x.phone?`<a class="btn sm" href="${annaWa(x.phone,x.text)}" target="_blank" rel="noopener">Написать в WhatsApp ↗</a>`:''}</div>`).join('')}`;
+    }
+    b+=`<div class="an-ins-f"><small>${r?'обновлено '+printWhen(r.at)+' · '+(+r.chats||0)+' '+plural(+r.chats||0,'диалог','диалога','диалогов')+', '+(+r.orders||0)+' '+plural(+r.orders||0,'заказ','заказа','заказов'):''}</small>${canWrite?`<button type="button" class="an-hb" data-aninsgo${wait?' disabled':''}>${wait?'Аня думает…':r?'Сделать новый разбор':'Сделать разбор'}</button>`:''}</div>`;
+  }
+  return `<div class="an-sec"><button type="button" class="an-tg" data-anins aria-expanded="${op}" aria-controls="anna-ins-b"><span>Аналитика переписок</span><i class="ch" aria-hidden="true"></i></button>${op?`<div class="an-sb" id="anna-ins-b">${b}</div>`:''}</div>`;
+}
+async function annaInsGo(){
+  const fs=annaFs(),per=annaUi.per==='month'?'month':'week';if(!fs||!canWrite)return;
+  annaInsWait[per]=Date.now();renderAnna();
+  try{await fs.doc('wa_anna/request').set({insights:per,insightsAt:Date.now(),by:annaWho()},{merge:true});toast('Аня разбирает переписки…')}
+  catch(e){annaInsWait[per]=0;renderAnna();toast('Не получилось: обновите правила базы (wa_anna)')}
 }
 $('anna-ref-btn').addEventListener('click',async()=>{
   const fs=annaFs();if(!fs||!canWrite)return;
