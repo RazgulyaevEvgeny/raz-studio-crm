@@ -97,21 +97,6 @@ export function startNotify(fs, env, idToken, log) {
     if (fresh.length) await fs.patch('wa_anna/telegram', { chats: list });
   }
 
-  // Разовая проверка по просьбе Евгения: через 3 минуты после запуска тестовое уведомление всем подписчикам (один раз, отметка broadcast)
-  const BROADCAST = 'test-2026-10-18';
-  async function broadcastOnce() {
-    const doc = (await fs.get('wa_anna/telegram')) || {};
-    if (doc.broadcast === BROADCAST) return;
-    const list = await subscribers();
-    for (const c of list) {
-      if (!c.chat) { log('Telegram: тест не отправлен', c.name, '— этот человек ещё не писал боту после обновления'); continue; }
-      const r = await tg(env, 'sendMessage', { chat_id: c.chat, text: TEST });
-      log('Telegram: тестовое уведомление', c.name, r.ok ? 'отправлено' : 'не доставлено — ' + (r.description || ''));
-    }
-    await fs.patch('wa_anna/telegram', { chats: list, broadcast: BROADCAST });
-  }
-
-  // Оповещения по просьбе: каждому — в его чат
   let watchErr = '';
   async function watchTick() {
     try {
@@ -158,7 +143,6 @@ export function startNotify(fs, env, idToken, log) {
   if (on) {
     poll();
     testOnce().catch(e => log('Telegram: тест не отправлен', e?.message || e));
-    setTimeout(() => broadcastOnce().catch(e => log('Telegram: тест не отправлен', e?.message || e)), 3 * 60e3);
     checkKaspi();
     setInterval(watchTick, 60e3);
     setInterval(checkKaspi, KASPI_EVERY);
