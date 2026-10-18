@@ -3018,17 +3018,19 @@ function renderAnalytics(){
   $('an-per').innerHTML=AN_PER.map(([id,l])=>`<button type="button" class="chip${anPer===id?' on':''}" data-anper="${id}">${l}</button>`).join('');
   const [from,to]=anRange(),inR=d=>d&&d>=from&&d<=to;
   const os=[...orders,...kVirtualOrders()].filter(o=>o.status!=='cancel'&&inR(receivedOf(o)));
-  const rev=os.reduce((s,o)=>s+(+o.price||0),0),prof=os.reduce((s,o)=>s+profitOf(o),0),paid=os.reduce((s,o)=>s+Math.min(+o.paid||0,+o.price||0),0);
+  const rev=os.reduce((s,o)=>s+(+o.price||0),0),prof=os.reduce((s,o)=>s+profitOf(o),0);
   const expL=['office','supplies'].flatMap(k=>ledger[k].filter(x=>inR(x.date)).map(x=>({...x,k})));
   const exp=expL.reduce((s,x)=>s+(+x.amount||0),0),net=prof-exp;
   const perTxt=anPer==='all'?'за всё время':anPer==='month'?'за '+monthName(curMonth()):anPer==='3m'?'за 3 месяца':'за 12 месяцев';
   $('an-sub').textContent='Данные '+perTxt+' по дате получения заказа. Отменённые заказы не считаются.';
   const k=(t,v,sm,cls='')=>`<div class="kpi"><span>${t}</span><b class="${cls}">${v}</b><small>${sm}</small></div>`;
+  /* чистыми с заказов: выручка минус себестоимость (расходы и товары заказа) и комиссия Kaspi; офис и закупки не вычитаем */
+  const profSt=os.filter(o=>!o.virtual).reduce((s,o)=>s+profitOf(o),0),profK=prof-profSt;
   $('an-kpis').innerHTML=k('Выручка',money(rev),os.length+' '+plural(os.length,'заказ','заказа','заказов'))
-    +k('Прибыль с заказов',money(prof),rev?'рентабельность '+Math.round(prof/rev*100)+'%':'—',prof<0?'neg':'')
-    +k('Чистыми',money(net),'после офиса и закупок: '+money(exp),net<0?'neg':net>0?'pos':'')
-    +k('Средний чек',money(os.length?rev/os.length:0),'на один заказ')
-    +k('Получено денег',money(paid),rev-paid>0?'ещё должны '+money(rev-paid):'всё оплачено');
+    +k('Чистыми с заказов',money(prof),'студия '+money(profSt)+' · Kaspi '+money(profK),prof<0?'neg':prof>0?'pos':'')
+    +k('Рентабельность',rev?Math.round(prof/rev*100)+'%':'—','себестоимость и комиссия Kaspi вычтены',prof<0?'neg':'')
+    +k('После офиса и закупок',money(net),'офис и закупки: '+money(exp),net<0?'neg':net>0?'pos':'')
+    +k('Средний чек',money(os.length?rev/os.length:0),'на один заказ');
   /* динамика */
   let dyn=[],cur=-1;
   if(anPer==='month'){
