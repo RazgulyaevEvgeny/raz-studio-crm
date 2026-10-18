@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018051003">
+<meta name="app-build" content="20261018152940">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -869,6 +869,28 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 /* ===== компактная мобильная версия (телефоны) =====
    Меньше шрифты и отступы, больше строк на экране. Поля ввода остаются удобными для пальца. */
 .rq-imp{background:var(--paper);color:var(--blue)}
+/* Заказы Kaspi: красная плитка (оттенок темнее фирменного, чтобы белый текст читался) */
+#w-kaspi{--kr:#e0301f;background:var(--kr);color:#fff}
+#w-kaspi .w-h h2,#w-kaspi .w-h h2 .c{color:#fff}
+#w-kaspi .w-h h2 .c{opacity:.9}
+#w-kaspi .go{color:var(--kr)}
+#w-kaspi .rq-imp{background:rgba(255,255,255,.18);color:#fff}
+#w-kaspi .rq-imp:hover{background:#fff;color:var(--kr)}
+#w-kaspi .rq-imp:focus-visible,#w-kaspi .go:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#w-kaspi .w-empty{background:rgba(255,255,255,.14);color:#fff}
+#w-kaspi .bw-note{color:#fff;opacity:.92}
+#w-kaspi .mf-x::before{border-color:#fff}
+.kq{grid-template-columns:minmax(0,1fr) auto;color:var(--ink)}
+#w-kaspi .w-h h2{white-space:nowrap;min-width:0}
+#w-kaspi .w-h h2 .c{overflow:hidden;text-overflow:ellipsis}
+#w-kaspi .go{text-decoration:none;white-space:nowrap;flex:none}
+.kq:hover{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--kr)}
+.kq-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.kq-t b{font:600 14px/1.3 var(--f);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kq-r{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.kq-r b{font:700 14.5px var(--f);white-space:nowrap}
+.kq-st{font:600 12px var(--f);color:var(--kr);background:color-mix(in srgb,var(--kr) 11%,var(--paper));padding:3px 9px;border-radius:999px;white-space:nowrap}
+.kq-more{align-self:flex-start;font:600 13px var(--f);color:#fff;padding:4px 2px;text-decoration:underline;text-underline-offset:3px}
 .rq-imp:hover{background:var(--blue);color:#fff}
 @media(max-width:600px){
   body{font-size:14px;line-height:1.42;padding-inline:12px;padding-block:10px 84px}
@@ -1148,7 +1170,6 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <button class="pill" type="button" data-go="projects">Проекты</button>
       <button class="pill" type="button" data-go="prices">Прайс</button>
       <button class="pill" type="button" data-go="analytics">Аналитика</button>
-      <a class="pill" href="marketing/" target="_blank" rel="noopener" style="text-decoration:none">Маркетинг ↗</a>
     </nav>
   </header>
 
@@ -2316,7 +2337,7 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 /* ---------- раскладка главной ---------- */
 let packW=[];
 function initPack(){
-  packW=[$('w-today').closest('.w'),$('w-print'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-kaspi'),$('w-projects'),$('w-office'),$('w-supplies')];
+  packW=[$('w-today').closest('.w'),$('w-kaspi'),$('w-print'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
   $('w-today').closest('.w').id||=('w-today-box');$('boss-list').closest('.w').id||=('w-boss');
   packW.forEach(w=>{w.classList.add('mfold');const h=w.querySelector(':scope>.w-h');if(h)h.insertAdjacentHTML('beforeend','<span class="mf-x" aria-hidden="true"></span>')});mfApply();
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);packW.forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
@@ -3718,11 +3739,20 @@ async function syncKaspiOrders(manual){
     if(manual)toast(kaspiSync.err);
   }finally{kaspiSync.busy=false;renderKaspiWidget();if(page==='home')packHome()}
 }
+function kaspiRow(o){
+  const ls=o.kaspi||[],what=ls.length?ls.map(l=>(l.name||'Товар')+(+l.qty>1?' × '+fmtQty(l.qty):'')).join(', '):(o.desc||'Заказ Kaspi');
+  const who=String(o.client||'').replace(/^Kaspi\s*·\s*/,'').replace(/^Kaspi$/,''),due=relDue(o);
+  const sub=[o.kaspiCode?'№ '+o.kaspiCode:'№ '+String(o.num||0).padStart(3,'0'),who,o.deadline?'до '+fmtDate(o.deadline):''].filter(Boolean).join(', ');
+  const st=KASPI_STATE[o.kaspiState]||(ST[o.status]||ST.new).label.toLowerCase();
+  return `<button type="button" class="mrow kq" data-open="${esc(o.id)}"><span class="kq-t"><b>${esc(what)}</b><small class="${o.deadline?due.cls:''}">${esc(sub)}</small></span>
+    <span class="kq-r"><b>${money(+o.price||kaspiSum(ls,0).rev)}</b><span class="kq-st">${esc(st)}</span></span></button>`;
+}
 function renderKaspiWidget(){
   const list=$('w-kaspi-list');if(!list||!kaspiSync)return;
   const act=orders.filter(o=>o.source==='kaspi'&&!CLOSED.has(o.status)).sort((a,b)=>(b.num||0)-(a.num||0));
-  $('w-kaspi-c').textContent=act.length||'';
-  list.innerHTML=act.length?act.slice(0,6).map(orderMini).join('')
+  const sum=act.reduce((t,o)=>t+(+o.price||kaspiSum(o.kaspi,0).rev),0);
+  $('w-kaspi-c').textContent=act.length?act.length+' на '+money(sum):'';
+  list.innerHTML=act.length?act.slice(0,6).map(kaspiRow).join('')+(act.length>6?`<button type="button" class="kq-more" data-go="orders" data-f="active">и ещё ${act.length-6} в ведомости</button>`:'')
     :`<div class="w-empty">${kaspiSync.at?'Активных заказов Kaspi нет. Новые появятся здесь сами.':'Заказы с Kaspi подтянутся сюда сами.'}</div>`;
   const b=$('kaspi-sync-btn');b.disabled=kaspiSync.busy||!canWrite;b.textContent=kaspiSync.busy?'Обновляем…':'Обновить с Kaspi';
   const t=kaspiSync.at?new Date(kaspiSync.at):null;
