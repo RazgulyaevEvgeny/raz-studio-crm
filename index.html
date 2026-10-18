@@ -3415,16 +3415,12 @@ async function quickStatus(id,status){
   try{await db.doc('orders/'+id).update({status,updatedAt:Date.now()});toast('Статус: '+ST[status].label);waNotify(id)}
   catch(e){toast(handleWriteError(e));render()}
 }
-/* уведомление клиенту в WhatsApp (воркер whatsapp-bot): что и кому отправить, решает воркер по заказу */
-const WA_API='https://whatsapp-bot.design-onegin.workers.dev';
+/* уведомление клиенту в WhatsApp: учёт кладёт задание в wa_outbox, бот на рабочем компьютере (папка whatsapp-bot)
+   забирает его и сам решает по заказу, что и кому отправить. Пока бот выключен, задания ждут его до недели. */
 async function waNotify(id,event='status'){
   const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;if(!u||!id)return;
-  try{
-    const r=await fetch(WA_API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify({id,event})});
-    const d=await r.json().catch(()=>({}));
-    if(d.ok)setTimeout(()=>toast('WhatsApp: клиенту отправлено уведомление'),1500);
-    else if(d.error==='whatsapp')setTimeout(()=>toast('WhatsApp не отправил сообщение: '+(d.message||'код '+d.status)),1500);
-  }catch(_){/* воркер ещё не подключён — молча пропускаем */}
+  try{await db.collection('wa_outbox').add({orderId:id,event,at:Date.now(),by:u.email||''})}
+  catch(_){/* правило для wa_outbox ещё не опубликовано — молча пропускаем */}
 }
 async function delOrder(){
   try{await db.doc('orders/'+editing).delete();closeEditor();toast('Заказ удалён')}
