@@ -22,19 +22,19 @@ import makeWASocket, { downloadMediaMessage, useMultiFileAuthState, DisconnectRe
 import pino from 'pino';
 import QRCode from 'qrcode';
 import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, botToken, PAUSE_AFTER_MANAGER } from './brain.js';
-import { makeDigest, digestDue, answerQuestions } from './anna.js';
+import { makeDigest, digestDue, answerQuestions, makeInsights, insightsDue } from './anna.js';
 import { startNotify } from './notify.js';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = join(DIR, 'auth');          // вход в WhatsApp; если удалить папку — снова попросит QR
 const PORT = 3777;
-const REPLY_DELAY = 8e3;                     // ждём, пока клиент допишет: отвечаем через 8 с после последнего сообщения
+const REPLY_DELAY = 7 * 60e3;                // даём менеджеру 7 минут ответить самому; не ответил — Анна отвечает сама (отсчёт с последнего сообщения клиента)
 const MAX_AGE = 30 * 60e3;                   // на сообщения старше 30 минут (пришли, пока компьютер был выключен) не отвечаем сами
 const OUTBOX_EVERY = 15e3;                   // как часто проверять задания на уведомления
 const OUTBOX_TTL = 7 * 24 * 3600e3;          // задания старше недели выбрасываем
 const SEND_GAP = 3e3;                        // не чаще одного сообщения в 3 секунды
 const MANAGER_WAIT = 10 * 60e3;              // если менеджер не ответил за 10 минут после вызова — извиняемся перед клиентом
-const BUSY_TEXT = 'К сожалению, у менеджеров сейчас большая загрузка. Как только они освободятся, они вам ответят.';
+const BUSY_TEXT = 'Извините, к сожалению, у менеджеров сейчас большая загрузка. Как только они освободятся, они вам ответят.';
 
 const env = process.env;
 const missing = ['FIREBASE_API_KEY', 'FIREBASE_PROJECT', 'BOT_EMAIL', 'BOT_PASSWORD'].filter(k => !String(env[k] || '').trim());
@@ -168,7 +168,7 @@ async function answer(jid, chatId, phone) {
     call ? { needsManager: true, managerReason: reply.handoff, managerCalledAt: Date.now(), busyNoticeAt: 0 } : {});
   if (call) {
     log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
-    notify?.managerNeeded({ name: chat.name, phone }, reply.handoff).catch(() => {});
+    notify?.managerNeeded({ name: chat.clientName || chat.name, phone }, reply.handoff).catch(() => {});
   }
 }
 
@@ -225,6 +225,22 @@ function textOf(message) {
 
 async function checkWaitingChats() {
   if (state.status !== 'online' || missing.length) return;
+  // После перезапуска бота таймеры ответа теряются: подбираем чаты, где клиент ждёт дольше 7 минут, а ответа нет
+  if (aiOn) try {
+    const silent = await fs.query('wa_chats', {
+      where: { fieldFilter: { field: { fieldPath: 'lastRole' }, op: 'EQUAL', value: { stringValue: 'client' } } },
+    });
+    for (const chat of silent) {
+      const age = Date.now() - (chat.updatedAt || 0);
+      if (pending.has(chat.id) || age < REPLY_DELAY || age > MAX_AGE) continue;
+      const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
+      if (!jid) continue;
+      pending.set(chat.id, null); // отметка «уже отвечаем», чтобы следующая проверка не ответила второй раз
+      await answer(jid, chat.id, chat.phone || '').finally(() => { if (pending.get(chat.id) === null) pending.delete(chat.id); });
+    }
+  } catch (e) {
+    log('ошибка проверки неотвеченных чатов', e?.message || e);
+  }
   try {
     const waiting = await fs.query('wa_chats', {
       where: { fieldFilter: { field: { fieldPath: 'needsManager' }, op: 'EQUAL', value: { booleanValue: true } } },
@@ -254,6 +270,8 @@ async function checkAnna() {
     if (n) log('Анна ответила на вопросы из учёта:', n);
     const why = await digestDue(fs);
     if (why) { await makeDigest(fs, env); log('Анна подготовила сводку для учёта (' + why + ')'); }
+    const per = await insightsDue(fs);
+    if (per) { await makeInsights(fs, env, per); log('Аня подготовила аналитику переписок за', per === 'month' ? 'месяц' : 'неделю'); }
     annaErr = '';
   } catch (e) {
     // Одна и та же ошибка (например, правила wa_anna ещё не опубликованы) — пишем в журнал один раз

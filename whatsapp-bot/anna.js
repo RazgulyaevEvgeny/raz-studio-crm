@@ -2,7 +2,7 @@
 // Сводка — документ wa_anna/digest; учёт просит обновить её через wa_anna/request (кнопка «Обновить»),
 // вопросы сотрудники пишут в коллекцию wa_anna_q, Анна отвечает в поле a. Всё на бесплатном Gemini.
 
-import { GEMINI_MODELS, SERVICE_NAMES, openOrders } from './brain.js';
+import { GEMINI_MODELS, SERVICE_NAMES, openOrders, normPhone } from './brain.js';
 
 const DAY = 24 * 3600e3;
 const MORNING = 9;                          // с 9 утра по Алматы готовим сводку на день (один раз, если компьютер включён)
@@ -23,10 +23,10 @@ async function collect(fs) {
   const chats = (await fs.list('wa_chats')).filter(c => now - (c.updatedAt || 0) < DAY);
   const orders = await openOrders(fs);
   const today = kz().toISOString().slice(0, 10);
-  const name = c => c.name || (c.phone ? '+' + c.phone : 'Клиент');
+  const name = c => c.clientName || c.name || (c.phone ? '+' + c.phone : 'Клиент');
   const needManager = chats.filter(c => c.needsManager)
     .sort((a, b) => (a.managerCalledAt || 0) - (b.managerCalledAt || 0))
-    .map(c => ({ id: c.id, name: c.name || '', phone: c.phone || '', reason: c.managerReason || '', since: c.managerCalledAt || c.updatedAt || now }));
+    .map(c => ({ id: c.id, name: c.clientName || c.name || '', phone: c.phone || '', reason: c.managerReason || '', since: c.managerCalledAt || c.updatedAt || now }));
   const kaspi = await kaspiToDo(fs);
   const tasks = (await fs.query('tasks', { where: { fieldFilter: { field: { fieldPath: 'done' }, op: 'EQUAL', value: { booleanValue: false } } } }).catch(() => []))
     .sort((a, b) => String(a.date || '9').localeCompare(String(b.date || '9'))).slice(0, 30)
@@ -219,12 +219,15 @@ export async function tgAssistant(fs, env, text, who, chat) {
   ref: для принтера — точное имя из [принтер …], для заказа — id из [заказ …], для задачи — id из [задача …];
   when (только для заказа): ready — когда будет готов, closed — когда выдадут или закроют (по умолчанию), any — при любой смене статуса.
   В reply скажи, что оповестишь. Если такого принтера, заказа или задачи в данных нет — watch не заполняй и честно скажи, что не нашла.
+Если просят аналитику или разбор переписок, выводы по клиентам за неделю или месяц — заполни insights: week или month (по умолчанию week),
+а в reply коротко скажи, что сейчас пришлёшь разбор.
 Если спрашивают про Kaspi, деньги, заказы, задачи, принтеры, клиентов — отвечай по данным ниже, с цифрами. Если данных нет или они могут быть неполными — честно скажи.`,
     facts + '\n\nСообщение: ' + String(text).slice(0, 1500), {
       type: 'OBJECT',
       properties: {
         reply: { type: 'STRING' },
         task: { type: 'OBJECT', properties: { title: { type: 'STRING' }, date: { type: 'STRING' }, time: { type: 'STRING' } }, required: ['title'] },
+        insights: { type: 'STRING', enum: ['week', 'month'] },
         watch: { type: 'OBJECT', properties: { kind: { type: 'STRING', enum: ['printer', 'order', 'task'] }, ref: { type: 'STRING' }, when: { type: 'STRING', enum: ['ready', 'closed', 'any'] } }, required: ['kind', 'ref'] },
       },
       required: ['reply'],
@@ -244,6 +247,10 @@ export async function tgAssistant(fs, env, text, who, chat) {
   }
   let reply = String(out.reply || 'Готово.').slice(0, 3000);
   if (out.watch && !w) reply = 'Не нашла, за чем следить: уточните название принтера, имя клиента в заказе или задачу.';
+  if (out.insights === 'week' || out.insights === 'month') {
+    try { reply = insightsText(await makeInsights(fs, env, out.insights), out.insights); }
+    catch (e) { reply = 'Не получилось сделать разбор: ' + String(e?.message || e).slice(0, 200); }
+  }
   return { reply, task: !w && t && t.title ? t : null, watch: w };
 }
 
@@ -300,4 +307,94 @@ export async function checkWatches(fs) {
     await fs.set('wa_anna/watches', { list: fresh.filter(w => !done.has(w.at + w.ref)).map(w => upd.get(w.at + w.ref) || w) });
   }
   return out;
+}
+
+/* ---------- аналитика переписок за неделю и месяц ---------- */
+// Документ wa_anna/insights: {week:{…}, month:{…}}; каждый — {at, days, summary, services:[{name,count}], questions:[], offers:[],
+//   lost:[{name, phone, why, suggest}], followups:[{name, phone, text}], chats, orders}.
+// Готовим по просьбе (кнопка в учёте пишет wa_anna/request.insights = 'week'|'month', или просьба Ане в Telegram)
+// и сами: недельную по понедельникам, месячную 1-го числа (утром, если компьютер включён).
+const PERIODS = { week: 7, month: 30 };
+
+export async function makeInsights(fs, env, period = 'week') {
+  const days = PERIODS[period] || 7, since = Date.now() - days * DAY;
+  const chats = (await fs.list('wa_chats')).filter(c => (c.updatedAt || 0) >= since);
+  const orders = await fs.query('orders', {
+    where: { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { integerValue: String(since - 30 * DAY) } } },
+  }).catch(() => []);
+  const inPeriod = orders.filter(o => (o.createdAt || 0) >= since && o.status !== 'cancel' && o.service !== 'kaspi');
+  const count = new Map();
+  for (const o of inPeriod) { const n = SERVICE_NAMES[o.service] || o.customService || o.service || 'Другое'; count.set(n, (count.get(n) || 0) + 1); }
+  const services = [...count].map(([name, n]) => ({ name, count: n })).sort((a, b) => b.count - a.count);
+  const byPhone = new Map(orders.map(o => [normPhone(o.phone), o]).filter(([p]) => p));
+  const who = { client: 'клиент', bot: 'Анна', manager: 'менеджер', notice: 'уведомление' };
+  const dialogs = chats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 60).map(c => {
+    const o = byPhone.get(normPhone(c.phone));
+    const msgs = (c.messages || []).filter(m => m.role !== 'notice').slice(-14)
+      .map(m => `  ${who[m.role] || m.role}: ${String(m.text || '').slice(0, 200)}`).join('\n');
+    const quiet = Math.round((Date.now() - (c.updatedAt || 0)) / DAY);
+    return `[чат ${c.id}] ${c.clientName || c.name || 'Клиент'}${c.phone ? ' +' + c.phone : ''}; ` +
+      `${o ? 'заказ есть: ' + (SERVICE_NAMES[o.service] || o.service) + ', статус ' + (ST[o.status] || o.status) : 'заказа нет'}; ` +
+      `последнее сообщение ${quiet ? quiet + ' дн назад' : 'сегодня'}, последним писал ${who[c.lastRole] || c.lastRole || '?'}\n${msgs}`;
+  }).join('\n\n');
+  const raw = await gemini(env, PERSONA + `
+Сделай для команды мини-аналитику переписок WhatsApp за последние ${days} дней. Пиши коротко и по делу, от первого лица.
+- summary: 2–4 предложения: сколько было обращений, с чем приходили, что получилось и что нет.
+- questions: до 6 частых вопросов клиентов, своими словами («Сколько стоит печать на футболке А4»).
+- offers: до 5 идей, что можно предложить другим клиентам или как продавать больше (по тому, что спрашивали и заказывали).
+- lost: клиенты, которые проконсультировались, но заказ не оформили и пропали (заказа нет, последним писала Анна или менеджер, тишина больше суток):
+  chatId из [чат …], why — почему, как ты думаешь, ушёл (дорого, долго не ответили, не было нужного, просто узнавал цену…), suggest — что ему написать.
+- followups: до 6 конкретных сообщений, кому стоит написать ещё раз или уточнить актуальность заказа: chatId и text — готовый короткий текст сообщения клиенту.
+Никогда не пиши служебные id в тексте.`, `Заказов студии за период: ${inPeriod.length}. По услугам: ${services.map(x => x.name + ' — ' + x.count).join(', ') || 'нет'}.
+Диалогов за период: ${chats.length}.
+
+${dialogs || 'Диалогов нет.'}`, {
+    type: 'OBJECT',
+    properties: {
+      summary: { type: 'STRING' },
+      questions: { type: 'ARRAY', items: { type: 'STRING' } },
+      offers: { type: 'ARRAY', items: { type: 'STRING' } },
+      lost: { type: 'ARRAY', items: { type: 'OBJECT', properties: { chatId: { type: 'STRING' }, why: { type: 'STRING' }, suggest: { type: 'STRING' } }, required: ['chatId', 'why'] } },
+      followups: { type: 'ARRAY', items: { type: 'OBJECT', properties: { chatId: { type: 'STRING' }, text: { type: 'STRING' } }, required: ['chatId', 'text'] } },
+    },
+    required: ['summary'],
+  });
+  let out;
+  try { out = JSON.parse(raw); } catch (_) { out = { summary: raw }; }
+  const chat = new Map(chats.map(c => [c.id, c]));
+  const person = id => { const c = chat.get(String(id)); return c ? { name: c.clientName || c.name || (c.phone ? '+' + c.phone : 'Клиент'), phone: c.phone || '' } : null; };
+  const res = {
+    at: Date.now(), days, chats: chats.length, orders: inPeriod.length, services: services.slice(0, 8),
+    summary: String(out.summary || '').slice(0, 1500),
+    questions: (out.questions || []).slice(0, 6).map(q => String(q).slice(0, 200)),
+    offers: (out.offers || []).slice(0, 5).map(q => String(q).slice(0, 300)),
+    lost: (out.lost || []).map(l => person(l.chatId) && { ...person(l.chatId), why: String(l.why || '').slice(0, 300), suggest: String(l.suggest || '').slice(0, 300) }).filter(Boolean).slice(0, 10),
+    followups: (out.followups || []).map(f => person(f.chatId) && { ...person(f.chatId), text: String(f.text || '').slice(0, 400) }).filter(Boolean).slice(0, 6),
+  };
+  await fs.patch('wa_anna/insights', { [period]: res });
+  return res;
+}
+
+// Текст аналитики для Telegram
+export function insightsText(r, period) {
+  const L = [`📊 Аналитика переписок за ${period === 'month' ? 'месяц' : 'неделю'}`, r.summary];
+  if (r.services.length) L.push('Чаще заказывали: ' + r.services.map(s => `${s.name} (${s.count})`).join(', '));
+  if (r.questions.length) L.push('Часто спрашивали:\n' + r.questions.map(q => '• ' + q).join('\n'));
+  if (r.offers.length) L.push('Что предложить:\n' + r.offers.map(q => '• ' + q).join('\n'));
+  if (r.lost.length) L.push('Ушли без заказа:\n' + r.lost.map(l => `• ${l.name} — ${l.why}${l.suggest ? ' Написать: ' + l.suggest : ''}`).join('\n'));
+  if (r.followups.length) L.push('Кому написать:\n' + r.followups.map(f => `• ${f.name}: «${f.text}»${f.phone ? ' https://wa.me/' + f.phone : ''}`).join('\n'));
+  return L.filter(Boolean).join('\n\n');
+}
+
+// Какую аналитику пора готовить: по просьбе из учёта или по расписанию
+export async function insightsDue(fs) {
+  const [ins, req] = await Promise.all([fs.get('wa_anna/insights'), fs.get('wa_anna/request')]);
+  const want = req?.insights, wantAt = req?.insightsAt || 0;
+  if (PERIODS[want] && wantAt > (ins?.[want]?.at || 0)) return want;
+  const d = kz();
+  if (d.getUTCHours() < MORNING) return '';
+  const today = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - 5 * 3600e3;
+  if (d.getUTCDay() === 1 && (ins?.week?.at || 0) < today) return 'week';
+  if (d.getUTCDate() === 1 && (ins?.month?.at || 0) < today) return 'month';
+  return '';
 }

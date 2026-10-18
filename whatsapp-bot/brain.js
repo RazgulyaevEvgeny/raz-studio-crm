@@ -35,7 +35,9 @@ const STUDIO = `Тебя зовут Анна, ты виртуальный мен
 что это Анна, виртуальный менеджер студии, передай, что ты сообщишь Милане (или Евгению) и он(а) скоро ответит, и вызови call_manager с пометкой, к кому обращались.
 Голосовые сообщения клиента приходят тебе расшифрованными, с пометкой [голосовое сообщение]: отвечай на них как на обычный текст.
 В первом ответе клиенту (если в переписке ещё нет твоих сообщений) представься ровно так:
-«Здравствуйте, меня зовут Анна, я виртуальный менеджер студии брендирования Разгуляев» — и сразу ответь на вопрос клиента.
+«Здравствуйте! Меня зовут Анна, я виртуальный менеджер студии брендирования Разгуляев. Как я могу к вам обращаться?»
+Если клиент сразу задал вопрос — после этого ответь и на него. Когда клиент назовёт имя, вызови save_client_name и дальше обращайся к нему по имени.
+Если в начале переписки указано «Клиент просил обращаться: …» — обращайся так и имя заново не спрашивай.
 Дальше в этом чате не представляйся заново. Если спросят, живой ли ты человек, честно скажи, что ты виртуальный помощник и можешь позвать менеджера.
 Услуги: виниловые наклейки на авто (логотипы, надписи, инстаграмы), DTF-печать на одежде (мерч для компаний, команд, мероприятий),
 3D-печать, 3D-таблички и вывески для заведений (кафе, кофейни, барбершопы, салоны), вышивка, распечатка, 3D-топперы.
@@ -48,6 +50,20 @@ const STUDIO = `Тебя зовут Анна, ты виртуальный мен
 Каждый раз, когда клиент хочет приехать, забрать заказ или спрашивает адрес и как подъехать, говори, что наша студия находится по адресу ул. Абая, 115а, и ВСЕГДА присылай ссылку 2ГИС (ровно ту, что выше, отдельной строкой),
 и обязательно предупреди, что приезд по предварительной записи: предложи договориться о дне и времени, и позови менеджера (call_manager), чтобы он подтвердил время.
 Способы оплаты и доставки: [уточнить у Евгения]. Пока их нет — говори, что менеджер подскажет.
+
+Что говорить по услугам:
+- DTF-печать: когда спрашивают стоимость печати, называй из прайса только варианты А4 и А3 (другие форматы не перечисляй).
+  Если спросят, сколько стирок выдерживает: DTF-печать держится 100–150 стирок при правильном уходе.
+- Вышивка: стоит от 4 000 ₸, максимальный размер вышивки 20×20 см, точная цена зависит от размера и сложности.
+  Обязательно скажи, что точную цену и сроки по вышивке может сказать только менеджер, и вызови call_manager.
+- Виниловые наклейки и надписи: НЕ называй «от …» и цену за метр. Спроси размер надписи в сантиметрах (ширина × высота) и сколько штук.
+  Когда размер известен — вызови vinyl_price и назови цену так: «≈ 12 400 ₸ (примерно)». Затем добавь: «Точные сроки и стоимость подскажет менеджер».
+- 3D-топперы: отправь ссылку на наш сайт топперов https://razgulyaevevgeny.github.io/toppers-site/ (отдельной строкой) и скажи,
+  что там можно ознакомиться с топперами, выбрать цвет и размер, заказать свою фигурку и сразу оформить заказ — он сразу появится у нас.
+- Если клиент прислал фото или картинку — сначала поддержи его («Отличная идея!», «Классный вариант!» по смыслу), потом передай менеджеру.
+- Если спрашивают про услугу, которой нет в списке выше, скажи: «Я передам ваш запрос менеджеру, он подскажет более точно» — и вызови call_manager.
+- Никогда не пиши «уточню у руководителя» и не обещай руководителя: все вопросы идут через менеджера.
+  Только если клиент жалуется или недоволен, скажи: «Передам руководителю, он в ближайшее время с вами свяжется» — и вызови call_manager с пометкой «жалоба».
 
 Как вести разговор:
 - Пиши по-русски, коротко и по-человечески, как вежливый менеджер в мессенджере: 1–4 предложения, без канцелярита и списков на полэкрана.
@@ -114,6 +130,25 @@ const TOOLS = [
     },
   },
   {
+    name: 'vinyl_price',
+    description: 'Примерная цена виниловой наклейки или надписи по размеру: по калькулятору из прайса, самая дешёвая плёнка и монтажная плёнка. Вызывай, когда клиент назвал размер в сантиметрах.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        width_cm: { type: 'number', description: 'Ширина надписи, см' },
+        height_cm: { type: 'number', description: 'Высота надписи, см' },
+        qty: { type: 'number', description: 'Сколько штук, по умолчанию 1' },
+      },
+      required: ['width_cm', 'height_cm'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'save_client_name',
+    description: 'Запоминает, как обращаться к клиенту (имя, которое он назвал). Вызывай, как только клиент представился.',
+    input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'], additionalProperties: false },
+  },
+  {
     name: 'call_manager',
     description: 'Передаёт чат менеджеру: в учёте чат помечается «нужен менеджер», бот перестаёт отвечать в нём на несколько часов.',
     input_schema: {
@@ -169,7 +204,7 @@ export async function runAgent(fs, env, phone, chat) {
   const now = new Date(Date.now() + 5 * 3600e3); // время Казахстана, UTC+5
   const today = `Сейчас ${WD_FULL[now.getUTCDay()]}, ${now.getUTCDate()} ${MONTHS_GEN[now.getUTCMonth()]} ${now.getUTCFullYear()}, ` +
     `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} по Алматы.` +
-    (chat.name ? ` Имя клиента в WhatsApp: ${chat.name}.` : '') +
+    (chat.clientName ? ` Клиент просил обращаться: ${chat.clientName}.` : '') + (chat.name ? ` Имя клиента в WhatsApp: ${chat.name}.` : '') +
     (phone ? '' : ' Номер телефона клиента скрыт, его заказы по номеру не найти: спроси номер заказа или позови менеджера.');
   const messages = toClaudeMessages(chat.messages || []);
   if (!messages.length) return {};
@@ -299,8 +334,20 @@ async function viaClaude(env, today, messages, ctx) {
   throw new Error('слишком много шагов');
 }
 
+/* сколько погонных метров уйдёт на надпись L×H см, N штук, при ширине рулона W см (как vinylMeters в учёте) */
+function vinylMeters(L, H, N, W) {
+  L = +L || 0; H = +H || 0; N = Math.max(1, Math.round(+N || 1)); W = +W || 126; if (!L || !H) return null;
+  const opt = (across, along) => {
+    if (across <= W) { const per = Math.max(1, Math.floor(W / across)); return { m: Math.ceil(N / per) * along / 100 }; }
+    return { m: N * Math.ceil(across / W) * along / 100 };
+  };
+  const a = opt(L, H), b = opt(H, L), r = a.m <= b.m ? a : b;
+  r.m = Math.max(0.05, Math.ceil(r.m * 20 - 1e-9) / 20);
+  return r;
+}
+
 function fallbackReply() {
-  return { text: 'Спасибо за сообщение! Передал ваш вопрос менеджеру, он ответит в этом чате.', handoff: 'бот не смог ответить сам' };
+  return { text: 'Извините, к сожалению, у менеджеров сейчас большая загрузка. Как только они освободятся, они вам ответят.', handoff: 'бот не смог ответить сам' };
 }
 
 async function runTool(name, input, { fs, phone, chat }) {
@@ -314,6 +361,20 @@ async function runTool(name, input, { fs, phone, chat }) {
         price: p.price, unit: p.unit || 'шт', from: !!p.from,
         tiers: (p.tiers || []).map(t => ({ from_qty: t.qty, price: t.price })),
       }));
+  }
+  if (name === 'vinyl_price') {
+    // Как калькулятор винила в учёте: метраж по ширине рулона и цена за пог. м по самым дешёвым плёнкам с наценкой
+    const item = (await fs.list('prices')).find(p => p.svc === 'vinyl' && p.calc && !p.hidden) || (await fs.list('prices')).find(p => p.calc);
+    if (!item) return { error: 'калькулятора винила в прайсе нет — скажи, что цену посчитает менеджер' };
+    const c = item.calc, perM = Math.round((Math.min(...c.vinyl) + Math.min(...c.mount)) * (1 + (+c.markup || 0) / 100) / 10) * 10;
+    const r = vinylMeters(input.width_cm, input.height_cm, input.qty, c.roll);
+    if (!r) return { error: 'нужен размер в сантиметрах: ширина и высота' };
+    return { price: Math.round(perM * r.m / 10) * 10, meters: r.m, say: 'Назови цену с пометкой «(примерно)» и добавь, что точные сроки и стоимость подскажет менеджер.' };
+  }
+  if (name === 'save_client_name') {
+    const n = String(input.name || '').trim().slice(0, 60);
+    if (n && chat.id) { await fs.patch('wa_chats/' + chat.id, { clientName: n }); chat.clientName = n; }
+    return { ok: true };
   }
   if (name === 'get_client_orders') {
     const orders = phone ? (await openOrders(fs)).filter(o => normPhone(o.phone) === phone) : [];
@@ -340,7 +401,7 @@ async function runTool(name, input, { fs, phone, chat }) {
     const notes = ['Оформлено ИИ-ботом в WhatsApp, проверить и подтвердить.',
       input.wanted_by ? 'Клиенту нужно к: ' + input.wanted_by : '', input.estimate ? 'Оценка бота: ' + input.estimate : ''].filter(Boolean).join('\n');
     await fs.create('orders', {
-      client: String(input.client_name || chat.name || 'Клиент WhatsApp').slice(0, 200), phone: phone ? '+' + phone : '',
+      client: String(input.client_name || chat.clientName || chat.name || 'Клиент WhatsApp').slice(0, 200), phone: phone ? '+' + phone : '',
       service: svc, customService: svc === 'other' ? 'Уточнить' : '', items: [], unit: 'шт', expenses: [], files: [], kaspi: [], kaspiFee: 0,
       qty: input.qty ? Math.max(0, +input.qty || 0) : null, desc: String(input.description || '').slice(0, 2000),
       status: 'new', price: null, paid: null, owner: '', notes,
