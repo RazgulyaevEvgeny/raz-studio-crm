@@ -85,4 +85,4 @@
 
 {{1}} — клиент, {{2}} — номер заказа, {{3}} — срок, например «25 октября» или «23–25 октября».
 
-Код воркера: `whatsapp-worker/worker.js` (Cloudflare → Workers → `whatsapp-bot` → Edit code → Deploy). Переменные: `WA_TOKEN` (Secret, постоянный токен WhatsApp Cloud API), `WA_PHONE_ID` (Phone number ID рабочего номера), `FIREBASE_API_KEY` (apiKey из `firebase-config.js`), `FIREBASE_PROJECT` = `raz-studio-5a486`, `ALLOWED_EMAILS` (почты сотрудников через запятую).
+Код воркера: `whatsapp-worker/worker.js` (Cloudflare → Workers → `whatsapp-bot` → Edit code → Deploy). Номер подключён к WhatsApp API через 360dialog в режиме совместной работы с приложением WhatsApp Business: менеджеры продолжают отвечать с телефона. Переменные: `D360_API_KEY` (Secret, API-ключ номера из кабинета 360dialog; если номер подключён напрямую в Meta, вместо него `WA_TOKEN` и `WA_PHONE_ID`), `FIREBASE_API_KEY` (apiKey из `firebase-config.js`), `FIREBASE_PROJECT` = `raz-studio-5a486`, `ALLOWED_EMAILS` (почты сотрудников через запятую).

@@ -2,14 +2,17 @@
 // Учёт вызывает его, когда менеджер меняет статус заказа или переносит срок.
 // Пускает только тех, кто вошёл в учёт через Firebase и есть в списке ALLOWED_EMAILS.
 //
-// Переменные Worker (Settings → Variables and Secrets):
+// Переменные Worker (Settings → Variables and Secrets), номер подключён через 360dialog:
+//   D360_API_KEY      — API-ключ номера из кабинета 360dialog (тип Secret!)
+// или номер подключён напрямую в Meta:
 //   WA_TOKEN          — постоянный токен WhatsApp Cloud API из кабинета Meta (тип Secret!)
 //   WA_PHONE_ID       — Phone number ID рабочего номера из кабинета Meta (тип Text)
+// и в обоих случаях:
 //   FIREBASE_API_KEY  — apiKey из firebaseConfig учёта (тип Text)
 //   FIREBASE_PROJECT  — projectId из firebaseConfig учёта, например raz-studio-5a486 (тип Text)
 //   ALLOWED_EMAILS    — почты через запятую, кому можно (тип Text)
 //
-// Пока WA_TOKEN или WA_PHONE_ID не заполнены, воркер ничего не отправляет и отвечает {skipped:'off'}.
+// Пока не заполнены ни D360_API_KEY, ни WA_TOKEN с WA_PHONE_ID, воркер ничего не отправляет и отвечает {skipped:'off'}.
 //
 // Запрос: POST {id, event}
 //   event 'status' — сообщение по текущему статусу заказа (Новый, Макет, Производство, Готов)
@@ -18,6 +21,7 @@
 
 const ALLOWED_ORIGIN = 'https://razgulyaevevgeny.github.io';
 const GRAPH = 'https://graph.facebook.com/v23.0';
+const D360 = 'https://waba-v2.360dialog.io';
 const LANG = 'ru';
 const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
@@ -54,7 +58,8 @@ export default {
     const allowed = (env.ALLOWED_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
     if (!email || !allowed.includes(email)) return json({ error: 'forbidden' }, 403);
 
-    if (!env.WA_TOKEN || !env.WA_PHONE_ID) return json({ skipped: 'off' });
+    const d360 = String(env.D360_API_KEY || '').trim();
+    if (!d360 && (!env.WA_TOKEN || !env.WA_PHONE_ID)) return json({ skipped: 'off' });
 
     let body = {};
     try { body = await request.json(); } catch (_) {}
@@ -87,10 +92,12 @@ export default {
       due: fmtDue(o.deadlineFrom, o.deadline),
     };
 
-    // 4. Отправка шаблона через WhatsApp Cloud API
-    const wa = await fetch(`${GRAPH}/${env.WA_PHONE_ID}/messages`, {
+    // 4. Отправка шаблона через WhatsApp Cloud API (через 360dialog или напрямую в Meta)
+    const wa = await fetch(d360 ? `${D360}/messages` : `${GRAPH}/${env.WA_PHONE_ID}/messages`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + String(env.WA_TOKEN).trim(), 'Content-Type': 'application/json' },
+      headers: d360
+        ? { 'D360-API-KEY': d360, 'Content-Type': 'application/json' }
+        : { Authorization: 'Bearer ' + String(env.WA_TOKEN).trim(), 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messaging_product: 'whatsapp',
         to: phone,
