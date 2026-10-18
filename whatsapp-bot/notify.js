@@ -20,13 +20,14 @@ const tg = (env, method, body) => fetch(`https://api.telegram.org/bot${String(en
 export function startNotify(fs, env, idToken, log) {
   const on = !!String(env.TELEGRAM_BOT_TOKEN || '').trim();
   let chats = null;
+  // Номер чата храним в поле chat: поле id запись в базу отбрасывает (см. toFields в brain.js)
   const subscribers = async () => chats || (chats = ((await fs.get('wa_anna/telegram'))?.chats) || []);
 
   async function send(text) {
     if (!on) return;
-    for (const c of await subscribers()) {
-      const r = await tg(env, 'sendMessage', { chat_id: c.id, text, disable_web_page_preview: true }).catch(e => ({ description: e?.message }));
-      if (!r.ok) log('Telegram: не доставлено', c.name || c.id, '—', r.description || '');
+    for (const c of (await subscribers()).filter(c => c.chat)) {
+      const r = await tg(env, 'sendMessage', { chat_id: c.chat, text, disable_web_page_preview: true }).catch(e => ({ description: e?.message }));
+      if (!r.ok) log('Telegram: не доставлено', c.name || c.chat, '—', r.description || '');
     }
   }
 
@@ -42,18 +43,21 @@ export function startNotify(fs, env, idToken, log) {
           const m = u.message;
           if (!m?.chat) continue;
           const list = await subscribers();
+          const name = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(' ') || m.from?.username || '';
+          let me = list.find(c => c.chat === m.chat.id);
+          // Подписались до исправления (номер чата не сохранился) — узнаём по имени и дописываем номер
+          if (!me) { me = list.find(c => !c.chat && c.name === name); if (me) { me.chat = m.chat.id; await fs.set('wa_anna/telegram', { chats: list }); log('Telegram: восстановлен чат', name); } }
           if (/^\/start/.test(m.text || '')) {
-            const name = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(' ') || m.from?.username || '';
-            if (!list.some(c => c.id === m.chat.id)) {
-              list.push({ id: m.chat.id, name, at: Date.now() });
+            if (!me) {
+              list.push({ chat: m.chat.id, name, at: Date.now() });
               await fs.set('wa_anna/telegram', { chats: list });
               log('Telegram: подписался', name);
             }
             await tg(env, 'sendMessage', { chat_id: m.chat.id, text: 'Готово! Сюда будут приходить уведомления студии: новые заказы Kaspi и когда Аня зовёт менеджера в WhatsApp. А ещё мне можно писать или наговаривать голосовые: «Аня, запиши задачу на завтра…», «Аня, что по Kaspi?»' });
+            testOnce().catch(() => {});
             continue;
           }
-          const me = list.find(c => c.id === m.chat.id);
-          if (me) ask(m, me).catch(e => log('Telegram: ошибка ответа', e?.message || e));
+          if (me) { testOnce().catch(() => {}); ask(m, me).catch(e => log('Telegram: ошибка ответа', e?.message || e)); }
         }
       } catch (e) {
         await new Promise(f => setTimeout(f, 30e3));
@@ -75,16 +79,20 @@ export function startNotify(fs, env, idToken, log) {
     tg(env, 'sendChatAction', { chat_id: m.chat.id, action: 'typing' }).catch(() => {});
     const { reply, task } = await tgAssistant(fs, env, text, callOf(me));
     await tg(env, 'sendMessage', { chat_id: m.chat.id, text: (voice ? `🎤 «${text.slice(0, 300)}»\n\n` : '') + reply, disable_web_page_preview: true });
-    log('Telegram: Аня ответила', me.name || me.id, task ? '(записала задачу: ' + task.title + ')' : '');
+    log('Telegram: Аня ответила', me.name || me.chat, task ? '(записала задачу: ' + task.title + ')' : '');
   }
 
   // Один раз после обновления: тестовое уведомление всем подписчикам, чтобы проверить, что всё доходит
   async function testOnce() {
-    const doc = await fs.get('wa_anna/telegram');
-    if (!doc?.chats?.length || doc.testSent) return;
-    await send('🛒 Тестовое уведомление: новый заказ Kaspi № 000000\nОшейник для прогулки — упаковать и передать курьеру\n(это проверка, настоящего заказа нет)');
-    await fs.set('wa_anna/telegram', { ...doc, testSent: Date.now() });
-    log('Telegram: отправлено тестовое уведомление');
+    const list = await subscribers();
+    const fresh = list.filter(c => c.chat && !c.tested);
+    if (!fresh.length) return;
+    for (const c of fresh) {
+      await tg(env, 'sendMessage', { chat_id: c.chat, text: '🛒 Тестовое уведомление: новый заказ Kaspi № 000000\nОшейник для прогулки — упаковать и передать курьеру\n(это проверка, настоящего заказа нет)' });
+      c.tested = Date.now();
+    }
+    await fs.set('wa_anna/telegram', { chats: list });
+    log('Telegram: отправлено тестовое уведомление', fresh.map(c => c.name).join(', '));
   }
 
   let kaspiErr = '';
