@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="34 30 352 482" width="352" height="482">
+<defs>
+<linearGradient id="cup" x1="0" x2="1"><stop offset="0" stop-color="#e9b27a"/><stop offset=".45" stop-color="#f4c795"/><stop offset="1" stop-color="#c98a50"/></linearGradient>
+<linearGradient id="slv" x1="0" x2="1"><stop offset="0" stop-color="#3347d6"/><stop offset=".5" stop-color="#5a70ff"/><stop offset="1" stop-color="#2e40c4"/></linearGradient>
+<linearGradient id="lid" x1="0" x2="1"><stop offset="0" stop-color="#14151f"/><stop offset=".4" stop-color="#2d2f40"/><stop offset="1" stop-color="#0d0e16"/></linearGradient>
+<radialGradient id="pk" cx=".38" cy=".3" r=".8"><stop offset="0" stop-color="#ffb04a"/><stop offset=".6" stop-color="#f77a12"/><stop offset="1" stop-color="#d4570a"/></radialGradient>
+<radialGradient id="gh" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#ece8ff"/><stop offset="1" stop-color="#c9c0f2"/></radialGradient>
+<radialGradient id="ct" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#f6f0ee"/><stop offset="1" stop-color="#ddd2d0"/></radialGradient>
+<filter id="bl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="7"/></filter>
+<clipPath id="cc"><path d="M92 214 L328 214 L296 478 Q294 490 282 490 L138 490 Q126 490 124 478 Z"/></clipPath>
+</defs>
+<ellipse cx="210" cy="494" rx="112" ry="11" fill="#0b1466" opacity=".45" filter="url(#bl)"/>
+<!-- стакан -->
+<path d="M92 214 L328 214 L296 478 Q294 490 282 490 L138 490 Q126 490 124 478 Z" fill="url(#cup)"/>
+<g clip-path="url(#cc)">
+<path d="M80 296 L340 296 L330 392 L90 392 Z" fill="url(#slv)"/>
+<path d="M80 296 L340 296 L340 301 L80 301 Z M80 387 L340 387 L340 392 L80 392 Z" fill="#fff" opacity=".22"/>
+<g transform="translate(210 344) rotate(-14)"><rect x="-27" y="-27" width="54" height="54" rx="14" fill="#fff"/><path d="M-9 -12 h11 a9 9 0 0 1 0 18 h-6 v8 h-5z M-4 -7 v8 h6 a4 4 0 0 0 0 -8z" fill="#4358ef" fill-rule="evenodd"/><circle cx="-14" cy="-16" r="3" fill="#4358ef"/></g>
+<path d="M100 220 Q122 350 128 490 L112 490 Q104 350 88 214Z" fill="#fff" opacity=".28"/>
+<path d="M300 214 Q312 350 292 490 L318 490 Q336 350 330 214Z" fill="#7a4414" opacity=".16"/>
+</g>
+<!-- крышка -->
+<path d="M82 186 Q82 168 100 168 L320 168 Q338 168 338 186 L338 210 Q338 222 326 222 L94 222 Q82 222 82 210Z" fill="url(#lid)"/>
+<path d="M86 205 Q210 216 334 205" stroke="#fff" stroke-opacity=".12" stroke-width="2" fill="none"/>
+<path d="M96 168 Q98 150 118 148 L302 148 Q322 150 324 168Z" fill="url(#lid)"/>
+<path d="M112 156 Q210 148 308 156" stroke="#fff" stroke-opacity=".18" stroke-width="3" fill="none" stroke-linecap="round"/>
+<ellipse cx="210" cy="148" rx="102" ry="13" fill="#383b50"/>
+<ellipse cx="210" cy="147" rx="100" ry="11" fill="#1d1f2c"/>
+<ellipse cx="266" cy="146" rx="22" ry="4.5" fill="#05060b"/>
+<!-- тени топперов -->
+<ellipse cx="124" cy="152" rx="38" ry="6" fill="#000" opacity=".4"/><ellipse cx="207" cy="154" rx="38" ry="6" fill="#000" opacity=".4"/><ellipse cx="290" cy="152" rx="34" ry="5" fill="#000" opacity=".4"/>
+<!-- кошечка -->
+<g transform="translate(124 148) scale(1.22)">
+<path d="M-26 -4 Q-30 -34 -22 -58 L-12 -60 L-4 -64 L4 -64 L12 -60 L22 -58 Q30 -34 26 -4 Q0 4 -26 -4Z" fill="url(#ct)"/>
+<path d="M-24 -52 L-26 -78 L-8 -62Z M24 -52 L26 -78 L8 -62Z" fill="url(#ct)"/><path d="M-22 -60 L-23 -72 L-14 -63Z M22 -60 L23 -72 L14 -63Z" fill="#ffb8c8"/>
+<ellipse cx="-11" cy="-36" rx="3.4" ry="4.2" fill="#1b1c28"/><ellipse cx="11" cy="-36" rx="3.4" ry="4.2" fill="#1b1c28"/><circle cx="-10" cy="-37.5" r="1.2" fill="#fff"/><circle cx="12" cy="-37.5" r="1.2" fill="#fff"/>
+<path d="M-3 -29 L3 -29 L0 -25Z" fill="#ff8aa3"/><path d="M0 -25 Q-3 -21 -7 -23 M0 -25 Q3 -21 7 -23" stroke="#1b1c28" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+<circle cx="-19" cy="-27" r="5" fill="#ffb8c8" opacity=".7"/><circle cx="19" cy="-27" r="5" fill="#ffb8c8" opacity=".7"/>
+<ellipse cx="-12" cy="-52" rx="9" ry="4" fill="#fff" opacity=".8" transform="rotate(-20 -12 -52)"/>
+</g>
+<!-- тыква -->
+<g transform="translate(207 150) scale(1.22)">
+<path d="M-6 -66 Q-4 -80 6 -84 Q8 -76 4 -66Z" fill="#3f9e3a"/><path d="M-4 -66 Q-3 -76 3 -82" stroke="#6fd05a" stroke-width="2" fill="none"/>
+<path d="M-32 -30 Q-32 -64 -6 -66 Q0 -60 6 -66 Q32 -64 32 -30 Q32 -2 6 -2 Q0 4 -6 -2 Q-32 -2 -32 -30Z" fill="url(#pk)"/>
+<path d="M-6 -66 Q-18 -32 -6 -2 M6 -66 Q18 -32 6 -2" stroke="#b9460a" stroke-opacity=".5" stroke-width="2.4" fill="none"/>
+<path d="M-17 -41 L-8 -34 L-20 -34Z M17 -41 L8 -34 L20 -34Z" fill="#3a1505"/>
+<path d="M-14 -22 Q0 -12 14 -22 L10 -20 L6 -17 L0 -20 L-6 -17 L-10 -20Z" fill="#3a1505"/>
+<ellipse cx="-17" cy="-52" rx="8" ry="4.5" fill="#fff" opacity=".45" transform="rotate(-35 -17 -52)"/>
+</g>
+<!-- призрак -->
+<g transform="translate(290 148) scale(1.22)">
+<path d="M-24 -2 Q-28 -58 0 -64 Q28 -58 24 -2 Q18 -9 12 -2 Q6 -9 0 -2 Q-6 -9 -12 -2 Q-18 -9 -24 -2Z" fill="url(#gh)"/>
+<ellipse cx="-8" cy="-38" rx="3.4" ry="4.4" fill="#1b1c28"/><ellipse cx="8" cy="-38" rx="3.4" ry="4.4" fill="#1b1c28"/><circle cx="-7" cy="-39.5" r="1.2" fill="#fff"/><circle cx="9" cy="-39.5" r="1.2" fill="#fff"/>
+<ellipse cx="0" cy="-27" rx="3.2" ry="4" fill="#1b1c28"/>
+<circle cx="-15" cy="-30" r="4" fill="#ffb8d8" opacity=".7"/><circle cx="15" cy="-30" r="4" fill="#ffb8d8" opacity=".7"/>
+<path d="M-12 -62 Q-14 -76 2 -78 Q16 -76 14 -62 Q0 -56 -12 -62Z" fill="#4358ef"/><path d="M-14 -61 Q0 -54 16 -61 L16 -57 Q0 -50 -14 -57Z" fill="#2e40c4"/><circle cx="2" cy="-82" r="5" fill="#fff"/>
+<ellipse cx="-12" cy="-48" rx="5" ry="9" fill="#fff" opacity=".7" transform="rotate(12 -12 -48)"/>
+</g>
+<!-- блики и искры -->
+<g fill="#fff"><path d="M52 150 l5 14 14 5 -14 5 -5 14 -5 -14 -14 -5 14 -5z"/><path d="M366 92 l4 11 11 4 -11 4 -4 11 -4 -11 -11 -4 11 -4z" opacity=".85"/></g>
+<g fill="#ffc83d"><path d="M340 214 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z"/><path d="M84 88 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z"/></g>
+<circle cx="358" cy="170" r="5" fill="#fff" opacity=".5"/><circle cx="300" cy="62" r="4" fill="#ffc83d"/>
+</svg>
