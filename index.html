@@ -4220,7 +4220,10 @@ const KP_CITIES=[['551010000','Павлодар'],['750000000','Алматы'],[
 const kpNorm=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
 const kpId=x=>'prod-'+String(x.code?'c'+x.code:x.sku?'s'+x.sku:'n'+kpNorm(x.name)).replace(/[^\wа-яё-]+/gi,'_').slice(0,140);
 const kpCity=()=>kaspiMeta.cityId||'551010000';
-const kpShop=()=>kpNorm(kaspiMeta.shopName||'');
+const kpShop=()=>kpShopKey(kaspiMeta.shopName||'');
+/* код товара Kaspi: в старых заказах он сидит в начале артикула вида 157950333_920482641 */
+const kpItemCode=i=>String(i.code||((String(i.sku||'').match(/^(\d{6,12})_\d+$/)||[])[1])||'');
+const kpShopKey=s=>String(s||'').toLowerCase().replace(/[^a-zа-яё0-9]+/gi,'');
 function kpCodeFrom(v){const m=String(v||'').match(/(\d{5,15})\/?(\?.*)?$/)||String(v||'').match(/(\d{5,15})/);return m?m[1]:''}
 
 /* все товары: сохранённые карточки + товары из заказов */
@@ -4232,10 +4235,11 @@ function kpAll(){
   const now=Date.now();
   (kaspiOrders||[]).forEach(k=>{
     const st=kStage(k);if(st==='cancel')return;
-    (k.items||[]).forEach(i=>{
+    (k.items||[]).forEach(i0=>{
+      const i={...i0,code:kpItemCode(i0)};
       let p=(i.code&&byCode.get(String(i.code)))||(i.sku&&bySku.get(kpNorm(i.sku)))||byName.get(kpNorm(i.name));
       if(!p){p={id:kpId(i),virtual:true,name:i.name||'Товар',code:i.code||'',sku:i.sku||'',sold:0,sold30:0,lastPrice:null,lastSold:0,src:'orders'};list.push(p);idx(p)}
-      else{if(!p.code&&i.code)p.code=i.code}
+      else if(!p.code&&i.code){p.code=i.code;byCode.set(String(i.code),p)}
       const q=+i.qty||1,t=+k.created||0;p.sold+=q;if(now-t<30*864e5)p.sold30+=q;
       if(t>=p.lastSold){p.lastSold=t;if(i.price)p.lastPrice=+i.price}
     });
@@ -4253,7 +4257,7 @@ const kpAlerts=()=>kpAll().filter(p=>p.alert&&p.status!=='off');
 /* себестоимость товара для прибыли: сначала карточка товара, потом закупки и прайс */
 function kpCostOf(item){
   const n=kpNorm(item.name);
-  const p=kaspiProducts.find(x=>x.cost!=null&&x.cost!==''&&((item.code&&String(x.code)===String(item.code))||(item.sku&&kpNorm(x.sku)===kpNorm(item.sku))||kpNorm(x.name)===n));
+  const ic=kpItemCode(item);const p=kaspiProducts.find(x=>x.cost!=null&&x.cost!==''&&((ic&&String(x.code)===ic)||(item.sku&&kpNorm(x.sku)===kpNorm(item.sku))||kpNorm(x.name)===n));
   return p?+p.cost:null;
 }
 /* прибыль с одной штуки: цена − комиссия − средняя доставка − себестоимость */
@@ -4349,8 +4353,8 @@ async function kpCheckPrices(manual){
         const r=d.offers[p.code];if(!r||r.error){errs++;await kpSave(p,{offers:{...(p.offers||{}),err:r?String(r.error):'нет ответа',at:Date.now()}});continue}
         const shop=kpShop();
         const all=(r.offers||[]).filter(o=>o.price!=null).sort((a,b)=>a.price-b.price);
-        const mine=shop?all.filter(o=>kpNorm(o.merchantName)===shop):[];
-        const other=shop?all.filter(o=>kpNorm(o.merchantName)!==shop):all.filter(o=>!(p.ourPrice&&o.price===p.ourPrice&&all.filter(x=>x.price===o.price).length===1));
+        const mine=shop?all.filter(o=>kpShopKey(o.merchantName)===shop):[];
+        const other=shop?all.filter(o=>kpShopKey(o.merchantName)!==shop):all.filter(o=>!(p.ourPrice&&o.price===p.ourPrice&&all.filter(x=>x.price===o.price).length===1));
         await kpSave(p,{offers:{at:Date.now(),n:all.length,min:all[0]?all[0].price:null,minName:all[0]?all[0].merchantName:'',
           minOther:other[0]?other[0].price:null,minOtherName:other[0]?other[0].merchantName:'',ours:mine[0]?mine[0].price:null,
           top:all.slice(0,5).map(o=>({n:o.merchantName,p:o.price})),err:''}});
