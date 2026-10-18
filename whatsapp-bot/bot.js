@@ -12,6 +12,7 @@
 
 import { createServer } from 'node:http';
 import { rm } from 'node:fs/promises';
+import { watchFile } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, isJidGroup, isJidBroadcast, isLidUser, isPnUser } from 'baileys';
@@ -249,6 +250,12 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   if (missing.length) log(state.note);
   connect().catch(e => log('ошибка подключения', e?.message || e));
   setInterval(processOutbox, OUTBOX_EVERY);
+  // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
+  for (const f of ['brain.js', 'bot.js', '.env']) {
+    watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
+      if (cur.mtimeMs !== prev.mtimeMs) { log('Файл ' + f + ' изменился, перезапускаюсь'); process.exit(0); }
+    });
+  }
 });
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
