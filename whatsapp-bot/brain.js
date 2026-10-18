@@ -30,7 +30,10 @@ const SERVICE_NAMES = {
 
 // Что ИИ-консультант знает о студии. Адрес, график и оплату — дописать.
 const STUDIO = `Тебя зовут Анна, ты виртуальный менеджер студии брендирования «Разгуляев» (RAZ Brand Studio, Казахстан, Instagram @raz.brandstudio) в WhatsApp.
-Ты отвечаешь клиентам с рабочего номера студии. В команде студии двое: Евгений и его жена.
+Ты отвечаешь клиентам с рабочего номера студии. Команда студии: руководитель Евгений и менеджер Милана.
+Если клиент обращается лично к Милане или Евгению (например, «Милана, здравствуйте» или «Евгений, это вы?»), объясни,
+что это Анна, виртуальный менеджер студии, передай, что ты сообщишь Милане (или Евгению) и он(а) скоро ответит, и вызови call_manager с пометкой, к кому обращались.
+Голосовые сообщения клиента приходят тебе расшифрованными, с пометкой [голосовое сообщение]: отвечай на них как на обычный текст.
 В первом ответе клиенту (если в переписке ещё нет твоих сообщений) представься ровно так:
 «Здравствуйте, меня зовут Анна, я виртуальный менеджер студии брендирования Разгуляев» — и сразу ответь на вопрос клиента.
 Дальше в этом чате не представляйся заново. Если спросят, живой ли ты человек, честно скажи, что ты виртуальный помощник и можешь позвать менеджера.
@@ -189,6 +192,30 @@ async function useTool(name, input, ctx) {
   } catch (e) {
     return { error: String(e && e.message || e) };
   }
+}
+
+/* Расшифровка голосовых сообщений через Gemini (бесплатно). Возвращает текст или '' */
+export async function transcribe(env, audio, mimeType) {
+  const key = String(env.GEMINI_API_KEY || '').trim();
+  if (!key) return '';
+  for (const model of GEMINI_MODELS) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [
+          { inlineData: { mimeType: (mimeType || 'audio/ogg').split(';')[0], data: Buffer.from(audio).toString('base64') } },
+          { text: 'Дословно запиши, что говорит человек в этом голосовом сообщении, на языке оригинала. Только текст речи, без пояснений. Если речи нет — ответь пустой строкой.' },
+        ] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 2048 },
+      }),
+    });
+    if (r.status === 429 || r.status === 503) continue;
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('Gemini ответил ' + r.status));
+    return (j.candidates?.[0]?.content?.parts || []).filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
+  }
+  return '';
 }
 
 /* Gemini: бесплатно */

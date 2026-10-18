@@ -16,10 +16,10 @@ import { rm } from 'node:fs/promises';
 import { watchFile } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, isJidGroup, isJidBroadcast, isLidUser, isPnUser } from 'baileys';
+import makeWASocket, { downloadMediaMessage, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, isJidGroup, isJidBroadcast, isLidUser, isPnUser } from 'baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, PAUSE_AFTER_MANAGER } from './brain.js';
+import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, PAUSE_AFTER_MANAGER } from './brain.js';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = join(DIR, 'auth');          // вход в WhatsApp; если удалить папку — снова попросит QR
@@ -111,7 +111,8 @@ async function onMessage(m) {
     return;
   }
 
-  await appendChat(fs, chatId, { role: 'client', text, at, id: m.key.id || '' }, {
+  const heard = await voiceText(m);
+  await appendChat(fs, chatId, { role: 'client', text: heard || text, at, id: m.key.id || '' }, {
     phone, jid, unread: true, ...(m.pushName ? { name: m.pushName } : {}),
   });
   if (!aiOn || Date.now() - at > MAX_AGE) return;
@@ -122,6 +123,22 @@ async function onMessage(m) {
     pending.delete(chatId);
     answer(jid, chatId, phone).catch(e => log('ошибка ответа', e?.message || e));
   }, REPLY_DELAY));
+}
+
+// Голосовое от клиента → текст (Gemini). Не получилось — вернёт '' и в чат попадёт «[клиент прислал голосовое сообщение]»
+async function voiceText(m) {
+  let msg = m.message || {};
+  if (msg.ephemeralMessage?.message) msg = msg.ephemeralMessage.message;
+  const audio = msg.audioMessage;
+  if (!audio || !env.GEMINI_API_KEY) return '';
+  try {
+    const buf = await downloadMediaMessage(m, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
+    const t = await transcribe(env, buf, audio.mimetype);
+    return t ? '[голосовое сообщение] ' + t : '';
+  } catch (e) {
+    log('не удалось расшифровать голосовое', e?.message || e);
+    return '';
+  }
 }
 
 async function answer(jid, chatId, phone) {
