@@ -105,7 +105,7 @@ async function onMessage(m) {
     if (sentByBot.has(m.key.id)) return;
     // Менеджер написал клиенту сам (с телефона или компьютера): бот уступает чат
     await appendChat(fs, chatId, { role: 'manager', text, at }, {
-      phone, jid, needsManager: false, busyNoticeAt: 0, botPausedUntil: Date.now() + PAUSE_AFTER_MANAGER * 3600e3,
+      phone, jid, needsManager: false, busyNoticeAt: 0, botPausedUntil: Date.now() + PAUSE_AFTER_MANAGER * 60e3,
     });
     clearTimeout(pending.get(chatId));
     return;
@@ -143,15 +143,26 @@ async function voiceText(m) {
 
 async function answer(jid, chatId, phone) {
   const chat = await fs.get('wa_chats/' + chatId);
-  if (!chat || chat.needsManager || (chat.botPausedUntil || 0) > Date.now()) return;
-  if (chat.lastRole !== 'client') return; // пока ждали, ответил менеджер
+  if (!chat || chat.lastRole !== 'client') return; // пока ждали, ответил менеджер
+  // Менеджер недавно писал в этом чате: ждём конца паузы, и если клиенту так и не ответили — отвечаем сами
+  const paused = (chat.botPausedUntil || 0) - Date.now();
+  if (paused > 0) {
+    clearTimeout(pending.get(chatId));
+    pending.set(chatId, setTimeout(() => {
+      pending.delete(chatId);
+      answer(jid, chatId, phone).catch(e => log('ошибка ответа', e?.message || e));
+    }, paused + 1000));
+    return;
+  }
   const reply = await runAgent(fs, env, phone, chat);
   if (!reply.text) return;
   let ok = true;
   try { await send(jid, reply.text, true); } catch (e) { ok = false; log('не отправлено', e?.message || e); }
+  // Менеджера зовём один раз: повторный вызов, пока он не подключился, не сбрасывает 10-минутное ожидание
+  const call = reply.handoff && !chat.needsManager;
   await appendChat(fs, chatId, { role: 'bot', text: ok ? reply.text : '[не отправлено] ' + reply.text, at: Date.now() },
-    reply.handoff ? { needsManager: true, managerReason: reply.handoff, managerCalledAt: Date.now(), busyNoticeAt: 0, botPausedUntil: Date.now() + PAUSE_AFTER_MANAGER * 3600e3 } : {});
-  if (reply.handoff) log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
+    call ? { needsManager: true, managerReason: reply.handoff, managerCalledAt: Date.now(), busyNoticeAt: 0 } : {});
+  if (call) log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
 }
 
 // Отправка с паузой «печатает…», как у живого человека, и не чаще одного сообщения в SEND_GAP
