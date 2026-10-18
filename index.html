@@ -1053,7 +1053,9 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 #w-anna>.w-h:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
 .an-av .ci{position:absolute;left:10%;top:23.8%;width:80%;height:76.2%;border-radius:50%;background:radial-gradient(circle at 38% 30%,#fff,#dde3ff 75%);box-shadow:0 8px 18px rgba(16,24,120,.38)}
 /* всё, что торчит справа за кругом (кончики волос и их белая обводка), срезаем по дуге круга: между стикером и текстом ничего светлого */
-.an-av .fg{position:absolute;inset:0;clip-path:polygon(0 0,68% 0,68% 23.5%,64.2% 26.1%,69.8% 28.6%,74.7% 31.7%,78.9% 35.3%,82.8% 39.7%,85.9% 44.4%,88.3% 49.6%,89.8% 55.6%,90.3% 61.9%,100% 61.9%,100% 100%,0 100%);filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(16,24,120,.4))}
+/* обводка и тень на обёртке .fs: filter на самом .fg срезался бы его clip-path, и ореол тени обрывался прямоугольником (заметно на телефоне) */
+.an-av .fg{position:absolute;inset:0;clip-path:polygon(0 0,68% 0,68% 23.5%,64.2% 26.1%,69.8% 28.6%,74.7% 31.7%,78.9% 35.3%,82.8% 39.7%,85.9% 44.4%,88.3% 49.6%,89.8% 55.6%,90.3% 61.9%,100% 61.9%,100% 100%,0 100%)}
+.an-av .fs{position:absolute;inset:0;filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(16,24,120,.4))}
 .an-av .fg img{position:absolute;inset:0;display:block;width:100%;height:100%}
 .an-av .mv{position:absolute;inset:0;transform-origin:64.4% 84.3%}
 .an-av .mv img{clip-path:polygon(49% 77.5%,65% 77%,87% 83.5%,88% 94%,76% 94%,49% 89%)}
@@ -1086,6 +1088,23 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .an-todo li{position:relative;list-style:none;display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;background:rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;font:500 14px/1.35 var(--f);overflow-wrap:anywhere}
 .an-todo li::before{content:"";width:14px;height:14px;margin-top:2px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85)}
 .an-todo{margin:0;padding:0}
+/* свёртки внутри Ани: «Сегодня сделать» и чат */
+#w-anna,#w-anna button,#w-anna a{-webkit-tap-highlight-color:transparent}
+.an-sec{display:flex;flex-direction:column;gap:8px;min-width:0}
+.an-tg{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;padding:0 14px;border-radius:14px;background:rgba(255,255,255,.12);color:#fff;font:700 12.5px var(--f);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;transition:background .15s}
+.an-tg:hover{background:rgba(255,255,255,.2)}
+.an-tg:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.an-tg .ch{flex:none;width:7px;height:7px;border-right:2px solid #fff;border-bottom:2px solid #fff;transform:translateY(-2px) rotate(45deg);transition:transform .25s}
+.an-tg[aria-expanded="true"] .ch{transform:translateY(1px) rotate(-135deg)}
+.an-sb{display:flex;flex-direction:column;gap:8px;min-width:0}
+.an-sb[hidden]{display:none}
+.an-qe{margin:0 2px;font:400 13px/1.4 var(--fb);color:rgba(255,255,255,.72)}
+.an-hb{all:unset;box-sizing:border-box;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 11px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font:600 12px var(--f);cursor:pointer;transition:background .15s}
+.an-hb:hover{background:rgba(255,255,255,.22)}
+.an-hb:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.an-hb[hidden],.an-hist[hidden],.an-todo[hidden]{display:none}
+.an-hist{padding-top:4px;border-top:1px solid rgba(255,255,255,.18)}
+.an-q time{align-self:center;font:600 11px var(--f);color:rgba(255,255,255,.6)}
 /* дело со ссылкой на заказ: подчёркнуто, со стрелкой, нажимается вся строка */
 .an-lk{all:unset;cursor:pointer;text-decoration:underline 1.5px rgba(255,255,255,.45);text-underline-offset:3px}
 .an-lk::after{content:"";position:absolute;inset:0;border-radius:14px}
@@ -1112,7 +1131,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .an-nb .btn{margin:0 14px 14px;background:#fff;color:var(--ab);text-decoration:none}
 .an-nb .btn:hover{background:#e6e9ff}
 .an-nb>div>:last-child:not(.btn){margin-bottom:14px}
-.an-stats{display:flex;flex-wrap:wrap;gap:6px}
+.an-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 #w-anna .an-stats .bw-stat{background:rgba(255,255,255,.12)}
 #w-anna .an-stats .bw-stat span{color:rgba(255,255,255,.78)}
 .an-stats .bw-stat em{font-size:17px;color:#fff}
@@ -1145,7 +1164,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   #pack #w-anna .mf-x{width:30px;height:30px}
   .an-av{left:8px;top:-20px;width:78px;height:82px}
   .an-av .ci{box-shadow:0 5px 12px rgba(16,24,120,.35)}
-  .an-av .fg{filter:drop-shadow(.8px 0 0 #fff) drop-shadow(-.8px 0 0 #fff) drop-shadow(0 .8px 0 #fff) drop-shadow(0 -.8px 0 #fff) drop-shadow(0 2px 4px rgba(16,24,120,.4))}
+  .an-av .fs{filter:drop-shadow(.8px 0 0 #fff) drop-shadow(-.8px 0 0 #fff) drop-shadow(0 .8px 0 #fff) drop-shadow(0 -.8px 0 #fff) drop-shadow(0 2px 4px rgba(16,24,120,.4))}
   #w-anna .w-h h2{font-size:16.5px}
   #w-anna .at{gap:2px}
   #w-anna .at .c{font-size:12px}
@@ -1154,8 +1173,8 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   .an-say{font-size:13.5px;padding:10px 12px;border-radius:5px 16px 16px 16px}
   .an-todo li{padding:8px 10px;border-radius:12px;font-size:13px;gap:8px}
   .an-ft{margin-top:10px}
-  .an-stats{display:grid;grid-template-columns:1fr 1fr}
-  .an-stats .bw-stat{padding:5px 9px}.an-stats .bw-stat em{font-size:15px}
+  .an-stats .bw-stat{padding:5px 8px}.an-stats .bw-stat span{font-size:10.5px;line-height:1.2}
+  .an-tg{min-height:38px;padding:0 12px;font-size:11.5px}.an-stats .bw-stat em{font-size:15px}
   .an-ask input,.an-ask .btn{min-height:40px}
   .an-h{font-size:11.5px}
 }
@@ -1469,13 +1488,19 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="home-grid">
       <div class="home-col">
         <div class="w" id="w-anna">
-          <div class="w-h"><h2><span class="an-av" id="anna-av" aria-hidden="true"><span class="ci"></span><span class="fg"><img src="anna-avatar-0.webp?v=2" alt="" width="240" height="252"><span class="mv"><img src="anna-avatar.webp?v=2" alt="" width="240" height="252"><i class="gl"></i></span></span><i class="sm"><b></b><b></b><b></b></i><i class="pf"></i></span><span class="at">Менеджер Аня<span class="c" id="w-anna-c">подключаемся…</span></span></h2></div>
+          <div class="w-h"><h2><span class="an-av" id="anna-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="anna-avatar-0.webp?v=2" alt="" width="240" height="252"><span class="mv"><img src="anna-avatar.webp?v=2" alt="" width="240" height="252"><i class="gl"></i></span></span></span><i class="sm"><b></b><b></b><b></b></i><i class="pf"></i></span><span class="at">Менеджер Аня<span class="c" id="w-anna-c">подключаемся…</span></span></h2></div>
           <div class="an-body" id="w-anna-body">
             <div class="an-col"><div class="an-say" id="w-anna-say">Загружаем сводку…</div><div id="w-anna-todo"></div><div class="an-stats" id="w-anna-stats"></div></div>
             <div class="an-col">
               <div id="w-anna-need"></div>
-              <form class="an-ask" id="anna-ask" novalidate><input id="anna-q" placeholder="Спросить Аню" autocomplete="off" maxlength="500" aria-label="Вопрос Ане"><button class="btn primary sm" type="submit" id="anna-q-btn">Спросить</button></form>
-              <div class="an-qs" id="w-anna-qs"></div>
+              <div class="an-sec" id="anna-chat"><button type="button" class="an-tg" id="anna-chat-tg" aria-expanded="false" aria-controls="anna-chat-b"><span id="anna-chat-l">Открыть чат</span><i class="ch" aria-hidden="true"></i></button>
+                <div class="an-sb" id="anna-chat-b" hidden>
+                  <form class="an-ask" id="anna-ask" novalidate><input id="anna-q" placeholder="Спросить Аню" autocomplete="off" maxlength="500" aria-label="Вопрос Ане"><button class="btn primary sm" type="submit" id="anna-q-btn">Спросить</button></form>
+                  <div class="an-qs" id="w-anna-qs"></div>
+                  <button type="button" class="an-hb" id="anna-hist-tg" aria-expanded="false" aria-controls="w-anna-hist" hidden></button>
+                  <div class="an-qs an-hist" id="w-anna-hist" hidden></div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="an-ft"><small class="bw-note">Аня отвечает, когда включён рабочий компьютер.</small><button class="an-ref" type="button" id="anna-ref-btn" aria-label="Обновить сводку Ани"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить</button></div>
@@ -4711,10 +4736,17 @@ function annaListen(){
   const fs=annaFs();if(!fs)return;
   const fail=e=>{annaLoaded=true;annaErr='rules';try{console.warn('wa_anna',e)}catch(_){}renderAnna()};
   fs.doc('wa_anna/digest').onSnapshot(s=>{annaD=s.exists?s.data():null;annaLoaded=true;annaErr='';renderAnna()},fail);
-  fs.collection('wa_anna_q').orderBy('at','desc').limit(3).onSnapshot(s=>{annaQ=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},fail);
+  fs.collection('wa_anna_q').orderBy('at','desc').limit(30).onSnapshot(s=>{annaQ=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},fail);
 }
 /* затяжка на аватаре: при первом показе сводки и при открытии блока */
 let annaPuffed=false,annaPuffT,annaNm=null;
+/* свёртки внутри блока: «Сегодня сделать» и чат закрыты, пока их не открыли (помним в браузере); история чата — только на сеанс */
+const ANNA_UI='raz.anna.ui';let annaUi={todo:false,chat:false},annaHist=false;try{Object.assign(annaUi,JSON.parse(localStorage.getItem(ANNA_UI)||'{}'))}catch(_){}
+function annaUiSet(k,v){annaUi[k]=v;try{localStorage.setItem(ANNA_UI,JSON.stringify(annaUi))}catch(_){}renderAnna()}
+/* в чате видно только свежее (5 минут с вопроса или ответа), остальное — под «Историей»; из базы ничего не удаляем */
+const ANNA_Q_FRESH=5*6e4;
+const annaQFresh=q=>Date.now()-Math.max(+q.at||0,+q.answeredAt||0)<ANNA_Q_FRESH;
+const annaQHtml=(q,t)=>`<div class="an-q">${t&&q.at?`<time>${annaAgo(+q.at)}</time>`:''}<span class="q">${esc(q.q)}</span>${q.status==='done'?`<span class="a">${esc(q.a||'Ответа нет.')}</span>`:'<span class="a wait">Аня думает…</span>'}</div>`;
 function annaPuff(){const a=$('anna-av');if(!a)return;a.classList.remove('puff');void a.offsetWidth;a.classList.add('puff');clearTimeout(annaPuffT);annaPuffT=setTimeout(()=>a.classList.remove('puff'),1600)}
 /* ссылки из дел: заказ студии — карточка заказа; заказ Kaspi — страница Kaspi на нужной вкладке, строка подсвечивается */
 function annaOrder(id){const s=String(id),o=orders.find(x=>x.id===s)||orders.find(x=>String(x.num)===s.replace(/^№?\s*0*/,''));if(!o){toast('Заказ не найден, возможно, его уже удалили');return}openEditor(o.id)}
@@ -4724,6 +4756,9 @@ function annaKaspi(id){
   requestAnimationFrame(()=>{const r=document.querySelector('#k-list .krow[data-kid="'+CSS.escape(k.id)+'"]');if(!r)return;r.scrollIntoView({block:'center',behavior:'smooth'});r.classList.add('kfocus');setTimeout(()=>r.classList.remove('kfocus'),2600)});
 }
 $('w-anna').addEventListener('click',e=>{const t=e.target;
+  if(t.closest('[data-antodo]')){annaUiSet('todo',!annaUi.todo);return}
+  if(t.closest('#anna-chat-tg')){annaUiSet('chat',!annaUi.chat);if(annaUi.chat&&!isPhone())$('anna-q').focus();return}
+  if(t.closest('#anna-hist-tg')){annaHist=!annaHist;renderAnna();return}
   const nm=t.closest('[data-annm]');if(nm){annaNm=annaNm===nm.dataset.annm?null:nm.dataset.annm;
     document.querySelectorAll('#w-anna-need .an-nm').forEach(r=>{const b=r.querySelector('[data-annm]'),o=b.dataset.annm===annaNm;r.classList.toggle('open',o);b.setAttribute('aria-expanded',o)});return}
   const od=t.closest('[data-anord]');if(od){annaOrder(od.dataset.anord);return}
@@ -4742,18 +4777,24 @@ function renderAnna(){
   else say.textContent=String(d.summary||'').trim()||'Пока без новостей.';
   if(!annaErr){
     const td=todo.map(t=>typeof t==='string'?{text:t}:t).filter(t=>t&&t.text).slice(0,6);
-    $('w-anna-todo').innerHTML=td.length?`<p class="an-h">Сегодня сделать</p><ul class="an-todo">${td.map(t=>{const x=esc(String(t.text));
+    $('w-anna-todo').innerHTML=td.length?`<div class="an-sec"><button type="button" class="an-tg" data-antodo aria-expanded="${annaUi.todo}" aria-controls="anna-todo-l"><span>Сегодня сделать · ${td.length}</span><i class="ch" aria-hidden="true"></i></button><ul class="an-todo" id="anna-todo-l"${annaUi.todo?'':' hidden'}>${td.map(t=>{const x=esc(String(t.text));
       return t.orderId?`<li><button type="button" class="an-lk" data-anord="${esc(String(t.orderId))}" title="Открыть заказ">${x}<i aria-hidden="true">→</i></button></li>`
-        :t.kaspiId?`<li><button type="button" class="an-lk" data-ankas="${esc(String(t.kaspiId))}" title="Открыть заказ на странице Kaspi">${x}<i aria-hidden="true">→</i></button></li>`:`<li>${x}</li>`}).join('')}</ul>`:'';
+        :t.kaspiId?`<li><button type="button" class="an-lk" data-ankas="${esc(String(t.kaspiId))}" title="Открыть заказ на странице Kaspi">${x}<i aria-hidden="true">→</i></button></li>`:`<li>${x}</li>`}).join('')}</ul></div>`:'';
     $('w-anna-need').innerHTML=need.length?`<p class="an-h">Ждут менеджера <em>${need.length}</em></p><div class="mini">${need.slice(0,8).map((n,i)=>{
       const ph=String(n.phone||'').replace(/\D/g,''),who=esc(n.name||(ph?'+'+ph:'Клиент')),key=ph||n.name||'#'+i,op=annaNm===key;
       const say=String(n.brief||n.reason||'').trim()||'Клиент просит менеджера, подробностей Аня не записала.';
       return `<div class="an-nm${op?' open':''}"><button type="button" class="mrow" data-annm="${esc(key)}" aria-expanded="${op}"><span class="an-w"><b>${who}</b><small>${esc(n.reason||'')}</small></span><span class="r">${n.since?`<small>${annaAgo(+n.since)}</small>`:''}<i class="ch" aria-hidden="true"></i></span></button>`
         +`<div class="an-nb"><div><p>${esc(say)}</p>${ph?`<a class="btn sm" href="https://wa.me/${ph}" target="_blank" rel="noopener">Перейти в чат WhatsApp ↗</a>`:''}</div></div></div>`}).join('')}</div>`:'';
-    const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Ани'],[st.needManager,'ждут ответа'],[st.voice,'голосовых']].filter(x=>x[0]!=null&&x[0]!=='');
+    const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Ани'],[st.needManager,'ждут ответа']].filter(x=>x[0]!=null&&x[0]!=='');
     $('w-anna-stats').innerHTML=S.map(([v,l])=>bwPStat(l,String(v))).join('');
   }
-  $('w-anna-qs').innerHTML=annaQ.map(q=>`<div class="an-q"><span class="q">${esc(q.q)}</span>${q.status==='done'?`<span class="a">${esc(q.a||'Ответа нет.')}</span>`:'<span class="a wait">Аня думает…</span>'}</div>`).join('');
+  const qNew=annaQ.filter(annaQFresh),qOld=annaQ.filter(q=>!annaQFresh(q)),co=!!annaUi.chat,hb=$('anna-hist-tg');
+  $('anna-chat-tg').setAttribute('aria-expanded',co);$('anna-chat-b').hidden=!co;
+  $('anna-chat-l').textContent=co?'Скрыть чат':'Открыть чат'+(qNew.length?' · '+qNew.length:'');
+  $('w-anna-qs').innerHTML=qNew.length?qNew.map(q=>annaQHtml(q)).join(''):'<p class="an-qe">'+(qOld.length?'Свежих вопросов нет. Прошлые ответы — в истории.':'Спросите Аню о заказах, клиентах или переписке.')+'</p>';
+  if(!qOld.length)annaHist=false;
+  hb.hidden=!qOld.length;hb.textContent=(annaHist?'Скрыть историю':'История')+' · '+qOld.length;hb.setAttribute('aria-expanded',annaHist);
+  $('w-anna-hist').hidden=!annaHist;$('w-anna-hist').innerHTML=annaHist?qOld.map(q=>annaQHtml(q,1)).join(''):'';
 }
 $('anna-ref-btn').addEventListener('click',async()=>{
   const fs=annaFs();if(!fs||!canWrite)return;
