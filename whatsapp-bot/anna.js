@@ -28,6 +28,9 @@ async function collect(fs) {
     .sort((a, b) => (a.managerCalledAt || 0) - (b.managerCalledAt || 0))
     .map(c => ({ id: c.id, name: c.name || '', phone: c.phone || '', reason: c.managerReason || '', since: c.managerCalledAt || c.updatedAt || now }));
   const kaspi = await kaspiToDo(fs);
+  const tasks = (await fs.query('tasks', { where: { fieldFilter: { field: { fieldPath: 'done' }, op: 'EQUAL', value: { booleanValue: false } } } }).catch(() => []))
+    .sort((a, b) => String(a.date || '9').localeCompare(String(b.date || '9'))).slice(0, 30)
+    .map(t => `${t.date || 'без даты'}${t.time ? ' ' + t.time : ''}: ${t.title || ''}${t.who ? ' (' + t.who + ')' : ''}`).join('\n');
   const botOrders = orders.filter(o => o.source === 'whatsapp' && o.status === 'new');
   const voice = chats.reduce((n, c) => n + (c.messages || []).filter(m => now - (m.at || 0) < DAY && /^\[голосовое сообщение\]/.test(m.text || '')).length, 0);
   const stats = { chats: chats.length, botOrders: botOrders.length, needManager: needManager.length, voice };
@@ -53,23 +56,38 @@ ${dialogs || 'нет'}
 Открытые заказы студии (по сроку):
 ${list || 'нет'}
 
-Kaspi: нужно собрать и отправить (по данным учёта, обновляются, когда открыт раздел Kaspi):
-${kaspi || 'нет'}`;
+Kaspi (по данным учёта, обновляются, когда открыт раздел Kaspi):
+${kaspi || 'нет'}
+
+Невыполненные задачи студии:
+${tasks || 'нет'}`;
   return { facts, needManager, stats };
 }
 
-// Заказы Kaspi, которые ждут сборки или передачи курьеру (коллекция kaspi_orders, её заполняет учёт)
+// Заказы Kaspi из коллекции kaspi_orders (её заполняет учёт, когда открыт раздел Kaspi):
+// что собрать и передать курьеру, и сколько Kaspi должен заплатить за отправленное в ближайшую неделю
+const KASPI_FEE = 0.30; // как в учёте: примерная комиссия и доставка Kaspi
 async function kaspiToDo(fs) {
   const ACTIVE = ['NEW', 'SIGN_REQUIRED', 'PICKUP', 'DELIVERY', 'KASPI_DELIVERY'];
-  const list = await fs.query('kaspi_orders', {
+  const list = (await fs.query('kaspi_orders', {
     where: { fieldFilter: { field: { fieldPath: 'state' }, op: 'IN', value: { arrayValue: { values: ACTIVE.map(v => ({ stringValue: v })) } } } },
-  }).catch(() => []);
+  }).catch(() => [])).filter(k => !k.returned && !['CANCELLED', 'CANCELLING', 'COMPLETED'].includes(k.status));
   const day = t => t ? kz(+t).toISOString().slice(0, 10) : '';
-  return list.filter(k => !k.transmitted && !k.returned && !['CANCELLED', 'CANCELLING', 'COMPLETED'].includes(k.status))
+  const what = k => (k.items || []).map(i => (i.name || 'товар') + (i.qty > 1 ? ' × ' + i.qty : '')).join(', ') || 'заказ ' + k.code;
+  const money = n => Math.round(n).toLocaleString('ru-RU') + ' ₸';
+  const shipped = k => k.transmitted || ((k.assembled || k.waybill) && k.state !== 'KASPI_DELIVERY');
+  const todo = list.filter(k => !shipped(k))
     .sort((a, b) => (+a.transmitPlan || +a.created || 0) - (+b.transmitPlan || +b.created || 0)).slice(0, 25)
-    .map(k => `[kaspi ${k.id}] ${(k.items || []).map(i => (i.name || 'товар') + (i.qty > 1 ? ' × ' + i.qty : '')).join(', ') || 'заказ ' + k.code}` +
-      ` — ${k.assembled || k.waybill ? 'собран, передать курьеру' : 'собрать'}${k.transmitPlan ? ', передать до ' + day(k.transmitPlan) : ''}${k.customer ? ', покупатель ' + k.customer : ''}`)
-    .join('\n');
+    .map(k => `[kaspi ${k.id}] ${what(k)} — ${k.assembled || k.waybill ? 'собран, передать курьеру' : 'собрать'}` +
+      `${k.transmitPlan ? ', передать до ' + day(k.transmitPlan) : ''}${k.customer ? ', покупатель ' + k.customer : ''}`);
+  const week = Date.now() + 7 * DAY;
+  const pay = list.filter(shipped).map(k => ({ k, at: +k.plannedDelivery || +k.transmitPlan || 0 })).filter(p => p.at && p.at <= week)
+    .sort((a, b) => a.at - b.at);
+  const total = pay.reduce((s, p) => s + (+p.k.total || 0), 0);
+  const payText = pay.length ? pay.map(p => `${day(p.at)}: ${what(p.k)} — ${money(p.k.total || 0)}`).join('\n') +
+    `\nИтого за неделю: ${money(total)}, на руки примерно ${money(total * (1 - KASPI_FEE))} (минус ~${KASPI_FEE * 100}% комиссии и доставки)` : 'нет';
+  return `Собрать: ${todo.filter(t => t.includes('— собрать')).length}, передать курьеру: ${todo.filter(t => t.includes('передать курьеру')).length}\n` +
+    (todo.join('\n') || 'нет') + `\n\nKaspi заплатит в ближайшие 7 дней (отправленные заказы, по плановой дате доставки):\n${payText}`;
 }
 
 /* ---------- Gemini ---------- */
@@ -165,4 +183,36 @@ export async function answerQuestions(fs, env) {
     await fs.patch('wa_anna_q/' + q.id, { a: a.slice(0, 2000) || 'Не знаю, что ответить.', status: 'done', answeredAt: Date.now() });
   }
   return qs.length;
+}
+
+/* ---------- Аня в Telegram: вопросы и задачи голосом или текстом ---------- */
+
+// who — как обращаться к сотруднику. Возвращает {reply, task?}; задачу сохраняет в учёт (раздел «Задачи»)
+export async function tgAssistant(fs, env, text, who) {
+  const { facts } = await collect(fs);
+  const raw = await gemini(env, PERSONA.replace('Ты Анна', 'Ты Аня (Анна)') + `
+Сейчас тебе пишет в Telegram ${who}. Обращайся к нему(ней) именно так: «${who}». Отвечай коротко, как в мессенджере, 1–6 предложений, без markdown.
+Если просят записать, поставить или напомнить задачу — заполни task: title (коротко, с глагола: «Купить удлинитель»), date (YYYY-MM-DD; «сегодня», «завтра»,
+«в пятницу» считай от текущей даты; без даты — сегодня), time (HH:MM, если назван). В reply подтверди, что записала и на какой день.
+Если спрашивают про Kaspi, деньги, заказы, задачи, клиентов — отвечай по данным ниже, с цифрами. Если данных нет или они могут быть неполными — честно скажи.`,
+    facts + '\n\nСообщение: ' + String(text).slice(0, 1500), {
+      type: 'OBJECT',
+      properties: {
+        reply: { type: 'STRING' },
+        task: { type: 'OBJECT', properties: { title: { type: 'STRING' }, date: { type: 'STRING' }, time: { type: 'STRING' } }, required: ['title'] },
+      },
+      required: ['reply'],
+    });
+  let out;
+  try { out = JSON.parse(raw); } catch (_) { out = { reply: raw }; }
+  const t = out.task;
+  if (t && t.title) {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? t.date : kz().toISOString().slice(0, 10);
+    await fs.create('tasks', {
+      kind: 'boss', title: String(t.title).slice(0, 200), desc: 'Записала Аня из Telegram по просьбе: ' + who, dateFrom: '', date,
+      who: '', time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : '', timeTo: '', status: 'new', by: 'Аня (Telegram)', files: [], comments: [],
+      done: false, doneAt: null, createdAt: Date.now(),
+    });
+  }
+  return { reply: String(out.reply || 'Готово.').slice(0, 3000), task: t && t.title ? t : null };
 }
