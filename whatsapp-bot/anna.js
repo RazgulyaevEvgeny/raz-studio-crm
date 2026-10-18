@@ -11,7 +11,7 @@ const ST = { new: 'новый', design: 'макет', prod: 'в производ
 const PERSONA = `Ты Анна, виртуальный менеджер студии брендирования «Разгуляев». Ты отвечаешь клиентам в WhatsApp,
 а сейчас говоришь с командой студии в их учёте: руководитель Евгений и менеджер Милана.
 Говори как живой толковый коллега: коротко, по-деловому, по-дружески, на русском, без канцелярита и без markdown.
-Опирайся только на данные ниже, ничего не выдумывай. Называй клиентов по имени (или номеру), заказы — по номеру.`;
+Опирайся только на данные ниже, ничего не выдумывай. Называй клиентов и заказы по имени клиента; служебные id в квадратных скобках никогда не показывай.`;
 
 // Время Казахстана (UTC+5) как объект Date с «местными» UTC-полями
 const kz = (t = Date.now()) => new Date(t + 5 * 3600e3);
@@ -26,7 +26,8 @@ async function collect(fs) {
   const name = c => c.name || (c.phone ? '+' + c.phone : 'Клиент');
   const needManager = chats.filter(c => c.needsManager)
     .sort((a, b) => (a.managerCalledAt || 0) - (b.managerCalledAt || 0))
-    .map(c => ({ name: c.name || '', phone: c.phone || '', reason: c.managerReason || '', since: c.managerCalledAt || c.updatedAt || now }));
+    .map(c => ({ id: c.id, name: c.name || '', phone: c.phone || '', reason: c.managerReason || '', since: c.managerCalledAt || c.updatedAt || now }));
+  const kaspi = await kaspiToDo(fs);
   const botOrders = orders.filter(o => o.source === 'whatsapp' && o.status === 'new');
   const voice = chats.reduce((n, c) => n + (c.messages || []).filter(m => now - (m.at || 0) < DAY && /^\[голосовое сообщение\]/.test(m.text || '')).length, 0);
   const stats = { chats: chats.length, botOrders: botOrders.length, needManager: needManager.length, voice };
@@ -36,10 +37,10 @@ async function collect(fs) {
     const who = { client: 'клиент', bot: 'Анна', manager: 'менеджер', notice: 'уведомление' };
     const tail = (c.messages || []).slice(-6).map(m => `  ${who[m.role] || m.role}: ${String(m.text || '').slice(0, 220)}`).join('\n');
     const flags = [c.needsManager ? `ЖДЁТ МЕНЕДЖЕРА (${c.managerReason || 'без причины'})` : '', c.lastRole === 'client' ? 'последним писал клиент' : ''].filter(Boolean).join(', ');
-    return `${name(c)}${flags ? ' — ' + flags : ''}\n${tail}`;
+    return `[чат ${c.id}] ${name(c)}${flags ? ' — ' + flags : ''}\n${tail}`;
   }).join('\n\n');
   const list = orders.sort((a, b) => String(a.deadline || '9').localeCompare(String(b.deadline || '9'))).slice(0, 40).map(o =>
-    `№${String(o.num || '').padStart(3, '0')} ${o.client || ''}: ${SERVICE_NAMES[o.service] || o.customService || o.service || ''}, ${ST[o.status] || o.status}` +
+    `[заказ ${o.id}] ${o.client || 'без имени'}: ${SERVICE_NAMES[o.service] || o.customService || o.service || ''}, ${ST[o.status] || o.status}` +
     `, срок ${o.deadline || 'не назначен'}${o.deadline && o.deadline < today ? ' (ПРОСРОЧЕН)' : o.deadline === today ? ' (СЕГОДНЯ)' : ''}` +
     `${o.source === 'whatsapp' && o.status === 'new' ? ', оформила Анна — нужно подтвердить' : ''}${o.desc ? ' — ' + String(o.desc).slice(0, 120) : ''}`).join('\n');
   const d = kz();
@@ -49,9 +50,26 @@ async function collect(fs) {
 Диалоги WhatsApp за сутки:
 ${dialogs || 'нет'}
 
-Открытые заказы (по сроку):
-${list || 'нет'}`;
+Открытые заказы студии (по сроку):
+${list || 'нет'}
+
+Kaspi: нужно собрать и отправить (по данным учёта, обновляются, когда открыт раздел Kaspi):
+${kaspi || 'нет'}`;
   return { facts, needManager, stats };
+}
+
+// Заказы Kaspi, которые ждут сборки или передачи курьеру (коллекция kaspi_orders, её заполняет учёт)
+async function kaspiToDo(fs) {
+  const ACTIVE = ['NEW', 'SIGN_REQUIRED', 'PICKUP', 'DELIVERY', 'KASPI_DELIVERY'];
+  const list = await fs.query('kaspi_orders', {
+    where: { fieldFilter: { field: { fieldPath: 'state' }, op: 'IN', value: { arrayValue: { values: ACTIVE.map(v => ({ stringValue: v })) } } } },
+  }).catch(() => []);
+  const day = t => t ? kz(+t).toISOString().slice(0, 10) : '';
+  return list.filter(k => !k.transmitted && !k.returned && !['CANCELLED', 'CANCELLING', 'COMPLETED'].includes(k.status))
+    .sort((a, b) => (+a.transmitPlan || +a.created || 0) - (+b.transmitPlan || +b.created || 0)).slice(0, 25)
+    .map(k => `[kaspi ${k.id}] ${(k.items || []).map(i => (i.name || 'товар') + (i.qty > 1 ? ' × ' + i.qty : '')).join(', ') || 'заказ ' + k.code}` +
+      ` — ${k.assembled || k.waybill ? 'собран, передать курьеру' : 'собрать'}${k.transmitPlan ? ', передать до ' + day(k.transmitPlan) : ''}${k.customer ? ', покупатель ' + k.customer : ''}`)
+    .join('\n');
 }
 
 /* ---------- Gemini ---------- */
@@ -83,20 +101,35 @@ export async function makeDigest(fs, env) {
   const { facts, needManager, stats } = await collect(fs);
   const raw = await gemini(env, PERSONA + `
 Подготовь сводку для главной страницы учёта:
-- summary: 2–5 предложений от первого лица, как будто ты утром рассказываешь команде, что было и что важно сегодня
-  (сколько обращений, о чём чаще спрашивали, кто ждёт ответа, какие заказы горят). Начни с приветствия по времени суток.
-- todo: до 6 конкретных дел на сегодня в повелительном наклонении («Ответить Айгерим про опт», «Подтвердить заказ №045»),
-  самое срочное первым. Если дел нет — пустой список.`, facts, {
+- summary: 2–5 предложений от первого лица, как будто ты рассказываешь команде, что было и что важно сегодня
+  (сколько обращений, о чём чаще спрашивали, кто ждёт ответа, какие заказы горят, что по Kaspi). Начни с приветствия по времени суток.
+- todo: до 6 конкретных дел на сегодня в повелительном наклонении, самое срочное первым: ответить клиентам, подтвердить заказы от Анны,
+  просроченные и сегодняшние заказы, собрать и передать заказы Kaspi; если срочного мало — предложи, чем полезно заняться.
+  Заказы называй по имени клиента, без номеров («Сдать заказ Калинина», «Собрать на Kaspi 2 топпера»).
+  Если дело про заказ студии — укажи его id из [заказ …] в orderId; если про Kaspi — id из [kaspi …] в kaspiId.
+  Не предлагай «прослушать/проверить голосовые»: голосовые уже расшифрованы, их текст в диалогах.
+- waiting: для каждого чата с пометкой ЖДЁТ МЕНЕДЖЕРА — chatId из [чат …] и brief: 1–3 предложения от тебя, что хочет клиент
+  (товар, количество, сроки, вопросы, что прислал), чтобы менеджеру не читать весь чат.
+Никогда не пиши в тексте служебные id.`, facts, {
     type: 'OBJECT',
-    properties: { summary: { type: 'STRING' }, todo: { type: 'ARRAY', items: { type: 'STRING' } } },
+    properties: {
+      summary: { type: 'STRING' },
+      todo: { type: 'ARRAY', items: { type: 'OBJECT', properties: { text: { type: 'STRING' }, orderId: { type: 'STRING' }, kaspiId: { type: 'STRING' } }, required: ['text'] } },
+      waiting: { type: 'ARRAY', items: { type: 'OBJECT', properties: { chatId: { type: 'STRING' }, brief: { type: 'STRING' } }, required: ['chatId', 'brief'] } },
+    },
     required: ['summary', 'todo'],
   });
   let out;
   try { out = JSON.parse(raw); } catch (_) { out = { summary: raw, todo: [] }; }
+  const briefs = new Map((out.waiting || []).map(w => [String(w.chatId), String(w.brief || '').slice(0, 600)]));
+  const known = id => (id && facts.includes(id + ']')) ? String(id) : ''; // ссылки только на настоящие заказы из данных
   const digest = {
     at: Date.now(), summary: String(out.summary || '').slice(0, 1500),
-    todo: (out.todo || []).slice(0, 6).map(t => ({ text: String(t).slice(0, 200) })),
-    needManager: needManager.slice(0, 8), stats,
+    todo: (out.todo || []).slice(0, 6).map(t => typeof t === 'string' ? { text: t.slice(0, 200) } : {
+      text: String(t.text || '').slice(0, 200),
+      ...(known(t.orderId) ? { orderId: known(t.orderId) } : {}), ...(known(t.kaspiId) ? { kaspiId: known(t.kaspiId) } : {}),
+    }).filter(t => t.text),
+    needManager: needManager.slice(0, 8).map(({ id, ...c }) => ({ ...c, ...(briefs.get(id) ? { brief: briefs.get(id) } : {}) })), stats,
   };
   await fs.set('wa_anna/digest', digest);
   return digest;
