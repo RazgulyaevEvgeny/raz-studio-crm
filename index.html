@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018154812">
+<meta name="app-build" content="20261018160218">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -894,6 +894,21 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 #w-print .w-h h2{white-space:nowrap;min-width:0}
 #w-print .bmark{height:30px;width:auto;flex:none;display:block}
 #w-print .ptxt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* широкие Задачи и Заявки: строки в две колонки */
+#w-boss,#w-req{container-type:inline-size}
+@container (min-width:640px){#boss-list,#boss-done,#w-req-list,#req-done{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;align-items:start}}
+/* Заявки с сайта: синяя плитка, как сайт топперов */
+#w-req{--tb:#4358ef;background:var(--tb);color:#fff}
+#w-req .w-h h2,#w-req .w-h h2 .c{color:#fff}
+#w-req .w-h h2 .c{opacity:.9}
+#w-req .tmark{width:44px;height:44px;flex:none;margin:-12px -4px -10px -6px;filter:drop-shadow(0 3px 6px rgba(10,20,90,.3))}
+#w-req .rq-imp{background:rgba(255,255,255,.18);color:#fff}
+#w-req .rq-imp:hover{background:#fff;color:var(--tb)}
+#w-req .w-empty{background:rgba(255,255,255,.14);color:#fff}
+#w-req .done-tog{color:#fff;opacity:.85}
+#pack .w.mfold#w-req .mf-x::before,#pack .w.mfold#w-kaspi .mf-x::before,#pack .w.mfold#w-print .mf-x::before{border-color:#fff}
+#w-req .mrow{color:var(--ink)}
+#w-req .mrow:hover{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--tb)}
 .wfoot{display:flex;align-items:baseline;justify-content:space-between;gap:6px 12px;flex-wrap:wrap;margin-top:-4px}
 .wfoot .bw-note{margin-top:0}
 .wlink{font:500 11.5px var(--fb);color:inherit;opacity:.7;text-decoration:none;white-space:nowrap;margin-left:auto}
@@ -914,7 +929,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 #w-print .bw-err,#w-print .bw-err.warn{background:#fff}
 #w-print .bw-note{color:#fff;opacity:.92}
 #w-print .mf-x::before{border-color:#fff}
-@media(max-width:600px){#w-kaspi .kmark{width:24px;height:24px}#w-print .bmark{height:24px}}
+@media(max-width:600px){#w-req .tmark{width:30px;height:30px;margin:0 -2px 0 -4px}#w-kaspi .kmark{width:24px;height:24px}#w-print .bmark{height:24px}}
 .kq:hover{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--kr)}
 .kq-t{display:flex;flex-direction:column;gap:2px;min-width:0}
 .kq-t b{font:600 14px/1.3 var(--f);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1224,11 +1239,12 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="home-grid">
       <div class="home-col">
         <div class="w" id="w-req">
-          <div class="w-h"><h2>Заявки с сайта <span class="c" id="w-req-c"></span></h2><a class="go" href="https://razgulyaevevgeny.github.io/toppers-site/" target="_blank" rel="noopener" title="Открыть сайт топперов">Сайт ↗</a></div>
+          <div class="w-h"><h2><img class="tmark" src="topper-ico.png?v=1" alt="" width="34" height="34">Заявки с сайта <span class="c" id="w-req-c"></span></h2></div>
           <button class="btn soft sm rq-imp" type="button" id="req-imp-btn">+ Из WhatsApp</button>
           <div class="mini" id="w-req-list"></div>
           <button class="done-tog" type="button" id="req-done-tog" hidden></button>
           <div class="mini" id="req-done" hidden></div>
+          <div class="wfoot"><span></span><a class="wlink" href="https://razgulyaevevgeny.github.io/toppers-site/" target="_blank" rel="noopener">сайт топперов ↗</a></div>
         </div>
         <div class="w" id="w-kaspi">
           <div class="w-h"><h2><svg class="kmark" viewBox="150 150 700 700" role="img" aria-label="Kaspi.kz"><path fill="#fff" fill-rule="evenodd" clip-rule="evenodd" d="M500.016 168.75C682.494 168.75 830.488 314.92 831.25 495.536V498.376C830.919 578.678 801.369 652.144 752.681 709.013C750.913 708.125 747.694 705.225 741.856 696.494C735.819 687.719 683.737 607.566 683.737 515.701C683.737 497.673 709.725 469.509 732.719 444.788L733.213 444.257C750.219 425.854 766.25 408.509 772.188 394.851C779.825 377.056 774.481 364.631 766.031 360.419C758.381 356.676 746.894 359.406 738.837 373.721C725.612 396.887 721.375 401.216 702.081 416.717C683.1 432.211 652.919 447.806 652.919 427.618C652.919 420.256 660.588 406.609 668.119 393.193L668.125 393.192C671.744 386.741 675.338 380.344 678.031 374.726C686.513 357.229 677.375 344.563 659.863 344.563C625.475 344.563 602.653 388.367 602.653 403.541C602.653 410.834 604.354 415.119 606.121 419.567C608.027 424.367 610.008 429.357 610.008 438.522C610.008 456.314 572.28 479.39 536.741 479.39C500.971 479.39 480.909 471.821 473.414 450.214L471.037 443.183L470.642 442.029L470.641 442.028C462.415 417.982 456.392 400.381 446.031 381.999C440.557 372.331 432.176 365.566 424.827 359.633L424.358 359.254C414.607 351.681 409.55 344.709 408.495 339.509C407.522 334.35 406.996 324.627 423.664 302.215C440.295 279.931 442.626 263.096 434.304 254.409C431.286 251.319 426.144 249.339 419.54 249.339C407.859 249.339 391.628 255.528 374.901 272.529C354.598 293.333 359.147 313.315 362.116 326.362C362.95 330.024 363.66 333.142 363.66 335.576C363.66 346.674 358.896 352.951 343.292 368.049C327.574 383.214 322.149 396.217 320.351 448.473C319.663 475.396 314.921 490.896 310.664 504.639C306.986 516.685 303.603 528.008 303.421 544.371C303.129 562.503 306.147 574.188 309.669 587.671C313.127 600.132 316.8 614.412 319.153 638.294C323.207 678.35 321.342 711.669 312.974 746.425L312.549 748.725L312.461 749.075C311.086 754.619 309.453 761.2 307.26 763.7C223.422 704.15 168.75 606.898 168.75 496.964C168.75 315.712 317.057 168.75 500.016 168.75ZM515.438 523.847C498.946 521.251 486.801 523.645 478.251 530.874C456.181 549.67 456.558 602.05 457 662.8L457.11 680C457.368 740.225 457.706 792.3 471.767 815.187C476.251 822.494 484.721 827.837 495.989 831.038C496.815 831.063 497.641 831.088 498.466 831.119C500.555 831.194 502.646 831.269 504.763 831.269C532.644 831.269 559.714 827.819 585.611 821.444C596.314 816.281 604.066 810.087 606.727 803.631C608.322 799.444 609.198 791.819 609.198 781.888C609.198 742.544 597.645 667.5 591.935 630.406L591.766 629.306L588.879 610.089L588.334 606.301L588.308 606.119C583.472 572.038 578.004 533.506 515.438 523.847ZM408.973 766.5C407.313 718.581 399.051 655.381 386.202 656.106C372.351 656.956 367.082 729.056 373.147 777.188C375.134 792.506 378.261 804.2 382.353 811.631C388.484 814.119 394.706 816.406 401.039 818.519C406.634 813.587 410.138 799.869 408.973 766.5ZM708.362 750.525C711.362 735.269 675.162 648.881 654.962 658.638C639.463 666.325 645.475 754.594 661.487 782.731C663.156 785.556 666.575 786.006 670.425 785.356C682.506 778.075 694.056 769.987 705.037 761.169C706.431 758.306 707.562 754.919 708.362 750.525Z"/></svg>Заказы <span class="c" id="w-kaspi-c"></span></h2></div>
@@ -2367,8 +2383,13 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 
 /* ---------- раскладка главной ---------- */
 let packW=[];
+let packWide=[],packSide=[];
 function initPack(){
-  packW=[$('w-today').closest('.w'),$('w-kaspi'),$('w-print'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
+  packWide=[$('w-today').closest('.w'),$('boss-list').closest('.w'),$('w-req')];packSide=[$('w-kaspi'),$('w-print')];
+  packW=[packWide[0],...packSide,packWide[1],packWide[2]];
+  /* убранные с главной блоки остаются скрытыми: их данные считаются, просто не показываются */
+  const hid=document.createElement('div');hid.id='home-hidden';hid.hidden=true;$('p-home').appendChild(hid);
+  ['w-cal','w-projects','w-office','w-supplies'].forEach(id=>{const w=$(id);if(w)hid.appendChild(w)});
   $('w-today').closest('.w').id||=('w-today-box');$('boss-list').closest('.w').id||=('w-boss');
   packW.forEach(w=>{w.classList.add('mfold');const h=w.querySelector(':scope>.w-h');if(h)h.insertAdjacentHTML('beforeend','<span class="mf-x" aria-hidden="true"></span>')});mfApply();
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);packW.forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
@@ -2385,20 +2406,11 @@ document.addEventListener('click',e=>{if(!isPhone())return;const h=e.target.clos
 function packHome(){
   const pack=$('pack');if(!pack||$('p-home').hidden||!packW.length)return;
   const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1100?3:w>=700?2:1;
-  const lead=packW[0],rest=packW.slice(1),mk=c=>{const d=document.createElement('div');d.className=c;return d};
-  if(packN!==n){packN=n;pack.innerHTML='';pack.style.setProperty('--cols',n);pack.dataset.n=n;
-    if(n===1){const c=mk('pcol');pack.appendChild(c);packW.forEach(x=>c.appendChild(x))}
-    else{const left=mk('pleft'),sub=mk('psub');sub.append(mk('pcol'),mk('pcol'));left.append(lead,sub);pack.appendChild(left);if(n===3)pack.appendChild(mk('pcol'));rest.forEach(x=>sub.firstChild.appendChild(x))}}
-  if(n===1){packW.forEach(x=>x.classList.remove('fill'));return}
-  pack.classList.add('m');
-  const cols=[...pack.querySelectorAll('.psub>.pcol'),...(n===3?[pack.lastElementChild]:[])];
-  const gap=parseFloat(getComputedStyle(pack).rowGap)||16,off=n===3?lead.offsetHeight+gap:0,base=cols.map((_,i)=>i<2?off:0);
-  const acc=[...base],assign=rest.map(x=>{const k=acc.indexOf(Math.min(...acc));acc[k]+=x.offsetHeight+gap;return k});
-  cols.forEach((c,k)=>{const want=rest.filter((_,i)=>assign[i]===k),cur=[...c.children];if(cur.length!==want.length||want.some((x,j)=>cur[j]!==x))want.forEach(x=>c.appendChild(x))});
-  /* нижний блок колонки дотягивается до соседних, только если разница небольшая: без больших пустот внутри блоков */
-  const colH=cols.map((c,i)=>base[i]+[...c.children].reduce((t,x)=>t+x.offsetHeight,0)+gap*Math.max(0,c.children.length-1)),mx=Math.max(...colH);
-  cols.forEach((c,i)=>{[...c.children].forEach(x=>x.classList.remove('fill'));const l=c.lastElementChild;if(l&&mx-colH[i]<=140)l.classList.add('fill')});
-  pack.classList.remove('m');
+  if(packN===n)return;packN=n;pack.innerHTML='';pack.style.setProperty('--cols',n);pack.dataset.n=n;
+  const mk=c=>{const d=document.createElement('div');d.className=c;return d};
+  if(n===1){const c=mk('pcol');pack.appendChild(c);packW.forEach(x=>c.appendChild(x));return}
+  if(n===3){const L=mk('pleft'),Rt=mk('pcol');packWide.forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(L,Rt);return}
+  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.appendChild(packWide[0]);a.appendChild(packSide[0]);b.appendChild(packSide[1]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(top,a,b,bot);
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 
