@@ -1031,47 +1031,82 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 #w-print .mf-x::before{border-color:#fff}
 @media(max-width:600px){#w-kaspi .kmark{width:24px;height:24px}#w-print .bmark{height:24px}}
 /* менеджер Анна — ИИ-менеджер в WhatsApp (whatsapp-bot): сводка, дела, кто ждёт человека, вопросы */
-#w-anna{container-type:inline-size;background:linear-gradient(160deg,#eef0ff,var(--tile) 55%)}
-#w-anna .w-h h2{gap:12px;min-width:0}
-#w-anna .av{width:52px;height:52px;flex:none;border-radius:50%;display:block;box-shadow:0 0 0 3px var(--paper),0 4px 12px rgba(67,88,239,.22)}
+#w-anna{container-type:inline-size;--ab:#4358ef;background:radial-gradient(240px 160px at 46px 34px,rgba(255,255,255,.16),rgba(255,255,255,0) 70%),linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
+#w-anna .w-h h2{gap:14px;min-width:0;color:#fff}
 #w-anna .at{display:flex;flex-direction:column;gap:4px;min-width:0}
-#w-anna .at .c{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#w-anna .at .c::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--sc,var(--muted))}
-#w-anna .go{flex:none;white-space:nowrap}
-#w-anna .go:disabled{opacity:.5;cursor:default;background:var(--paper);color:var(--blue)}
+#w-anna .at .c{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.86)}
+#w-anna .at .c::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--sc,#c9cfff);box-shadow:0 0 0 2px rgba(255,255,255,.9)}
+#w-anna .go{flex:none;white-space:nowrap;background:#fff;color:var(--ab)}
+#w-anna .go:hover{background:#e6e9ff}
+#w-anna .go:focus-visible,#w-anna .an-ask .btn:focus-visible,#w-anna a.mrow:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#w-anna .go:disabled{opacity:.55;cursor:default;background:#fff;color:var(--ab)}
+#pack .w.mfold#w-anna .mf-x::before{border-color:#fff}
+/* аватар: фото без сигареты (фон) + сигарета с губами отдельным слоем — он качается при открытии; дым поверх, выходит за круг */
+.an-av{position:relative;flex:none;width:64px;height:64px}
+.an-av .ph{position:absolute;inset:0;border-radius:50%;overflow:hidden;background:#fff url(anna-avatar-0.jpg?v=1) center/cover;box-shadow:0 0 0 3px rgba(255,255,255,.92),0 8px 18px rgba(16,24,120,.38)}
+.an-av .mv{position:absolute;inset:0;transform-origin:53% 75%}
+.an-av .mv img{display:block;width:100%;height:100%;clip-path:polygon(40% 68%,56% 67%,86% 75.5%,87% 87%,72% 87%,40% 80%)}
+.an-av .gl{position:absolute;left:79%;top:80%;width:14%;height:14%;margin:-7% 0 0 -7%;border-radius:50%;background:radial-gradient(#ffd27a,rgba(255,110,40,.65) 40%,rgba(255,80,20,0) 70%);opacity:0}
+.an-av .sm{position:absolute;left:82%;top:79%;width:0;height:0;pointer-events:none}
+.an-av .sm b,.an-av .pf{position:absolute;border-radius:50%;background:radial-gradient(rgba(244,245,252,.95),rgba(214,219,236,.6) 42%,rgba(214,219,236,0) 70%);filter:blur(1.4px)}
+.an-av .sm b{left:-6px;top:-6px;width:12px;height:12px;opacity:0;animation:ansm 4.2s cubic-bezier(.3,.2,.4,1) infinite}
+.an-av .sm b:nth-child(2){animation-delay:-1.4s;animation-name:ansm2}
+.an-av .sm b:nth-child(3){animation-delay:-2.8s}
+@keyframes ansm{0%{transform:translate(0,0) scale(.3);opacity:0}10%{opacity:.95}45%{transform:translate(-4px,-22px) scale(1.5);opacity:.75}100%{transform:translate(10px,-54px) scale(3);opacity:0}}
+@keyframes ansm2{0%{transform:translate(0,0) scale(.3);opacity:0}10%{opacity:.9}50%{transform:translate(5px,-24px) scale(1.6);opacity:.7}100%{transform:translate(4px,-52px) scale(2.8);opacity:0}}
+.an-av .pf{left:46%;top:76%;width:22%;height:16%;margin:-8% 0 0 -11%;opacity:0}
+/* затяжка: сигарета приподнимается, кончик разгорается, потом выдох */
+.an-av.puff .mv{animation:anpuff 1.5s ease-in-out}
+.an-av.puff .gl{animation:anglow 1.5s ease-in-out}
+.an-av.puff .pf{animation:anexh 1.5s ease-out}
+@keyframes anpuff{0%,100%{transform:none}18%{transform:rotate(-7deg) translateY(-.5px)}34%{transform:rotate(-3deg)}48%{transform:rotate(-8deg) translateY(-.5px)}66%{transform:rotate(-1deg)}80%{transform:rotate(-3deg)}}
+@keyframes anglow{0%,100%{opacity:0}18%,50%{opacity:.95}70%{opacity:.25}}
+@keyframes anexh{0%,55%{transform:translate(0,0) scale(.4);opacity:0}66%{opacity:.85}100%{transform:translate(9px,-15px) scale(2.4);opacity:0}}
+@media(prefers-reduced-motion:reduce){.an-av .sm b,.an-av.puff .mv,.an-av.puff .gl,.an-av.puff .pf{animation:none}.an-av .sm b:first-child{opacity:.55;transform:translate(1px,-14px) scale(1.6)}}
 .an-body{display:flex;flex-direction:column;gap:14px;min-width:0}
 .an-col{display:flex;flex-direction:column;gap:14px;min-width:0}
 .an-col>div:empty{display:none}
 @container (min-width:640px){.an-body{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}}
-.an-say{position:relative;background:var(--paper);border-radius:6px 20px 20px 20px;padding:13px 16px;font:400 14.5px/1.5 var(--fb);color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
-.an-h{margin:0 0 7px 2px;font:700 12.5px var(--f);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
-.an-h em{font-style:normal;display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font:700 11px var(--f);letter-spacing:0}
+.an-say{position:relative;background:rgba(255,255,255,.16);border-radius:6px 20px 20px 20px;padding:13px 16px;font:400 14.5px/1.5 var(--fb);color:#fff;white-space:pre-line;overflow-wrap:anywhere}
+.an-h{margin:0 0 7px 2px;font:700 12.5px var(--f);color:rgba(255,255,255,.78);text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:6px}
+.an-h em{font-style:normal;display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#fff;color:var(--danger);font:800 11px var(--f);letter-spacing:0}
 .an-todo{display:flex;flex-direction:column;gap:6px}
-.an-todo li{list-style:none;display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;background:var(--paper);border-radius:14px;padding:10px 12px;font:500 14px/1.35 var(--f);overflow-wrap:anywhere}
-.an-todo li::before{content:"";width:14px;height:14px;margin-top:2px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--blue)}
+.an-todo li{list-style:none;display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;background:rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;font:500 14px/1.35 var(--f);overflow-wrap:anywhere}
+.an-todo li::before{content:"";width:14px;height:14px;margin-top:2px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85)}
 .an-todo{margin:0;padding:0}
-#w-anna a.mrow{text-decoration:none;color:var(--ink)}
+#w-anna .mrow{background:rgba(255,255,255,.12);color:#fff}
+#w-anna .mrow small{color:rgba(255,255,255,.75)}
+#w-anna a.mrow{text-decoration:none}
+#w-anna a.mrow:hover{background:rgba(255,255,255,.2);box-shadow:none}
 .an-w{min-width:0;display:flex;flex-direction:column;gap:2px}
 #w-anna div.mrow:hover{box-shadow:none}
-#w-anna .mrow .r small{color:var(--danger);font-weight:600}
+#w-anna .mrow .r small{color:#ffd3cd;font-weight:600}
+#w-anna .mrow .r small.wa{color:#fff;font-weight:700}
 .an-stats{display:flex;flex-wrap:wrap;gap:6px}
-.an-stats .bw-stat{background:var(--paper)}
-.an-stats .bw-stat em{font-size:17px}
+#w-anna .an-stats .bw-stat{background:rgba(255,255,255,.12)}
+#w-anna .an-stats .bw-stat span{color:rgba(255,255,255,.78)}
+.an-stats .bw-stat em{font-size:17px;color:#fff}
 .an-ask{display:flex;gap:6px}
-.an-ask input{flex:1 1 auto;min-width:0;border:0;background:var(--paper);border-radius:999px;min-height:44px;padding:0 16px;font:500 14.5px var(--fb);color:var(--ink)}
-.an-ask input:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
+.an-ask input{flex:1 1 auto;min-width:0;border:0;background:rgba(255,255,255,.16);border-radius:999px;min-height:44px;padding:0 16px;font:500 14.5px var(--fb);color:#fff}
+.an-ask input::placeholder{color:rgba(255,255,255,.72)}
+.an-ask input:focus{background:rgba(255,255,255,.24)}
+.an-ask input:focus-visible{outline:2px solid #fff;outline-offset:1px}
 .an-ask .btn{min-height:44px;padding:0 18px}
+#w-anna .an-ask .btn{background:#fff;color:var(--ab)}
+#w-anna .an-ask .btn:hover{background:#e6e9ff}
+#w-anna .an-ask .btn:disabled{opacity:.55}
 .an-qs{display:flex;flex-direction:column;gap:8px}
 .an-q{display:flex;flex-direction:column;gap:5px;font:400 13.5px/1.45 var(--fb)}
-.an-q .q{align-self:flex-end;max-width:88%;background:var(--blue);color:#fff;border-radius:16px 16px 4px 16px;padding:7px 12px;overflow-wrap:anywhere}
-.an-q .a{align-self:flex-start;max-width:92%;background:var(--paper);border-radius:4px 16px 16px 16px;padding:8px 12px;white-space:pre-line;overflow-wrap:anywhere}
-.an-q .a.wait{color:var(--muted);font-style:italic}
-.an-q .a.wait::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:var(--muted);vertical-align:1px;animation:bwpulse 1.2s ease-in-out infinite}
-#w-anna .bw-note{margin-top:-8px}
+.an-q .q{align-self:flex-end;max-width:88%;background:#fff;color:var(--ink);border-radius:16px 16px 4px 16px;padding:7px 12px;overflow-wrap:anywhere}
+.an-q .a{align-self:flex-start;max-width:92%;background:rgba(255,255,255,.16);color:#fff;border-radius:4px 16px 16px 16px;padding:8px 12px;white-space:pre-line;overflow-wrap:anywhere}
+.an-q .a.wait{color:rgba(255,255,255,.78);font-style:italic}
+.an-q .a.wait::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:#fff;vertical-align:1px;animation:bwpulse 1.2s ease-in-out infinite}
+#w-anna .bw-note{margin-top:-8px;color:#fff;opacity:.85}
 @media(prefers-reduced-motion:reduce){.an-q .a.wait::after{animation:none}}
 @media(max-width:600px){
-  #w-anna .av{width:40px;height:40px;box-shadow:0 0 0 2px var(--paper),0 3px 8px rgba(67,88,239,.2)}
-  #w-anna .w-h h2{gap:9px}
+  .an-av{width:52px;height:52px}
+  .an-av .ph{box-shadow:0 0 0 2px rgba(255,255,255,.92),0 5px 12px rgba(16,24,120,.35)}
+  #w-anna .w-h h2{gap:11px}
   #w-anna .at{gap:2px}
   .an-body,.an-col{gap:10px}
   .an-say{font-size:13.5px;padding:10px 12px;border-radius:5px 16px 16px 16px}
@@ -1393,7 +1428,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
     <div class="home-grid">
       <div class="home-col">
         <div class="w" id="w-anna">
-          <div class="w-h"><h2><svg class="av" viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="an-clip"><circle cx="32" cy="32" r="32"/></clipPath></defs><g clip-path="url(#an-clip)"><rect width="64" height="64" fill="#dfe3ff"/><g transform="matrix(1.12 0 0 1.12 -3.84 -2.6)"><path fill="#3a2823" d="M14 52c-2-9-1-20 2-28 3-9 9-14 16-14s13 5 16 14c3 8 4 19 2 28z"/><path fill="#4358ef" d="M8 66c1-11 10-18 24-18s23 7 24 18z"/><path fill="#fff" d="M26 48.6l6 6.4 6-6.4c-2-.5-4-.8-6-.8s-4 .3-6 .8z"/><path fill="#ecbd9d" d="M27.5 40h9v9.5c-1.3 1.6-2.8 2.4-4.5 2.4s-3.2-.8-4.5-2.4z"/><ellipse cx="32" cy="29" rx="11" ry="12.6" fill="#f6d3ba"/><path fill="#3a2823" d="M20.6 30c-.8-9 4-15.5 11.4-15.5S44.2 21 43.4 30c-1.2-4.6-3.6-7.6-7-9.2-3 3.4-8.6 5.2-14 5.6-.8 1-1.4 2.2-1.8 3.6z"/><circle cx="27.8" cy="30.4" r="1.35" fill="#2a1d19"/><circle cx="36.2" cy="30.4" r="1.35" fill="#2a1d19"/><circle cx="25.4" cy="34.4" r="2.1" fill="#f3a7a0" opacity=".55"/><circle cx="38.6" cy="34.4" r="2.1" fill="#f3a7a0" opacity=".55"/><path d="M28.6 35.8c1.9 1.9 4.9 1.9 6.8 0" fill="none" stroke="#b5554a" stroke-width="1.5" stroke-linecap="round"/><path d="M19.4 29.5c0-8 5.6-13.6 12.6-13.6s12.6 5.6 12.6 13.6" fill="none" stroke="#262a45" stroke-width="1.8" stroke-linecap="round"/><rect x="17.3" y="27" width="4.4" height="7.4" rx="2.2" fill="#262a45"/><path d="M19.6 34c0 3.6 2.6 5.4 6.4 5.4h2.2" fill="none" stroke="#262a45" stroke-width="1.5" stroke-linecap="round"/><circle cx="28.6" cy="39.4" r="1.4" fill="#262a45"/></g></g></svg><span class="at">Менеджер Анна<span class="c" id="w-anna-c">подключаемся…</span></span></h2><button class="go" type="button" id="anna-ref-btn" aria-label="Обновить сводку Анны"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span>Обновить</span></button></div>
+          <div class="w-h"><h2><span class="an-av" id="anna-av" aria-hidden="true"><span class="ph"><span class="mv"><img src="anna-avatar.jpg?v=1" alt="" width="240" height="240"><i class="gl"></i></span></span><i class="sm"><b></b><b></b><b></b></i><i class="pf"></i></span><span class="at">Менеджер Анна<span class="c" id="w-anna-c">подключаемся…</span></span></h2><button class="go" type="button" id="anna-ref-btn" aria-label="Обновить сводку Анны"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span>Обновить</span></button></div>
           <div class="an-body">
             <div class="an-col"><div class="an-say" id="w-anna-say">Загружаем сводку…</div><div id="w-anna-todo"></div><div class="an-stats" id="w-anna-stats"></div></div>
             <div class="an-col">
@@ -2589,7 +2624,7 @@ let packN=0;
 const MF_KEY='raz.home.open';let mOpen=new Set();try{mOpen=new Set(JSON.parse(localStorage.getItem(MF_KEY)||'[]'))}catch(_){}
 const isPhone=()=>matchMedia('(max-width:600px)').matches;
 function mfApply(){packW.forEach(w=>{const o=mOpen.has(w.id);w.classList.toggle('mopen',o);const h=w.querySelector(':scope>.w-h');if(h){h.setAttribute('aria-expanded',isPhone()||w.id==='w-req'?String(o):'true')}})}
-function mfToggle(id,force){const o=force!=null?force:!mOpen.has(id);o?mOpen.add(id):mOpen.delete(id);try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply()}
+function mfToggle(id,force){const o=force!=null?force:!mOpen.has(id);o?mOpen.add(id):mOpen.delete(id);try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff()}
 document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h,#w-req>.w-h');if(!h||(!isPhone()&&h.parentElement.id!=='w-req')||e.target.closest('a,button,select,input,.go'))return;
   e.preventDefault();e.stopPropagation();mfToggle(h.parentElement.id)},true);
 function packHome(){
@@ -4633,8 +4668,13 @@ function annaListen(){
   fs.doc('wa_anna/digest').onSnapshot(s=>{annaD=s.exists?s.data():null;annaLoaded=true;annaErr='';renderAnna()},fail);
   fs.collection('wa_anna_q').orderBy('at','desc').limit(3).onSnapshot(s=>{annaQ=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},fail);
 }
+/* затяжка на аватаре: при первом показе сводки, при открытии блока и по нажатию на аватар (на компьютере) */
+let annaPuffed=false,annaPuffT;
+function annaPuff(){const a=$('anna-av');if(!a)return;a.classList.remove('puff');void a.offsetWidth;a.classList.add('puff');clearTimeout(annaPuffT);annaPuffT=setTimeout(()=>a.classList.remove('puff'),1600)}
+$('anna-av').addEventListener('click',()=>{if(!isPhone())annaPuff()});
 function renderAnna(){
   const say=$('w-anna-say');if(!say)return;
+  if(annaLoaded&&!annaPuffed){annaPuffed=true;setTimeout(annaPuff,500)}
   const d=annaD||{},st=d.stats||{},need=Array.isArray(d.needManager)?d.needManager:[],todo=Array.isArray(d.todo)?d.todo:[];
   $('anna-ref-btn').disabled=$('anna-q-btn').disabled=!canWrite||!db;
   const c=$('w-anna-c');
@@ -4649,7 +4689,7 @@ function renderAnna(){
     $('w-anna-todo').innerHTML=td.length?`<p class="an-h">Сегодня сделать</p><ul class="an-todo">${td.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'';
     $('w-anna-need').innerHTML=need.length?`<p class="an-h">Ждут менеджера <em>${need.length}</em></p><div class="mini">${need.slice(0,8).map(n=>{
       const ph=String(n.phone||'').replace(/\D/g,''),who=esc(n.name||(ph?'+'+ph:'Клиент'));
-      const inner=`<span class="an-w"><b>${who}</b><small>${esc(n.reason||'')}</small></span><span class="r">${n.since?`<small>${annaAgo(+n.since)}</small>`:''}${ph?'<small style="color:var(--blue)">WhatsApp ↗</small>':''}</span>`;
+      const inner=`<span class="an-w"><b>${who}</b><small>${esc(n.reason||'')}</small></span><span class="r">${n.since?`<small>${annaAgo(+n.since)}</small>`:''}${ph?'<small class="wa">WhatsApp ↗</small>':''}</span>`;
       return ph?`<a class="mrow" href="https://wa.me/${ph}" target="_blank" rel="noopener">${inner}</a>`:`<div class="mrow">${inner}</div>`}).join('')}</div>`:'';
     const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Анны'],[st.needManager,'ждут ответа'],[st.voice,'голосовых']].filter(x=>x[0]!=null&&x[0]!=='');
     $('w-anna-stats').innerHTML=S.map(([v,l])=>bwPStat(l,String(v))).join('');
