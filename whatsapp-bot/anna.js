@@ -30,7 +30,7 @@ async function collect(fs) {
   const kaspi = await kaspiToDo(fs);
   const tasks = (await fs.query('tasks', { where: { fieldFilter: { field: { fieldPath: 'done' }, op: 'EQUAL', value: { booleanValue: false } } } }).catch(() => []))
     .sort((a, b) => String(a.date || '9').localeCompare(String(b.date || '9'))).slice(0, 30)
-    .map(t => `${t.date || 'без даты'}${t.time ? ' ' + t.time : ''}: ${t.title || ''}${t.who ? ' (' + t.who + ')' : ''}`).join('\n');
+    .map(t => `[задача ${t.id}] ${t.date || 'без даты'}${t.time ? ' ' + t.time : ''}: ${t.title || ''}${t.who ? ' (' + t.who + ')' : ''}`).join('\n');
   const botOrders = orders.filter(o => o.source === 'whatsapp' && o.status === 'new');
   const voice = chats.reduce((n, c) => n + (c.messages || []).filter(m => now - (m.at || 0) < DAY && /^\[голосовое сообщение\]/.test(m.text || '')).length, 0);
   const stats = { chats: chats.length, botOrders: botOrders.length, needManager: needManager.length, voice };
@@ -88,6 +88,25 @@ async function kaspiToDo(fs) {
     `\nИтого за неделю: ${money(total)}, на руки примерно ${money(total * (1 - KASPI_FEE))} (минус ~${KASPI_FEE * 100}% комиссии и доставки)` : 'нет';
   return `Собрать: ${todo.filter(t => t.includes('— собрать')).length}, передать курьеру: ${todo.filter(t => t.includes('передать курьеру')).length}\n` +
     (todo.join('\n') || 'нет') + `\n\nKaspi заплатит в ближайшие 7 дней (отправленные заказы, по плановой дате доставки):\n${payText}`;
+}
+
+/* ---------- 3D-принтеры (воркер bambu-watch, тот же, что на главной учёта) ---------- */
+
+const PRINT_API = 'https://bambu-watch.design-onegin.workers.dev/api/status';
+const PSTATE = { RUNNING: 'печатает', PRINTING: 'печатает', PREPARE: 'готовится к печати', SLICING: 'готовится к печати', PAUSE: 'на паузе', PAUSED: 'на паузе', FINISH: 'свободен, печать завершена', FAILED: 'ошибка печати', IDLE: 'свободен' };
+export const printerBusy = p => !!p && p.online !== false && ['RUNNING', 'PRINTING', 'PREPARE', 'SLICING', 'PAUSE', 'PAUSED'].includes(String(p.state || '').toUpperCase());
+export async function printers() {
+  try { return (await (await fetch(PRINT_API, { cache: 'no-store' })).json()).printers || []; } catch (_) { return null; }
+}
+async function printerFacts() {
+  const list = await printers();
+  if (!list) return 'нет связи с принтерами';
+  return list.map(p => {
+    const st = p.online === false ? 'не в сети' : PSTATE[String(p.state || '').toUpperCase()] || 'в сети';
+    const pc = printerBusy(p) && p.progress != null && p.progress !== '' ? `, готово ${Math.round(+p.progress)}%` : '';
+    const rem = printerBusy(p) && +p.remain > 0 ? `, осталось ~${Math.round(+p.remain)} мин` : '';
+    return `[принтер ${p.name}] ${st}${pc}${rem}${p.errorText ? ', ошибка: ' + p.errorText : ''}`;
+  }).join('\n') || 'нет';
 }
 
 /* ---------- Gemini ---------- */
@@ -188,25 +207,34 @@ export async function answerQuestions(fs, env) {
 /* ---------- Аня в Telegram: вопросы и задачи голосом или текстом ---------- */
 
 // who — как обращаться к сотруднику. Возвращает {reply, task?}; задачу сохраняет в учёт (раздел «Задачи»)
-export async function tgAssistant(fs, env, text, who) {
-  const { facts } = await collect(fs);
+export async function tgAssistant(fs, env, text, who, chat) {
+  const facts = (await collect(fs)).facts + '\n\n3D-принтеры в мастерской:\n' + await printerFacts();
   const raw = await gemini(env, PERSONA.replace('Ты Анна', 'Ты Аня (Анна)') + `
 Сейчас тебе пишет в Telegram ${who}. Обращайся к нему(ней) именно так: «${who}». Отвечай коротко, как в мессенджере, 1–6 предложений, без markdown.
 Если просят записать, поставить или напомнить задачу — заполни task: title (коротко, с глагола: «Купить удлинитель»), date (YYYY-MM-DD; «сегодня», «завтра»,
 «в пятницу» считай от текущей даты; без даты — сегодня), time (HH:MM, если назван). В reply подтверди, что записала и на какой день.
-Если спрашивают про Kaspi, деньги, заказы, задачи, клиентов — отвечай по данным ниже, с цифрами. Если данных нет или они могут быть неполными — честно скажи.`,
+Если просят оповестить, сообщить, написать, когда что-то случится («оповести, когда принтер закончит печать», «скажи, когда закроется заказ Калинина»,
+«напиши, когда выполнят задачу …») — это НЕ задача, task не заполняй, а заполни watch:
+  kind: printer (принтер закончит печать), order (заказ студии), task (задача);
+  ref: для принтера — точное имя из [принтер …], для заказа — id из [заказ …], для задачи — id из [задача …];
+  when (только для заказа): ready — когда будет готов, closed — когда выдадут или закроют (по умолчанию), any — при любой смене статуса.
+  В reply скажи, что оповестишь. Если такого принтера, заказа или задачи в данных нет — watch не заполняй и честно скажи, что не нашла.
+Если спрашивают про Kaspi, деньги, заказы, задачи, принтеры, клиентов — отвечай по данным ниже, с цифрами. Если данных нет или они могут быть неполными — честно скажи.`,
     facts + '\n\nСообщение: ' + String(text).slice(0, 1500), {
       type: 'OBJECT',
       properties: {
         reply: { type: 'STRING' },
         task: { type: 'OBJECT', properties: { title: { type: 'STRING' }, date: { type: 'STRING' }, time: { type: 'STRING' } }, required: ['title'] },
+        watch: { type: 'OBJECT', properties: { kind: { type: 'STRING', enum: ['printer', 'order', 'task'] }, ref: { type: 'STRING' }, when: { type: 'STRING', enum: ['ready', 'closed', 'any'] } }, required: ['kind', 'ref'] },
       },
       required: ['reply'],
     });
   let out;
   try { out = JSON.parse(raw); } catch (_) { out = { reply: raw }; }
   const t = out.task;
-  if (t && t.title) {
+  const w = out.watch && facts.includes(`[${{ printer: 'принтер', order: 'заказ', task: 'задача' }[out.watch.kind]} ${out.watch.ref}]`) ? out.watch : null;
+  if (w && chat) await addWatch(fs, { kind: w.kind, ref: String(w.ref), when: w.kind === 'order' ? (w.when || 'closed') : '', chat, who, at: Date.now() });
+  else if (t && t.title) {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? t.date : kz().toISOString().slice(0, 10);
     await fs.create('tasks', {
       kind: 'boss', title: String(t.title).slice(0, 200), desc: 'Записала Аня из Telegram по просьбе: ' + who, dateFrom: '', date,
@@ -214,5 +242,62 @@ export async function tgAssistant(fs, env, text, who) {
       done: false, doneAt: null, createdAt: Date.now(),
     });
   }
-  return { reply: String(out.reply || 'Готово.').slice(0, 3000), task: t && t.title ? t : null };
+  let reply = String(out.reply || 'Готово.').slice(0, 3000);
+  if (out.watch && !w) reply = 'Не нашла, за чем следить: уточните название принтера, имя клиента в заказе или задачу.';
+  return { reply, task: !w && t && t.title ? t : null, watch: w };
+}
+
+/* ---------- оповещения «сообщи, когда…» (список в wa_anna/watches, проверяет notify.js) ---------- */
+
+async function addWatch(fs, w) {
+  if (w.kind === 'order') w.start = (await fs.get('orders/' + w.ref))?.status || '';
+  if (w.kind === 'printer') w.busy = printerBusy((await printers() || []).find(p => p.name === w.ref));
+  const list = ((await fs.get('wa_anna/watches'))?.list) || [];
+  list.push(w);
+  await fs.set('wa_anna/watches', { list });
+}
+
+const ORDER_ST = { new: 'новый', design: 'макет', prod: 'в производстве', ready: 'готов', done: 'выдан клиенту', cancel: 'отменён' };
+const WATCH_DAYS = 7;
+// Возвращает [{w, text}] — что пора отправить; сам список обновляет
+export async function checkWatches(fs) {
+  const doc = await fs.get('wa_anna/watches');
+  const list = doc?.list || [];
+  if (!list.length) return [];
+  const pr = list.some(w => w.kind === 'printer') ? await printers() : null;
+  const out = [], keep = [];
+  let changed = false;
+  for (const w of list) {
+    let text = '';
+    if (w.kind === 'printer' && pr) {
+      const p = pr.find(x => x.name === w.ref);
+      const busy = printerBusy(p);
+      if (busy && !w.busy) { w.busy = true; changed = true; }
+      else if (w.busy && !busy) {
+        const st = String(p?.state || '').toUpperCase();
+        text = !p || p.online === false ? `принтер ${w.ref} пропал из сети, печать могла прерваться` :
+          st === 'FAILED' || p.errorText ? `принтер ${w.ref} остановился с ошибкой${p.errorText ? ': ' + p.errorText : ''}` : `принтер ${w.ref} закончил печать`;
+      }
+    } else if (w.kind === 'order') {
+      const o = await fs.get('orders/' + w.ref);
+      const name = o?.client ? `заказ ${o.client}` : 'заказ';
+      if (!o) text = 'заказ, за которым я следила, удалили из учёта';
+      else if (w.when === 'ready' ? ['ready', 'done'].includes(o.status) : w.when === 'any' ? o.status !== w.start : ['done', 'cancel'].includes(o.status))
+        text = `${name}: ${ORDER_ST[o.status] || o.status}`;
+    } else if (w.kind === 'task') {
+      const t = await fs.get('tasks/' + w.ref);
+      if (!t) text = 'задачу, за которой я следила, удалили';
+      else if (t.done) text = `задача «${t.title || ''}» выполнена`;
+    }
+    if (!text && Date.now() - (w.at || 0) > WATCH_DAYS * DAY) text = `неделю следила, но так и не дождалась: ${w.kind === 'printer' ? 'принтер ' + w.ref : w.kind === 'order' ? 'заказ' : 'задача'}. Больше не слежу`;
+    if (text) { out.push({ w, text }); changed = true; } else keep.push(w);
+  }
+  if (changed) {
+    // пока проверяли, могли добавить новые оповещения — берём свежий список и убираем только сработавшие
+    const fresh = ((await fs.get('wa_anna/watches'))?.list) || [];
+    const done = new Set(out.map(x => x.w.at + x.w.ref));
+    const upd = new Map(keep.map(w => [w.at + w.ref, w]));
+    await fs.set('wa_anna/watches', { list: fresh.filter(w => !done.has(w.at + w.ref)).map(w => upd.get(w.at + w.ref) || w) });
+  }
+  return out;
 }
