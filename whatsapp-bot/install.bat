@@ -9,10 +9,17 @@ echo.
 
 where node >nul 2>&1
 if errorlevel 1 (
-  echo Не найдена программа Node.js, она нужна для работы бота. Устанавливаю...
-  winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+  echo Не найдена программа Node.js, она нужна для работы бота.
+  where winget >nul 2>&1
+  if errorlevel 1 (
+    echo Сейчас откроется сайт nodejs.org: скачайте установщик LTS для Windows, установите с настройками по умолчанию.
+    start "" https://nodejs.org/
+  ) else (
+    echo Устанавливаю...
+    winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements
+  )
   echo.
-  echo Если установка прошла, закройте это окно и запустите install.bat ещё раз.
+  echo Когда Node.js установится, закройте это окно и запустите install.bat ещё раз.
   pause
   exit /b
 )
