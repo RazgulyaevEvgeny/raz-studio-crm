@@ -388,7 +388,7 @@ export async function appendChat(fs, chatId, msg, extra = {}) {
 /* ---------- Firestore через REST, вход под пользователем бота ---------- */
 
 let botCache = null;
-async function botToken(env) {
+export async function botToken(env) {
   if (botCache && botCache.exp > Date.now()) return botCache.token;
   const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${env.FIREBASE_API_KEY}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
