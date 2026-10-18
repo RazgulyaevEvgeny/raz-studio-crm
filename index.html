@@ -2871,7 +2871,7 @@ function renderAnalytics(){
   /* Kaspi */
   const kp=new Map();orders.filter(o=>o.status!=='cancel').forEach(o=>(o.kaspi||[]).forEach(l=>{if(!inR(l.date||receivedOf(o)))return;const fee=kaspiFeeOf(o)/100,q=+l.qty||0,pr=(+l.price||0)*q;
     const e=bump(kp,l.name,q,pr);e.p=(e.p||0)+pr*(1-fee)-(+l.cost||0)*q}));
-  (typeof kaspiOrders!=='undefined'&&kaspiOrders||[]).filter(k=>kStage(k)==='sold'&&inR(kDay(k.completed||k.created))).forEach(k=>(k.items&&k.items.length?k.items:[{name:'Заказ Kaspi',qty:1,price:+k.total||0}]).forEach(l=>{
+  (typeof kaspiOrders!=='undefined'&&kaspiOrders||[]).filter(k=>['packing','handover','shipped','sold'].includes(kStage(k))&&inR(kDay(k.created||k.completed))).forEach(k=>(k.items&&k.items.length?k.items:[{name:'Заказ Kaspi',qty:1,price:+k.total||0}]).forEach(l=>{
     const q=+l.qty||1,pr=(+l.price||0)*q,c=kFindCost(l.name||'');const e=bump(kp,l.name||'Товар Kaspi',q,pr);e.p=(e.p||0)+pr*(1-KASPI_FEE)-(c?+c.cost:0)*q}));
   $('an-kaspi').innerHTML=hbars(topN(kp,8).map(r=>({...r,s:money(r.x),tip:`${r.l}: ${r.v} шт на ${money(r.x)}${r.p!=null?'\nПрибыль: '+money(r.p):''}`})),{fmt:v=>v+' шт'});
   /* клиенты */
@@ -3862,15 +3862,15 @@ const kDay=ms=>ms?ds(new Date(+ms)):'';
 /* выданные заказы Kaspi как заказы для прибыли и аналитики (в ведомости их нет):
    дата — день выдачи, себестоимость — из закупок и прайса Kaspi, комиссия — KASPI_FEE */
 function kVirtualOrders(){
-  const sold=(kaspiOrders||[]).filter(k=>kStage(k)==='sold');if(!sold.length)return [];
+  const sold=(kaspiOrders||[]).filter(k=>['packing','handover','shipped','sold'].includes(kStage(k)));if(!sold.length)return [];
   const cost=new Map();try{kaspiCatalog().forEach(i=>{const n=i.name.trim().toLowerCase();if(i.cost!=null&&!cost.has(n))cost.set(n,+i.cost)})}catch(_){}
   return sold.map(k=>{
-    const day=kDay(k.completed||k.created);
+    const day=kDay(k.created||k.completed);
     const items=k.items&&k.items.length?k.items:[{name:'Заказ Kaspi № '+k.code,qty:1,price:+k.total||0}];
     const lines=items.map(i=>({name:i.name||'Товар Kaspi',qty:+i.qty||1,price:+i.price||0,date:day,cost:cost.get(String(i.name||'').trim().toLowerCase())||0}));
     if(!lines.some(l=>l.price))lines[0].price=Math.round((+k.total||0)/lines[0].qty);
     return {id:'kv-'+k.id,virtual:true,client:'Kaspi',service:'kaspi',source:'kaspi',status:'done',price:+k.total||0,paid:+k.total||0,
-      receivedAt:day,createdAt:+k.completed||+k.created||0,items:[],
+      receivedAt:day,createdAt:+k.created||+k.completed||0,items:[],
       expenses:kCom()!=null&&kDeliv(k)?[{id:'d',title:'Доставка Kaspi',amount:kDeliv(k)}]:[],kaspi:lines,kaspiFee:kCom()!=null?kCom():KASPI_FEE*100};
   });
 }
@@ -3880,6 +3880,8 @@ const kDeliv=k=>Math.max(0,+k.deliveryCost||0);
 const kHold=k=>kCom()==null?Math.round((+k.total||0)*KASPI_FEE):Math.round((+k.total||0)*kCom()/100+kDeliv(k));
 const kNet=k=>Math.round((+k.total||0)-kHold(k));
 const kWhat=k=>(k.items&&k.items.length)?k.items.map(i=>(i.name||'Товар')+(+i.qty>1?' × '+i.qty:'')).join(', '):'Заказ № '+(k.code||'');
+const kQty=k=>(k.items&&k.items.length)?k.items.reduce((s,i)=>s+(+i.qty||1),0):1;
+const kGoods=k=>{const v=(k.items||[]).reduce((s,i)=>s+(+i.price||0)*(+i.qty||1),0);return v||(+k.total||0)};
 const kPayDay=k=>kDay(k.plannedDelivery)||kDay(k.transmitPlan);
 function kStage(k){
   if(!k)return '';
@@ -4123,11 +4125,12 @@ function renderKaspiPage(){
     ${kCleanAsk?`<span class="kc-b"><b>Удалить ${led.length} старых заказов Kaspi насовсем?</b> <button class="btn danger solid sm" type="button" data-kclean="yes">Удалить</button> <button class="btn soft sm" type="button" data-kclean="no">Нет</button></span>`
       :`<button class="btn danger sm" type="button" data-kclean="ask">Удалить насовсем</button>`}</div>`:'';
   /* цифры */
-  const ym=curMonth(),soldM=g.sold.filter(k=>kDay(k.completed||k.created).slice(0,7)===ym);
+  const ym=curMonth(),soldM=[...g.packing,...g.handover,...g.shipped,...g.sold].filter(k=>kDay(k.created).slice(0,7)===ym);
+  const qM=soldM.reduce((s,k)=>s+kQty(k),0),gM=soldM.reduce((s,k)=>s+kGoods(k),0);
   const waitPay=g.shipped.reduce((s,k)=>s+kNet(k),0);
   $('k-kpi').innerHTML=`<div class="kpi"><span>Упаковать</span><b>${g.packing.length}</b><small>${g.handover.length?'и передать курьеру: '+g.handover.length:'к передаче курьеру нет'}</small></div>
     <div class="kpi"><span>Ждём оплату</span><b>${money(waitPay)}</b><small>${g.shipped.length} ${plural(g.shipped.length,'заказ','заказа','заказов')} в доставке, за вычетом ${Math.round(KASPI_FEE*100)}%</small></div>
-    <div class="kpi"><span>Продано за ${esc(monthName(ym))}</span><b>${money(soldM.reduce((s,k)=>s+(+k.total||0),0))}</b><small>${soldM.length} ${plural(soldM.length,'заказ','заказа','заказов')}</small></div>`;
+    <div class="kpi"><span>Продано за ${esc(monthName(ym))}</span><b>${money(gM)}</b><small>${qM} ${plural(qM,'товар','товара','товаров')} в ${soldM.length} ${plural(soldM.length,'заказе','заказах','заказах')}, по дате заказа, без отменённых — как в аналитике Kaspi</small></div>`;
   $('k-tabs').innerHTML=K_STAGES.map(([id,l])=>`<button type="button" class="chip${kTab===id?' on':''}" data-ktab="${id}" role="tab" aria-selected="${kTab===id}">${l} <em>${g[id].length}</em></button>`).join('');
   /* инструменты вкладки */
   let tools='';
