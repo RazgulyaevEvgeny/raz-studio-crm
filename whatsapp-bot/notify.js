@@ -46,11 +46,11 @@ export function startNotify(fs, env, idToken, log) {
           const name = [m.from?.first_name, m.from?.last_name].filter(Boolean).join(' ') || m.from?.username || '';
           let me = list.find(c => c.chat === m.chat.id);
           // Подписались до исправления (номер чата не сохранился) — узнаём по имени и дописываем номер
-          if (!me) { me = list.find(c => !c.chat && c.name === name); if (me) { me.chat = m.chat.id; await fs.set('wa_anna/telegram', { chats: list }); log('Telegram: восстановлен чат', name); } }
+          if (!me) { me = list.find(c => !c.chat && c.name === name); if (me) { me.chat = m.chat.id; await fs.patch('wa_anna/telegram', { chats: list }); log('Telegram: восстановлен чат', name); } }
           if (/^\/start/.test(m.text || '')) {
             if (!me) {
               list.push({ chat: m.chat.id, name, at: Date.now() });
-              await fs.set('wa_anna/telegram', { chats: list });
+              await fs.patch('wa_anna/telegram', { chats: list });
               log('Telegram: подписался', name);
             }
             await tg(env, 'sendMessage', { chat_id: m.chat.id, text: 'Готово! Сюда будут приходить уведомления студии: новые заказы Kaspi и когда Аня зовёт менеджера в WhatsApp. А ещё мне можно писать или наговаривать голосовые: «Аня, запиши задачу на завтра…», «Аня, что по Kaspi?»' });
@@ -93,7 +93,21 @@ export function startNotify(fs, env, idToken, log) {
       log('Telegram: тестовое уведомление', c.name, r.ok ? 'отправлено' : 'не доставлено — ' + (r.description || ''));
       c.tested = Date.now();
     }
-    if (fresh.length) await fs.set('wa_anna/telegram', { chats: list });
+    if (fresh.length) await fs.patch('wa_anna/telegram', { chats: list });
+  }
+
+  // Разовая проверка по просьбе Евгения: через 3 минуты после запуска тестовое уведомление всем подписчикам (один раз, отметка broadcast)
+  const BROADCAST = 'test-2026-10-18';
+  async function broadcastOnce() {
+    const doc = (await fs.get('wa_anna/telegram')) || {};
+    if (doc.broadcast === BROADCAST) return;
+    const list = await subscribers();
+    for (const c of list) {
+      if (!c.chat) { log('Telegram: тест не отправлен', c.name, '— этот человек ещё не писал боту после обновления'); continue; }
+      const r = await tg(env, 'sendMessage', { chat_id: c.chat, text: TEST });
+      log('Telegram: тестовое уведомление', c.name, r.ok ? 'отправлено' : 'не доставлено — ' + (r.description || ''));
+    }
+    await fs.patch('wa_anna/telegram', { chats: list, broadcast: BROADCAST });
   }
 
   let kaspiErr = '';
@@ -126,6 +140,7 @@ export function startNotify(fs, env, idToken, log) {
   if (on) {
     poll();
     testOnce().catch(e => log('Telegram: тест не отправлен', e?.message || e));
+    setTimeout(() => broadcastOnce().catch(e => log('Telegram: тест не отправлен', e?.message || e)), 3 * 60e3);
     checkKaspi();
     setInterval(checkKaspi, KASPI_EVERY);
   }
