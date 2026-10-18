@@ -4241,7 +4241,8 @@ function kpAll(){
     });
   });
   list.forEach(p=>{
-    p.ourPrice=+p.price||p.lastPrice||0;
+    p.ourPrice=(p.offers&&+p.offers.ours)||+p.price||p.lastPrice||0;
+    p.priceSrc=p.offers&&+p.offers.ours?'kaspi':+p.price?'list':p.lastPrice?'order':'';
     p.status=p.available===true?'sale':p.available===false?'off':p.src==='orders'||p.virtual?'orders':'sale';
     const o=p.offers||{};
     p.alert=!!(o.minOther&&p.ourPrice&&o.minOther<p.ourPrice);
@@ -4289,11 +4290,13 @@ function kpParseXml(text){
   }).filter(x=>x.name||x.sku);
 }
 function kpParseRows(rows){
-  const h=rows.findIndex(r=>r&&r.some(c=>/sku|артикул/i.test(String(c||'')))&&r.some(c=>/модел|наимен|назван|model|name|товар/i.test(String(c||''))));
-  if(h<0)throw new Error('Не нашёл в файле столбцы «SKU/Артикул» и «Модель/Название». Скачайте прайс-лист в кабинете Kaspi: Управление товарами → Скачать.');
+  const isName=c=>/модел|наимен|назван|model|name|товар/i.test(String(c||'')),isPrice=c=>/цен|price|стоимост/i.test(String(c||'')),isSku=c=>/sku|артикул|код/i.test(String(c||''));
+  const h=rows.slice(0,40).findIndex(r=>r&&r.some(isName)&&(r.some(isSku)||r.some(isPrice)));
+  if(h<0){const first=rows.slice(0,6).map(r=>(r||[]).filter(c=>c!==''&&c!=null).slice(0,8).join(' | ')).filter(Boolean).join(' / ');
+    throw new Error('Не понял, где в файле название товара и цена. Начало файла: '+first.slice(0,300))}
   const H=rows[h].map(c=>String(c||'').trim());
   const col=re=>H.findIndex(c=>re.test(c));
-  const cSku=col(/sku|артикул/i),cName=col(/модел|наимен|назван|^model$|^name$|товар/i),cBrand=col(/бренд|brand/i),cPrice=col(/цена|price/i),cCode=col(/код.*kaspi|kaspi.*(код|id)|ссылк|url/i);
+  const cSku=col(/sku|артикул/i)>=0?col(/sku|артикул/i):col(/^код(?!.*kaspi)/i),cName=col(/модел|наимен|назван|^model$|^name$|товар/i),cBrand=col(/бренд|brand/i),cPrice=col(/цен|price|стоимост/i),cCode=col(/код.*kaspi|kaspi.*(код|id)|ссылк|url/i);
   const cStock=H.map((c,i)=>/остат|stock|кол-?во|количество/i.test(c)?i:-1).filter(i=>i>=0);
   const cAv=H.map((c,i)=>/^pp\d+$|налич|available|доступ/i.test(c)?i:-1).filter(i=>i>=0&&!cStock.includes(i));
   return rows.slice(h+1).filter(r=>r&&(r[cSku]||r[cName])).map(r=>{
@@ -4311,7 +4314,9 @@ async function kpImport(file){
   try{
     let list;
     if(/\.xml$/i.test(file.name)||/xml/.test(file.type))list=kpParseXml(await file.text());
-    else{await kpLoadXlsx();const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});list=kpParseRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''}))}
+    else{await kpLoadXlsx();const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});let err=null;list=[];
+      for(const sn of wb.SheetNames){try{list=kpParseRows(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''}));if(list.length)break}catch(e){err=err||e}}
+      if(!list.length&&err)throw err}
     if(!list.length)throw new Error('В файле не нашлось товаров.');
     const seen=new Set();let n=0;
     for(const x of list){
@@ -4375,7 +4380,7 @@ function kpCard(p){
     <div class="kp-h"><a class="kp-n" href="${esc(link)}" target="_blank" rel="noopener">${esc(p.name||'Без названия')} ↗</a><span class="kp-st" style="--sc:var(${st[1]})">${st[0]}</span></div>
     <div class="kp-meta">${[p.sku?'SKU '+esc(p.sku):'',p.code?'код '+esc(p.code):'',p.brand?esc(p.brand):''].filter(Boolean).join(' · ')||'&nbsp;'}</div>
     <div class="kp-g">
-      <div><small>Цена</small><b>${p.ourPrice?money(p.ourPrice):'—'}</b></div>
+      <div><small>Цена</small><b>${p.ourPrice?money(p.ourPrice):'—'}</b><span class="kp-dim">${{kaspi:'сейчас на Kaspi',list:'из прайс-листа',order:'в последнем заказе'}[p.priceSrc]||''}</span></div>
       <div><small>В наличии</small><b>${p.stock!=null&&p.stock!==''?p.stock+' шт':p.status==='off'?'нет':'—'}</b></div>
       <div><small>Продано</small><b>${p.sold} шт</b><span class="kp-dim">${p.sold30?'за 30 дней '+p.sold30:''}</span></div>
       <div><small>С 1 шт</small><b class="${u&&u.profit!=null&&u.profit<0?'kp-bad':''}">${u&&u.profit!=null?money(u.profit):'—'}</b><span class="kp-dim">${u?'удержания '+money(u.hold):''}</span></div>
