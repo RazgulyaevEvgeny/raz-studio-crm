@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018182802">
+<meta name="app-build" content="20261018185443">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1130,9 +1130,11 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .an-nb>div{min-height:0;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;gap:10px;visibility:hidden;transition:visibility 0s .3s}
 .an-nm.open .an-nb>div{visibility:visible;transition:none}
 .an-nb p{margin:0 14px;padding:9px 13px;background:rgba(255,255,255,.16);border-radius:4px 16px 16px 16px;font:400 13.5px/1.45 var(--fb);white-space:pre-line;overflow-wrap:anywhere}
-.an-nb .btn{margin:0 14px 14px;background:#fff;color:var(--ab);text-decoration:none}
+.an-nba .an-hb{align-self:center;min-height:34px;padding:0 14px}
+.an-nba{align-self:stretch;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 14px 14px}
+.an-nb .btn{background:#fff;color:var(--ab);text-decoration:none}
 .an-nb .btn:hover{background:#e6e9ff}
-.an-nb>div>:last-child:not(.btn){margin-bottom:14px}
+.an-nb>div>:last-child:not(.btn):not(.an-nba){margin-bottom:14px}
 .an-per{display:flex;gap:6px;flex-wrap:wrap}
 .an-chip{all:unset;box-sizing:border-box;cursor:pointer;min-height:30px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font:600 12.5px var(--f);transition:background .15s}
 .an-chip:hover{background:rgba(255,255,255,.22)}.an-chip.on{background:#fff;color:var(--ab)}
@@ -1184,7 +1186,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   #w-anna .w-h h2{font-size:16.5px}
   #w-anna .at{gap:2px}
   #w-anna .at .c{font-size:12px}
-  .an-nb p{margin:0 12px;font-size:13px}.an-nb .btn{margin:0 12px 12px}
+  .an-nb p{margin:0 12px;font-size:13px}.an-nba{margin:0 12px 12px}
   .an-body,.an-col{gap:10px}
   .an-say{font-size:13.5px;padding:10px 12px;border-radius:5px 16px 16px 16px}
   .an-todo li{padding:8px 10px;border-radius:12px;font-size:13px;gap:8px}
@@ -4749,7 +4751,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadPrinte
      orderId — id заказа студии (открываем карточку), kaspiId — id или номер заказа Kaspi (открываем страницу Kaspi на нём); brief — что хочет клиент, словами Анны.
    wa_anna/request — просьба обновить сводку {refreshAt, by}; wa_anna_q — вопросы {q, at, by, status:'new'|'done', a}.
    Обёртка db не умеет doc.onSnapshot, add и orderBy, поэтому здесь Firestore напрямую. */
-let annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={};
+let annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={},annaWait=null;
 const annaFs=()=>window.firebase&&firebase.firestore&&firebase.firestore();
 const annaWho=()=>{const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;return (u&&u.email)||''};
 function annaAgo(ts){const m=Math.max(0,Math.round((Date.now()-ts)/6e4));if(m<1)return 'только что';if(m<60)return m+' мин назад';const h=Math.round(m/60);return h<48?h+' ч назад':Math.round(h/24)+' дн назад'}
@@ -4757,6 +4759,8 @@ function annaListen(){
   const fs=annaFs();if(!fs)return;
   const fail=e=>{annaLoaded=true;annaErr='rules';try{console.warn('wa_anna',e)}catch(_){}renderAnna()};
   fs.doc('wa_anna/digest').onSnapshot(s=>{annaD=s.exists?s.data():null;annaLoaded=true;annaErr='';renderAnna()},fail);
+  /* кто ждёт менеджера — прямо из чатов: менеджер ответил клиенту или сняли вручную — строка сразу уходит */
+  fs.collection('wa_chats').where('needsManager','==',true).onSnapshot(s=>{annaWait=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaWait=null});
   fs.doc('wa_anna/insights').onSnapshot(s=>{annaIns=s.exists?s.data():null;renderAnna()},()=>{});
   fs.collection('wa_anna_q').orderBy('at','desc').limit(30).onSnapshot(s=>{annaQ=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},fail);
 }
@@ -4786,12 +4790,17 @@ $('w-anna').addEventListener('click',e=>{const t=e.target;
   if(t.closest('#anna-hist-tg')){annaHist=!annaHist;renderAnna();return}
   const nm=t.closest('[data-annm]');if(nm){annaNm=annaNm===nm.dataset.annm?null:nm.dataset.annm;
     document.querySelectorAll('#w-anna-need .an-nm').forEach(r=>{const b=r.querySelector('[data-annm]'),o=b.dataset.annm===annaNm;r.classList.toggle('open',o);b.setAttribute('aria-expanded',o)});return}
+  const dn=t.closest('[data-andone]');if(dn){annaDone(dn.dataset.andone);return}
   const od=t.closest('[data-anord]');if(od){annaOrder(od.dataset.anord);return}
   const kp=t.closest('[data-ankas]');if(kp)annaKaspi(kp.dataset.ankas)});
 function renderAnna(){
   const say=$('w-anna-say');if(!say)return;
   if(annaLoaded&&!annaPuffed){annaPuffed=true;setTimeout(annaPuff,500)}
-  const d=annaD||{},st=d.stats||{},need=Array.isArray(d.needManager)?d.needManager:[],todo=Array.isArray(d.todo)?d.todo:[];
+  const d=annaD||{},st={...(d.stats||{})},todo=Array.isArray(d.todo)?d.todo:[];
+  const dn=Array.isArray(d.needManager)?d.needManager:[],ph=x=>String(x||'').replace(/\D/g,'');
+  const need=annaWait?annaWait.slice().sort((a,b)=>(+a.managerCalledAt||0)-(+b.managerCalledAt||0)).map(c=>{const o=dn.find(x=>ph(x.phone)&&ph(x.phone)===ph(c.phone))||{};
+    return {id:c.id,name:c.clientName||c.name||'',phone:c.phone||'',reason:c.managerReason||o.reason||'',since:c.managerCalledAt||c.updatedAt||0,brief:o.brief||''}}):dn;
+  if(annaWait)st.needManager=need.length;
   $('anna-ref-btn').disabled=$('anna-q-btn').disabled=!canWrite||!db;
   const c=$('w-anna-c');
   c.textContent=annaErr?'нет доступа к базе':!annaLoaded?'подключаемся…':d.at?(need.length?need.length+' ждут · ':'')+'обновлено '+printWhen(d.at):'сводки пока нет';
@@ -4809,7 +4818,7 @@ function renderAnna(){
       const ph=String(n.phone||'').replace(/\D/g,''),who=esc(n.name||(ph?'+'+ph:'Клиент')),key=ph||n.name||'#'+i,op=annaNm===key;
       const say=String(n.brief||n.reason||'').trim()||'Клиент просит менеджера, подробностей Аня не записала.';
       return `<div class="an-nm${op?' open':''}"><button type="button" class="mrow" data-annm="${esc(key)}" aria-expanded="${op}"><span class="an-w"><b>${who}</b><small>${esc(n.reason||'')}</small></span><span class="r">${n.since?`<small>${annaAgo(+n.since)}</small>`:''}<i class="ch" aria-hidden="true"></i></span></button>`
-        +`<div class="an-nb"><div><p>${esc(say)}</p>${ph?`<a class="btn sm" href="https://wa.me/${ph}" target="_blank" rel="noopener">Перейти в чат WhatsApp ↗</a>`:''}</div></div></div>`}).join('')}</div>`:'';
+        +`<div class="an-nb"><div><p>${esc(say)}</p><div class="an-nba">${ph?`<a class="btn sm" href="https://wa.me/${ph}" target="_blank" rel="noopener">Перейти в чат WhatsApp ↗</a>`:''}${n.id&&canWrite?`<button type="button" class="an-hb" data-andone="${esc(n.id)}" title="Клиенту ответили: убрать из списка">Снять ✓</button>`:''}</div></div></div></div>`}).join('')}</div>`:'';
     const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Ани'],[st.needManager,'ждут ответа']].filter(x=>x[0]!=null&&x[0]!=='');
     $('w-anna-stats').innerHTML=S.map(([v,l])=>bwPStat(l,String(v))).join('');
     $('w-anna-ins').innerHTML=annaInsHtml();
@@ -4841,6 +4850,12 @@ function annaInsHtml(){
     b+=`<div class="an-ins-f"><small>${r?'обновлено '+printWhen(r.at)+' · '+(+r.chats||0)+' '+plural(+r.chats||0,'диалог','диалога','диалогов')+', '+(+r.orders||0)+' '+plural(+r.orders||0,'заказ','заказа','заказов'):''}</small>${canWrite?`<button type="button" class="an-hb" data-aninsgo${wait?' disabled':''}>${wait?'Аня думает…':r?'Сделать новый разбор':'Сделать разбор'}</button>`:''}</div>`;
   }
   return `<div class="an-sec"><button type="button" class="an-tg" data-anins aria-expanded="${op}" aria-controls="anna-ins-b"><span>Аналитика переписок</span><i class="ch" aria-hidden="true"></i></button>${op?`<div class="an-sb" id="anna-ins-b">${b}</div>`:''}</div>`;
+}
+/* снять клиента из «Ждут менеджера» вручную; Аня снова пометит его, если позже опять позовёт менеджера */
+async function annaDone(id){
+  const fs=annaFs();if(!fs||!canWrite)return;
+  try{await fs.doc('wa_chats/'+id).update({needsManager:false,managerDoneAt:Date.now(),managerDoneBy:annaWho()});toast('Сняла: клиенту ответили')}
+  catch(e){toast('Не получилось снять, попробуйте ещё раз')}
 }
 async function annaInsGo(){
   const fs=annaFs(),per=annaUi.per==='month'?'month':'week';if(!fs||!canWrite)return;
