@@ -4247,7 +4247,8 @@ function kpAll(){
   list.forEach(p=>{
     p.ourPrice=(p.offers&&+p.offers.ours)||+p.price||p.lastPrice||0;
     p.priceSrc=p.offers&&+p.offers.ours?'kaspi':+p.price?'list':p.lastPrice?'order':'';
-    p.status=p.available===true?'sale':p.available===false?'off':p.src==='orders'||p.virtual?'orders':'sale';
+    /* если прайс-лист загружен, товар из старых заказов, которого в нём нет, на Kaspi уже не продаётся */
+    p.status=p.available===true?'sale':p.available===false?'off':p.src==='orders'||p.virtual?(kaspiMeta.priceListAt?'off':'orders'):'sale';
     const o=p.offers||{};
     p.alert=!!(o.minOther&&p.ourPrice&&o.minOther<p.ourPrice);
   });
