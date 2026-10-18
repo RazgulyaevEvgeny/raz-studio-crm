@@ -19,18 +19,10 @@ const NOTICES = {
   delay:  'Здравствуйте, {client}! К сожалению, заказ № {num} задерживается. Новый срок готовности: {due}. Приносим извинения за ожидание.',
 };
 
-// Сроки по услугам, в рабочих днях (суббота и воскресенье — выходные).
-// base — стандартный срок; если открытых заказов на услугу больше busy, прибавляется extra;
-// supplier — дни на материалы от поставщика. ПРИМЕРНЫЕ ЦИФРЫ: заменить на настоящие.
-const DEADLINES = {
-  vinyl:      { base: 2, busy: 5,  extra: 2, supplier: 0 },
-  dtf:        { base: 3, busy: 10, extra: 2, supplier: 1 },
-  print3d:    { base: 3, busy: 5,  extra: 3, supplier: 0 },
-  sign3d:     { base: 5, busy: 3,  extra: 3, supplier: 0 },
-  embroidery: { base: 5, busy: 5,  extra: 3, supplier: 0 },
-  printing:   { base: 1, busy: 10, extra: 1, supplier: 0 },
-  other:      { base: 5, busy: 5,  extra: 2, supplier: 0 },
-};
+// Срок, который бот ставит в заказ, оформленный из WhatsApp, в рабочих днях (суббота и воскресенье — выходные).
+// Клиенту бот называет стандарт 2–3 дня (кроме вышивки), точный срок в заказе потом правит менеджер.
+const ORDER_DAYS = { embroidery: 5 };
+const ORDER_DAYS_DEFAULT = 3;
 const SERVICE_NAMES = {
   vinyl: 'Винил на авто', dtf: 'DTF-печать', print3d: '3D-печать', sign3d: '3D-вывеска',
   embroidery: 'Вышивка', printing: 'Распечатка', other: 'Другое',
@@ -59,7 +51,7 @@ const STUDIO = `Тебя зовут Анна, ты виртуальный мен
   Если клиент пишет по-казахски, отвечай по-казахски.
 - Цены называй только из инструмента get_prices. Не выдумывай цены, скидки, сроки и характеристики.
   Если точной цены нет (нестандартный заказ, нужен макет) — скажи, что менеджер посчитает, и собери детали.
-- Сроки называй только через estimate_deadline и всегда как ориентировочные: окончательный срок подтверждает менеджер.
+- Сроки называй только через estimate_deadline: стандартный срок на все услуги, кроме вышивки, 2–3 дня, и всегда добавляй «Точные сроки вам подскажет менеджер». По вышивке срок подскажет менеджер. Конкретных дат не обещай.
 - Про статус заказа клиента узнавай через get_client_orders.
 - Чтобы оформить заказ, собери: что сделать, на чём или какой размер, количество, есть ли макет, к какому числу нужно, как обращаться к клиенту.
   Когда всё понятно и клиент согласен — вызови create_order и скажи, что заявка принята и менеджер подтвердит её.
@@ -89,7 +81,7 @@ const TOOLS = [
   },
   {
     name: 'estimate_deadline',
-    description: 'Ориентировочный срок готовности нового заказа с учётом текущей загрузки студии по услуге.',
+    description: 'Стандартный срок по услуге и как его сказать клиенту.',
     input_schema: {
       type: 'object',
       properties: {
@@ -307,21 +299,13 @@ async function runTool(name, input, { fs, phone, chat }) {
     };
   }
   if (name === 'estimate_deadline') {
-    const rule = DEADLINES[input.service] || DEADLINES.other;
-    const load = (await openOrders(fs)).filter(o => o.service === input.service && o.status !== 'ready').length;
-    const days = rule.base + (load > rule.busy ? rule.extra : 0) + rule.supplier;
-    const due = addWorkDays(new Date(Date.now() + 5 * 3600e3), days);
-    return {
-      work_days: days,
-      ready_by: `${due.getUTCDate()} ${MONTHS_GEN[due.getUTCMonth()]} (${WD_FULL[due.getUTCDay()]})`,
-      busy: load > rule.busy,
-      note: 'Срок ориентировочный, окончательно подтверждает менеджер.',
-    };
+    // Правило Евгения: клиенту называем только стандартный срок, точный подскажет менеджер
+    if (input.service === 'embroidery') return { standard: null, say: 'Срок по вышивке подскажет менеджер.' };
+    return { standard: '2–3 рабочих дня', say: 'Стандартный срок на эту услугу 2–3 дня. Точные сроки вам подскажет менеджер.' };
   }
   if (name === 'create_order') {
     const svc = SERVICE_NAMES[input.service] ? input.service : 'other';
-    const rule = DEADLINES[svc];
-    const due = addWorkDays(new Date(Date.now() + 5 * 3600e3), rule.base + rule.supplier);
+    const due = addWorkDays(new Date(Date.now() + 5 * 3600e3), ORDER_DAYS[svc] || ORDER_DAYS_DEFAULT);
     const last = await fs.query('orders', { orderBy: [{ field: { fieldPath: 'num' }, direction: 'DESCENDING' }], limit: 1 });
     const num = ((last[0] && last[0].num) || 0) + 1;
     const now = Date.now();
