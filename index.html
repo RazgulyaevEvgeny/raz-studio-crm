@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018153507">
+<meta name="app-build" content="20261018153810">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -885,6 +885,15 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 #w-kaspi .w-h h2 .c{overflow:hidden;text-overflow:ellipsis}
 #w-kaspi .go{text-decoration:none;white-space:nowrap;flex:none}
 #w-kaspi .kmark{width:30px;height:30px;flex:none;margin-right:-2px}
+/* Принтеры: зелёная плитка Bambu Lab (оттенок темнее фирменного #00AE42, чтобы белый текст читался) */
+#w-print{--pg:#00843b;background:var(--pg);color:#fff}
+#w-print .w-h h2,#w-print .w-h h2 .c{color:#fff}
+#w-print .w-h h2 .c{opacity:.9}
+#w-print .go{color:var(--pg);text-decoration:none}
+#w-print .go:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#w-print .bw-card{color:var(--ink)}
+#w-print .bw-note{color:#fff;opacity:.92}
+#w-print .mf-x::before{border-color:#fff}
 @media(max-width:600px){#w-kaspi .kmark{width:24px;height:24px}}
 .kq:hover{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--kr)}
 .kq-t{display:flex;flex-direction:column;gap:2px;min-width:0}
