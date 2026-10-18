@@ -17,6 +17,8 @@ service cloud.firestore {
     match /marketing/{id} { allow read, write: if signedIn(); }
     // Магазин Kaspi: заказы из кабинета продавца (подтягивает воркер kaspi-orders)
     match /kaspi_orders/{id} { allow read, write: if signedIn(); }
+    // WhatsApp: переписка с клиентами (пишет воркер whatsapp-bot под отдельным входом бота)
+    match /wa_chats/{id} { allow read, write: if signedIn(); }
 
     // Заявки с сайта топперов: сайт может только создать новую заявку (без входа),
     // читать, подтверждать и удалять их могут только сотрудники

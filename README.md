@@ -86,3 +86,15 @@
 {{1}} — клиент, {{2}} — номер заказа, {{3}} — срок, например «25 октября» или «23–25 октября».
 
 Код воркера: `whatsapp-worker/worker.js` (Cloudflare → Workers → `whatsapp-bot` → Edit code → Deploy). Номер подключён к WhatsApp API через 360dialog в режиме совместной работы с приложением WhatsApp Business: менеджеры продолжают отвечать с телефона. Переменные: `D360_API_KEY` (Secret, API-ключ номера из кабинета 360dialog; если номер подключён напрямую в Meta, вместо него `WA_TOKEN` и `WA_PHONE_ID`), `FIREBASE_API_KEY` (apiKey из `firebase-config.js`), `FIREBASE_PROJECT` = `raz-studio-5a486`, `ALLOWED_EMAILS` (почты сотрудников через запятую).
+
+### ИИ-консультант в WhatsApp
+
+Тот же воркер `whatsapp-bot` отвечает клиентам на входящие сообщения в рабочем WhatsApp. Он работает на Claude и берёт данные из учёта: цены из «Прайса», заказы клиента по его номеру, загрузку по услугам для расчёта срока. Может оформить заказ (статус «Новый», источник `whatsapp`, в заметках «Оформлено ИИ-ботом, проверить») и позвать менеджера. Если менеджер написал клиенту сам (с телефона или из учёта), бот молчит в этом чате 12 часов. Переписка хранится в Firestore, коллекция `wa_chats` (правило есть в `firestore.rules`, после обновления правил нажать Publish в консоли Firebase).
+
+Настройка:
+1. Firebase → Authentication → Users → Add user: почта и пароль для бота, например `bot@raz-studio.kz`. Это `BOT_EMAIL` и `BOT_PASSWORD`.
+2. console.anthropic.com → API Keys → Create key. Это `ANTHROPIC_API_KEY` (Secret).
+3. Придумать длинную случайную строку — `WEBHOOK_SECRET` (Secret).
+4. Адрес вебхука: `https://whatsapp-bot.design-onegin.workers.dev/webhook/<WEBHOOK_SECRET>`. Для 360dialog он задаётся один раз запросом к их API (`POST https://waba-v2.360dialog.io/v1/configs/webhook` с заголовком `D360-API-KEY` и телом `{"url": "<адрес>"}`).
+
+Сроки по услугам (стандартный срок, порог загрузки, сдвиг, срок поставщика) и сведения о студии (адрес, график, оплата) задаются в начале `whatsapp-worker/worker.js`: константы `DEADLINES` и `STUDIO`.
