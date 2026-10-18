@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018153810">
+<meta name="app-build" content="20261018154404">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -891,10 +891,25 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 #w-print .w-h h2 .c{opacity:.9}
 #w-print .go{color:var(--pg);text-decoration:none}
 #w-print .go:focus-visible{outline:2px solid #fff;outline-offset:2px}
-#w-print .bw-card{color:var(--ink)}
+#w-print .w-h h2{white-space:nowrap;min-width:0}
+#w-print .bmark{height:30px;width:auto;flex:none;display:block}
+#w-print .bw-card{background:#006a30;color:#fff}
+#w-print .bw-card.alert{box-shadow:inset 0 0 0 2px #ffb3a7}
+#w-print .bw-meta{color:rgba(255,255,255,.84)}
+#w-print .bw-stat{background:rgba(255,255,255,.12)}
+#w-print .bw-stat span{color:rgba(255,255,255,.78)}
+#w-print .bw-stat em{color:#fff}
+#w-print .bw-ring .bg{stroke:rgba(255,255,255,.2)}
+#w-print .bw-ring .fg{stroke:#fff}
+#w-print .bw-card.alert .bw-ring .fg{stroke:#ffb3a7}
+#w-print .bw-ring b,#w-print .bw-ring b small{color:#fff}
+#w-print .bw-ring.ico{background:rgba(255,255,255,.14)}
+#w-print .bw-ring.ico svg{color:#fff}
+#w-print .bw-chip{background:#fff}
+#w-print .bw-err,#w-print .bw-err.warn{background:#fff}
 #w-print .bw-note{color:#fff;opacity:.92}
 #w-print .mf-x::before{border-color:#fff}
-@media(max-width:600px){#w-kaspi .kmark{width:24px;height:24px}}
+@media(max-width:600px){#w-kaspi .kmark{width:24px;height:24px}#w-print .bmark{height:22px}#w-print .ptxt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}
 .kq:hover{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--kr)}
 .kq-t{display:flex;flex-direction:column;gap:2px;min-width:0}
 .kq-t b{font:600 14px/1.3 var(--f);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1247,7 +1262,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
           <div class="tday-w" id="w-today"></div>
         </div>
         <div class="w" id="w-print">
-          <div class="w-h"><h2>Принтеры <span class="c msum" id="w-print-m"></span></h2><a class="go" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">Вход в Bambu ↗</a></div>
+          <div class="w-h"><h2><img class="bmark" src="bambu-logo-w.png?v=1" alt="Bambu Lab" width="103" height="30"><span class="ptxt">Принтеры</span> <span class="c msum" id="w-print-m"></span></h2><a class="go" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">Вход в Bambu ↗</a></div>
           <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем принтеры…</span></div></div>
           <small class="bw-note" id="w-print-note"></small>
         </div>
