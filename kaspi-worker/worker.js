@@ -13,6 +13,7 @@
 //   entries  &ids=a,b,c — состав заказов
 //   assemble POST {id, code} — «Скомплектован»: Kaspi формирует накладную, заказ уходит в «Передачу»
 //   waybill  &url=... — скачать накладную (PDF) по ссылке Kaspi
+//   offers   &ids=a,b,c&city=551010000 — предложения продавцов по товарам (цены конкурентов)
 
 const ALLOWED_ORIGIN = 'https://razgulyaevevgeny.github.io';
 const KASPI = 'https://kaspi.kz/shop/api/v2';
@@ -102,6 +103,8 @@ export default {
         return {
           name: at.offer?.name || at.product?.name || p.name || '',
           sku: at.offer?.code || p.code || '',
+          code: p.code || '',
+          category: at.category?.title || '',
           qty: at.quantity || 1,
           price: at.basePrice ?? at.totalPrice ?? null,
         };
@@ -200,6 +203,35 @@ export default {
         const type = r.headers.get('content-type') || '';
         if (!r.ok || !/pdf|octet-stream/i.test(type)) return json({ error: 'waybill', status: r.status, type }, 502);
         return new Response(r.body, { headers: { ...cors, 'Content-Type': 'application/pdf' } });
+      }
+
+      // --- цены продавцов по товарам (как на странице товара Kaspi) ---
+      if (mode === 'offers') {
+        const ids = (url.searchParams.get('ids') || '').split(',').map(s => s.trim()).filter(x => /^\d{3,15}$/.test(x)).slice(0, 30);
+        const city = /^\d{6,12}$/.test(url.searchParams.get('city') || '') ? url.searchParams.get('city') : '551010000';
+        const out = {};
+        for (const id of ids) {
+          used++;
+          try {
+            const r = await fetch(`https://kaspi.kz/yml/offer-view/offers/${id}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json, text/plain, */*',
+                'Referer': `https://kaspi.kz/shop/p/-${id}/`,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+              },
+              body: JSON.stringify({ cityId: city, id, limit: 64, page: 0, sortOption: 'PRICE' }),
+            });
+            if (!r.ok) { out[id] = { error: r.status }; continue; }
+            const d = await r.json();
+            out[id] = {
+              total: d.total ?? (d.offers || []).length,
+              offers: (d.offers || []).map(o => ({ merchantId: String(o.merchantId || ''), merchantName: o.merchantName || '', price: o.price ?? null })),
+            };
+          } catch (e) { out[id] = { error: String(e && e.message || e) }; }
+        }
+        return json({ city, offers: out });
       }
 
       return json({ error: 'unknown mode' }, 400);

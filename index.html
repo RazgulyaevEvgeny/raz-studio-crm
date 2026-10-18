@@ -23,6 +23,33 @@
 .kf-in .suffix{width:120px}
 .kf-in input{width:100%;border:0;background:var(--paper);border-radius:12px;min-height:40px;padding:0 30px 0 12px;font:500 15px var(--f);color:var(--ink)}
 .kf-in input:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
+
+.kp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.kp{background:var(--tile);border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.kp.alert{box-shadow:inset 0 0 0 2px var(--danger)}
+.kp-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.kp-n{font:700 15.5px/1.25 var(--f);color:var(--ink);text-decoration:none;overflow-wrap:anywhere}
+.kp-n:hover{color:var(--blue)}
+.kp-st{flex:none;font:600 12px var(--f);color:var(--sc);background:color-mix(in srgb,var(--sc) 12%,var(--paper));border-radius:999px;padding:4px 10px;white-space:nowrap}
+.kp-meta{color:var(--muted);font-size:12.5px;margin-top:-6px}
+.kp-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kp-g>div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.kp-g small{color:var(--muted);font-size:12px}
+.kp-g b{font:700 14.5px var(--f);white-space:nowrap}
+.kp-dim{color:var(--muted);font-size:12px}
+.kp-bad{color:var(--danger)}.kp-ok{color:var(--st-ready)}
+.kp-in{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kp-in label,.kp-set label{display:flex;flex-direction:column;gap:4px;font:600 12.5px var(--f);color:var(--muted)}
+.kp-in input,.kp-set input{width:100%;border:0;background:var(--paper);border-radius:12px;min-height:40px;padding:0 12px;font:500 14.5px var(--f);color:var(--ink)}
+.kp-in .suffix input{padding-right:30px}
+.kp-in input:focus-visible,.kp-set input:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
+.kp-c{display:flex;flex-direction:column;gap:2px;background:var(--paper);border-radius:12px;padding:8px 12px;font-size:13.5px}
+.kp-set{display:grid;grid-template-columns:repeat(2,minmax(0,280px));gap:10px}
+.kp-set .selwrap select{min-height:40px}
+.kp-file{cursor:pointer}
+.kp-q{min-width:200px;flex:1}
+.kp-dot{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font:700 11px var(--f);margin-left:2px}
+@media(max-width:700px){.kp-g{grid-template-columns:1fr 1fr}.kp-set,.kp-in{grid-template-columns:1fr}}
 /* ---------- раздел Kaspi ---------- */
 .klist{display:flex;flex-direction:column;gap:8px}
 .krow{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,minmax(96px,auto)) auto;gap:6px 18px;align-items:center;background:var(--tile);border-radius:18px;padding:12px 16px}
@@ -2872,7 +2899,7 @@ function renderAnalytics(){
   const kp=new Map();orders.filter(o=>o.status!=='cancel').forEach(o=>(o.kaspi||[]).forEach(l=>{if(!inR(l.date||receivedOf(o)))return;const fee=kaspiFeeOf(o)/100,q=+l.qty||0,pr=(+l.price||0)*q;
     const e=bump(kp,l.name,q,pr);e.p=(e.p||0)+pr*(1-fee)-(+l.cost||0)*q}));
   (typeof kaspiOrders!=='undefined'&&kaspiOrders||[]).filter(k=>['packing','handover','shipped','sold'].includes(kStage(k))&&inR(kDay(k.created||k.completed))).forEach(k=>(k.items&&k.items.length?k.items:[{name:'Заказ Kaspi',qty:1,price:+k.total||0}]).forEach(l=>{
-    const q=+l.qty||1,pr=(+l.price||0)*q,c=kFindCost(l.name||'');const e=bump(kp,l.name||'Товар Kaspi',q,pr);e.p=(e.p||0)+pr*(1-KASPI_FEE)-(c?+c.cost:0)*q}));
+    const q=+l.qty||1,pr=(+l.price||0)*q,pc=kpCostOf(l),c=pc!=null?{cost:pc}:kFindCost(l.name||'');const e=bump(kp,l.name||'Товар Kaspi',q,pr);e.p=(e.p||0)+pr*(1-KASPI_FEE)-(c?+c.cost:0)*q}));
   $('an-kaspi').innerHTML=hbars(topN(kp,8).map(r=>({...r,s:money(r.x),tip:`${r.l}: ${r.v} шт на ${money(r.x)}${r.p!=null?'\nПрибыль: '+money(r.p):''}`})),{fmt:v=>v+' шт'});
   /* клиенты */
   const cl=new Map();os.forEach(o=>bump(cl,(o.client||'Без имени').trim(),+o.price||0));
@@ -3836,7 +3863,7 @@ $('task-form').addEventListener('submit',async e=>{
   tasksCol.onSnapshot(snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));tasksLoaded=true;render()},fail);
   db.collection('prices').onSnapshot(snap=>{prices=snap.docs.map(d=>({id:d.id,...d.data()}));pricesLoaded=true;render();setTimeout(importPendingPrices,400);if(qEditing&&qEditing!=='new'&&!prices.find(x=>x.id===qEditing)){closeQ();toast('Эту позицию удалили')}},fail);
   kaspiCol=db.collection('kaspi_orders');
-  kaspiCol.onSnapshot(snap=>{const all=snap.docs.map(d=>({id:d.id,...d.data()}));kaspiMeta=all.find(x=>x.id==='_meta')||{};kaspiOrders=all.filter(x=>x.id!=='_meta');kaspiLoaded=true;kaspiDbErr='';render()},
+  kaspiCol.onSnapshot(snap=>{const all=snap.docs.map(d=>({id:d.id,...d.data()}));kaspiMeta=all.find(x=>x.id==='_meta')||{};kaspiProducts=all.filter(x=>x.kind==='product');kaspiOrders=all.filter(x=>x.id!=='_meta'&&x.kind!=='product');kaspiLoaded=true;kaspiDbErr='';setTimeout(render,0)},
     e=>{kaspiLoaded=true;kaspiDbErr='rules';try{console.warn('kaspi_orders',e)}catch(_){}render()});
   db.collection('requests').onSnapshot(snap=>{requests=snap.docs.map(d=>({id:d.id,...d.data()}));requestsLoaded=true;render();setTimeout(importPendingReq,300)},e=>{requestsLoaded=true;try{console.warn('requests',e)}catch(_){}});
   db.collection('projects').onSnapshot(snap=>{projects=snap.docs.map(d=>({id:d.id,...d.data()}));projLoaded=true;render();if(pEditing&&pEditing!=='new'&&!projects.find(x=>x.id===pEditing)){closeP();toast('Этот проект удалили')}},fail);
@@ -3852,7 +3879,7 @@ for(const n of ['openEditor','openX','openQ','openP']){const f=window[n];if(type
    в календаре) → Продано. */
 const KASPI_API='https://kaspi-orders.design-onegin.workers.dev';
 var KASPI_STATE={NEW:'новый',SIGN_REQUIRED:'на подписании',PICKUP:'самовывоз',DELIVERY:'своя доставка',KASPI_DELIVERY:'Kaspi Доставка',ARCHIVE:'архив'};
-var K_STAGES=[['packing','Упаковка'],['handover','Передача'],['shipped','На доставке'],['sold','Продано']];
+var K_STAGES=[['packing','Упаковка'],['handover','Передача'],['shipped','На доставке'],['sold','Продано'],['products','Товары']];
 var K_FIELDS=['code','state','status','total','created','completed','plannedDelivery','deliveryMode','isKaspiDelivery','assembled','preOrder','waybill','waybillNumber','transmitted','transmitPlan','returned','deliveryCost','customer','phone','town'];
 var kaspiSync={busy:false,at:0,tried:0,err:'',count:0,stats:null};
 var kaspiOrders=[],kaspiMeta={},kaspiLoaded=false,kaspiDbErr='',kaspiCol=null;
@@ -3867,7 +3894,7 @@ function kVirtualOrders(){
   return sold.map(k=>{
     const day=kDay(k.created||k.completed);
     const items=k.items&&k.items.length?k.items:[{name:'Заказ Kaspi № '+k.code,qty:1,price:+k.total||0}];
-    const lines=items.map(i=>({name:i.name||'Товар Kaspi',qty:+i.qty||1,price:+i.price||0,date:day,cost:cost.get(String(i.name||'').trim().toLowerCase())||0}));
+    const lines=items.map(i=>({name:i.name||'Товар Kaspi',qty:+i.qty||1,price:+i.price||0,date:day,cost:kpCostOf(i)??cost.get(String(i.name||'').trim().toLowerCase())??0}));
     if(!lines.some(l=>l.price))lines[0].price=Math.round((+k.total||0)/lines[0].qty);
     return {id:'kv-'+k.id,virtual:true,client:'Kaspi',service:'kaspi',source:'kaspi',status:'done',price:+k.total||0,paid:+k.total||0,
       receivedAt:day,createdAt:+k.created||+k.completed||0,items:[],
@@ -4133,7 +4160,9 @@ function renderKaspiPage(){
   $('k-kpi').innerHTML=`<div class="kpi"><span>Упаковать</span><b>${g.packing.length}</b><small>${g.handover.length?'и передать курьеру: '+g.handover.length:'к передаче курьеру нет'}</small></div>
     <div class="kpi"><span>Ждём оплату</span><b>${money(waitPay)}</b><small>${g.shipped.length} ${plural(g.shipped.length,'заказ','заказа','заказов')} в доставке, за вычетом ${Math.round(KASPI_FEE*100)}%</small></div>
     <div class="kpi"><span>Продано за ${esc(monthName(ym))}</span><b>${money(gM)}</b><small>${qM} ${plural(qM,'товар','товара','товаров')} в ${soldM.length} ${plural(soldM.length,'заказе','заказах','заказах')}, по дате заказа. Отменённые и возвраты не считаются${cM.length?': '+cM.length+' на '+money(cM.reduce((s,k)=>s+kGoods(k),0)):''}</small></div>`;
-  $('k-tabs').innerHTML=K_STAGES.map(([id,l])=>`<button type="button" class="chip${kTab===id?' on':''}" data-ktab="${id}" role="tab" aria-selected="${kTab===id}">${l} <em>${g[id].length}</em></button>`).join('');
+  const kpA=kpAlerts().length;
+  $('k-tabs').innerHTML=K_STAGES.map(([id,l])=>`<button type="button" class="chip${kTab===id?' on':''}" data-ktab="${id}" role="tab" aria-selected="${kTab===id}">${l} <em>${id==='products'?kpAll().length:g[id].length}</em>${id==='products'&&kpA?`<span class="kp-dot" title="У конкурентов дешевле">${kpA}</span>`:''}</button>`).join('');
+  if(kTab==='products'){renderKaspiProducts();return}
   /* инструменты вкладки */
   let tools='';
   if(kTab==='handover'&&g.handover.length){
@@ -4180,6 +4209,233 @@ $('p-kaspi').addEventListener('change',e=>{
 });
 $('k-sync').addEventListener('click',()=>syncKaspiOrders(true));
 
+/* ---------- Kaspi: товары ----------
+   Официальный API Kaspi список товаров и остатки не отдаёт, поэтому товары берутся
+   из прайс-листа (файл из кабинета продавца: XML или Excel) и из заказов. В карточке
+   вписывается себестоимость и код товара Kaspi; по коду воркер проверяет цены других
+   продавцов (как на странице товара) и учёт предупреждает, если у конкурента дешевле.
+   Карточки хранятся в той же коллекции kaspi_orders с kind:'product' (id prod-…). */
+var kaspiProducts=[],kpView={f:'sale',q:''},kpBusy=false,kpMsg='',kpLastAlerts=-1;
+const KP_CITIES=[['551010000','Павлодар'],['750000000','Алматы'],['710000000','Астана'],['511010000','Шымкент'],['351010000','Караганда'],['631010000','Усть-Каменогорск']];
+const kpNorm=s=>String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+const kpId=x=>'prod-'+String(x.code?'c'+x.code:x.sku?'s'+x.sku:'n'+kpNorm(x.name)).replace(/[^\wа-яё-]+/gi,'_').slice(0,140);
+const kpCity=()=>kaspiMeta.cityId||'551010000';
+const kpShop=()=>kpNorm(kaspiMeta.shopName||'');
+function kpCodeFrom(v){const m=String(v||'').match(/(\d{5,15})\/?(\?.*)?$/)||String(v||'').match(/(\d{5,15})/);return m?m[1]:''}
+
+/* все товары: сохранённые карточки + товары из заказов */
+function kpAll(){
+  const list=kaspiProducts.map(p=>({...p,sold:0,sold30:0,lastPrice:null,lastSold:0}));
+  const byCode=new Map(),bySku=new Map(),byName=new Map();
+  const idx=p=>{if(p.code)byCode.set(String(p.code),p);if(p.sku)bySku.set(kpNorm(p.sku),p);if(p.name)byName.set(kpNorm(p.name),p)};
+  list.forEach(idx);
+  const now=Date.now();
+  (kaspiOrders||[]).forEach(k=>{
+    const st=kStage(k);if(st==='cancel')return;
+    (k.items||[]).forEach(i=>{
+      let p=(i.code&&byCode.get(String(i.code)))||(i.sku&&bySku.get(kpNorm(i.sku)))||byName.get(kpNorm(i.name));
+      if(!p){p={id:kpId(i),virtual:true,name:i.name||'Товар',code:i.code||'',sku:i.sku||'',sold:0,sold30:0,lastPrice:null,lastSold:0,src:'orders'};list.push(p);idx(p)}
+      else{if(!p.code&&i.code)p.code=i.code}
+      const q=+i.qty||1,t=+k.created||0;p.sold+=q;if(now-t<30*864e5)p.sold30+=q;
+      if(t>=p.lastSold){p.lastSold=t;if(i.price)p.lastPrice=+i.price}
+    });
+  });
+  list.forEach(p=>{
+    p.ourPrice=+p.price||p.lastPrice||0;
+    p.status=p.available===true?'sale':p.available===false?'off':p.src==='orders'||p.virtual?'orders':'sale';
+    const o=p.offers||{};
+    p.alert=!!(o.minOther&&p.ourPrice&&o.minOther<p.ourPrice);
+  });
+  return list.sort((a,b)=>(b.alert-a.alert)||(b.sold30-a.sold30)||(b.sold-a.sold)||String(a.name).localeCompare(String(b.name),'ru'));
+}
+const kpAlerts=()=>kpAll().filter(p=>p.alert&&p.status!=='off');
+/* себестоимость товара для прибыли: сначала карточка товара, потом закупки и прайс */
+function kpCostOf(item){
+  const n=kpNorm(item.name);
+  const p=kaspiProducts.find(x=>x.cost!=null&&x.cost!==''&&((item.code&&String(x.code)===String(item.code))||(item.sku&&kpNorm(x.sku)===kpNorm(item.sku))||kpNorm(x.name)===n));
+  return p?+p.cost:null;
+}
+/* прибыль с одной штуки: цена − комиссия − средняя доставка − себестоимость */
+function kpUnit(p){
+  if(!p.ourPrice)return null;
+  const sold=(kaspiOrders||[]).filter(k=>kStage(k)==='sold'&&k.deliveryCost!=null&&+k.total);
+  const dRate=sold.length?sold.reduce((s,k)=>s+kDeliv(k),0)/sold.reduce((s,k)=>s+(+k.total||0),0):0;
+  const hold=kCom()==null?p.ourPrice*KASPI_FEE:p.ourPrice*(kCom()/100+dRate);
+  const cost=p.cost!=null&&p.cost!==''?+p.cost:null;
+  return {hold:Math.round(hold),cost,profit:cost==null?null:Math.round(p.ourPrice-hold-cost)};
+}
+async function kpSave(p,patch){
+  const base={...p};['virtual','sold','sold30','lastPrice','lastSold','ourPrice','status','alert','id'].forEach(k=>delete base[k]);
+  const doc={...base,kind:'product',name:p.name||'',code:p.code||'',sku:p.sku||'',...patch,updatedAt:Date.now()};
+  await kaspiCol.doc(p.id||kpId(doc)).set(doc);
+}
+async function kpSaveMeta(patch){const meta={...kaspiMeta};delete meta.id;await kaspiCol.doc('_meta').set({...meta,...patch})}
+
+/* ---------- прайс-лист из кабинета: XML или Excel ---------- */
+function kpLoadXlsx(){
+  if(window.XLSX)return Promise.resolve();
+  return new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=ok;sc.onerror=()=>no(new Error('Не загрузилась библиотека Excel. Проверьте интернет.'));document.head.appendChild(sc)});
+}
+const kpYes=v=>/^(yes|да|true|1|в наличии|есть)$/i.test(String(v??'').trim());
+function kpParseXml(text){
+  const doc=new DOMParser().parseFromString(text,'application/xml');
+  return [...doc.getElementsByTagName('offer')].map(o=>{
+    const g=t=>{const e=o.getElementsByTagName(t)[0];return e?e.textContent.trim():''};
+    const av=[...o.getElementsByTagName('availability')];
+    const stock=av.reduce((s,a)=>s+(+a.getAttribute('stockCount')||0),0);
+    const anyYes=av.some(a=>kpYes(a.getAttribute('available')));
+    let price=+g('price')||0;if(!price){const cp=o.getElementsByTagName('cityprice')[0];if(cp)price=+cp.textContent||0}
+    return {sku:o.getAttribute('sku')||'',name:g('model')||g('name'),brand:g('brand'),price,stock:av.some(a=>a.hasAttribute('stockCount'))?stock:null,available:av.length?anyYes:true};
+  }).filter(x=>x.name||x.sku);
+}
+function kpParseRows(rows){
+  const h=rows.findIndex(r=>r&&r.some(c=>/sku|артикул/i.test(String(c||'')))&&r.some(c=>/модел|наимен|назван|model|name|товар/i.test(String(c||''))));
+  if(h<0)throw new Error('Не нашёл в файле столбцы «SKU/Артикул» и «Модель/Название». Скачайте прайс-лист в кабинете Kaspi: Управление товарами → Скачать.');
+  const H=rows[h].map(c=>String(c||'').trim());
+  const col=re=>H.findIndex(c=>re.test(c));
+  const cSku=col(/sku|артикул/i),cName=col(/модел|наимен|назван|^model$|^name$|товар/i),cBrand=col(/бренд|brand/i),cPrice=col(/цена|price/i),cCode=col(/код.*kaspi|kaspi.*(код|id)|ссылк|url/i);
+  const cStock=H.map((c,i)=>/остат|stock|кол-?во|количество/i.test(c)?i:-1).filter(i=>i>=0);
+  const cAv=H.map((c,i)=>/^pp\d+$|налич|available|доступ/i.test(c)?i:-1).filter(i=>i>=0&&!cStock.includes(i));
+  return rows.slice(h+1).filter(r=>r&&(r[cSku]||r[cName])).map(r=>{
+    const st=cStock.map(i=>r[i]).filter(v=>v!==''&&v!=null&&!isNaN(+v));
+    const avs=cAv.map(i=>r[i]).filter(v=>v!==''&&v!=null);
+    const stock=st.length?st.reduce((s,v)=>s+(+v||0),0):(avs.length&&avs.every(v=>!isNaN(+v))?avs.reduce((s,v)=>s+(+v||0),0):null);
+    const available=avs.length?avs.some(v=>kpYes(v)||(+v>0)):(stock!=null?stock>0:true);
+    return {sku:String(r[cSku]??'').trim(),name:String(r[cName]??'').trim(),brand:cBrand>=0?String(r[cBrand]??'').trim():'',price:cPrice>=0?+String(r[cPrice]??'').replace(/[^\d.,]/g,'').replace(',','.')||0:0,
+      code:cCode>=0?kpCodeFrom(r[cCode]):'',stock,available};
+  });
+}
+async function kpImport(file){
+  if(!file||!canWrite)return;
+  kpBusy=true;kpMsg='Читаем прайс-лист…';render();
+  try{
+    let list;
+    if(/\.xml$/i.test(file.name)||/xml/.test(file.type))list=kpParseXml(await file.text());
+    else{await kpLoadXlsx();const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});list=kpParseRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''}))}
+    if(!list.length)throw new Error('В файле не нашлось товаров.');
+    const seen=new Set();let n=0;
+    for(const x of list){
+      const ex=kaspiProducts.find(p=>(x.sku&&kpNorm(p.sku)===kpNorm(x.sku))||(x.code&&String(p.code)===String(x.code))||(!x.sku&&kpNorm(p.name)===kpNorm(x.name)));
+      const p=ex||{id:kpId(x)};seen.add(p.id);
+      await kpSave({...p},{name:x.name||(ex&&ex.name)||'',sku:x.sku||(ex&&ex.sku)||'',code:x.code||(ex&&ex.code)||'',brand:x.brand||(ex&&ex.brand)||'',price:x.price||(ex&&ex.price)||0,
+        stock:x.stock,available:x.available,src:'pricelist',importedAt:Date.now()});n++;
+    }
+    /* товаров, которых нет в новом прайс-листе, на Kaspi больше нет в продаже */
+    for(const p of kaspiProducts.filter(p=>p.src==='pricelist'&&!seen.has(p.id)&&p.available!==false))await kpSave(p,{available:false});
+    await kpSaveMeta({priceListAt:Date.now(),priceListName:file.name});
+    toast('Прайс-лист загружен: '+n+' '+plural(n,'товар','товара','товаров'));kpMsg='';
+  }catch(e){kpMsg='⚠ '+((e&&e.message)||'Не получилось прочитать файл')}
+  finally{kpBusy=false;render()}
+}
+
+/* ---------- цены конкурентов ---------- */
+async function kpCheckPrices(manual){
+  if(kpBusy||!canWrite||!kaspiLoaded||kaspiDbErr)return;
+  const list=kpAll().filter(p=>p.code&&p.status!=='off');
+  if(!list.length){if(manual)toast('Впишите товарам код Kaspi (из ссылки на товар), чтобы проверять цены');return}
+  kpBusy=true;kpMsg='Проверяем цены конкурентов…';render();
+  let errs=0,oldWorker=false;
+  try{
+    for(let i=0;i<list.length;i+=25){
+      const part=list.slice(i,i+25);
+      const d=await kApi({mode:'offers',ids:part.map(p=>p.code).join(','),city:kpCity()});
+      if(!d||!d.offers){oldWorker=true;break}
+      for(const p of part){
+        const r=d.offers[p.code];if(!r||r.error){errs++;await kpSave(p,{offers:{...(p.offers||{}),err:r?String(r.error):'нет ответа',at:Date.now()}});continue}
+        const shop=kpShop();
+        const all=(r.offers||[]).filter(o=>o.price!=null).sort((a,b)=>a.price-b.price);
+        const mine=shop?all.filter(o=>kpNorm(o.merchantName)===shop):[];
+        const other=shop?all.filter(o=>kpNorm(o.merchantName)!==shop):all.filter(o=>!(p.ourPrice&&o.price===p.ourPrice&&all.filter(x=>x.price===o.price).length===1));
+        await kpSave(p,{offers:{at:Date.now(),n:all.length,min:all[0]?all[0].price:null,minName:all[0]?all[0].merchantName:'',
+          minOther:other[0]?other[0].price:null,minOtherName:other[0]?other[0].merchantName:'',ours:mine[0]?mine[0].price:null,
+          top:all.slice(0,5).map(o=>({n:o.merchantName,p:o.price})),err:''}});
+      }
+      kpMsg=`Проверяем цены: ${Math.min(i+25,list.length)} из ${list.length}`;render();
+    }
+    if(oldWorker)throw new Error(K_OLD_WORKER);
+    await kpSaveMeta({pricesAt:Date.now()});
+    kpMsg=errs?`Kaspi не ответил по ${errs} ${plural(errs,'товару','товарам','товарам')}. Попробуйте позже.`:'';
+    const a=kpAlerts().length;
+    if(manual||a)toast(a?'У конкурентов дешевле: '+a+' '+plural(a,'товар','товара','товаров'):'Цены проверены, дешевле никого нет');
+  }catch(e){kpMsg='⚠ '+((e&&e.message)||'Не получилось проверить цены')}
+  finally{kpBusy=false;render()}
+}
+
+/* ---------- вкладка «Товары» ---------- */
+function kpCard(p){
+  const u=kpUnit(p),o=p.offers||{};
+  const st={sale:['в продаже','--st-ready'],off:['снят с продажи','--muted'],orders:['из заказов','--st-design']}[p.status];
+  const link=p.code?`https://kaspi.kz/shop/p/-${encodeURIComponent(p.code)}/`:`https://kaspi.kz/shop/search/?text=${encodeURIComponent(p.name||'')}`;
+  const comp=!p.code?`<span class="kp-dim">Впишите код Kaspi, чтобы следить за ценой</span>`
+    :o.err?`<span class="kp-dim">Kaspi не ответил${o.at?', '+fmtDate(kDay(o.at)):''}</span>`
+    :o.at?(p.alert?`<b class="kp-bad">У «${esc(o.minOtherName||'конкурента')}» дешевле: ${money(o.minOther)}</b><span class="kp-dim">на ${money(p.ourPrice-o.minOther)} ниже вашей, продавцов: ${o.n}</span>`
+      :`<b class="kp-ok">${o.minOther?'Ваша цена лучшая':'Конкурентов нет'}</b><span class="kp-dim">${o.minOther?'следующая цена '+money(o.minOther)+' у «'+esc(o.minOtherName)+'»':'продавцов: '+(o.n||0)}</span>`)
+    :`<span class="kp-dim">Цены ещё не проверялись</span>`;
+  return `<div class="kp${p.alert&&p.status!=='off'?' alert':''}" data-kp="${esc(p.id)}">
+    <div class="kp-h"><a class="kp-n" href="${esc(link)}" target="_blank" rel="noopener">${esc(p.name||'Без названия')} ↗</a><span class="kp-st" style="--sc:var(${st[1]})">${st[0]}</span></div>
+    <div class="kp-meta">${[p.sku?'SKU '+esc(p.sku):'',p.code?'код '+esc(p.code):'',p.brand?esc(p.brand):''].filter(Boolean).join(' · ')||'&nbsp;'}</div>
+    <div class="kp-g">
+      <div><small>Цена</small><b>${p.ourPrice?money(p.ourPrice):'—'}</b></div>
+      <div><small>В наличии</small><b>${p.stock!=null&&p.stock!==''?p.stock+' шт':p.status==='off'?'нет':'—'}</b></div>
+      <div><small>Продано</small><b>${p.sold} шт</b><span class="kp-dim">${p.sold30?'за 30 дней '+p.sold30:''}</span></div>
+      <div><small>С 1 шт</small><b class="${u&&u.profit!=null&&u.profit<0?'kp-bad':''}">${u&&u.profit!=null?money(u.profit):'—'}</b><span class="kp-dim">${u?'удержания '+money(u.hold):''}</span></div>
+    </div>
+    <div class="kp-in">
+      <label>Себестоимость<span class="suffix"><input type="number" min="0" step="1" inputmode="numeric" data-kpcost value="${p.cost??''}" placeholder="закуп + карго" ${canWrite?'':'disabled'}><span>₸</span></span></label>
+      <label>Код товара Kaspi<input data-kpcode value="${esc(p.code||'')}" placeholder="или вставьте ссылку" autocomplete="off" ${canWrite?'':'disabled'}></label>
+    </div>
+    <div class="kp-c">${comp}</div>
+  </div>`;
+}
+function renderKaspiProducts(){
+  /* пока человек вписывает себестоимость или код, не перерисовываем — иначе пропадёт набранное */
+  const ae=document.activeElement;if(ae&&ae.matches&&ae.matches('#p-kaspi input[data-kpcost],#p-kaspi input[data-kpcode],#kp-shop'))return;
+  const all=kpAll(),alerts=all.filter(p=>p.alert&&p.status!=='off');
+  const F=[['sale','В продаже',x=>x.status==='sale'],['off','Сняты',x=>x.status==='off'],['orders','Только в заказах',x=>x.status==='orders'],['alert','Дешевле у конкурента',x=>x.alert&&x.status!=='off'],['nocost','Без себестоимости',x=>x.cost==null||x.cost===''],['all','Все',()=>true]];
+  const f=F.find(x=>x[0]===kpView.f)||F[0],q=kpNorm(kpView.q);
+  const rows=all.filter(f[2]).filter(p=>!q||kpNorm([p.name,p.sku,p.code,p.brand].join(' ')).includes(q));
+  const pc=kaspiMeta.pricesAt?fmtDate(kDay(kaspiMeta.pricesAt))+' в '+new Date(kaspiMeta.pricesAt).toTimeString().slice(0,5):'';
+  $('k-tools').innerHTML=`<div class="kfees">
+    <div class="kf-h"><h3>Товары на Kaspi</h3>
+      <label class="btn soft sm kp-file">${kpBusy?'Подождите…':'Загрузить прайс-лист'}<input type="file" id="kp-file" accept=".xml,.xlsx,.xls,.csv" hidden ${kpBusy||!canWrite?'disabled':''}></label>
+      <button class="btn primary sm" type="button" id="kp-check" ${kpBusy||!canWrite?'disabled':''}>Проверить цены конкурентов</button></div>
+    <p class="knote">Kaspi не отдаёт список товаров и остатки через API, поэтому их берём из прайс-листа: в кабинете продавца «Управление товарами» → скачать прайс-лист (Excel или XML) и загрузить сюда. Товары из заказов появляются сами. ${kaspiMeta.priceListAt?'Прайс-лист загружен '+fmtDate(kDay(kaspiMeta.priceListAt))+'.':''} ${pc?'Цены конкурентов проверены '+pc+', дальше сами раз в 6 часов, пока учёт открыт.':''}</p>
+    <div class="kp-set">
+      <label>Город для цен<span class="selwrap"><select id="kp-city">${KP_CITIES.map(([v,l])=>`<option value="${v}"${kpCity()===v?' selected':''}>${l}</option>`).join('')}</select></span></label>
+      <label>Ваш магазин на Kaspi<input id="kp-shop" value="${esc(kaspiMeta.shopName||'')}" placeholder="название, как у покупателей" autocomplete="off"></label>
+    </div>
+    ${kpMsg?`<div class="knote">${esc(kpMsg)}</div>`:''}
+    ${alerts.length?`<div class="kclean"><span><b>У конкурентов дешевле: ${alerts.length} ${plural(alerts.length,'товар','товара','товаров')}.</b> ${alerts.slice(0,3).map(p=>esc(p.name)).join(', ')}${alerts.length>3?' и др.':''}</span><button class="btn soft sm" type="button" data-kpf="alert">Показать</button></div>`:''}
+    <div class="ktools"><div class="chips">${F.map(([id,l,fn])=>`<button type="button" class="chip${kpView.f===id?' on':''}" data-kpf="${id}">${l} <em>${all.filter(fn).length}</em></button>`).join('')}</div>
+      <label class="search kp-q"><input id="kp-q" type="search" placeholder="Поиск товара" value="${esc(kpView.q)}" aria-label="Поиск товара"></label></div>
+  </div>`;
+  $('k-list').innerHTML=rows.length?`<div class="kp-grid">${rows.map(kpCard).join('')}</div>`
+    :`<div class="empty"><h3>${all.length?'Здесь пусто':'Товаров пока нет'}</h3><p>${all.length?'Под этот фильтр товаров нет.':'Загрузите прайс-лист из кабинета Kaspi или дождитесь заказов: товары из них появятся сами.'}</p></div>`;
+}
+$('p-kaspi').addEventListener('click',e=>{
+  const t=e.target;
+  const f=t.closest('[data-kpf]');if(f){kpView.f=f.dataset.kpf;render();return}
+  if(t.closest('#kp-check')){kpCheckPrices(true);return}
+});
+$('p-kaspi').addEventListener('change',async e=>{
+  const t=e.target;
+  if(t.id==='kp-file'){kpImport(t.files[0]);t.value='';return}
+  if(t.id==='kp-city'){kpSaveMeta({cityId:t.value}).then(()=>toast('Город сохранён. Нажмите «Проверить цены конкурентов».'));return}
+  if(t.id==='kp-shop'){kpSaveMeta({shopName:t.value.trim()}).then(()=>toast('Название магазина сохранено'));return}
+  const card=t.closest('[data-kp]');if(!card||!canWrite)return;
+  const p=kpAll().find(x=>x.id===card.dataset.kp);if(!p)return;
+  try{
+    if(t.matches('[data-kpcost]')){const v=t.value.trim();await kpSave(p,{cost:v===''?null:Math.max(0,+v)});toast('Себестоимость сохранена')}
+    if(t.matches('[data-kpcode]')){const c=t.value.trim()?kpCodeFrom(t.value):'';if(t.value.trim()&&!c){toast('Не нашёл код: вставьте ссылку на товар Kaspi или число из неё');return}
+      await kpSave(p,{code:c,offers:null});toast(c?'Код сохранён, проверяем цену…':'Код убран');if(c)setTimeout(()=>kpCheckPrices(false),600)}
+  }catch(er){toast(handleWriteError(er))}
+});
+$('p-kaspi').addEventListener('input',e=>{if(e.target.id==='kp-q'){kpView.q=e.target.value;const pos=e.target.selectionStart;render();const q=$('kp-q');if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}}});
+$('p-kaspi').addEventListener('focusout',()=>setTimeout(()=>{if(page==='kaspi'&&kTab==='products')render()},200));
+document.addEventListener('click',e=>{if(e.target.closest('[data-kpalert]')){kTab='products';kpView.f='alert'}},true);
+/* цены конкурентов — сами раз в 6 часов, пока учёт открыт */
+setInterval(()=>{if(kaspiLoaded&&!kaspiDbErr&&canWrite&&!kpBusy&&Date.now()-(+kaspiMeta.pricesAt||0)>6*3600e3&&Date.now()-(kpCheckPrices._t||0)>30*60e3){kpCheckPrices._t=Date.now();kpCheckPrices(false)}},60*1000);
+
 /* ---------- блок на главной ---------- */
 function renderKaspiWidget(){
   const list=$('w-kaspi-list');if(!list||!kaspiSync)return;
@@ -4189,7 +4445,8 @@ function renderKaspiWidget(){
   if(kaspiDbErr){list.innerHTML=`<div class="w-empty">Нужно обновить правила базы Firestore (строка kaspi_orders). Подробности в разделе Kaspi.</div>`;$('w-kaspi-note').textContent='';return}
   const row=(k,st)=>`<button type="button" class="mrow kq" data-go="kaspi"><span class="kq-t"><b>${esc(kWhat(k))}</b><small>№ ${esc(k.code)}${k.transmitPlan&&st==='packing'?', передать до '+fmtDate(kDay(k.transmitPlan)):''}</small></span><span class="kq-r"><b>${money(k.total)}</b><span class="kq-st">${st==='packing'?'упаковать':'передать'}</span></span></button>`;
   const todo=[...g.packing.map(k=>row(k,'packing')),...g.handover.map(k=>row(k,'handover'))];
-  list.innerHTML=(todo.length?todo.slice(0,5).join(''):`<div class="w-empty">${kaspiSync.at?'Упаковывать сейчас нечего.':'Заказы с Kaspi подтянутся сюда сами.'}</div>`)
+  const kpA=kpAlerts();
+  list.innerHTML=(kpA.length?`<button type="button" class="mrow kq" data-go="kaspi" data-kpalert><span class="kq-t"><b>У конкурентов дешевле: ${kpA.length} ${plural(kpA.length,'товар','товара','товаров')}</b><small>${esc(kpA.slice(0,2).map(p=>p.name).join(', '))}</small></span><span class="kq-r"><span class="kq-st">цены</span></span></button>`:'')+(todo.length?todo.slice(0,5).join(''):`<div class="w-empty">${kaspiSync.at?'Упаковывать сейчас нечего.':'Заказы с Kaspi подтянутся сюда сами.'}</div>`)
     +`<button type="button" class="kq-more" data-go="kaspi">${g.shipped.length?'В доставке '+g.shipped.length+', ждём '+money(g.shipped.reduce((s,k)=>s+kNet(k),0))+' · ':''}Все заказы Kaspi</button>`;
   const t=kaspiSync.at?new Date(kaspiSync.at):null;
   $('w-kaspi-note').textContent=kaspiSync.err?'⚠ '+kaspiSync.err:t?'Проверено в '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+', обновляется само каждые 10 минут.':'';
