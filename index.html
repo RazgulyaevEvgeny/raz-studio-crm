@@ -3397,9 +3397,13 @@ async function saveOrder(ev){
       await ref.set({...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||''});
       if(rq){try{await db.doc('requests/'+rq.id).update({status:'accepted',orderId:ref.id,orderNum:nextNum,handledBy:ROLE().name||'',handledAt:now})}catch(_){}}
       toast(rq?'Заявка подтверждена: заказ № '+String(nextNum).padStart(3,'0'):'Заказ № '+String(nextNum).padStart(3,'0')+' добавлен');
+      waNotify(ref.id);
     }else{
-      await db.doc('orders/'+editing).update({...d,updatedAt:now});
+      const id=editing,prev=edOrig;
+      await db.doc('orders/'+id).update({...d,updatedAt:now});
       toast('Сохранено');
+      if(prev&&prev.status!==d.status)waNotify(id);
+      else if(prev&&prev.deadline&&d.deadline>prev.deadline&&!CLOSED.has(d.status))waNotify(id,'delay');
     }
     const kept=new Set(edFiles.map(f=>f.id));
     if(assets)edFilesOrig.filter(id=>!kept.has(id)).forEach(id=>assets.delete(id).catch(()=>{}));
@@ -3408,8 +3412,19 @@ async function saveOrder(ev){
   finally{btn.disabled=false}
 }
 async function quickStatus(id,status){
-  try{await db.doc('orders/'+id).update({status,updatedAt:Date.now()});toast('Статус: '+ST[status].label)}
+  try{await db.doc('orders/'+id).update({status,updatedAt:Date.now()});toast('Статус: '+ST[status].label);waNotify(id)}
   catch(e){toast(handleWriteError(e));render()}
+}
+/* уведомление клиенту в WhatsApp (воркер whatsapp-bot): что и кому отправить, решает воркер по заказу */
+const WA_API='https://whatsapp-bot.design-onegin.workers.dev';
+async function waNotify(id,event='status'){
+  const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;if(!u||!id)return;
+  try{
+    const r=await fetch(WA_API,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await u.getIdToken()},body:JSON.stringify({id,event})});
+    const d=await r.json().catch(()=>({}));
+    if(d.ok)setTimeout(()=>toast('WhatsApp: клиенту отправлено уведомление'),1500);
+    else if(d.error==='whatsapp')setTimeout(()=>toast('WhatsApp не отправил сообщение: '+(d.message||'код '+d.status)),1500);
+  }catch(_){/* воркер ещё не подключён — молча пропускаем */}
 }
 async function delOrder(){
   try{await db.doc('orders/'+editing).delete();closeEditor();toast('Заказ удалён')}
