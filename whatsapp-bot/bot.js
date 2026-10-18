@@ -7,6 +7,7 @@
 //   - если менеджер сам написал клиенту, бот молчит в этом чате 30 минут, а потом снова отвечает на новые вопросы;
 //   - если бот позвал менеджера, а тот не ответил за 10 минут, бот извиняется перед клиентом (один раз);
 //   - готовит для учёта сводку «Менеджер Анна» (утром и по кнопке «Обновить») и отвечает на вопросы сотрудников (anna.js);
+//   - присылает команде в Telegram уведомления: Анна зовёт менеджера, новый заказ Kaspi (notify.js);
 //   - сообщения не отмечает прочитанными, чтобы менеджеры видели новые чаты в телефоне.
 // Состояние и QR-код: http://localhost:3777 на этом компьютере.
 //
@@ -20,8 +21,9 @@ import { dirname, join } from 'node:path';
 import makeWASocket, { downloadMediaMessage, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, isJidGroup, isJidBroadcast, isLidUser, isPnUser } from 'baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, PAUSE_AFTER_MANAGER } from './brain.js';
+import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, botToken, PAUSE_AFTER_MANAGER } from './brain.js';
 import { makeDigest, digestDue, answerQuestions } from './anna.js';
+import { startNotify } from './notify.js';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = join(DIR, 'auth');          // вход в WhatsApp; если удалить папку — снова попросит QR
@@ -164,7 +166,10 @@ async function answer(jid, chatId, phone) {
   const call = reply.handoff && !chat.needsManager;
   await appendChat(fs, chatId, { role: 'bot', text: ok ? reply.text : '[не отправлено] ' + reply.text, at: Date.now() },
     call ? { needsManager: true, managerReason: reply.handoff, managerCalledAt: Date.now(), busyNoticeAt: 0 } : {});
-  if (call) log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
+  if (call) {
+    log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
+    notify?.managerNeeded({ name: chat.name, phone }, reply.handoff).catch(() => {});
+  }
 }
 
 // Отправка с паузой «печатает…», как у живого человека, и не чаще одного сообщения в SEND_GAP
@@ -239,6 +244,7 @@ async function checkWaitingChats() {
 
 /* ---------- «Менеджер Анна» в учёте: сводка и вопросы ---------- */
 
+let notify = null; // уведомления команде в Telegram (notify.js)
 let annaBusy = false, annaErr = '';
 async function checkAnna() {
   if (annaBusy || missing.length || !aiOn) return;
@@ -328,8 +334,9 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   setInterval(processOutbox, OUTBOX_EVERY);
   setInterval(checkWaitingChats, 60e3);
   setInterval(checkAnna, 30e3);
+  if (!missing.length) notify = startNotify(fs, env, () => botToken(env), log);
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
-  for (const f of ['brain.js', 'anna.js', 'bot.js', '.env']) {
+  for (const f of ['brain.js', 'anna.js', 'notify.js', 'bot.js', '.env']) {
     watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
       if (cur.mtimeMs !== prev.mtimeMs) { log('Файл ' + f + ' изменился, перезапускаюсь'); process.exit(0); }
     });
