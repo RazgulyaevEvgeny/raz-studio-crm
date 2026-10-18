@@ -13,11 +13,22 @@
 <meta name="apple-mobile-web-app-title" content="CRM студии">
 <meta name="application-name" content="CRM студии">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+
+.kfees{background:var(--tile);border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.kfees .kpis{gap:8px}.kfees .kpi{background:var(--paper)}
+.kfees .kpi small{line-height:1.5}
+.kf-h{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.kf-h h3{margin:0 auto 0 0;font:800 18px var(--f);letter-spacing:-.02em}
+.kf-in{display:inline-flex;align-items:center;gap:8px;font:600 13.5px var(--f)}
+.kf-in .suffix{width:120px}
+.kf-in input{width:100%;border:0;background:var(--paper);border-radius:12px;min-height:40px;padding:0 30px 0 12px;font:500 15px var(--f);color:var(--ink)}
+.kf-in input:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
 /* ---------- раздел Kaspi ---------- */
 .klist{display:flex;flex-direction:column;gap:8px}
 .krow{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,minmax(96px,auto)) auto;gap:6px 18px;align-items:center;background:var(--tile);border-radius:18px;padding:12px 16px}
 .krow.k-handover{grid-template-columns:auto minmax(0,1fr) repeat(2,minmax(96px,auto)) auto}
-.krow.k-sold,.krow.k-cancel{grid-template-columns:minmax(0,1fr) minmax(96px,auto) auto}
+.krow.k-sold{grid-template-columns:minmax(0,1fr) repeat(2,minmax(96px,auto)) auto}
+.krow.k-cancel{grid-template-columns:minmax(0,1fr) minmax(96px,auto) auto}
 .kr-m{min-width:0;display:flex;flex-direction:column;gap:2px}
 .kr-m b{font:600 15px var(--f);overflow-wrap:anywhere}
 .kr-m small,.kr-d small,.kr-pay small{color:var(--muted);font-size:12.5px}
@@ -3859,10 +3870,15 @@ function kVirtualOrders(){
     const lines=items.map(i=>({name:i.name||'Товар Kaspi',qty:+i.qty||1,price:+i.price||0,date:day,cost:cost.get(String(i.name||'').trim().toLowerCase())||0}));
     if(!lines.some(l=>l.price))lines[0].price=Math.round((+k.total||0)/lines[0].qty);
     return {id:'kv-'+k.id,virtual:true,client:'Kaspi',service:'kaspi',source:'kaspi',status:'done',price:+k.total||0,paid:+k.total||0,
-      receivedAt:day,createdAt:+k.completed||+k.created||0,items:[],expenses:[],kaspi:lines,kaspiFee:KASPI_FEE*100};
+      receivedAt:day,createdAt:+k.completed||+k.created||0,items:[],
+      expenses:kCom()!=null&&kDeliv(k)?[{id:'d',title:'Доставка Kaspi',amount:kDeliv(k)}]:[],kaspi:lines,kaspiFee:kCom()!=null?kCom():KASPI_FEE*100};
   });
 }
-const kNet=k=>Math.round((+k.total||0)*(1-KASPI_FEE));
+/* комиссия Kaspi в % (из кабинета, «Взаиморасчёты»): пока не указана, считаем 30% на всё сразу, включая доставку */
+const kCom=()=>{const v=kaspiMeta&&kaspiMeta.commissionPct;return v===''||v==null||isNaN(+v)?null:+v};
+const kDeliv=k=>Math.max(0,+k.deliveryCost||0);
+const kHold=k=>kCom()==null?Math.round((+k.total||0)*KASPI_FEE):Math.round((+k.total||0)*kCom()/100+kDeliv(k));
+const kNet=k=>Math.round((+k.total||0)-kHold(k));
 const kWhat=k=>(k.items&&k.items.length)?k.items.map(i=>(i.name||'Товар')+(+i.qty>1?' × '+i.qty:'')).join(', '):'Заказ № '+(k.code||'');
 const kPayDay=k=>kDay(k.plannedDelivery)||kDay(k.transmitPlan);
 function kStage(k){
@@ -4071,10 +4087,25 @@ function kRow(k,stage){
     mid=d('Заказан',fd(k.created))+d('Доставят',fd(k.plannedDelivery));
     act=`<span class="kr-pay"><small>ждём оплату</small><b>${money(kNet(k))}</b></span>`;
   }else{
-    mid=d(stage==='sold'?'Выдан':'Заказан',fd(stage==='sold'?(k.completed||k.created):k.created));
+    mid=d(stage==='sold'?'Выдан':'Заказан',fd(stage==='sold'?(k.completed||k.created):k.created))
+      +(stage==='sold'?d('Доставка Kaspi',k.deliveryCost!=null?money(kDeliv(k))+(+k.total?' · '+(kDeliv(k)/k.total*100).toFixed(1).replace('.',',')+'%':''):'нет данных'):'');
     act=`<b class="kr-sum">${money(k.total)}</b>`;
   }
   return `<div class="krow k-${stage}">${pre}<div class="kr-m"><b>${esc(kWhat(k))}</b><small>№ ${esc(k.code)}${who?' · '+esc(who):''}${stage!=='shipped'&&stage!=='sold'&&stage!=='cancel'?' · '+money(k.total):''}</small></div>${mid}<div class="kr-a">${act}</div></div>`;
+}
+function kFeesBlock(sold){
+  const now=Date.now();
+  const calc=list=>{const rev=list.reduce((s,k)=>s+(+k.total||0),0),known=list.filter(k=>k.deliveryCost!=null),del=known.reduce((s,k)=>s+kDeliv(k),0),
+    revK=known.reduce((s,k)=>s+(+k.total||0),0),com=kCom()!=null?rev*kCom()/100:null;
+    return {n:list.length,rev,del,dp:revK?del/revK*100:null,nk:known.length,com,cp:kCom(),tp:rev&&com!=null&&revK?(com/rev*100+del/revK*100):null}};
+  const pc=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
+  const col=(t,c)=>`<div class="kpi"><span>${t}</span><b>${c.rev?pc(c.tp??null):'—'}</b><small>${c.n} ${plural(c.n,'заказ','заказа','заказов')} на ${money(c.rev)}<br>доставка ${money(c.del)} (${pc(c.dp)})${c.nk<c.n?', есть данные по '+c.nk:''}<br>комиссия ${c.com!=null?money(c.com)+' ('+pc(c.cp)+')':'не указана'}</small></div>`;
+  const last30=sold.filter(k=>now-(+k.completed||+k.created||0)<=30*864e5),last10=sold.slice(0,10);
+  return `<div class="kfees"><div class="kf-h"><h3>Удержания Kaspi: доставка и комиссия</h3>
+    <label class="kf-in">Комиссия Kaspi <span class="suffix"><input id="k-com" type="number" min="0" max="50" step="0.1" inputmode="decimal" value="${kCom()??''}" placeholder="из кабинета"><span>%</span></span></label>
+    <button class="btn soft sm" type="button" id="k-com-save" ${canWrite?'':'disabled'}>Сохранить</button></div>
+    <p class="knote">Доставку Kaspi присылает по каждому заказу, она вычитается из прибыли. Комиссию Kaspi через API не отдаёт: посмотрите процент в кабинете продавца (раздел «Взаиморасчёты» или «Тарифы») и впишите сюда.${kCom()==null?' Пока комиссия не указана, прибыль считается с вычетом 30% на всё сразу.':''}</p>
+    <div class="kpis">${col('Последние 10 заказов',calc(last10))}${col('За 30 дней',calc(last30))}${col('За всё время',calc(sold))}</div></div>`;
 }
 function renderKaspiPage(){
   const list=$('k-list');if(!list)return;
@@ -4108,7 +4139,7 @@ function renderKaspiPage(){
       +(kPrintFails.length?`<div class="kclean"><span>Эти накладные Kaspi не отдал, откройте их в кабинете: ${kPrintFails.map(k=>`<a href="${esc(k.waybill)}" target="_blank" rel="noopener">№ ${esc(k.code)}</a>`).join(', ')}</span></div>`:'');
   }
   if(kTab==='shipped'&&g.shipped.length)tools=`<div class="knote">Оплата с Kaspi ожидается в день доставки — эти суммы стоят в календаре.</div>`;
-  if(kTab==='sold')tools=`<div class="ktools"><span class="knote">${kHist.msg?esc(kHist.msg):kaspiMeta.historyDone?'История загружена из Kaspi'+(kaspiMeta.historyAt?' '+fmtDate(kDay(kaspiMeta.historyAt)):'')+'.':'История ещё не загружена.'}</span>
+  if(kTab==='sold')tools=kFeesBlock(g.sold)+`<div class="ktools"><span class="knote">${kHist.msg?esc(kHist.msg):kaspiMeta.historyDone?'История загружена из Kaspi'+(kaspiMeta.historyAt?' '+fmtDate(kDay(kaspiMeta.historyAt)):'')+'.':'История ещё не загружена.'}</span>
     <button class="btn soft sm" type="button" id="k-hist" ${kHist.busy||!canWrite?'disabled':''}>${kHist.busy?'Загружаем…':kaspiMeta.historyDone?'Загрузить заново':'Загрузить историю'}</button></div>`;
   $('k-tools').innerHTML=tools;
   /* список */
@@ -4132,6 +4163,9 @@ $('p-kaspi').addEventListener('click',e=>{
   const cl=t.closest('[data-kclean]');if(cl){const v=cl.dataset.kclean;if(v==='ask')kCleanAsk=true;else if(v==='no')kCleanAsk=false;else{kCleanLedger();return}render();return}
   if(t.closest('#k-print')){kPrint();return}
   if(t.closest('#k-hist')){loadKaspiHistory(true);return}
+  if(t.closest('#k-com-save')){const v=$('k-com').value.trim().replace(',','.');const n=v===''?null:Math.min(50,Math.max(0,+v));
+    if(v!==''&&isNaN(n)){toast('Впишите процент числом, например 12');return}
+    const meta={...kaspiMeta};delete meta.id;meta.commissionPct=n;kaspiCol.doc('_meta').set(meta).then(()=>toast(n==null?'Комиссия убрана, считаем 30%':'Комиссия Kaspi сохранена: '+String(n).replace('.',',')+'%')).catch(e=>toast(handleWriteError(e)));return}
 });
 $('p-kaspi').addEventListener('change',e=>{
   const t=e.target;
