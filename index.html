@@ -4306,10 +4306,12 @@ function kpParseRows(rows){
   return rows.slice(h+1).filter(r=>r&&(r[cSku]||r[cName])).map(r=>{
     const st=cStock.map(i=>r[i]).filter(v=>v!==''&&v!=null&&!isNaN(+v));
     const avs=cAv.map(i=>r[i]).filter(v=>v!==''&&v!=null);
-    const stock=st.length?st.reduce((s,v)=>s+(+v||0),0):(avs.length&&avs.every(v=>!isNaN(+v))?avs.reduce((s,v)=>s+(+v||0),0):null);
+    /* склады PP1–PP5: число — остаток на складе, yes/no — есть или нет */
+    const avNum=avs.filter(v=>String(v).trim()!==''&&!isNaN(+v));
+    const stock=st.length?st.reduce((s,v)=>s+(+v||0),0):(avNum.length?avNum.reduce((s,v)=>s+(+v||0),0):null);
     const available=avs.length?avs.some(v=>kpYes(v)||(+v>0)):(stock!=null?stock>0:true);
     return {sku:String(r[cSku]??'').trim(),name:String(r[cName]??'').trim(),brand:cBrand>=0?String(r[cBrand]??'').trim():'',price:cPrice>=0?+String(r[cPrice]??'').replace(/[^\d.,]/g,'').replace(',','.')||0:0,
-      code:cCode>=0?kpCodeFrom(r[cCode]):'',stock,available};
+      code:cCode>=0?kpCodeFrom(r[cCode]):kpItemCode({sku:String(r[cSku]??'').trim()}),stock,available};
   });
 }
 async function kpImport(file){
@@ -4322,19 +4324,24 @@ async function kpImport(file){
       for(const sn of wb.SheetNames){try{list=kpParseRows(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:''}));if(list.length)break}catch(e){err=err||e}}
       if(!list.length&&err)throw err}
     if(!list.length)throw new Error('В файле не нашлось товаров.');
+    const n=await kpApplyList(list,file.name);
+    toast('Прайс-лист загружен: '+n+' '+plural(n,'товар','товара','товаров'));kpMsg='';
+  }catch(e){kpMsg='⚠ '+((e&&e.message)||'Не получилось прочитать файл')}
+  finally{kpBusy=false;render()}
+}
+/* записать товары из прайс-листа в карточки */
+async function kpApplyList(list,fileName){
     const seen=new Set();let n=0;
     for(const x of list){
-      const ex=kaspiProducts.find(p=>(x.sku&&kpNorm(p.sku)===kpNorm(x.sku))||(x.code&&String(p.code)===String(x.code))||(!x.sku&&kpNorm(p.name)===kpNorm(x.name)));
+      const ex=kaspiProducts.find(p=>(x.sku&&kpNorm(p.sku)===kpNorm(x.sku))||(x.code&&String(p.code)===String(x.code)))||kaspiProducts.find(p=>kpNorm(p.name)===kpNorm(x.name));
       const p=ex||{id:kpId(x)};seen.add(p.id);
       await kpSave({...p},{name:x.name||(ex&&ex.name)||'',sku:x.sku||(ex&&ex.sku)||'',code:x.code||(ex&&ex.code)||'',brand:x.brand||(ex&&ex.brand)||'',price:x.price||(ex&&ex.price)||0,
         stock:x.stock,available:x.available,src:'pricelist',importedAt:Date.now()});n++;
     }
     /* товаров, которых нет в новом прайс-листе, на Kaspi больше нет в продаже */
     for(const p of kaspiProducts.filter(p=>p.src==='pricelist'&&!seen.has(p.id)&&p.available!==false))await kpSave(p,{available:false});
-    await kpSaveMeta({priceListAt:Date.now(),priceListName:file.name});
-    toast('Прайс-лист загружен: '+n+' '+plural(n,'товар','товара','товаров'));kpMsg='';
-  }catch(e){kpMsg='⚠ '+((e&&e.message)||'Не получилось прочитать файл')}
-  finally{kpBusy=false;render()}
+    await kpSaveMeta({priceListAt:Date.now(),priceListName:fileName||''});
+    return n;
 }
 
 /* ---------- цены конкурентов ---------- */
