@@ -3886,7 +3886,8 @@ const kPayDay=k=>kDay(k.plannedDelivery)||kDay(k.transmitPlan);
 function kStage(k){
   if(!k)return '';
   if(k.status==='COMPLETED')return 'sold';
-  if(k.state==='ARCHIVE'||['CANCELLED','CANCELLING','RETURNED','KASPI_DELIVERY_RETURN_REQUESTED'].includes(k.status))return 'cancel';
+  /* отменённые, возвраты и «отменены при доставке» (вернулись на склад) — денег за них нет, в продажах не считаем */
+  if(k.state==='ARCHIVE'||k.returned||['CANCELLED','CANCELLING','RETURNED','KASPI_DELIVERY_RETURN_REQUESTED'].includes(k.status))return 'cancel';
   if(k.transmitted)return 'shipped';
   if(k.assembled||k.waybill||(k.assembledAt&&Date.now()-k.assembledAt<3*3600e3))return k.state==='KASPI_DELIVERY'?'handover':'shipped';
   return 'packing';
@@ -4127,10 +4128,11 @@ function renderKaspiPage(){
   /* цифры */
   const ym=curMonth(),soldM=[...g.packing,...g.handover,...g.shipped,...g.sold].filter(k=>kDay(k.created).slice(0,7)===ym);
   const qM=soldM.reduce((s,k)=>s+kQty(k),0),gM=soldM.reduce((s,k)=>s+kGoods(k),0);
+  const cM=g.cancel.filter(k=>kDay(k.created).slice(0,7)===ym);
   const waitPay=g.shipped.reduce((s,k)=>s+kNet(k),0);
   $('k-kpi').innerHTML=`<div class="kpi"><span>Упаковать</span><b>${g.packing.length}</b><small>${g.handover.length?'и передать курьеру: '+g.handover.length:'к передаче курьеру нет'}</small></div>
     <div class="kpi"><span>Ждём оплату</span><b>${money(waitPay)}</b><small>${g.shipped.length} ${plural(g.shipped.length,'заказ','заказа','заказов')} в доставке, за вычетом ${Math.round(KASPI_FEE*100)}%</small></div>
-    <div class="kpi"><span>Продано за ${esc(monthName(ym))}</span><b>${money(gM)}</b><small>${qM} ${plural(qM,'товар','товара','товаров')} в ${soldM.length} ${plural(soldM.length,'заказе','заказах','заказах')}, по дате заказа, без отменённых — как в аналитике Kaspi</small></div>`;
+    <div class="kpi"><span>Продано за ${esc(monthName(ym))}</span><b>${money(gM)}</b><small>${qM} ${plural(qM,'товар','товара','товаров')} в ${soldM.length} ${plural(soldM.length,'заказе','заказах','заказах')}, по дате заказа. Отменённые и возвраты не считаются${cM.length?': '+cM.length+' на '+money(cM.reduce((s,k)=>s+kGoods(k),0)):''}</small></div>`;
   $('k-tabs').innerHTML=K_STAGES.map(([id,l])=>`<button type="button" class="chip${kTab===id?' on':''}" data-ktab="${id}" role="tab" aria-selected="${kTab===id}">${l} <em>${g[id].length}</em></button>`).join('');
   /* инструменты вкладки */
   let tools='';
