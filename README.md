@@ -54,3 +54,9 @@
 Переменные: `GEMINI_API_KEY` (Secret, бесплатно с aistudio.google.com), `FIREBASE_PROJECT` = `raz-studio-5a486`, `ALLOWED_ORIGIN` = `https://razgulyaevevgeny.github.io`, `IG_TOKEN` (Secret, токен Instagram). Привязки: Workers AI с именем `AI` (запасной ИИ и фоны для креативов), по желанию KV `IG_KV` (токен Instagram продлевается сам).
 
 Инструкции агентов хранятся на сайте, поэтому код воркера обновлять больше не нужно — только если меняется сам сервер.
+
+## Заказы Kaspi (воркер `kaspi-orders`)
+
+На главной есть блок «Заказы Kaspi». Пока учёт открыт, он раз в 10 минут спрашивает воркер `kaspi-orders`, какие заказы активны в магазине Kaspi (за последние 14 дней), и сам заводит новые как заказы учёта: услуга «Kaspi», клиент, телефон, товары, сумма, дата доставки. Дублей не бывает: у заказа из Kaspi постоянный номер документа `kaspi-<id>`. Статус в учёте дальше ведут сотрудники, с Kaspi обновляется только пометка о его состоянии. Кнопка «Обновить с Kaspi» проверяет сразу.
+
+Код воркера: `kaspi-worker/worker.js` (Cloudflare → Workers → `kaspi-orders` → Edit code). Переменные: `KASPI_TOKEN` (Secret, токен API из кабинета продавца Kaspi), `FIREBASE_API_KEY` (apiKey из `firebase-config.js`), `ALLOWED_EMAILS` (почты сотрудников через запятую).

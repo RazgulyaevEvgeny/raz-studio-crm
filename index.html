@@ -1178,6 +1178,12 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
           <button class="done-tog" type="button" id="req-done-tog" hidden></button>
           <div class="mini" id="req-done" hidden></div>
         </div>
+        <div class="w" id="w-kaspi">
+          <div class="w-h"><h2>Заказы Kaspi <span class="c" id="w-kaspi-c"></span></h2><a class="go" href="https://kaspi.kz/mc/" target="_blank" rel="noopener" title="Кабинет продавца Kaspi">Кабинет ↗</a></div>
+          <button class="btn soft sm rq-imp" type="button" id="kaspi-sync-btn">Обновить с Kaspi</button>
+          <div class="mini" id="w-kaspi-list"></div>
+          <small class="bw-note" id="w-kaspi-note"></small>
+        </div>
         <div class="w">
           <div class="w-h"><h2>Задачи <span class="c" id="w-boss-c"></span></h2><button class="go" type="button" id="boss-add-btn">+ Задача</button></div>
           <form class="tform" id="boss-form" hidden novalidate>
@@ -2163,7 +2169,7 @@ function render(){
   const keep=[...document.querySelectorAll('textarea[data-cmtext]')].map(x=>[x.dataset.cmtext,x.value,document.activeElement===x]);
   renderNav();
   renderReqBadge();
-  if(page==='home'){renderHome();renderReqWidget();packHome()}
+  if(page==='home'){renderHome();renderReqWidget();renderKaspiWidget();packHome()}
   if(page==='orders')renderOrders();
   if(page==='calendar')renderCalendar();
   if(page==='office'||page==='supplies')renderLedger(page);
@@ -2310,7 +2316,7 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 /* ---------- раскладка главной ---------- */
 let packW=[];
 function initPack(){
-  packW=[$('w-today').closest('.w'),$('w-print'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-projects'),$('w-office'),$('w-supplies')];
+  packW=[$('w-today').closest('.w'),$('w-print'),$('w-cal'),$('boss-list').closest('.w'),$('w-req'),$('w-kaspi'),$('w-projects'),$('w-office'),$('w-supplies')];
   $('w-today').closest('.w').id||=('w-today-box');$('boss-list').closest('.w').id||=('w-boss');
   packW.forEach(w=>{w.classList.add('mfold');const h=w.querySelector(':scope>.w-h');if(h)h.insertAdjacentHTML('beforeend','<span class="mf-x" aria-hidden="true"></span>')});mfApply();
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);packW.forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
@@ -3669,6 +3675,67 @@ $('task-form').addEventListener('submit',async e=>{
   for(const k of ['office','supplies'])db.collection(k).onSnapshot(snap=>{ledger[k]=snap.docs.map(d=>({id:d.id,...d.data()}));ledgerLoaded[k]=true;render();if(xEditing&&xEditing!=='new'&&xKind===k&&!ledger[k].find(r=>r.id===xEditing)){closeX();toast('Эту запись удалили')}},fail);
 })();
 for(const n of ['openEditor','openX','openQ','openP']){const f=window[n];if(typeof f==='function')window[n]=function(...a){const r=f.apply(this,a);enhanceSelects();return r}}
+/* ---------- заказы из магазина Kaspi (воркер kaspi-orders) ----------
+   Воркер забирает активные заказы Kaspi за 14 дней. Новые заказы сами становятся
+   заказами учёта (услуга «Kaspi», id документа kaspi-<id Kaspi>, поэтому дублей нет).
+   У уже созданных обновляется только состояние на Kaspi — статус в учёте ведут сотрудники. */
+const KASPI_API='https://kaspi-orders.design-onegin.workers.dev';
+var KASPI_STATE={NEW:'новый',SIGN_REQUIRED:'на подписании',PICKUP:'самовывоз',DELIVERY:'доставка',KASPI_DELIVERY:'Kaspi Доставка'};
+var kaspiSync={busy:false,at:0,tried:0,err:''};
+async function syncKaspiOrders(manual){
+  if(kaspiSync.busy||!db||!canWrite||!loaded)return;
+  const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;if(!u)return;
+  kaspiSync.busy=true;kaspiSync.tried=Date.now();renderKaspiWidget();
+  try{
+    const r=await fetch(KASPI_API,{headers:{Authorization:'Bearer '+await u.getIdToken()}});
+    let data={};try{data=await r.json()}catch(_){}
+    if(!r.ok)throw new Error(r.status===403?'Вашей почты нет в списке ALLOWED_EMAILS воркера kaspi-orders.'
+      :data.error==='kaspi'?'Kaspi не ответил (код '+data.status+'). Проверьте токен в воркере kaspi-orders.'
+      :'Воркер kaspi-orders не ответил (код '+r.status+').');
+    let made=0,num=orders.reduce((m,o)=>Math.max(m,o.num||0),0);
+    for(const k of data.orders||[]){
+      const id='kaspi-'+k.id,ex=orders.find(o=>o.id===id);
+      if(ex){if(ex.kaspiState!==k.state)await ordersCol.doc(id).update({kaspiState:k.state,updatedAt:Date.now()});continue}
+      const day=k.created?ds(new Date(k.created)):todayStr();
+      const items=k.items&&k.items.length?k.items:[{name:'Заказ Kaspi № '+k.code,qty:1,price:+k.total||0}];
+      const lines=items.map(i=>{const c=kFindCost(i.name||'');return{id:uid(),name:i.name||'Товар Kaspi',price:+i.price||0,qty:+i.qty||1,date:day,cost:c?+c.cost:0,src:'Kaspi № '+k.code}});
+      const now=Date.now();
+      await ordersCol.doc(id).set({
+        client:'Kaspi'+(k.customer?' · '+k.customer:''),phone:k.phone||'',service:'kaspi',customService:'',
+        items:[],unit:'шт',expenses:[],files:[],kaspi:lines,kaspiFee:KASPI_FEE*100,
+        qty:lines.reduce((s,l)=>s+l.qty,0),desc:lines.map(l=>l.name+(l.qty>1?' × '+l.qty:'')).join(', '),
+        status:'new',price:+k.total||0,paid:+k.total||0,owner:'',
+        notes:'Заказ Kaspi № '+k.code+(KASPI_STATE[k.state]?', '+KASPI_STATE[k.state]:''),
+        receivedAt:day,deadlineFrom:'',deadline:k.plannedDelivery?ds(new Date(k.plannedDelivery)):'',
+        num:++num,createdAt:now,updatedAt:now,createdBy:'Kaspi',
+        source:'kaspi',kaspiId:k.id,kaspiCode:k.code,kaspiState:k.state
+      });made++;
+    }
+    kaspiSync.at=Date.now();kaspiSync.err='';
+    if(manual||made)toast(made?'С Kaspi пришло новых заказов: '+made:'Новых заказов на Kaspi нет');
+  }catch(e){
+    kaspiSync.err=(e&&e.message)||'Нет связи с Kaspi';
+    if(manual)toast(kaspiSync.err);
+  }finally{kaspiSync.busy=false;renderKaspiWidget();if(page==='home')packHome()}
+}
+function renderKaspiWidget(){
+  const list=$('w-kaspi-list');if(!list||!kaspiSync)return;
+  const act=orders.filter(o=>o.source==='kaspi'&&!CLOSED.has(o.status)).sort((a,b)=>(b.num||0)-(a.num||0));
+  $('w-kaspi-c').textContent=act.length||'';
+  list.innerHTML=act.length?act.slice(0,6).map(orderMini).join('')
+    :`<div class="w-empty">${kaspiSync.at?'Активных заказов Kaspi нет. Новые появятся здесь сами.':'Заказы с Kaspi подтянутся сюда сами.'}</div>`;
+  const b=$('kaspi-sync-btn');b.disabled=kaspiSync.busy||!canWrite;b.textContent=kaspiSync.busy?'Обновляем…':'Обновить с Kaspi';
+  const t=kaspiSync.at?new Date(kaspiSync.at):null;
+  $('w-kaspi-note').textContent=kaspiSync.err?'⚠ '+kaspiSync.err
+    :t?'Проверено в '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+', обновляется само каждые 10 минут.':'';
+}
+$('kaspi-sync-btn').addEventListener('click',()=>syncKaspiOrders(true));
+/* первая проверка — как только загрузятся заказы, дальше раз в 10 минут, пока учёт открыт */
+(function kaspiAuto(){
+  const tick=()=>{if(loaded&&db&&canWrite&&Date.now()-kaspiSync.tried>=10*60*1000-5000)syncKaspiOrders(false)};
+  const wait=setInterval(()=>{if(loaded&&db){clearInterval(wait);tick();setInterval(tick,60*1000)}},1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+})();
 /* ---------- принтеры в мастерской (bambu-watch) ---------- */
 const PRINT_API='https://bambu-watch.design-onegin.workers.dev/api/status';
 function printWhen(ts){
