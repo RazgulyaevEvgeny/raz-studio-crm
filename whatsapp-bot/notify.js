@@ -1,11 +1,12 @@
 // Бот команды в Telegram (бесплатно). Уведомления:
 //   - Анна позвала менеджера в WhatsApp;
-//   - пришёл новый заказ Kaspi (бот сам раз в 5 минут спрашивает воркер kaspi-orders, учёт открывать не нужно).
+//   - пришёл новый заказ Kaspi (бот сам раз в 5 минут спрашивает воркер kaspi-orders, учёт открывать не нужно);
+//   - то, о чём попросили Аню: «оповести, когда принтер закончит печать / закроется заказ / выполнят задачу» (раз в минуту).
 // Подписка: открыть своего бота в Telegram и отправить ему /start. Список подписчиков — wa_anna/telegram.
 // Подписчики могут писать или наговаривать Ане вопросы и задачи (ответ готовит tgAssistant в anna.js).
 // В .env: TELEGRAM_BOT_TOKEN (выдаёт @BotFather). Для Kaspi почта бота (BOT_EMAIL) должна быть в ALLOWED_EMAILS воркера.
 
-import { tgAssistant } from './anna.js';
+import { tgAssistant, checkWatches } from './anna.js';
 import { transcribe } from './brain.js';
 
 const KASPI_API = 'https://kaspi-orders.design-onegin.workers.dev';
@@ -78,9 +79,9 @@ export function startNotify(fs, env, idToken, log) {
     }
     if (!text.trim()) return;
     tg(env, 'sendChatAction', { chat_id: m.chat.id, action: 'typing' }).catch(() => {});
-    const { reply, task } = await tgAssistant(fs, env, text, callOf(me));
+    const { reply, task, watch } = await tgAssistant(fs, env, text, callOf(me), m.chat.id);
     await tg(env, 'sendMessage', { chat_id: m.chat.id, text: (voice ? `🎤 «${text.slice(0, 300)}»\n\n` : '') + reply, disable_web_page_preview: true });
-    log('Telegram: Аня ответила', me.name || me.chat, task ? '(записала задачу: ' + task.title + ')' : '');
+    log('Telegram: Аня ответила', me.name || me.chat, task ? '(записала задачу: ' + task.title + ')' : watch ? '(поставила оповещение: ' + watch.kind + ' ' + watch.ref + ')' : '');
   }
 
   // Один раз после обновления: тестовое уведомление всем подписчикам, чтобы проверить, что всё доходит
@@ -108,6 +109,23 @@ export function startNotify(fs, env, idToken, log) {
       log('Telegram: тестовое уведомление', c.name, r.ok ? 'отправлено' : 'не доставлено — ' + (r.description || ''));
     }
     await fs.patch('wa_anna/telegram', { chats: list, broadcast: BROADCAST });
+  }
+
+  // Оповещения по просьбе: каждому — в его чат
+  let watchErr = '';
+  async function watchTick() {
+    try {
+      for (const { w, text } of await checkWatches(fs)) {
+        const me = (await subscribers()).find(c => c.chat === w.chat) || { name: w.who };
+        const r = await tg(env, 'sendMessage', { chat_id: w.chat, text: `🔔 ${callOf(me)}, ${text}.` });
+        log('Telegram: оповещение', me.name || w.chat, '—', text, r.ok ? '' : '(не доставлено: ' + (r.description || '') + ')');
+      }
+      watchErr = '';
+    } catch (e) {
+      const why = String(e?.message || e);
+      if (why !== watchErr) log('ошибка проверки оповещений', why);
+      watchErr = why;
+    }
   }
 
   let kaspiErr = '';
@@ -142,6 +160,7 @@ export function startNotify(fs, env, idToken, log) {
     testOnce().catch(e => log('Telegram: тест не отправлен', e?.message || e));
     setTimeout(() => broadcastOnce().catch(e => log('Telegram: тест не отправлен', e?.message || e)), 3 * 60e3);
     checkKaspi();
+    setInterval(watchTick, 60e3);
     setInterval(checkKaspi, KASPI_EVERY);
   }
   return {

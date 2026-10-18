@@ -622,6 +622,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .tico{display:inline-flex;align-items:center;gap:2px}
 .ttm{display:inline-flex;align-items:center;gap:4px;vertical-align:1px;margin-right:6px;padding:2px 8px 2px 6px;border-radius:999px;background:color-mix(in srgb,var(--blue) 14%,var(--paper));color:var(--blue);font:700 11.5px/1.3 var(--f);white-space:nowrap}
 .ttm svg{width:12px;height:12px}
+.tanya{display:inline-flex;align-items:center;gap:4px;vertical-align:-3px;margin-right:6px;padding:1px 8px 1px 1px;border-radius:999px;background:color-mix(in srgb,var(--blue) 14%,var(--paper));color:var(--blue);font:700 10.5px/1.3 var(--f);white-space:nowrap}
+.tanya img{width:18px;height:18px;border-radius:50%;object-fit:cover;object-position:50% 20%;background:color-mix(in srgb,var(--blue) 30%,var(--paper))}
 .tsrc{display:inline-block;vertical-align:2px;margin-right:6px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--task) 16%,var(--paper));color:var(--task);font:700 10.5px/1.3 var(--f);white-space:nowrap}
 .ttime-ed{grid-column:1/-1;display:flex;flex-direction:column;gap:8px;background:var(--tile);border-radius:12px;padding:10px 12px}
 .task.boss.now .ttime-ed{background:var(--paper)}
@@ -1994,6 +1996,9 @@ const SEND_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 /* время задачи: «13:00–17:00», «с 13:00» или «до 17:00» */
 /* задачи блока «от начальства»: от руководителя (kind boss) и от менеджера (kind mgr — проходят по старым правилам базы) */
 const isMgrTask=t=>!!t&&(t.kind==='mgr'||t.src==='mgr');
+/* задачу поставила Аня (из Telegram) — у неё маленький аватар */
+const isAnyaTask=t=>!!t&&/^Аня/.test(t.by||'');
+const ANYA_TAG='<span class="tanya" title="Задачу поставила Аня"><img src="anna-avatar-0.webp" alt="">Аня</span>';
 const isBossBlock=t=>!!t&&(t.kind==='boss'||t.kind==='mgr');
 const tmTxt=t=>t.time&&t.timeTo?t.time+'–'+t.timeTo:t.time?(isBossBlock(t)?'с ':'')+t.time:t.timeTo?'до '+t.timeTo:'';
 const CLOCK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
@@ -2338,7 +2343,7 @@ function bossRow(t){const b=bossParts(t),id=esc(t.id),open=openBoss.has(t.id)||e
   const icons=(nc?`<span title="Комментарии">${CM_ICON}${nc}</span>`:'')+(nf?`<span title="Файлы">${CLIP_ICON}${nf}</span>`:'')+(t.desc?'<span class="bt-d" title="Есть описание">≡</span>':'');
   return `<div class="btask${open?' open':''}${t.done?' done':''}${now?' now':''}" style="--sc:var(${b.st.c})">
     <button type="button" class="bt-h" data-btog="${id}" aria-expanded="${open}">
-      <span class="bt-t"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${isMgrTask(t)?'<span class="tsrc">от менеджера</span>':''}${esc(t.title)}</b>
+      <span class="bt-t"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${isAnyaTask(t)?ANYA_TAG:isMgrTask(t)?'<span class="tsrc">от менеджера</span>':''}${esc(t.title)}</b>
         <small><span class="bt-st">${esc(b.st.label.toLowerCase())}</span>${dl?` · <span class="${b.late?'late':''}">${esc(dl)}</span>`:''}${t.who?' · кому: '+esc(t.who):''}</small></span>
       ${icons?`<span class="bt-i">${icons}</span>`:''}<span class="bt-x">${CHEV}</span>
     </button>
@@ -2364,7 +2369,7 @@ function todayTask(t){
   }
   return `<div class="tday${open?' open':''}${t.done?' done':''}" style="--sc:var(${boss?'--boss':'--task'})">
     <div class="tday-h">${lead}
-      <button type="button" class="tday-t" data-ttog="${id}" aria-expanded="${open}"><b>${esc(t.title)}</b><small><span class="k">${boss?'от начальства':'задача'}</span>${meta.filter(Boolean).map(x=>' · <span class="'+(late&&/просроч/.test(x)?'late':'')+'">'+esc(x)+'</span>').join('')}</small></button>
+      <button type="button" class="tday-t" data-ttog="${id}" aria-expanded="${open}"><b>${isAnyaTask(t)?ANYA_TAG:''}${esc(t.title)}</b><small><span class="k">${boss?'от начальства':'задача'}</span>${meta.filter(Boolean).map(x=>' · <span class="'+(late&&/просроч/.test(x)?'late':'')+'">'+esc(x)+'</span>').join('')}</small></button>
       ${icons?`<span class="tday-i">${icons}</span>`:''}
       <button type="button" class="tday-x" data-ttog="${id}" aria-expanded="${open}" aria-label="${open?'Свернуть задачу':'Подробнее о задаче'}">${CHEV}</button>
     </div>${body}</div>`;
@@ -2379,7 +2384,7 @@ function taskRow(t){
   const del=askDel===t.id?`<button class="tdel ask" type="button" data-tdel="${esc(t.id)}" data-confirm="1">Удалить</button>`:`<button class="tdel" type="button" data-tdel="${esc(t.id)}" aria-label="Удалить задачу">×</button>`;
   return `<div class="task${t.done?' done':''}">
     <button class="chk" type="button" data-tdone="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${t.done?'Вернуть в работу':'Отметить выполненной'}" ${canWrite?'':'disabled'}>${CHECK}</button>
-    <span class="tt"><b>${esc(t.title)}</b>${meta.length?`<small class="${late?'late':''}">${esc(meta.join(', '))}</small>`:''}</span>
+    <span class="tt"><b>${isAnyaTask(t)?ANYA_TAG:''}${esc(t.title)}</b>${meta.length?`<small class="${late?'late':''}">${esc(meta.join(', '))}</small>`:''}</span>
     ${canWrite?del:'<span></span>'}</div>`;
 }
 
