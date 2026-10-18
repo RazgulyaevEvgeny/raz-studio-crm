@@ -5,6 +5,7 @@
 //   - отвечает клиентам ИИ-консультантом на бесплатном Google Gemini (логика в brain.js);
 //   - отправляет клиентам уведомления о заказах: учёт кладёт задание в коллекцию wa_outbox, бот его забирает;
 //   - если менеджер сам написал клиенту с телефона, бот молчит в этом чате 12 часов;
+//   - если бот позвал менеджера, а тот не ответил за 10 минут, бот извиняется перед клиентом (один раз);
 //   - сообщения не отмечает прочитанными, чтобы менеджеры видели новые чаты в телефоне.
 // Состояние и QR-код: http://localhost:3777 на этом компьютере.
 //
@@ -28,6 +29,8 @@ const MAX_AGE = 30 * 60e3;                   // на сообщения стар
 const OUTBOX_EVERY = 15e3;                   // как часто проверять задания на уведомления
 const OUTBOX_TTL = 7 * 24 * 3600e3;          // задания старше недели выбрасываем
 const SEND_GAP = 3e3;                        // не чаще одного сообщения в 3 секунды
+const MANAGER_WAIT = 10 * 60e3;              // если менеджер не ответил за 10 минут после вызова — извиняемся перед клиентом
+const BUSY_TEXT = 'К сожалению, у менеджеров сейчас большая загрузка. Как только они освободятся, они вам ответят.';
 
 const env = process.env;
 const missing = ['FIREBASE_API_KEY', 'FIREBASE_PROJECT', 'BOT_EMAIL', 'BOT_PASSWORD'].filter(k => !String(env[k] || '').trim());
@@ -102,14 +105,14 @@ async function onMessage(m) {
     if (sentByBot.has(m.key.id)) return;
     // Менеджер написал клиенту сам (с телефона или компьютера): бот уступает чат
     await appendChat(fs, chatId, { role: 'manager', text, at }, {
-      phone, needsManager: false, botPausedUntil: Date.now() + PAUSE_AFTER_MANAGER * 3600e3,
+      phone, jid, needsManager: false, busyNoticeAt: 0, botPausedUntil: Date.now() + PAUSE_AFTER_MANAGER * 3600e3,
     });
     clearTimeout(pending.get(chatId));
     return;
   }
 
   await appendChat(fs, chatId, { role: 'client', text, at, id: m.key.id || '' }, {
-    phone, unread: true, ...(m.pushName ? { name: m.pushName } : {}),
+    phone, jid, unread: true, ...(m.pushName ? { name: m.pushName } : {}),
   });
   if (!aiOn || Date.now() - at > MAX_AGE) return;
 
@@ -130,7 +133,7 @@ async function answer(jid, chatId, phone) {
   let ok = true;
   try { await send(jid, reply.text, true); } catch (e) { ok = false; log('не отправлено', e?.message || e); }
   await appendChat(fs, chatId, { role: 'bot', text: ok ? reply.text : '[не отправлено] ' + reply.text, at: Date.now() },
-    reply.handoff ? { needsManager: true, managerReason: reply.handoff, botPausedUntil: Date.now() + PAUSE_AFTER_MANAGER * 3600e3 } : {});
+    reply.handoff ? { needsManager: true, managerReason: reply.handoff, managerCalledAt: Date.now(), busyNoticeAt: 0, botPausedUntil: Date.now() + PAUSE_AFTER_MANAGER * 3600e3 } : {});
   if (reply.handoff) log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
 }
 
@@ -181,6 +184,27 @@ function textOf(message) {
   if (!kind) return null;
   const caption = m[kind].caption ? ': ' + m[kind].caption : '';
   return `[клиент прислал ${kinds[kind]}${caption}]`;
+}
+
+/* ---------- менеджер не ответил за 10 минут ---------- */
+
+async function checkWaitingChats() {
+  if (state.status !== 'online' || missing.length) return;
+  try {
+    const waiting = await fs.query('wa_chats', {
+      where: { fieldFilter: { field: { fieldPath: 'needsManager' }, op: 'EQUAL', value: { booleanValue: true } } },
+    });
+    for (const chat of waiting) {
+      if (chat.busyNoticeAt || !chat.managerCalledAt || Date.now() - chat.managerCalledAt < MANAGER_WAIT) continue;
+      const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
+      if (!jid) continue;
+      await send(jid, BUSY_TEXT, true);
+      await appendChat(fs, chat.id, { role: 'bot', text: BUSY_TEXT, at: Date.now() }, { busyNoticeAt: Date.now() });
+      log('Менеджер не ответил за 10 минут, клиенту', chat.phone || chat.id, 'отправлено извинение');
+    }
+  } catch (e) {
+    log('ошибка проверки ожидающих чатов', e?.message || e);
+  }
 }
 
 /* ---------- уведомления о заказах (задания от учёта в wa_outbox) ---------- */
@@ -250,6 +274,7 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   if (missing.length) log(state.note);
   connect().catch(e => log('ошибка подключения', e?.message || e));
   setInterval(processOutbox, OUTBOX_EVERY);
+  setInterval(checkWaitingChats, 60e3);
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
   for (const f of ['brain.js', 'bot.js', '.env']) {
     watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
