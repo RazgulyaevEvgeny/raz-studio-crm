@@ -48,6 +48,8 @@ const log = (...a) => console.log(new Date().toLocaleString('ru-RU'), ...a);
 let sock = null;
 const sentByBot = new Set();   // id сообщений, которые отправил сам бот (чтобы не принять их за ответ менеджера)
 const pending = new Map();     // чат → таймер ответа
+const answering = new Set();   // чаты, где Аня прямо сейчас думает и пишет ответ (чтобы не ответить дважды)
+const inbox = new Map();       // чат → очередь входящих: сообщения одного чата (альбом из нескольких фото) обрабатываем по одному
 
 /* ---------- подключение к WhatsApp ---------- */
 
@@ -91,7 +93,13 @@ async function connect() {
 
   sock.ev.on('messages.upsert', ({ messages, type }) => {
     if (type !== 'notify') return; // история переписки при первом подключении нам не нужна
-    for (const m of messages) onMessage(m).catch(e => log('ошибка обработки сообщения', e?.message || e));
+    for (const m of messages) {
+      // По одному на чат: иначе сообщения альбома одновременно перезаписывают переписку в учёте и часть теряется
+      const key = m.key?.remoteJid || '';
+      const next = (inbox.get(key) || Promise.resolve()).then(() => onMessage(m)).catch(e => log('ошибка обработки сообщения', e?.message || e));
+      inbox.set(key, next);
+      next.finally(() => { if (inbox.get(key) === next) inbox.delete(key); });
+    }
   });
 }
 
@@ -147,6 +155,14 @@ async function voiceText(m) {
 }
 
 async function answer(jid, chatId, phone) {
+  // Пока Аня думает над ответом (ИИ отвечает несколько секунд, потом «печатает…»), ежеминутная проверка
+  // видела, что последним писал клиент, и запускала второй такой же ответ. Теперь второй запуск просто пропускается.
+  if (answering.has(chatId)) return;
+  answering.add(chatId);
+  try { await answerNow(jid, chatId, phone); } finally { answering.delete(chatId); }
+}
+
+async function answerNow(jid, chatId, phone) {
   const chat = await fs.get('wa_chats/' + chatId);
   if (!chat || chat.lastRole !== 'client') return; // пока ждали, ответил менеджер
   if (skipped(chat)) return; // Аня уже решила, что на эти сообщения отвечать не нужно
@@ -240,7 +256,7 @@ async function checkWaitingChats() {
     });
     for (const chat of silent) {
       const age = Date.now() - (chat.updatedAt || 0);
-      if (pending.has(chat.id) || age < REPLY_DELAY || age > MAX_AGE || skipped(chat)) continue;
+      if (pending.has(chat.id) || answering.has(chat.id) || age < REPLY_DELAY || age > MAX_AGE || skipped(chat)) continue;
       const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
       if (!jid) continue;
       pending.set(chat.id, null); // отметка «уже отвечаем», чтобы следующая проверка не ответила второй раз
