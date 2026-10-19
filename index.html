@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261019110000">
+<meta name="app-build" content="20261019130000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -3401,15 +3401,29 @@ async function showInvoice({num,date,buyer:b,lines:L}){
   <div class="iv-line"></div>
   <div class="iv-sign">Исполнитель <i></i> /${esc(R.boss||INV_BOSS)}/ <em>М.П.</em></div>`;
   invTitle='Счет на оплату № '+num+' от '+isoToDM(date)+'.'+date.slice(0,4)+' '+b.name;
-  $('inv').hidden=false;invZoom();
+  $('inv').hidden=false;invZoom();invOpened();
 }
 let invTitle='',invOldTitle='';
 function invZoom(){const sh=$('inv-sheet');sh.style.zoom=Math.min(1,(innerWidth-24)/(sh.classList.contains('land')?1123:794)).toFixed(3)}
 const invFile=()=>invTitle.replace(/[\\/:*?"<>|«»]/g,'').replace(/\s+/g,' ').trim().slice(0,120)||'Документ';
 let pdfLibs=null;
 function loadPdfLibs(){return pdfLibs||(pdfLibs=Promise.all(['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'].map(u=>new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=u;sc.onload=ok;sc.onerror=()=>{pdfLibs=null;no(new Error('Не загрузилась библиотека PDF. Проверьте интернет.'))};document.head.appendChild(sc)}))))}
+// На телефоне файл отдаём через «Поделиться»: так его можно сохранить в Файлы или отправить в WhatsApp.
+let invPdfFile=null;
+const invTouch=()=>matchMedia('(pointer:coarse)').matches;
+function invOpened(){invPdfFile=null;$('inv-pdf').textContent='Скачать PDF';loadPdfLibs().catch(()=>{})}
+async function invShare(f){
+  try{await navigator.share({files:[f],title:f.name});return true}
+  catch(e){if(e&&e.name==='AbortError')return true;return false}
+}
+function invDownload(f){
+  const url=URL.createObjectURL(f),a=document.createElement('a');
+  a.href=url;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
 async function invPdf(){
-  const btn=$('inv-pdf'),lbl=btn.textContent;btn.disabled=true;btn.textContent='Готовлю…';
+  const btn=$('inv-pdf');
+  if(invPdfFile){await invShare(invPdfFile);return}
+  btn.disabled=true;btn.textContent='Готовлю…';let lbl='Скачать PDF';
   try{
     await loadPdfLibs();
     const sh=$('inv-sheet'),land=sh.classList.contains('land'),W=land?1123:794,pw=land?297:210,ph=land?210:297;
@@ -3426,8 +3440,10 @@ async function invPdf(){
       g.fillStyle='#fff';g.fillRect(0,0,pc.width,h);g.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
       if(y)pdf.addPage();pdf.addImage(pc.toDataURL('image/jpeg',.92),'JPEG',0,0,pw,h*pw/cv.width);
     }
-    const url=URL.createObjectURL(pdf.output('blob')),a=document.createElement('a');
-    a.href=url;a.download=invFile()+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    const f=new File([pdf.output('blob')],invFile()+'.pdf',{type:'application/pdf'});
+    if(invTouch()&&navigator.canShare&&navigator.canShare({files:[f]})){
+      if(!await invShare(f)){invPdfFile=f;lbl='Сохранить PDF';toast('PDF готов. Нажмите «Сохранить PDF».')}
+    }else invDownload(f);
   }catch(e){toast(e.message||'Не получилось сделать PDF')}
   finally{btn.disabled=false;btn.textContent=lbl}
 }
@@ -3554,7 +3570,7 @@ async function showDoc(d){
   sh.innerHTML=`<div class="dh"><div class="iv-logo">${invLogo()}</div>${fz}</div>`+h.slice(fz.length);
   invTitle=DOC_T[d.type].l+' № '+d.num+' от '+dLong(d.date)+' '+d.buyer.name;
   $('inv-bar-t').textContent=DOC_T[d.type].l;
-  $('inv').hidden=false;invZoom();
+  $('inv').hidden=false;invZoom();invOpened();
 }
 /* ---- раздел «Документы» ---- */
 let bEdit=null,dcF='all',bhBin=null;
@@ -3650,7 +3666,7 @@ function openIv(id,bin,o={}){
   syncCs($('iv-pick'));
   ['iv-bn','iv-bb','iv-bc','iv-ba','iv-ln','iv-lq','iv-lu','iv-lp'].forEach(i=>$(i).value='');$('iv-nb').hidden=true;
   $('iv-numl').textContent='Номер: '+T.n;$('iv-datel').textContent='Дата';
-  $('iv-num').value=v?v.num:nextDocNum(ivType);setDM($('iv-date'),v?v.date:todayStr());
+  $('iv-num').value=v?v.num:base?base.num:nextDocNum(ivType);/* документ по счёту берёт номер счёта */setDM($('iv-date'),v?v.date:todayStr());
   ivLinesE=(v?v.lines:base?base.lines:[]||[]).map(l=>({...l}));renderIvLines();
   $('iv-del').innerHTML=v&&canWrite?'<button class="btn danger sm" type="button" id="iv-delb">Удалить</button>':'';
   $('iv-err').hidden=true;$('ived').hidden=false;
@@ -3694,8 +3710,8 @@ async function saveIv(show){
         made={id,type:ivType,from:ivFrom||'',num,date,buyer,lines,createdAt:prev?prev.createdAt:now,updatedAt:now,by};c.docs.push(made);
         /* после накладной счёт-фактура формируется сама; при правке накладной она обновляется вместе с ней */
         if(ivType==='waybill'){const ex=c.docs.find(x=>x.type==='sf'&&x.from===id);
-          if(ex){Object.assign(ex,{buyer,lines,updatedAt:now})}
-          else{const n=String(c.docs.filter(x=>x.type==='sf').reduce((m,x)=>Math.max(m,parseInt(x.num)||0),0)+1);sf={id:uid(),type:'sf',from:id,num:n,date,buyer,lines,createdAt:now,updatedAt:now,by};c.docs.push(sf)}}}
+          if(ex){Object.assign(ex,{num,buyer,lines,updatedAt:now})}
+          else{sf={id:uid(),type:'sf',from:id,num,date,buyer,lines,createdAt:now,updatedAt:now,by};c.docs.push(sf)}}}
       if(isNew){c.buyers=c.buyers.filter(x=>x.bin!==buyer.bin);c.buyers.push(buyer)}});
     closeIv();toast(T.s+' № '+num+(ivType==='waybill'||ivType==='sf'?' сохранена':' сохранён')+(sf?'. Счёт-фактура № '+sf.num+' сформирована':''));render();
     if(show)showDoc(made);
