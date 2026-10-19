@@ -10,7 +10,7 @@
 //   - готовит для учёта сводку «Менеджер Аня» (утром и по кнопке «Обновить») и отвечает на вопросы сотрудников (anna.js);
 //   - присылает команде в Telegram уведомления: Аня зовёт менеджера, новый заказ Kaspi (notify.js);
 //   - сообщения не отмечает прочитанными, чтобы менеджеры видели новые чаты в телефоне;
-//   - фото клиента смотрит через Gemini, примеры работ присылает из учёта; после включения компьютера отвечает всем, кто ждал;
+//   - фото клиента смотрит через Gemini, делает из логотипа визуализацию на футболке или худи (mockup.js), примеры работ присылает из учёта; после включения компьютера отвечает всем, кто ждал;
 //   - копия базы каждую ночь, дожим замолчавших клиентов, просьба об отзыве, цены конкурентов Kaspi (extras.js).
 // Состояние и QR-код: http://localhost:3777 на этом компьютере.
 //
@@ -28,6 +28,7 @@ import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPho
 import { startExtras } from './extras.js';
 import { makeDigest, digestDue, answerQuestions, makeInsights, insightsDue } from './anna.js';
 import { startNotify } from './notify.js';
+import { rememberPhoto, warmUp } from './mockup.js';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = join(DIR, 'auth');          // вход в WhatsApp; если удалить папку — снова попросит QR
@@ -154,6 +155,7 @@ async function photoText(m, text) {
   if (!img || !env.GEMINI_API_KEY || m.key.fromMe) return '';
   try {
     const buf = await downloadMediaMessage(m, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
+    await rememberPhoto(who(m.key).chatId, buf); // из этого фото Аня сделает визуализацию макета
     const t = await describeImage(env, buf, img.mimetype, img.caption || '');
     return t ? `${text} На фото: ${t}` : '';
   } catch (e) {
@@ -215,6 +217,10 @@ async function answerNow(jid, chatId, phone) {
   await appendChat(fs, chatId, { role: 'bot', text: ok ? reply.text : '[не отправлено] ' + reply.text, at: Date.now(), ...(id ? { id } : {}) },
     call ? { needsManager: true, managerReason: reply.handoff, managerCalledAt: Date.now(), busyNoticeAt: 0 } : {});
   if (ok && reply.media?.length) await sendExamples(jid, chatId, reply.media);
+  if (ok && reply.mockup) try {
+    const mid = await send(jid, { image: reply.mockup }, false);
+    await appendChat(fs, chatId, { role: 'bot', text: '[Аня отправила визуализацию макета: ' + (chat.lastMockup?.what || '') + ']', at: Date.now(), ...(mid ? { id: mid } : {}) });
+  } catch (e) { log('визуализация не отправлена', e?.message || e); }
   if (reply.reserve) extras?.reserveUsed(reply.reserve);
   if (call) {
     log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
@@ -420,13 +426,14 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   log('Страница бота: http://localhost:' + PORT);
   if (missing.length) log(state.note);
   connect().catch(e => log('ошибка подключения', e?.message || e));
+  warmUp();
   setInterval(processOutbox, OUTBOX_EVERY);
   setInterval(checkWaitingChats, 60e3);
   setInterval(checkAnna, 30e3);
   if (!missing.length) notify = startNotify(fs, env, () => botToken(env), log);
   if (!missing.length) extras = startExtras({ fs, env, log, notify, send, online: () => state.status === 'online' && !!sock, sock: () => sock, aiOn, DIR });
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
-  for (const f of ['brain.js', 'anna.js', 'notify.js', 'extras.js', 'bot.js', '.env']) {
+  for (const f of ['brain.js', 'anna.js', 'notify.js', 'extras.js', 'mockup.js', 'bot.js', '.env']) {
     watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
       if (cur.mtimeMs !== prev.mtimeMs) { log('Файл ' + f + ' изменился, перезапускаюсь'); process.exit(0); }
     });
