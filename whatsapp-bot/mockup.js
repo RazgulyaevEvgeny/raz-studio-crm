@@ -96,13 +96,13 @@ async function photoBase(S, item, side, hex) {
     }
     file = await S(data, { raw: info }).png().toBuffer();
   }
-  const g = await S(file).resize(920, 960, { fit: 'inside' }).png().toBuffer();
+  const g = await S(file).resize(900, 900, { fit: 'inside' }).png().toBuffer();
   const m = await S(g).metadata();
-  const gx = Math.round((W - m.width) / 2), gy = Math.round(40 + (960 - m.height) / 2);
+  const gx = Math.round((W - m.width) / 2), gy = Math.round(30 + (900 - m.height) / 2);
   const bg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><defs>
     <radialGradient id="bg" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#f7f7f5"/><stop offset="1" stop-color="#dedfdc"/></radialGradient></defs>
     <rect width="${W}" height="${H}" fill="url(#bg)"/><ellipse cx="500" cy="${gy + m.height + 8}" rx="${Math.round(m.width * 0.38)}" ry="14" fill="#00000018"/>
-    <text x="500" y="1092" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#777">RAZ Brand Studio · примерная визуализация</text></svg>`);
+    <text x="500" y="1092" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#777">Разгуляев · студия брендирования · примерная визуализация</text></svg>`);
   const base = await S(bg).png().composite([{ input: g, left: gx, top: gy }]).png().toBuffer();
   const px = m.width * p.body / p.chest;
   const cx = gx + m.width * (side === 'chest_left' ? p.left[0] : 0.5);
@@ -168,24 +168,26 @@ function garmentSvg(item, side, hex) {
     <path d="${g.body(s)}" fill="url(#sh)"/><path d="${g.body(s)}" fill="url(#hl)"/>
     ${g.extra(s)}
   </g>
-  <text x="500" y="1092" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#777">RAZ Brand Studio · примерная визуализация</text>
+  <text x="500" y="1092" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#777">Разгуляев · студия брендирования · примерная визуализация</text>
 </svg>`;
 }
 
 /* ---------- размерные стрелки над принтом и справа от него ---------- */
-function sizeArrows(x, y, w, h, wcm, hcm, dark) {
-  const c = dark ? '#ffffff' : '#1d1d1f', pill = dark ? '#000000a0' : '#ffffffc0';
+function sizeArrows(x, y, w, h, wcm, hcm, dark, emb, capY) {
+  // Стрелки полупрозрачные, чтобы не спорили с принтом; размер ещё раз крупно подписан рядом с изделием
+  const c = dark ? '#ffffff' : '#1d1d1f', pill = dark ? '#00000055' : '#ffffff66';
   const cm = v => (v >= 10 ? Math.round(v) : Math.round(v * 2) / 2).toString().replace('.', ',') + ' см';
   const gy = Math.max(30, y - 22), gx = Math.min(W - 30, x + w + 22);
   const head = (x1, y1, dx, dy) => `<path d="M${x1} ${y1} l${-dx * 10 - dy * 6} ${-dy * 10 + dx * 6} M${x1} ${y1} l${-dx * 10 + dy * 6} ${-dy * 10 - dx * 6}" />`;
-  const label = (tx, ty, t, lw = 68) => `<rect x="${tx - lw / 2}" y="${ty - 15}" width="${lw}" height="24" rx="12" fill="${pill}"/><text x="${tx}" y="${ty + 3}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="16" fill="${c}">${t}</text>`;
+  const label = (tx, ty, t, lw = 68) => `<rect x="${tx - lw / 2}" y="${ty - 15}" width="${lw}" height="24" rx="12" fill="${pill}"/><text x="${tx}" y="${ty + 3}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="15" fill="${c}" fill-opacity=".6">${t}</text>`;
   const low = h < 40; // низкая надпись: высоту пишем в верхней подписи, без вертикальной стрелки
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
-  <g stroke="${c}" stroke-width="2.5" fill="none" stroke-linecap="round">
+  <g stroke="${c}" stroke-opacity=".45" stroke-width="2" fill="none" stroke-linecap="round">
     <path d="M${x} ${gy - 7} v14 M${x + w} ${gy - 7} v14 M${x} ${gy} H${x + w}"/>${head(x, gy, -1, 0)}${head(x + w, gy, 1, 0)}
     ${low ? '' : `<path d="M${gx - 7} ${y} h14 M${gx - 7} ${y + h} h14 M${gx} ${y} V${y + h}"/>${head(gx, y, 0, -1)}${head(gx, y + h, 0, 1)}`}
   </g>
   ${low ? label(x + w / 2, gy - 20, cm(wcm).replace(' см', '') + ' × ' + cm(hcm), 120) : label(x + w / 2, gy - 20, cm(wcm)) + label(Math.min(W - 40, gx + 40), y + h / 2, cm(hcm))}
+  <text x="500" y="${capY}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="26" fill="#3a3a3c">Размер ${emb ? 'вышивки' : 'принта'} ≈ ${cm(wcm).replace(' см', '')} × ${cm(hcm)}</text>
 </svg>`);
 }
 
@@ -272,7 +274,7 @@ export async function makeMockup(opts) {
     layers.push({ input: shadeBuf, raw: { width: meta.width, height: meta.height, channels: 4 }, left, top, blend: 'soft-light' });
   }
   // Правило Евгения: на мокапе стрелками показываем примерный размер принта или вышивки в см
-  layers.push({ input: sizeArrows(left, top, meta.width, meta.height, meta.width / px, meta.height / px, isDark(hex)), left: 0, top: 0 });
+  layers.push({ input: sizeArrows(left, top, meta.width, meta.height, meta.width / px, meta.height / px, isDark(hex), emb, photo ? 1040 : 44), left: 0, top: 0 });
   return S(base).composite(layers).jpeg({ quality: 88 }).toBuffer();
 }
 
