@@ -38,14 +38,15 @@
 .kp-g b{font:700 14.5px var(--f);white-space:nowrap}
 .kp-dim{color:var(--muted);font-size:12px}
 .kp-bad{color:var(--danger)}.kp-ok{color:var(--st-ready)}
+.kp-fc{background:var(--tile)}
 .kp-in{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .kp-in label,.kp-set label{display:flex;flex-direction:column;gap:4px;font:600 12.5px var(--f);color:var(--muted)}
 .kp-in input,.kp-set input{width:100%;border:0;background:var(--paper);border-radius:12px;min-height:40px;padding:0 12px;font:500 14.5px var(--f);color:var(--ink)}
 .kp-in .suffix input{padding-right:30px}
 .kp-in input:focus-visible,.kp-set input:focus-visible{outline:3px solid var(--blue);outline-offset:1px}
 .kp-c{display:flex;flex-direction:column;gap:2px;background:var(--paper);border-radius:12px;padding:8px 12px;font-size:13.5px}
-.kp-set{display:grid;grid-template-columns:repeat(2,minmax(0,280px));gap:10px}
-.kp-set .selwrap select{min-height:40px}
+.kp-set{display:grid;grid-template-columns:repeat(3,minmax(0,240px));gap:10px}
+.kp-set .selwrap{flex:none;min-width:0}.kp-set .selwrap select,.kp-set .selwrap .cs-btn{min-height:40px}
 .kp-file{cursor:pointer}
 .kp-q{min-width:200px;flex:1}
 .kp-dot{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;font:700 11px var(--f);margin-left:2px}
@@ -5233,7 +5234,7 @@ function kpCodeFrom(v){const m=String(v||'').match(/(\d{5,15})\/?(\?.*)?$/)||Str
 
 /* все товары: сохранённые карточки + товары из заказов */
 function kpAll(){
-  const list=kaspiProducts.map(p=>({...p,sold:0,sold30:0,lastPrice:null,lastSold:0}));
+  const list=kaspiProducts.map(p=>({...p,sold:0,sold30:0,soldAfter:0,lastPrice:null,lastSold:0}));
   const byCode=new Map(),bySku=new Map(),byName=new Map();
   const idx=p=>{if(p.code)byCode.set(String(p.code),p);if(p.sku)bySku.set(kpNorm(p.sku),p);if(p.name)byName.set(kpNorm(p.name),p)};
   list.forEach(idx);
@@ -5245,7 +5246,7 @@ function kpAll(){
       let p=(i.code&&byCode.get(String(i.code)))||(i.sku&&bySku.get(kpNorm(i.sku)))||byName.get(kpNorm(i.name));
       if(!p){p={id:kpId(i),virtual:true,name:i.name||'Товар',code:i.code||'',sku:i.sku||'',sold:0,sold30:0,lastPrice:null,lastSold:0,src:'orders'};list.push(p);idx(p)}
       else if(!p.code&&i.code){p.code=i.code;byCode.set(String(i.code),p)}
-      const q=+i.qty||1,t=+k.created||0;p.sold+=q;if(now-t<30*864e5)p.sold30+=q;
+      const q=+i.qty||1,t=+k.created||0;p.sold+=q;if(now-t<30*864e5)p.sold30+=q;if(p.importedAt&&t>p.importedAt)p.soldAfter=(p.soldAfter||0)+q;
       if(t>=p.lastSold){p.lastSold=t;if(i.price)p.lastPrice=+i.price}
     });
   });
@@ -5256,10 +5257,29 @@ function kpAll(){
     p.status=p.available===true?'sale':p.available===false?'off':p.src==='orders'||p.virtual?(kaspiMeta.priceListAt?'off':'orders'):'sale';
     const o=p.offers||{};
     p.alert=!!(o.minOther&&p.ourPrice&&o.minOther<p.ourPrice);
+    kpForecast(p,now);
   });
   return list.sort((a,b)=>(b.alert-a.alert)||(b.sold30-a.sold30)||(b.sold-a.sold)||String(a.name).localeCompare(String(b.name),'ru'));
 }
 const kpAlerts=()=>kpAll().filter(p=>p.alert&&p.status!=='off');
+/* Прогноз остатков: остаток из прайс-листа минус продажи после его загрузки, скорость — продажи за 30 дней.
+   «Пора заказывать», если товара хватит меньше, чем идёт доставка из Китая (+ неделя запаса).
+   «Залежался», если товар есть, а продаж не было 45 дней: в нём заморожены деньги (остаток × себестоимость). */
+const KP_STALE_DAYS=45;
+const kpLead=()=>Math.max(1,+kaspiMeta.leadDays||25);
+function kpForecast(p,now=Date.now()){
+  p.left=p.stock!=null&&p.stock!==''?Math.max(0,(+p.stock||0)-(p.soldAfter||0)):null;
+  p.rate=p.sold30/30;
+  p.daysLeft=p.left!=null&&p.rate>0?Math.floor(p.left/p.rate):null;
+  const lead=kpLead();
+  p.reorder=p.status==='sale'&&p.daysLeft!=null&&p.daysLeft<=lead+7;
+  p.reorderQty=p.reorder?Math.max(1,Math.ceil(p.rate*(lead+30)-p.left)):0;
+  const since=+p.lastSold||+p.addedAt||+p.importedAt||0; // последняя продажа, а если продаж не было — когда товар появился в учёте
+  p.stale=p.status==='sale'&&p.left>0&&!!since&&now-since>KP_STALE_DAYS*864e5;
+  p.frozen=p.stale?p.left*(+p.cost||0):0;
+}
+const kpReorders=()=>kpAll().filter(p=>p.reorder);
+const kpStale=()=>kpAll().filter(p=>p.stale);
 /* себестоимость товара для прибыли: сначала карточка товара, потом закупки и прайс */
 function kpCostOf(item){
   const n=kpNorm(item.name);
@@ -5276,7 +5296,7 @@ function kpUnit(p){
   return {hold:Math.round(hold),cost,profit:cost==null?null:Math.round(p.ourPrice-hold-cost)};
 }
 async function kpSave(p,patch){
-  const base={...p};['virtual','sold','sold30','lastPrice','lastSold','ourPrice','status','alert','id'].forEach(k=>delete base[k]);
+  const base={...p};['virtual','sold','sold30','lastPrice','lastSold','ourPrice','status','alert','id','soldAfter','left','rate','daysLeft','reorder','reorderQty','stale','frozen'].forEach(k=>delete base[k]);
   const doc={...base,kind:'product',name:p.name||'',code:p.code||'',sku:p.sku||'',...patch,updatedAt:Date.now()};
   await kaspiCol.doc(p.id||kpId(doc)).set(doc);
 }
@@ -5342,7 +5362,7 @@ async function kpApplyList(list,fileName){
       const ex=kaspiProducts.find(p=>(x.sku&&kpNorm(p.sku)===kpNorm(x.sku))||(x.code&&String(p.code)===String(x.code)))||kaspiProducts.find(p=>kpNorm(p.name)===kpNorm(x.name));
       const p=ex||{id:kpId(x)};seen.add(p.id);
       await kpSave({...p},{name:x.name||(ex&&ex.name)||'',sku:x.sku||(ex&&ex.sku)||'',code:x.code||(ex&&ex.code)||'',brand:x.brand||(ex&&ex.brand)||'',price:x.price||(ex&&ex.price)||0,
-        stock:x.stock,available:x.available,src:'pricelist',importedAt:Date.now()});n++;
+        stock:x.stock,available:x.available,src:'pricelist',importedAt:Date.now(),addedAt:(ex&&(ex.addedAt||ex.importedAt))||Date.now()});n++;
     }
     /* товаров, которых нет в новом прайс-листе, на Kaspi больше нет в продаже */
     for(const p of kaspiProducts.filter(p=>p.src==='pricelist'&&!seen.has(p.id)&&p.available!==false))await kpSave(p,{available:false});
@@ -5398,7 +5418,7 @@ function kpCard(p){
     <div class="kp-meta">${[p.sku?'SKU '+esc(p.sku):'',p.code?'код '+esc(p.code):'',p.brand?esc(p.brand):''].filter(Boolean).join(' · ')||'&nbsp;'}</div>
     <div class="kp-g">
       <div><small>Цена</small><b>${p.ourPrice?money(p.ourPrice):'—'}</b><span class="kp-dim">${{kaspi:'сейчас на Kaspi',list:'из прайс-листа',order:'в последнем заказе'}[p.priceSrc]||''}</span></div>
-      <div><small>В наличии</small><b>${p.stock!=null&&p.stock!==''?p.stock+' шт':p.status==='off'?'нет':'—'}</b></div>
+      <div><small>В наличии</small><b class="${p.reorder?'kp-bad':''}">${p.left!=null?p.left+' шт':p.status==='off'?'нет':'—'}</b><span class="kp-dim">${p.daysLeft!=null?'хватит на '+p.daysLeft+' дн.':p.left&&p.status==='sale'&&!p.rate?'продаж за 30 дн. нет':''}</span></div>
       <div><small>Продано</small><b>${p.sold} шт</b><span class="kp-dim">${p.sold30?'за 30 дней '+p.sold30:''}</span></div>
       <div><small>С 1 шт</small><b class="${u&&u.profit!=null&&u.profit<0?'kp-bad':''}">${u&&u.profit!=null?money(u.profit):'—'}</b><span class="kp-dim">${u?'удержания '+money(u.hold):''}</span></div>
     </div>
@@ -5407,13 +5427,15 @@ function kpCard(p){
       <label>Код товара Kaspi<input data-kpcode value="${esc(p.code||'')}" placeholder="или вставьте ссылку" autocomplete="off" ${canWrite?'':'disabled'}></label>
     </div>
     <div class="kp-c">${comp}</div>
+    ${p.reorder?`<div class="kp-c kp-fc"><b class="kp-bad">Пора заказывать: ~${p.reorderQty} шт</b><span class="kp-dim">продаётся ${String(Math.round(p.rate*10)/10).replace('.',',')} шт в день, остатка хватит на ${p.daysLeft} дн., доставка ${kpLead()} дн.</span></div>`
+      :p.stale?`<div class="kp-c kp-fc"><b>Залежался: продаж нет больше ${KP_STALE_DAYS} дней</b><span class="kp-dim">${p.frozen?'в остатке '+money(p.frozen)+'. ':''}Снизить цену, обновить фото или больше не возить</span></div>`:''}
   </div>`;
 }
 function renderKaspiProducts(){
   /* пока человек вписывает себестоимость или код, не перерисовываем — иначе пропадёт набранное */
-  const ae=document.activeElement;if(ae&&ae.matches&&ae.matches('#p-kaspi input[data-kpcost],#p-kaspi input[data-kpcode],#kp-shop'))return;
+  const ae=document.activeElement;if(ae&&ae.matches&&ae.matches('#p-kaspi input[data-kpcost],#p-kaspi input[data-kpcode],#kp-shop,#kp-lead'))return;
   const all=kpAll(),alerts=all.filter(p=>p.alert&&p.status!=='off');
-  const F=[['sale','В продаже',x=>x.status==='sale'],['off','Сняты',x=>x.status==='off'],['orders','Только в заказах',x=>x.status==='orders'],['alert','Дешевле у конкурента',x=>x.alert&&x.status!=='off'],['nocost','Без себестоимости',x=>x.cost==null||x.cost===''],['all','Все',()=>true]];
+  const F=[['sale','В продаже',x=>x.status==='sale'],['reorder','Пора заказать',x=>x.reorder],['stale','Залежались',x=>x.stale],['off','Сняты',x=>x.status==='off'],['orders','Только в заказах',x=>x.status==='orders'],['alert','Дешевле у конкурента',x=>x.alert&&x.status!=='off'],['nocost','Без себестоимости',x=>x.cost==null||x.cost===''],['all','Все',()=>true]];
   const f=F.find(x=>x[0]===kpView.f)||F[0],q=kpNorm(kpView.q);
   const rows=all.filter(f[2]).filter(p=>!q||kpNorm([p.name,p.sku,p.code,p.brand].join(' ')).includes(q));
   const pc=kaspiMeta.pricesAt?fmtDate(kDay(kaspiMeta.pricesAt))+' в '+new Date(kaspiMeta.pricesAt).toTimeString().slice(0,5):'';
@@ -5425,8 +5447,12 @@ function renderKaspiProducts(){
     <div class="kp-set">
       <label>Город для цен<span class="selwrap"><select id="kp-city">${KP_CITIES.map(([v,l])=>`<option value="${v}"${kpCity()===v?' selected':''}>${l}</option>`).join('')}</select></span></label>
       <label>Ваш магазин на Kaspi<input id="kp-shop" value="${esc(kaspiMeta.shopName||'')}" placeholder="название, как у покупателей" autocomplete="off"></label>
+      <label>Доставка из Китая, дней<input id="kp-lead" type="number" min="1" max="120" inputmode="numeric" value="${kpLead()}" ${canWrite?'':'disabled'}></label>
     </div>
     ${kpMsg?`<div class="knote">${esc(kpMsg)}</div>`:''}
+    ${(()=>{const ro=all.filter(p=>p.reorder),sl=all.filter(p=>p.stale),fz=sl.reduce((s,p)=>s+p.frozen,0);
+      return (ro.length?`<div class="kclean"><span><b>Пора заказывать из Китая: ${ro.length} ${plural(ro.length,'товар','товара','товаров')}.</b> ${ro.slice(0,3).map(p=>esc(p.name)+' ~'+p.reorderQty+' шт').join(', ')}${ro.length>3?' и др.':''}</span><button class="btn soft sm" type="button" data-kpf="reorder">Показать</button></div>`:'')
+        +(sl.length?`<div class="kclean"><span><b>Залежались ${KP_STALE_DAYS}+ дней: ${sl.length} ${plural(sl.length,'товар','товара','товаров')}</b>${fz?', в них лежит '+money(fz):''}.</span><button class="btn soft sm" type="button" data-kpf="stale">Показать</button></div>`:'')})()}
     ${alerts.length?`<div class="kclean"><span><b>У конкурентов дешевле: ${alerts.length} ${plural(alerts.length,'товар','товара','товаров')}.</b> ${alerts.slice(0,3).map(p=>esc(p.name)).join(', ')}${alerts.length>3?' и др.':''}</span><button class="btn soft sm" type="button" data-kpf="alert">Показать</button></div>`:''}
     <div class="ktools"><div class="chips">${F.map(([id,l,fn])=>`<button type="button" class="chip${kpView.f===id?' on':''}" data-kpf="${id}">${l} <em>${all.filter(fn).length}</em></button>`).join('')}</div>
       <label class="search kp-q"><input id="kp-q" type="search" placeholder="Поиск товара" value="${esc(kpView.q)}" aria-label="Поиск товара"></label></div>
@@ -5444,6 +5470,7 @@ $('p-kaspi').addEventListener('change',async e=>{
   if(t.id==='kp-file'){kpImport(t.files[0]);t.value='';return}
   if(t.id==='kp-city'){kpSaveMeta({cityId:t.value}).then(()=>toast('Город сохранён. Нажмите «Проверить цены конкурентов».'));return}
   if(t.id==='kp-shop'){kpSaveMeta({shopName:t.value.trim()}).then(()=>toast('Название магазина сохранено'));return}
+  if(t.id==='kp-lead'){const n=Math.round(+t.value);if(!(n>=1&&n<=120)){toast('Впишите число дней от 1 до 120');return}kpSaveMeta({leadDays:n}).then(()=>toast('Срок доставки сохранён: '+n+' дн.'));return}
   const card=t.closest('[data-kp]');if(!card||!canWrite)return;
   const p=kpAll().find(x=>x.id===card.dataset.kp);if(!p)return;
   try{
@@ -5454,6 +5481,7 @@ $('p-kaspi').addEventListener('change',async e=>{
 });
 $('p-kaspi').addEventListener('input',e=>{if(e.target.id==='kp-q'){kpView.q=e.target.value;const pos=e.target.selectionStart;render();const q=$('kp-q');if(q){q.focus();try{q.setSelectionRange(pos,pos)}catch(_){}}}});
 $('p-kaspi').addEventListener('focusout',()=>setTimeout(()=>{if(page==='kaspi'&&kTab==='products')render()},200));
+document.addEventListener('click',e=>{const b=e.target.closest('[data-kpgo]');if(b){kTab='products';kpView.f=b.dataset.kpgo}},true);
 document.addEventListener('click',e=>{if(e.target.closest('[data-kpalert]')){kTab='products';kpView.f='alert'}},true);
 /* цены конкурентов — сами раз в 6 часов, пока учёт открыт */
 setInterval(()=>{if(kaspiLoaded&&!kaspiDbErr&&canWrite&&!kpBusy&&Date.now()-(+kaspiMeta.pricesAt||0)>6*3600e3&&Date.now()-(kpCheckPrices._t||0)>30*60e3){kpCheckPrices._t=Date.now();kpCheckPrices(false)}},60*1000);
@@ -5467,8 +5495,8 @@ function renderKaspiWidget(){
   if(kaspiDbErr){list.innerHTML=`<div class="w-empty">Нужно обновить правила базы Firestore (строка kaspi_orders). Подробности в разделе Kaspi.</div>`;$('w-kaspi-note').textContent='';return}
   const row=(k,st)=>`<button type="button" class="mrow kq" data-go="kaspi"><span class="kq-t"><b>${esc(kWhat(k))}</b><small>№ ${esc(k.code)}${k.transmitPlan&&st==='packing'?', передать до '+fmtDate(kDay(k.transmitPlan)):''}</small></span><span class="kq-r"><b>${money(k.total)}</b><span class="kq-st">${st==='packing'?'упаковать':'передать'}</span></span></button>`;
   const todo=[...g.packing.map(k=>row(k,'packing')),...g.handover.map(k=>row(k,'handover'))];
-  const kpA=kpAlerts();
-  list.innerHTML=(kpA.length?`<button type="button" class="mrow kq" data-go="kaspi" data-kpalert><span class="kq-t"><b>У конкурентов дешевле: ${kpA.length} ${plural(kpA.length,'товар','товара','товаров')}</b><small>${esc(kpA.slice(0,2).map(p=>p.name).join(', '))}</small></span><span class="kq-r"><span class="kq-st">цены</span></span></button>`:'')+(todo.length?todo.slice(0,5).join(''):`<div class="w-empty">${kaspiSync.at?'Упаковывать сейчас нечего.':'Заказы с Kaspi подтянутся сюда сами.'}</div>`)
+  const kpA=kpAlerts(),kpR=kpReorders();
+  list.innerHTML=(kpR.length?`<button type="button" class="mrow kq" data-go="kaspi" data-kpgo="reorder"><span class="kq-t"><b>Пора заказывать из Китая: ${kpR.length} ${plural(kpR.length,'товар','товара','товаров')}</b><small>${esc(kpR.slice(0,2).map(p=>p.name+' ~'+p.reorderQty+' шт').join(', '))}</small></span></button>`:'')+(kpA.length?`<button type="button" class="mrow kq" data-go="kaspi" data-kpalert><span class="kq-t"><b>У конкурентов дешевле: ${kpA.length} ${plural(kpA.length,'товар','товара','товаров')}</b><small>${esc(kpA.slice(0,2).map(p=>p.name).join(', '))}</small></span><span class="kq-r"><span class="kq-st">цены</span></span></button>`:'')+(todo.length?todo.slice(0,5).join(''):`<div class="w-empty">${kaspiSync.at?'Упаковывать сейчас нечего.':'Заказы с Kaspi подтянутся сюда сами.'}</div>`)
     +`<button type="button" class="kq-more" data-go="kaspi">${g.shipped.length?'В доставке '+g.shipped.length+', ждём '+money(g.shipped.reduce((s,k)=>s+kNet(k),0))+' · ':''}Все заказы Kaspi</button>`;
   const t=kaspiSync.at?new Date(kaspiSync.at):null;
   $('w-kaspi-note').textContent=kaspiSync.err?'⚠ '+kaspiSync.err:t?'Проверено в '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+', обновляется само каждые 10 минут.':'';
