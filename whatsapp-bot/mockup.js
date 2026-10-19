@@ -60,6 +60,51 @@ export async function lastPhoto(chatId) {
   try { return await readFile(join(PHOTOS, safe(chatId) + '.img')); } catch (_) { return null; }
 }
 
+/* ---------- фото заготовок (blanks/) ---------- */
+// Настоящие фото пустых изделий: blanks/<изделие>_<black|white>_<front|back>.png (фон вырезан).
+// body — какая доля ширины фото приходится на корпус (без рукавов), chest — ширина груди в см,
+// front/back — где верх принта (доля высоты), left — центр и верх логотипа на груди слева
+const BLANKS = join(DIR, 'blanks');
+const PHOTO = {
+  tshirt: { chest: 60, body: 0.6, front: 0.2, back: 0.16, left: [0.63, 0.22] },
+  hoodie: { chest: 64, body: 0.56, front: 0.28, back: 0.29, left: [0.61, 0.33] },
+};
+async function photoBase(S, item, side, hex) {
+  const p = PHOTO[item];
+  if (!p) return null;
+  const face = side === 'back' ? 'back' : 'front';
+  const load = tone => readFile(join(BLANKS, `${item}_${tone}_${face}.png`)).catch(() => null);
+  const h = hex.toLowerCase();
+  // Чёрное и белое — как на фото; любой другой цвет — перекрашиваем белую заготовку, сохраняя складки и тени ткани
+  let file = h === '#1f1f22' ? await load('black') : h === '#f3f3f1' ? await load('white') : null, tint = false;
+  if (!file) { file = await load('white'); tint = !!file && h !== '#f3f3f1'; }
+  if (!file) return null;
+  if (tint) {
+    const { data, info } = await S(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    let sum = 0, cnt = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 200) { sum += data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11; cnt++; }
+    const mean = cnt ? sum / cnt : 230, k = isDark(hex) ? 0.55 : 1;
+    for (let i = 0; i < data.length; i += 4) {
+      const d = (data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11 - mean) * k;
+      for (let j = 0; j < 3; j++) data[i + j] = Math.max(0, Math.min(255, Math.round(c[j] + d)));
+    }
+    file = await S(data, { raw: info }).png().toBuffer();
+  }
+  const g = await S(file).resize(920, 960, { fit: 'inside' }).png().toBuffer();
+  const m = await S(g).metadata();
+  const gx = Math.round((W - m.width) / 2), gy = Math.round(40 + (960 - m.height) / 2);
+  const bg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#f7f7f5"/><stop offset="1" stop-color="#dedfdc"/></radialGradient></defs>
+    <rect width="${W}" height="${H}" fill="url(#bg)"/><ellipse cx="500" cy="${gy + m.height + 8}" rx="${Math.round(m.width * 0.38)}" ry="14" fill="#00000018"/>
+    <text x="500" y="1092" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#777">RAZ Brand Studio · примерная визуализация</text></svg>`);
+  const base = await S(bg).png().composite([{ input: g, left: gx, top: gy }]).png().toBuffer();
+  const px = m.width * p.body / p.chest;
+  const cx = gx + m.width * (side === 'chest_left' ? p.left[0] : 0.5);
+  const top = gy + m.height * (side === 'chest_left' ? p.left[1] : p[face]);
+  return { base, px, cx, top: Math.round(top) };
+}
+
 /* ---------- изделия (SVG) ---------- */
 // Каждое изделие: силуэт, детали поверх и где печатать. px — сколько пикселей в 1 см (ширина груди ~52 см)
 const GARMENTS = {
@@ -172,21 +217,35 @@ export async function makeMockup(opts) {
   const hex = colorOf(opts.color);
   const g = GARMENTS[item];
 
+  // Сначала настоящее фото заготовки (blanks/), если для изделия его нет — рисованное изделие
+  const photo = opts.blank ? null : await photoBase(S, item, side, hex).catch(e => { console.log('Фото заготовки не подошло:', String(e?.message || e).slice(0, 200)); return null; });
   const base = opts.blank
     ? await S(opts.blank).rotate().resize(W, H, { fit: 'cover' }).png().toBuffer()
-    : await S(Buffer.from(garmentSvg(item, side, hex))).png().toBuffer();
+    : photo ? photo.base : await S(Buffer.from(garmentSvg(item, side, hex))).png().toBuffer();
 
   let logo = opts.logo ? await cleanLogo(opts.logo) : await S(textLogo(opts.text || 'LOGO', hex)).trim().png().toBuffer();
   const [cw, ch] = side === 'chest_left' ? [Math.min(10, SIZES[size][0]), Math.min(10, SIZES[size][1])] : SIZES[size];
-  const box = { w: Math.round(cw * g.px), h: Math.round(ch * g.px) };
-  logo = await S(logo).resize(box.w, box.h, { fit: 'inside' }).png().toBuffer();
+  const px = photo ? photo.px : g.px;
+  const box = { w: Math.round(cw * px), h: Math.round(ch * px) };
+  logo = await S(logo).ensureAlpha().resize(box.w, box.h, { fit: 'inside' }).png().toBuffer();
   const meta = await S(logo).metadata();
-  const cx = side === 'chest_left' ? (item === 'shopper' ? 500 : 640) : 500;
-  const top = opts.blank ? Math.round(H * (side === 'back' ? 0.24 : 0.28)) : g.top[side];
-  const out = await S(base)
-    .composite([{ input: logo, left: Math.round(cx - meta.width / 2), top }])
-    .jpeg({ quality: 86 }).toBuffer();
-  return out;
+  const cx = photo ? photo.cx : side === 'chest_left' ? (item === 'shopper' ? 500 : 640) : 500;
+  const top = photo ? photo.top : opts.blank ? Math.round(H * (side === 'back' ? 0.24 : 0.28)) : g.top[side];
+  const left = Math.round(cx - meta.width / 2);
+  const layers = [{ input: logo, left, top }];
+  if (photo) {
+    // Складки ткани поверх принта: берём светотень фото под принтом и накладываем мягким светом — печать выглядит «на ткани»
+    const region = await S(base).extract({ left, top, width: meta.width, height: meta.height }).greyscale().raw().toBuffer({ resolveWithObject: true });
+    const avg = region.data.reduce((a, v) => a + v, 0) / region.data.length;
+    const alpha = await S(logo).extractChannel(3).raw().toBuffer();
+    const shadeBuf = Buffer.alloc(meta.width * meta.height * 4);
+    for (let i = 0; i < meta.width * meta.height; i++) {
+      const v = Math.max(0, Math.min(255, Math.round(128 + (region.data[i] - avg) * 1.8)));
+      shadeBuf[i * 4] = shadeBuf[i * 4 + 1] = shadeBuf[i * 4 + 2] = v; shadeBuf[i * 4 + 3] = alpha[i];
+    }
+    layers.push({ input: shadeBuf, raw: { width: meta.width, height: meta.height, channels: 4 }, left, top, blend: 'soft-light' });
+  }
+  return S(base).composite(layers).jpeg({ quality: 88 }).toBuffer();
 }
 
 export function describe(o) {
