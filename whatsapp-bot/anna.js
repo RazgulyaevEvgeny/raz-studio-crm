@@ -134,8 +134,25 @@ async function gemini(env, system, text, json) {
 
 /* ---------- сводка дня ---------- */
 
+// Дела, которые в учёте отметили сделанными (кружок в «Сегодня сделать»): wa_anna/done {items:{ключ:{text, at, orderId?, kaspiId?}}}.
+// Ключ считается так же, как в index.html (annaTodoKey). Сутки после отметки дело не возвращаем; старые записи чистим.
+const DONE_TTL = DAY;
+const todoKey = text => {
+  const x = String(text || '').toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]+/g, '');
+  let h = 0; for (let i = 0; i < x.length; i++) h = (h * 31 + x.charCodeAt(i)) | 0;
+  return 'k' + (h >>> 0).toString(36);
+};
+async function doneTodo(fs) {
+  const items = (await fs.get('wa_anna/done').catch(() => null))?.items || {};
+  const fresh = Object.fromEntries(Object.entries(items).filter(([, r]) => r && Date.now() - (+r.at || 0) < DONE_TTL));
+  if (Object.keys(fresh).length < Object.keys(items).length) await fs.set('wa_anna/done', { items: fresh }).catch(() => {});
+  return Object.entries(fresh).map(([key, r]) => ({ key, ...r }));
+}
+
 export async function makeDigest(fs, env) {
   const { facts, needManager, stats } = await collect(fs);
+  const done = await doneTodo(fs);
+  const doneText = done.length ? '\n\nУЖЕ СДЕЛАНО СЕГОДНЯ (команда отметила в учёте, в todo НЕ повторять ни дословно, ни другими словами):\n' + done.map(r => '- ' + r.text).join('\n') : '';
   const raw = await gemini(env, PERSONA + `
 Подготовь сводку для главной страницы учёта:
 - summary: 2–5 предложений от первого лица, как будто ты рассказываешь команде, что было и что важно сегодня
@@ -147,7 +164,7 @@ export async function makeDigest(fs, env) {
   Не предлагай «прослушать/проверить голосовые»: голосовые уже расшифрованы, их текст в диалогах.
 - waiting: для каждого чата с пометкой ЖДЁТ МЕНЕДЖЕРА — chatId из [чат …] и brief: 1–3 предложения от тебя, что хочет клиент
   (товар, количество, сроки, вопросы, что прислал), чтобы менеджеру не читать весь чат.
-Никогда не пиши в тексте служебные id.`, facts, {
+Никогда не пиши в тексте служебные id.`, facts + doneText, {
     type: 'OBJECT',
     properties: {
       summary: { type: 'STRING' },
@@ -165,7 +182,7 @@ export async function makeDigest(fs, env) {
     todo: (out.todo || []).slice(0, 6).map(t => typeof t === 'string' ? { text: t.slice(0, 200) } : {
       text: String(t.text || '').slice(0, 200),
       ...(known(t.orderId) ? { orderId: known(t.orderId) } : {}), ...(known(t.kaspiId) ? { kaspiId: known(t.kaspiId) } : {}),
-    }).filter(t => t.text),
+    }).filter(t => t.text && !done.some(r => r.key === todoKey(t.text) || (t.orderId && r.orderId === t.orderId) || (t.kaspiId && r.kaspiId === t.kaspiId))),
     needManager: needManager.slice(0, 8).map(({ id, ...c }) => ({ ...c, ...(briefs.get(id) ? { brief: briefs.get(id) } : {}) })), stats,
   };
   await fs.set('wa_anna/digest', digest);
