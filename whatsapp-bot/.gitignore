@@ -3,3 +3,4 @@ auth/
 .env
 bot.log
 bot.old.log
+backup/

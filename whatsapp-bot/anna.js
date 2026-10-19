@@ -1,6 +1,6 @@
-// «Менеджер Анна» в учёте: сводка дня для виджета на главной и ответы на вопросы сотрудников.
+// «Менеджер Аня» в учёте: сводка дня для виджета на главной и ответы на вопросы сотрудников.
 // Сводка — документ wa_anna/digest; учёт просит обновить её через wa_anna/request (кнопка «Обновить»),
-// вопросы сотрудники пишут в коллекцию wa_anna_q, Анна отвечает в поле a. Всё на бесплатном Gemini.
+// вопросы сотрудники пишут в коллекцию wa_anna_q, Аня отвечает в поле a. Всё на бесплатном Gemini.
 
 import { GEMINI_MODELS, SERVICE_NAMES, openOrders, normPhone } from './brain.js';
 
@@ -8,7 +8,7 @@ const DAY = 24 * 3600e3;
 const MORNING = 9;                          // с 9 утра по Алматы готовим сводку на день (один раз, если компьютер включён)
 const ST = { new: 'новый', design: 'макет', prod: 'в производстве', ready: 'готов, ждёт клиента' };
 
-const PERSONA = `Ты Анна, виртуальный менеджер студии брендирования «Разгуляев». Ты отвечаешь клиентам в WhatsApp,
+const PERSONA = `Ты Аня, виртуальный помощник студии брендирования «Разгуляев». Ты отвечаешь клиентам в WhatsApp,
 а сейчас говоришь с командой студии в их учёте: руководитель Евгений и менеджер Милана.
 Говори как живой толковый коллега: коротко, по-деловому, по-дружески, на русском, без канцелярита и без markdown.
 Опирайся только на данные ниже, ничего не выдумывай. Называй клиентов и заказы по имени клиента; служебные id в квадратных скобках никогда не показывай.`;
@@ -37,7 +37,7 @@ async function collect(fs) {
 
   // Компактный текст для ИИ: диалоги за сутки и открытые заказы
   const dialogs = chats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 25).map(c => {
-    const who = { client: 'клиент', bot: 'Анна', manager: 'менеджер', notice: 'уведомление' };
+    const who = { client: 'клиент', bot: 'Аня', manager: 'менеджер', notice: 'уведомление' };
     const tail = (c.messages || []).slice(-6).map(m => `  ${who[m.role] || m.role}: ${String(m.text || '').slice(0, 220)}`).join('\n');
     const flags = [c.needsManager ? `ЖДЁТ МЕНЕДЖЕРА (${c.managerReason || 'без причины'})` : '', c.lastRole === 'client' ? 'последним писал клиент' : ''].filter(Boolean).join(', ');
     return `[чат ${c.id}] ${name(c)}${flags ? ' — ' + flags : ''}\n${tail}`;
@@ -45,7 +45,7 @@ async function collect(fs) {
   const list = orders.sort((a, b) => String(a.deadline || '9').localeCompare(String(b.deadline || '9'))).slice(0, 40).map(o =>
     `[заказ ${o.id}] ${o.client || 'без имени'}: ${SERVICE_NAMES[o.service] || o.customService || o.service || ''}, ${ST[o.status] || o.status}` +
     `, срок ${o.deadline || 'не назначен'}${o.deadline && o.deadline < today ? ' (ПРОСРОЧЕН)' : o.deadline === today ? ' (СЕГОДНЯ)' : ''}` +
-    `${o.source === 'whatsapp' && o.status === 'new' ? ', оформила Анна — нужно подтвердить' : ''}${o.desc ? ' — ' + String(o.desc).slice(0, 120) : ''}`).join('\n');
+    `${o.source === 'whatsapp' && o.status === 'new' ? ', оформила Аня — нужно подтвердить' : ''}${o.desc ? ' — ' + String(o.desc).slice(0, 120) : ''}`).join('\n');
   const d = kz();
   const facts = `Сейчас ${d.toISOString().slice(0, 16).replace('T', ' ')} по Алматы.
 Статистика за сутки: диалогов ${stats.chats}, ждут менеджера ${stats.needManager}, заказов от Анны ждут подтверждения ${stats.botOrders}, голосовых ${voice}.
@@ -226,7 +226,7 @@ export async function answerQuestions(fs, env) {
 // who — как обращаться к сотруднику. Возвращает {reply, task?}; задачу сохраняет в учёт (раздел «Задачи»)
 export async function tgAssistant(fs, env, text, who, chat) {
   const facts = (await collect(fs)).facts + '\n\n3D-принтеры в мастерской:\n' + await printerFacts();
-  const raw = await gemini(env, PERSONA.replace('Ты Анна', 'Ты Аня (Анна)') + `
+  const raw = await gemini(env, PERSONA + `
 Сейчас тебе пишет в Telegram ${who}. Обращайся к нему(ней) именно так: «${who}». Отвечай коротко, как в мессенджере, 1–6 предложений, без markdown.
 Если просят записать, поставить или напомнить задачу — заполни task: title (коротко, с глагола: «Купить удлинитель»), date (YYYY-MM-DD; «сегодня», «завтра»,
 «в пятницу» считай от текущей даты; без даты — сегодня), time (HH:MM, если назван). В reply подтверди, что записала и на какой день.
@@ -338,16 +338,23 @@ export async function makeInsights(fs, env, period = 'week') {
   const chats = (await fs.list('wa_chats')).filter(c => (c.updatedAt || 0) >= since);
   const orders = await fs.query('orders', {
     where: { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { integerValue: String(since - 30 * DAY) } } },
-  }).catch(() => []);
+  }).then(l => l.filter(o => !o.deletedAt)).catch(() => []);
   const inPeriod = orders.filter(o => (o.createdAt || 0) >= since && o.status !== 'cancel' && o.service !== 'kaspi');
+  // Полная переписка из архива wa_log (в самом чате хранятся только последние 40 сообщений)
+  const months = [...new Set([since, Date.now()].map(t => { const d = kz(t); return d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, '0'); }))];
+  for (const c of chats.slice(0, 60)) {
+    const log = [];
+    for (const m of months) log.push(...(((await fs.get('wa_log/' + c.id + '_' + m).catch(() => null))?.messages) || []));
+    if (log.length > (c.messages || []).length) c.messages = log.filter(m => (m.at || 0) >= since).sort((a, b) => (a.at || 0) - (b.at || 0));
+  }
   const count = new Map();
   for (const o of inPeriod) { const n = SERVICE_NAMES[o.service] || o.customService || o.service || 'Другое'; count.set(n, (count.get(n) || 0) + 1); }
   const services = [...count].map(([name, n]) => ({ name, count: n })).sort((a, b) => b.count - a.count);
   const byPhone = new Map(orders.map(o => [normPhone(o.phone), o]).filter(([p]) => p));
-  const who = { client: 'клиент', bot: 'Анна', manager: 'менеджер', notice: 'уведомление' };
+  const who = { client: 'клиент', bot: 'Аня', manager: 'менеджер', notice: 'уведомление' };
   const dialogs = chats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 60).map(c => {
     const o = byPhone.get(normPhone(c.phone));
-    const msgs = (c.messages || []).filter(m => m.role !== 'notice').slice(-14)
+    const msgs = (c.messages || []).filter(m => m.role !== 'notice').slice(period === 'month' ? -24 : -14)
       .map(m => `  ${who[m.role] || m.role}: ${String(m.text || '').slice(0, 200)}`).join('\n');
     const quiet = Math.round((Date.now() - (c.updatedAt || 0)) / DAY);
     return `[чат ${c.id}] ${c.clientName || c.name || 'Клиент'}${c.phone ? ' +' + c.phone : ''}; ` +
@@ -359,7 +366,7 @@ export async function makeInsights(fs, env, period = 'week') {
 - summary: 2–4 предложения: сколько было обращений, с чем приходили, что получилось и что нет.
 - questions: до 6 частых вопросов клиентов, своими словами («Сколько стоит печать на футболке А4»).
 - offers: до 5 идей, что можно предложить другим клиентам или как продавать больше (по тому, что спрашивали и заказывали).
-- lost: клиенты, которые проконсультировались, но заказ не оформили и пропали (заказа нет, последним писала Анна или менеджер, тишина больше суток):
+- lost: клиенты, которые проконсультировались, но заказ не оформили и пропали (заказа нет, последним писала Аня или менеджер, тишина больше суток):
   chatId из [чат …], why — почему, как ты думаешь, ушёл (дорого, долго не ответили, не было нужного, просто узнавал цену…), suggest — что ему написать.
 - followups: до 6 конкретных сообщений, кому стоит написать ещё раз или уточнить актуальность заказа: chatId и text — готовый короткий текст сообщения клиенту.
 Никогда не пиши служебные id в тексте.`, `Заказов студии за период: ${inPeriod.length}. По услугам: ${services.map(x => x.name + ' — ' + x.count).join(', ') || 'нет'}.
