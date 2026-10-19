@@ -124,7 +124,7 @@ async function gemini(env, system, text, json) {
         generationConfig: { temperature: 0.5, maxOutputTokens: 4096, ...(json ? { responseMimeType: 'application/json', responseSchema: json } : {}) },
       }),
     });
-    if (r.status === 429 || r.status === 503) continue;
+    if (r.status === 429 || r.status === 503 || r.status === 404) continue;
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error((j.error && j.error.message) || ('Gemini ответил ' + r.status));
     return (j.candidates?.[0]?.content?.parts || []).filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
