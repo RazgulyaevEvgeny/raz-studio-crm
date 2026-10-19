@@ -4,7 +4,8 @@
 // Что делает:
 //   - отвечает клиентам ИИ-консультантом на бесплатном Google Gemini (логика в brain.js);
 //   - отправляет клиентам уведомления о заказах: учёт кладёт задание в коллекцию wa_outbox, бот его забирает;
-//   - если менеджер сам написал клиенту, бот молчит в этом чате 30 минут, а потом снова отвечает на новые вопросы;
+//   - если менеджер сам написал клиенту, бот молчит в этом чате 30 минут, а потом читает переписку и сам решает,
+//     нужно ли отвечать (на «спасибо» и «хорошо» молчит, на новый вопрос отвечает и представляется: «Милана сейчас занята заказом»);
 //   - если бот позвал менеджера, а тот не ответил за 10 минут, бот извиняется перед клиентом (один раз);
 //   - готовит для учёта сводку «Менеджер Анна» (утром и по кнопке «Обновить») и отвечает на вопросы сотрудников (anna.js);
 //   - присылает команде в Telegram уведомления: Анна зовёт менеджера, новый заказ Kaspi (notify.js);
@@ -148,6 +149,7 @@ async function voiceText(m) {
 async function answer(jid, chatId, phone) {
   const chat = await fs.get('wa_chats/' + chatId);
   if (!chat || chat.lastRole !== 'client') return; // пока ждали, ответил менеджер
+  if (skipped(chat)) return; // Аня уже решила, что на эти сообщения отвечать не нужно
   // Менеджер недавно писал в этом чате: ждём конца паузы, и если клиенту так и не ответили — отвечаем сами
   const paused = (chat.botPausedUntil || 0) - Date.now();
   if (paused > 0 && paused <= PAUSE_AFTER_MANAGER * 60e3) { // длиннее — пауза осталась от старой версии бота (12 ч), не считаем
@@ -159,6 +161,12 @@ async function answer(jid, chatId, phone) {
     return;
   }
   const reply = await runAgent(fs, env, phone, chat);
+  if (reply.silent) {
+    // Запоминаем решение до следующего сообщения клиента, чтобы проверка раз в минуту не спрашивала ИИ снова
+    await fs.patch('wa_chats/' + chatId, { botSkippedAt: chat.updatedAt || Date.now(), botSkipReason: reply.silent.slice(0, 200) });
+    log('Аня решила не отвечать в чате', phone || chatId, '—', reply.silent);
+    return;
+  }
   if (!reply.text) return;
   let ok = true;
   try { await send(jid, reply.text, true); } catch (e) { ok = false; log('не отправлено', e?.message || e); }
@@ -232,7 +240,7 @@ async function checkWaitingChats() {
     });
     for (const chat of silent) {
       const age = Date.now() - (chat.updatedAt || 0);
-      if (pending.has(chat.id) || age < REPLY_DELAY || age > MAX_AGE) continue;
+      if (pending.has(chat.id) || age < REPLY_DELAY || age > MAX_AGE || skipped(chat)) continue;
       const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
       if (!jid) continue;
       pending.set(chat.id, null); // отметка «уже отвечаем», чтобы следующая проверка не ответила второй раз
@@ -360,5 +368,8 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
     });
   }
 });
+
+// Аня уже решила промолчать на последние сообщения клиента (новое сообщение сдвигает updatedAt, и решение пересматривается)
+function skipped(chat) { return (chat.botSkippedAt || 0) >= (chat.updatedAt || 0) && !!chat.botSkippedAt; }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }

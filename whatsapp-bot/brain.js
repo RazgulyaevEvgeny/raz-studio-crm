@@ -34,7 +34,7 @@ const STUDIO = `Тебя зовут Анна, ты виртуальный мен
 Если клиент обращается лично к Милане или Евгению (например, «Милана, здравствуйте» или «Евгений, это вы?»), объясни,
 что это Анна, виртуальный менеджер студии, передай, что ты сообщишь Милане (или Евгению) и он(а) скоро ответит, и вызови call_manager с пометкой, к кому обращались.
 Голосовые сообщения клиента приходят тебе расшифрованными, с пометкой [голосовое сообщение]: отвечай на них как на обычный текст.
-В первом ответе клиенту (если в переписке ещё нет твоих сообщений) представься ровно так:
+В первом ответе клиенту (если в переписке ещё нет твоих сообщений и живой менеджер в ней не писал) представься ровно так:
 «Здравствуйте! Меня зовут Анна, я виртуальный менеджер студии брендирования Разгуляев. Как я могу к вам обращаться?»
 Если клиент сразу задал вопрос — после этого ответь и на него. Когда клиент назовёт имя, вызови save_client_name и дальше обращайся к нему по имени.
 Если в начале переписки указано «Клиент просил обращаться: …» — обращайся так и имя заново не спрашивай.
@@ -64,6 +64,22 @@ const STUDIO = `Тебя зовут Анна, ты виртуальный мен
 - Если спрашивают про услугу, которой нет в списке выше, скажи: «Я передам ваш запрос менеджеру, он подскажет более точно» — и вызови call_manager.
 - Никогда не пиши «уточню у руководителя» и не обещай руководителя: все вопросы идут через менеджера.
   Только если клиент жалуется или недоволен, скажи: «Передам руководителю, он в ближайшее время с вами свяжется» — и вызови call_manager с пометкой «жалоба».
+
+Переписка, в которой уже писал живой менеджер.
+Сообщения с пометкой [написал живой менеджер студии] написала менеджер Милана (или руководитель), а не ты. Ты подключаешься,
+только когда клиенту долго не отвечают. Прежде чем писать, внимательно прочитай ВСЮ переписку и пойми, о чём уже договорились.
+1) Сначала реши, нужно ли вообще отвечать. Если ответ не нужен — вызови stay_silent и ничего не пиши. Ответ НЕ нужен, если последнее сообщение клиента:
+   благодарность, «ок», «хорошо», «понял», «договорились», «подъеду», эмодзи, стикер, прощание или подтверждение того, о чём клиент уже договорился с менеджером;
+   либо на вопрос клиента менеджер уже ответил выше. Не пиши ради того, чтобы что-то написать.
+2) Отвечай, только если у клиента есть новый вопрос или просьба, на которые ещё никто не ответил: про заказ, цены, сроки, услуги, адрес и т.п.
+3) Не повторяй то, что менеджер уже сказал или прислал: адрес, ссылку 2ГИС, цены, сроки, реквизиты. Правило «всегда присылай ссылку 2ГИС»
+   в такой переписке не действует, если ссылку уже прислали: тогда просто напомни, что ссылка есть выше в переписке.
+   Не противоречь менеджеру и не меняй то, о чём он договорился с клиентом (время встречи, цену, срок). Если не уверена — call_manager.
+4) Если ты пишешь в такой переписке впервые (твоих сообщений после сообщений менеджера ещё нет), начни ровно так:
+   «Здравствуйте! Меня зовут Аня, я виртуальный менеджер студии брендирования Разгуляев. К сожалению, Милана сейчас занята заказом, поэтому вам отвечаю я.»
+   и сразу, в том же сообщении, ответь на вопрос клиента. Имя клиента не спрашивай, если менеджер уже обращался к нему по имени.
+5) Если вопрос может решить только менеджер (макет, оплата, о чём он лично договаривался) — после представления скажи, что передашь вопрос Милане
+   и она ответит, как только освободится, и вызови call_manager.
 
 Как вести разговор:
 - Пиши по-русски, коротко и по-человечески, как вежливый менеджер в мессенджере: 1–4 предложения, без канцелярита и списков на полэкрана.
@@ -149,6 +165,16 @@ const TOOLS = [
     input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'], additionalProperties: false },
   },
   {
+    name: 'stay_silent',
+    description: 'Ничего не писать клиенту: последнее сообщение не требует ответа (благодарность, «ок», подтверждение договорённости) или менеджер уже ответил на вопрос. После вызова текст не пиши.',
+    input_schema: {
+      type: 'object',
+      properties: { reason: { type: 'string', description: 'Коротко, почему отвечать не нужно' } },
+      required: ['reason'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'call_manager',
     description: 'Передаёт чат менеджеру: в учёте чат помечается «нужен менеджер», бот перестаёт отвечать в нём на несколько часов.',
     input_schema: {
@@ -199,20 +225,22 @@ export async function markNoticeSent(fs, orderId, n) {
 // Claude (платно) включается, только если в .env задан ANTHROPIC_API_KEY.
 export const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
 
-// Ответ бота на последние сообщения клиента: {text, handoff}
+// Ответ бота на последние сообщения клиента: {text, handoff}, либо {silent}, если Аня решила, что отвечать не нужно
 export async function runAgent(fs, env, phone, chat) {
   const now = new Date(Date.now() + 5 * 3600e3); // время Казахстана, UTC+5
   const today = `Сейчас ${WD_FULL[now.getUTCDay()]}, ${now.getUTCDate()} ${MONTHS_GEN[now.getUTCMonth()]} ${now.getUTCFullYear()}, ` +
     `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} по Алматы.` +
     (chat.clientName ? ` Клиент просил обращаться: ${chat.clientName}.` : '') + (chat.name ? ` Имя клиента в WhatsApp: ${chat.name}.` : '') +
-    (phone ? '' : ' Номер телефона клиента скрыт, его заказы по номеру не найти: спроси номер заказа или позови менеджера.');
+    (phone ? '' : ' Номер телефона клиента скрыт, его заказы по номеру не найти: спроси номер заказа или позови менеджера.') +
+    managerNote(chat.messages || []);
   const messages = toClaudeMessages(chat.messages || []);
   if (!messages.length) return {};
-  const ctx = { fs, phone, chat, handoff: '' };
+  const ctx = { fs, phone, chat, handoff: '', silent: '' };
   try {
     const text = String(env.ANTHROPIC_API_KEY || '').trim()
       ? await viaClaude(env, today, messages, ctx)
       : await viaGemini(env, today, messages, ctx);
+    if (ctx.silent) return { silent: ctx.silent };
     return text ? { text, handoff: ctx.handoff } : fallbackReply();
   } catch (e) {
     console.log('ИИ не ответил:', String(e?.message || e).slice(0, 300));
@@ -224,6 +252,7 @@ async function useTool(name, input, ctx) {
   try {
     const out = await runTool(name, input || {}, ctx);
     if (name === 'call_manager') ctx.handoff = String(input?.reason || 'нужен менеджер');
+    if (name === 'stay_silent') ctx.silent = String(input?.reason || 'ответ не нужен');
     return out;
   } catch (e) {
     return { error: String(e && e.message || e) };
@@ -296,6 +325,7 @@ async function viaGemini(env, today, messages, ctx) {
       const out = await useTool(c.name, c.args, ctx);
       results.push({ functionResponse: { ...(c.id ? { id: c.id } : {}), name: c.name, response: Array.isArray(out) ? { items: out } : out } });
     }
+    if (ctx.silent) return '';
     contents.push({ role: 'user', parts: results });
   }
   throw new Error('слишком много шагов');
@@ -329,6 +359,7 @@ async function viaClaude(env, today, messages, ctx) {
       const out = await useTool(u.name, u.input, ctx);
       results.push({ type: 'tool_result', tool_use_id: u.id, content: JSON.stringify(out), ...(out && out.error ? { is_error: true } : {}) });
     }
+    if (ctx.silent) return '';
     messages.push({ role: 'user', content: results });
   }
   throw new Error('слишком много шагов');
@@ -411,7 +442,7 @@ async function runTool(name, input, { fs, phone, chat }) {
     });
     return { ok: true, num: String(num).padStart(3, '0'), deadline: fmtDue('', isoDate(due)) };
   }
-  if (name === 'call_manager') return { ok: true };
+  if (name === 'call_manager' || name === 'stay_silent') return { ok: true };
   return { error: 'unknown tool' };
 }
 
@@ -427,13 +458,26 @@ export function toClaudeMessages(list) {
   for (const m of list.slice(-HISTORY)) {
     if (m.role === 'notice' || !m.text) continue;
     const role = m.role === 'client' ? 'user' : 'assistant';
-    const text = m.role === 'manager' ? '[ответ менеджера] ' + m.text : m.text;
+    const text = m.role === 'manager' ? '[написал живой менеджер студии] ' + m.text : m.text;
     const last = out[out.length - 1];
     if (last && last.role === role) last.content += '\n' + text;
     else out.push({ role, content: text });
   }
   while (out.length && out[0].role !== 'user') out.shift();
   return out.length && out[out.length - 1].role === 'user' ? out : [];
+}
+
+// Подсказка ИИ: писал ли в чате живой менеджер, как давно, и писала ли Аня после него (от этого зависит, как ей представиться)
+function managerNote(list) {
+  const lastMgr = list.map(m => m.role).lastIndexOf('manager');
+  if (lastMgr < 0) return '';
+  const ago = Math.max(1, Math.round((Date.now() - (list[lastMgr].at || Date.now())) / 60e3));
+  const botAfter = list.slice(lastMgr + 1).some(m => m.role === 'bot');
+  const botBefore = list.slice(0, lastMgr).some(m => m.role === 'bot');
+  return ` В этой переписке уже писал живой менеджер, последний раз ${ago} мин назад.` +
+    (botAfter ? ' После него ты уже писала клиенту, не представляйся заново.'
+      : botBefore ? ' Ты писала в этом чате раньше, но после менеджера ещё нет: если отвечаешь, коротко скажи, что Милана сейчас занята заказом, поэтому отвечаешь ты.'
+      : ' Ты в этой переписке ещё не писала: сначала реши, нужен ли ответ; если нужен — начни с представления, как сказано в инструкции.');
 }
 
 /* ---------- чаты в учёте (коллекция wa_chats, документ на собеседника) ---------- */
