@@ -319,7 +319,9 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
       'Не здоровайся заново и не представляйся. Если клиент уже отказался, договорился с менеджером, заказ оформлен, разговор был не о заказе или напоминать неуместно — вызови stay_silent.', at: Date.now() }]));
   }
   if (!messages.length) return {};
-  const ctx = { fs, phone, chat, handoff: '', silent: '', media: null, mockup: null };
+  // В нерабочее время первый ответ обязателен: молчать нельзя, если Аня не писала клиенту последние 3 часа
+  const mustAnswer = !opts.followUp && !isWorkTime() && !list.some(m => m.role === 'bot' && Date.now() - (m.at || 0) < 3 * 3600e3);
+  const ctx = { fs, phone, chat, handoff: '', silent: '', media: null, mockup: null, mustAnswer };
   try {
     const text = String(env.ANTHROPIC_API_KEY || '').trim()
       ? await viaClaude(env, today, messages, ctx)
@@ -338,6 +340,7 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
 }
 
 async function useTool(name, input, ctx) {
+  if (name === 'stay_silent' && ctx.mustAnswer) return { error: 'Сейчас нерабочее время и клиент ждёт: молчать нельзя. Ответь клиенту.' };
   try {
     const out = await runTool(name, input || {}, ctx);
     if (name === 'call_manager') ctx.handoff = String(input?.reason || 'нужен менеджер');
@@ -536,7 +539,9 @@ function hoursNote(list = []) {
   // Про нерабочее время говорим один раз: если Аня уже писала клиенту за последние 3 часа, не повторяем
   const said = list.some(m => m.role === 'bot' && Date.now() - (m.at || 0) < 3 * 3600e3);
   return `Сейчас нерабочее время студии (менеджер ответит ${nextOpen()}).` + (said ? ' Про нерабочее время ты уже говорила, не повторяй.'
-    : ' В этом ответе скажи, что сейчас нерабочее время, но ты можешь помочь: подсказать по заказу и предварительно оформить его для менеджера.');
+    : ' В этом ответе скажи, что сейчас нерабочее время, но ты можешь помочь: подсказать по заказу и предварительно оформить его для менеджера.' +
+      ' Ты ещё не отвечала этому клиенту в нерабочее время, поэтому ОБЯЗАТЕЛЬНО ответь (stay_silent сейчас нельзя): представься, если ещё не представлялась,' +
+      ' и сразу помогай по делу — цены и расчёт, визуализация (make_mockup), предварительный заказ (create_order).');
 }
 
 /* ---------- запасной ИИ: Cloudflare Workers AI через воркер отдела маркетинга (бесплатно, без инструментов) ---------- */

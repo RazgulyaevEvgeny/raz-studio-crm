@@ -36,6 +36,7 @@ const PORT = 3777;
 // В рабочее время даём менеджеру 7 минут ответить самому; вечером, в обед и в выходные Аня отвечает сразу,
 // выждав 15 секунд, чтобы клиент успел дописать (отсчёт с последнего сообщения клиента)
 const replyDelay = () => (isWorkTime() ? 7 * 60e3 : 15e3);
+const OFF_HOURS_PAUSE = 3 * 60e3;             // в нерабочее время после сообщения менеджера Аня ждёт только 3 минуты
 const MAX_AGE = 3 * 24 * 3600e3;             // компьютер был выключен: после включения отвечаем всем, кто ждал до 3 дней (с извинением за ожидание)
 const OUTBOX_EVERY = 15e3;                   // как часто проверять задания на уведомления
 const OUTBOX_TTL = 7 * 24 * 3600e3;          // задания старше недели выбрасываем
@@ -139,6 +140,7 @@ async function onMessage(m) {
     phone, jid, unread: true, ...(m.pushName ? { name: m.pushName } : {}),
   });
   if (!aiOn || m._late || Date.now() - at > MAX_AGE) return;
+  log('Сообщение от клиента', phone || chatId, '— отвечу через', Math.round(replyDelay() / 1000), 'с');
 
   // Клиенты часто пишут несколькими сообщениями подряд: отвечаем, когда допишет
   clearTimeout(pending.get(chatId));
@@ -192,10 +194,13 @@ async function answer(jid, chatId, phone) {
 async function answerNow(jid, chatId, phone) {
   const chat = await fs.get('wa_chats/' + chatId);
   if (!chat || chat.lastRole !== 'client') return; // пока ждали, ответил менеджер
-  if (skipped(chat)) return; // Аня уже решила, что на эти сообщения отвечать не нужно
+  if (skipped(chat)) { log('Аня не отвечает в чате', phone || chatId, '— уже решила раньше:', chat.botSkipReason || ''); return; } // Аня уже решила, что на эти сообщения отвечать не нужно
   // Менеджер недавно писал в этом чате: ждём конца паузы, и если клиенту так и не ответили — отвечаем сами
-  const paused = (chat.botPausedUntil || 0) - Date.now();
-  if (paused > 0 && paused <= PAUSE_AFTER_MANAGER * 60e3) { // длиннее — пауза осталась от старой версии бота (12 ч), не считаем
+  // В нерабочее время Аня отвечает сразу; уступает только живому разговору менеджера (писал меньше 3 минут назад)
+  let paused = (chat.botPausedUntil || 0) - Date.now();
+  if (!isWorkTime()) paused = Math.min(paused, (chat.botPausedUntil || 0) - PAUSE_AFTER_MANAGER * 60e3 + OFF_HOURS_PAUSE - Date.now());
+  if (paused > 0 && paused <= PAUSE_AFTER_MANAGER * 60e3) {
+    log('Аня ждёт: в чате', phone || chatId, 'недавно писал менеджер, отвечу через', Math.ceil(paused / 1000), 'с'); // длиннее — пауза осталась от старой версии бота (12 ч), не считаем
     clearTimeout(pending.get(chatId));
     pending.set(chatId, setTimeout(() => {
       pending.delete(chatId);
