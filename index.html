@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261018185443">
+<meta name="app-build" content="20261019070000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1468,6 +1468,86 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 @supports(-webkit-touch-callout:none){
   @media(max-width:600px){input,select,textarea{font-size:16px!important}}
 }
+/* юрлицо: документы и счёт на оплату */
+.legal-row{background:var(--tile);border-radius:14px;padding:12px 14px;font-weight:600}
+.dsec{display:flex;flex-direction:column;gap:12px;background:var(--paper);border-radius:18px;box-shadow:inset 0 0 0 2px var(--line);padding:14px 16px}
+.dsec-h{font:700 15px var(--f);letter-spacing:-.01em}
+.dsec-h em{font-style:normal;font-weight:600;font-size:12.5px;margin-left:6px;padding:3px 9px;border-radius:999px;background:var(--tile);color:var(--muted)}
+.dsec-h em.ok{background:color-mix(in srgb,var(--ok) 14%,var(--paper));color:var(--ok)}
+.dsec-h em.need{background:color-mix(in srgb,var(--danger) 12%,var(--paper));color:var(--danger)}
+#p-docs .fld input,#p-docs .fld select,#p-docs .fld textarea{background:var(--paper)}
+.dc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+@media(max-width:900px){.dc-grid{grid-template-columns:1fr}}
+.dc-list{display:flex;flex-direction:column;gap:8px}
+.dc-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px 14px;align-items:center;background:var(--paper);border-radius:16px;padding:12px 12px 12px 16px}
+.dc-row b{font:700 15px var(--f);display:block;overflow-wrap:anywhere}
+.dc-row small{display:block;color:var(--muted);font-size:13px;margin-top:2px;overflow-wrap:anywhere}
+.dc-row .dc-s{font:800 17px var(--f);white-space:nowrap;letter-spacing:-.02em}
+.dc-row .dc-a{display:flex;gap:6px}
+.dc-tag{display:inline-block;font:600 11.5px var(--f);padding:2px 8px;border-radius:999px;background:var(--tile);color:var(--muted);margin-left:6px;vertical-align:2px}
+.dc-tag.ok{background:color-mix(in srgb,var(--ok) 14%,var(--paper));color:var(--ok)}
+@media(max-width:560px){.dc-row{grid-template-columns:minmax(0,1fr) auto}.dc-row .dc-a{grid-column:1/-1}.dc-row .dc-a .btn{flex:1}}
+.dc-bform{display:flex;flex-direction:column;gap:12px;background:var(--paper);border-radius:18px;padding:14px 16px}
+#p-docs .dc-bform .fld input{background:var(--tile)}
+.dc-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rst{font-style:normal;font:600 12.5px var(--f);letter-spacing:0;padding:3px 9px;border-radius:999px;background:var(--paper);color:var(--muted)}
+.rst.ok{background:color-mix(in srgb,var(--ok) 14%,var(--paper));color:var(--ok)}
+.rst.need{background:color-mix(in srgb,var(--danger) 12%,var(--paper));color:var(--danger)}
+.iv-add{display:flex;flex-direction:column;gap:8px}
+.iv-add input{border:0;background:var(--tile);border-radius:12px;min-height:44px;padding:0 12px;width:100%;min-width:0}
+.iv-add .suffix input{padding-right:30px}
+.iv-add-r{display:grid;grid-template-columns:90px 70px minmax(0,1fr) auto;gap:8px;align-items:center}
+@media(max-width:440px){.iv-add-r{grid-template-columns:1fr 1fr}.iv-add-r .btn,.iv-add-r .suffix{grid-column:1/-1}}
+details.dsec>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+details.dsec>summary::-webkit-details-marker{display:none}
+details.dsec>summary::after{content:"";width:9px;height:9px;border-right:2.4px solid var(--muted);border-bottom:2.4px solid var(--muted);transform:rotate(45deg);margin:-4px 4px 0 0;transition:transform .2s}
+details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
+.r-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.r-fields .fld.wide{grid-column:1/-1}
+@media(max-width:440px){.r-fields{grid-template-columns:1fr}}
+.inv-sum{display:flex;flex-direction:column;gap:6px}
+.inv-ln{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;font-size:14px;background:var(--tile);border-radius:12px;padding:9px 12px}
+.inv-ln b{font-weight:600;overflow-wrap:anywhere}.inv-ln span{white-space:nowrap;font-weight:700}
+.inv-ln.tot{background:var(--ink);color:#fff}
+.inv-warn{font-size:13px;background:color-mix(in srgb,var(--st-prod) 10%,var(--paper));border-radius:12px;padding:9px 12px}
+.inv{position:fixed;inset:0;z-index:60;background:rgba(10,11,20,.82);display:flex;flex-direction:column}
+.inv[hidden]{display:none}
+.inv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));color:#fff}
+.inv-bar b{font:700 16px var(--f)}.inv-bar .r{display:flex;gap:8px}
+.inv-scroll{flex:1;overflow:auto;padding:4px 12px 24px;display:flex;justify-content:center;align-items:flex-start}
+.inv-sheet{width:794px;flex:none;background:#fff;color:#000;font:12px/1.35 Arial,Helvetica,sans-serif;padding:40px 48px 56px;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.inv-sheet p{margin:0 0 8px}
+.inv-sheet table{border-collapse:collapse;width:100%}
+.iv-logo{color:#4358ef;line-height:0;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid #d9dcef}
+.iv-logo svg{height:62px;width:auto}
+.iv-warn{font-size:10.5px;text-align:center;margin-bottom:14px!important}
+.iv-cap{font-weight:700;font-size:13px;margin-bottom:4px}
+.iv-bank td{border:1px solid #000;padding:4px 6px;vertical-align:top}
+.iv-bank td.c{width:22%;text-align:center}
+.iv-bank tr:nth-child(1) td,.iv-bank tr:nth-child(3) td{border-bottom:0}
+.iv-bank tr:nth-child(2) td,.iv-bank tr:nth-child(4) td{border-top:0}
+.inv-sheet h1{font:700 18px/1.25 Arial,Helvetica,sans-serif;margin:22px 0 6px;padding-bottom:6px;border-bottom:2px solid #000}
+.iv-party td{padding:4px 0;vertical-align:top}.iv-party td:first-child{width:90px}
+.iv-items{margin-top:12px}
+.iv-items th,.iv-items td{border:1px solid #000;padding:4px 6px;vertical-align:top}
+.iv-items th{font-weight:700;text-align:center;background:#f3f3f3}
+.iv-items td.n{text-align:right;white-space:nowrap}.iv-items td.c{text-align:center}
+.iv-items thead{border:2px solid #000}
+.iv-tot{width:auto!important;margin:6px 0 10px auto}
+.iv-tot td{padding:2px 0 2px 16px;text-align:right;font-weight:700;white-space:nowrap}
+.iv-line{border-top:2px solid #000;margin:14px 0 22px}
+.iv-sign{display:flex;align-items:flex-end;gap:8px;font-weight:700}
+.iv-sign i{display:inline-block;width:170px;border-bottom:1px solid #000;height:1px}
+.iv-sign em{font-style:normal;font-weight:400;margin-left:40px;color:#444}
+@media print{
+  body.printing>*:not(#inv){display:none!important}
+  body.printing{background:#fff!important}
+  body.printing #inv{position:static;display:block;background:none}
+  body.printing .inv-bar{display:none}
+  body.printing .inv-scroll{overflow:visible;padding:0;display:block}
+  body.printing .inv-sheet{zoom:1!important;width:auto;box-shadow:none;border-radius:0;padding:0}
+  @page{size:A4;margin:12mm 12mm 14mm}
+}
 </style>
 
 <div class="shell">
@@ -1480,6 +1560,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <button class="pill" type="button" data-go="calendar">Календарь <span class="n hot" id="n-late" hidden>0</span></button>
       <button class="pill" type="button" data-go="office"><span class="lf">Расходы офиса</span><span class="ls">Расходы</span></button>
       <button class="pill" type="button" data-go="supplies">Закупки</button>
+      <button class="pill" type="button" data-go="docs">Документы</button>
       <button class="pill" type="button" data-go="projects">Проекты</button>
       <button class="pill" type="button" data-go="prices">Прайс</button>
       <button class="pill" type="button" data-go="analytics">Аналитика</button>
@@ -1594,6 +1675,34 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   </section>
   <section id="p-office" class="page" style="gap:16px" hidden></section>
   <section id="p-supplies" class="page" style="gap:16px" hidden></section>
+  <section id="p-docs" class="page" style="gap:16px" hidden>
+    <div class="ph"><div><h1>Документы</h1><p>Счета на оплату для юрлиц, контрагенты и реквизиты студии.</p></div><button class="btn primary" type="button" id="dc-new">Новый счёт</button></div>
+    <div class="w"><div class="w-h"><h2>Счета на оплату <span class="c" id="dc-inv-c"></span></h2></div><div class="dc-list" id="dc-inv"></div></div>
+    <div class="dc-grid">
+      <div class="w"><div class="w-h"><h2>Контрагенты <span class="c" id="dc-b-c"></span></h2><button class="btn white sm" type="button" id="dc-badd">Добавить</button></div>
+        <div class="dc-bform" id="dc-bform" hidden>
+          <div class="fld"><label for="bf-name">Наименование *</label><input id="bf-name" autocomplete="off" placeholder="ТОО «Название»"></div>
+          <div class="grid2"><div class="fld"><label for="bf-bin">БИН / ИИН *</label><input id="bf-bin" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="12 цифр"></div>
+          <div class="fld"><label for="bf-contract">Договор</label><input id="bf-contract" autocomplete="off" placeholder="Без договора"></div></div>
+          <div class="fld"><label for="bf-addr">Адрес</label><input id="bf-addr" autocomplete="off" placeholder="Город, улица, дом, офис"></div>
+          <div class="grid2"><div class="fld"><label for="bf-dir">Директор</label><input id="bf-dir" autocomplete="off" placeholder="ФИО"></div>
+          <div class="fld"><label for="bf-phone">Телефон</label><input id="bf-phone" type="tel" autocomplete="off" placeholder="+7 7__ ___ __ __"></div></div>
+          <div class="fld"><label for="bf-email">Почта</label><input id="bf-email" type="email" autocomplete="off" placeholder="для отправки счёта"></div>
+          <div class="err" id="bf-err" hidden></div>
+          <div class="dc-acts"><span id="bf-del"></span><span style="flex:1"></span><button class="btn soft sm" type="button" id="bf-cancel">Отмена</button><button class="btn primary sm" type="button" id="bf-save">Сохранить</button></div>
+        </div>
+        <div class="dc-list" id="dc-buyers"></div>
+      </div>
+      <div class="w"><div class="w-h"><h2>Реквизиты студии <em class="rst" id="r-state"></em></h2></div>
+        <div class="r-fields" id="r-fields"></div>
+        <label class="chk-row"><input type="checkbox" id="r-vat"> Мы плательщики НДС</label>
+        <div class="fld" id="r-vatw" hidden><label for="r-vatrate">Ставка НДС</label><div class="suffix"><input id="r-vatrate" type="number" min="0" max="50" step="1" inputmode="numeric" placeholder="16"><span>%</span></div></div>
+        <div class="err" id="r-err" hidden></div>
+        <div><button class="btn primary sm" type="button" id="r-save">Сохранить реквизиты</button></div>
+        <span class="hint">Подставляются во все счета: и в отдельные, и в счета из заказов.</span>
+      </div>
+    </div>
+  </section>
   <section id="p-analytics" class="page" style="gap:16px" hidden>
     <div class="ph"><div><h1>Аналитика</h1><p id="an-sub">Сколько заработали, что заказывают чаще и когда.</p></div></div>
     <div class="chips an-per" id="an-per" role="group" aria-label="Период"></div>
@@ -1701,6 +1810,46 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
   </section>
 </div>
 
+<div class="ed" id="ived" hidden>
+  <div class="ed-back" data-ivclose></div>
+  <form class="ed-panel" id="iv-form" novalidate>
+    <div class="ed-head"><h2 id="iv-title">Новый счёт</h2><button class="x" type="button" data-ivclose aria-label="Закрыть">×</button></div>
+    <div class="ed-body">
+      <div class="fld"><label for="iv-pick">Покупатель *</label><select id="iv-pick"></select></div>
+      <div class="dsec" id="iv-nb" hidden><b class="dsec-h">Новый контрагент</b>
+        <div class="fld"><label for="iv-bn">Наименование *</label><input id="iv-bn" autocomplete="off" placeholder="ТОО «Название»"></div>
+        <div class="grid2"><div class="fld"><label for="iv-bb">БИН / ИИН *</label><input id="iv-bb" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="12 цифр"></div>
+        <div class="fld"><label for="iv-bc">Договор</label><input id="iv-bc" autocomplete="off" placeholder="Без договора"></div></div>
+        <div class="fld"><label for="iv-ba">Адрес</label><input id="iv-ba" autocomplete="off" placeholder="Город, улица, дом, офис"></div>
+        <span class="hint">Сохранится в контрагентах, в следующий раз просто выберете из списка.</span>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label for="iv-num">Номер счёта</label><input id="iv-num" inputmode="numeric" autocomplete="off"></div>
+        <div class="fld"><label for="iv-date">Дата счёта</label><input id="iv-date" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div>
+      </div>
+      <div class="fld"><span class="lb">Что в счёте</span><div class="exps" id="iv-lines"></div></div>
+      <div class="iv-add">
+        <input id="iv-ln" autocomplete="off" placeholder="Наименование: футболки с печатью логотипа" aria-label="Наименование">
+        <div class="iv-add-r">
+          <input id="iv-lq" type="number" min="0" step="any" inputmode="decimal" placeholder="Кол-во" aria-label="Количество">
+          <input id="iv-lu" autocomplete="off" placeholder="шт" aria-label="Единица">
+          <div class="suffix"><input id="iv-lp" type="number" step="any" inputmode="decimal" placeholder="Цена" aria-label="Цена за единицу"><span>₸</span></div>
+          <button class="btn primary sm" type="button" id="iv-ladd">Добавить</button>
+        </div>
+      </div>
+      <div class="inv-ln tot" id="iv-tot"><b>Итого к оплате</b><span>0 ₸</span></div>
+    </div>
+    <div class="err" id="iv-err" hidden style="padding:0 24px 8px"></div>
+    <div class="ed-foot">
+      <div id="iv-del"></div>
+      <div class="r"><button class="btn soft sm" type="button" id="iv-save">Сохранить</button><button class="btn primary sm" type="submit">Сохранить и показать</button></div>
+    </div>
+  </form>
+</div>
+<div class="inv" id="inv" hidden role="dialog" aria-modal="true" aria-label="Счёт на оплату">
+  <div class="inv-bar"><b>Счёт на оплату</b><div class="r"><button class="btn primary sm" type="button" id="inv-print">Печать или PDF</button><button class="btn white sm" type="button" id="inv-close">Закрыть</button></div></div>
+  <div class="inv-scroll"><div class="inv-sheet" id="inv-sheet"></div></div>
+</div>
 <datalist id="owners-dl"></datalist>
 
 <button class="fab" type="button" data-new aria-label="Новый заказ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -1716,6 +1865,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
       <button class="tab" type="button" role="tab" id="tab-main" aria-selected="true" data-tab="main">Заказ</button>
       <button class="tab" type="button" role="tab" id="tab-cost" aria-selected="false" data-tab="cost"><span class="lf">Сколько мы потратили</span><span class="ls">Расходы</span> <em id="tab-cost-n"></em></button>
       <button class="tab" type="button" role="tab" id="tab-kaspi" aria-selected="false" data-tab="kaspi" hidden>Kaspi</button>
+      <button class="tab" type="button" role="tab" id="tab-docs" aria-selected="false" data-tab="docs" hidden>Документы</button>
     </div>
     <div class="ed-body" id="pane-main">
       <div class="reqbox" id="req-box" hidden></div>
@@ -1723,6 +1873,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <div class="fld"><label for="f-client">Клиент *</label><div class="combo"><input id="f-client" autocomplete="off" placeholder="Имя или компания"><button class="combo-btn" type="button" id="f-client-btn" aria-label="Выбрать из клиентов" aria-haspopup="listbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button></div></div>
         <div class="fld"><label for="f-phone">Телефон</label><input id="f-phone" type="tel" placeholder="+7 7__ ___ __ __"><a class="wa" id="wa" target="_blank" rel="noopener" hidden>Написать в WhatsApp ↗</a></div>
       </div>
+      <label class="chk-row legal-row"><input type="checkbox" id="f-legal"> Юрлицо: нужны документы (счёт на оплату)</label>
       <div class="fld"><span class="lb" id="svc-lb">Услуга</span><div class="svc-pick" id="svc-pick" role="group" aria-labelledby="svc-lb"></div></div>
       <div class="fld" id="custom-wrap" hidden><label for="f-custom">Название услуги *</label><input id="f-custom" autocomplete="off" placeholder="Например: лазерная гравировка"></div>
       <div class="grid2">
@@ -1795,6 +1946,27 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
         <span class="hint" id="k-src">Выберите товар стрелочкой: цена и себестоимость подставятся как в прошлый раз.</span>
         <div class="kadd-foot"><div class="fld kfee"><label for="k-fee">Комиссия Kaspi</label><div class="suffix"><input id="k-fee" type="number" min="0" max="100" step="0.5" inputmode="decimal"><span>%</span></div></div><button class="btn primary sm" type="button" id="k-addbtn">Добавить продажу</button></div>
       </div>
+    </div>
+    <div class="ed-body" id="pane-docs" hidden>
+      <div class="dsec"><b class="dsec-h">Покупатель</b>
+        <div class="fld"><label for="d-pick">Выбрать контрагента</label><select id="d-pick"></select></div>
+        <div class="fld"><label for="d-name">Наименование организации *</label><input id="d-name" autocomplete="off" placeholder="ТОО «Название»"></div>
+        <div class="grid2">
+          <div class="fld"><label for="d-bin">БИН / ИИН *</label><input id="d-bin" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="12 цифр"></div>
+          <div class="fld"><label for="d-contract">Договор</label><input id="d-contract" autocomplete="off" placeholder="Без договора"></div>
+        </div>
+        <div class="fld"><label for="d-addr">Адрес</label><input id="d-addr" autocomplete="off" placeholder="Город, улица, дом"></div>
+      </div>
+      <div class="dsec"><b class="dsec-h">Счёт на оплату</b>
+        <div class="grid2">
+          <div class="fld"><label for="d-num">Номер счёта</label><input id="d-num" inputmode="numeric" autocomplete="off"></div>
+          <div class="fld"><label for="d-date">Дата счёта</label><input id="d-date" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div>
+        </div>
+        <div class="inv-sum" id="d-sum"></div>
+        <button class="btn primary" type="button" id="d-make">Сформировать счёт на оплату</button>
+        <span class="hint">Откроется готовый счёт: его можно распечатать или сохранить в PDF и отправить клиенту. Позиции и суммы берутся из вкладки «Заказ».</span>
+      </div>
+      <span class="hint">Все счета, контрагенты и реквизиты студии собраны в разделе «Документы» в верхнем меню.</span>
     </div>
     <div class="err" id="f-err" hidden style="padding:0 24px 8px"></div>
     <div class="ed-foot">
@@ -2215,7 +2387,7 @@ const MGR_LIMITS=false;const mgrLimited=()=>MGR_LIMITS&&isMgr();
 function applyRoleWrite(){canWrite=baseWrite&&!(mgrLimited()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
 function go(p,opts={}){
   page=p;applyRoleWrite();
-  ['home','orders','kaspi','calendar','office','supplies','projects','prices','analytics'].forEach(x=>$('p-'+x).hidden=x!==p);
+  ['home','orders','kaspi','calendar','office','supplies','docs','projects','prices','analytics'].forEach(x=>$('p-'+x).hidden=x!==p);
   document.querySelectorAll('.pills [data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===p));
   if(p==='calendar'){selDay=opts.day||selDay||todayStr();const [y,m]=selDay.split('-').map(Number);calY=y;calM=m-1}
   render();
@@ -2548,6 +2720,7 @@ function render(){
   if(page==='kaspi')renderKaspiPage();
   if(page==='calendar')renderCalendar();
   if(page==='office'||page==='supplies')renderLedger(page);
+  if(page==='docs')renderDocsPage();
   if(page==='projects')renderProjects();
   if(page==='prices')renderPrices();
   if(page==='analytics')renderAnalytics();
@@ -2936,8 +3109,8 @@ function renderSvcPick(){
 }
 let edScrollReset=new Set();
 function setTab(t){
-  edTab=t;['main','cost','kaspi'].forEach(k=>{$('pane-'+k).hidden=t!==k;$('tab-'+k).setAttribute('aria-selected',t===k)});
-  if(t==='cost')renderCost();if(t==='kaspi')renderKaspi();
+  edTab=t;['main','cost','kaspi','docs'].forEach(k=>{$('pane-'+k).hidden=t!==k;$('tab-'+k).setAttribute('aria-selected',t===k)});
+  if(t==='cost')renderCost();if(t==='kaspi')renderKaspi();if(t==='docs')renderDocs();
   if(!$('ed').hidden&&edScrollReset.has(t)){edScrollReset.delete(t);$('pane-'+t).scrollTop=0}
 }
 function renderOrderFiles(){
@@ -2975,7 +3148,7 @@ function updateRest(){
   const w=waLink($('f-phone').value);const a=$('wa');a.hidden=!w;if(w)a.href=w;
 }
 function openEditor(id,preset={}){
-  edScrollReset=new Set(['main','cost','kaspi']);
+  edScrollReset=new Set(['main','cost','kaspi','docs']);
   editing=id;
   const o=id==='new'?{status:'new',service:view.svc!=='all'?view.svc:'vinyl',deadline:preset.deadline||view.day||'',...(preset.o||{})}:orders.find(x=>x.id===id);
   $('ed-save').textContent='Сохранить';edReq=id==='new'&&preset.req?preset.req:null;reqAskReject=false;renderReqBox();
@@ -2990,6 +3163,7 @@ function openEditor(id,preset={}){
   if(id!=='new'&&canWrite){const sp=splitOldTopItems(o);if(sp){edConvFrom=edItems;edItems=sp}}
   edItems.forEach(i=>{if(i.top&&(i.cost==null||i.cost==='')){const tc=topperItemCost(i);if(tc){i.cost=tc.cost;if(tc.p3d)i.p3d=tc.p3d;if(!i.pid)i.pid=tc.pid}}});
   oiClear();renderItems();
+  fillDocs(o,id);
   $('f-desc').value=o.desc||'';
   setDM($('f-deadline'),o.deadline||'');setDM($('f-dfrom'),o.deadlineFrom||'');
   setDM($('f-received'),id==='new'?(o.receivedAt||todayStr()):receivedOf(o));
@@ -3012,6 +3186,303 @@ function addExpense(){
   if(!(amount>0)){showErr('f-err','Впишите сумму расхода.');$('e-amount').focus();return false}
   $('f-err').hidden=true;edExp.push({id:uid(),title,amount});$('e-title').value='';$('e-amount').value='';renderCost();$('e-title').focus();return true;
 }
+/* ---------- документы для юрлиц: счета на оплату ----------
+   Раздел «Документы»: счета, контрагенты и реквизиты студии. Всё лежит в wa_anna (правило уже опубликовано, новое не нужно):
+   wa_anna/requisites — реквизиты студии; wa_anna/legal — {buyers:[{bin,name,addr,contract,director,phone,email}],
+   invoices:[{id,num,date,buyer,lines:[{name,qty,unit,price}],createdAt,updatedAt,by}]} — отдельные счета без заказа.
+   У заказа: legal (галочка «Юрлицо»), buyer {name,bin,addr,contract}, invoice {num,date}; такие заказы тоже попадают в список счетов.
+   Счёт по типовой форме РК («Счет на оплату» с образцом платёжного поручения), печать или PDF прямо из браузера. */
+const REQ_F=[['name','Наименование (как в документах)','ИП Разгуляев Е. К.',1],['bin','БИН / ИИН','12 цифр'],['kbe','Кбе','19'],['addr','Адрес','г. Павлодар, ул. Абая, 115а',1],['bank','Банк','АО «Kaspi Bank»',1],['iik','ИИК (номер счёта)','KZ00 0000 0000 0000 0000',1],['bik','БИК','CASPKZKA'],['knp','Код назначения платежа','859'],['boss','Подпись: исполнитель (ФИО)','Рябиков Е. К.',1]];
+const INV_BOSS='Рябиков Е. К.';
+/* реквизиты студии по умолчанию: подставляются, пока в wa_anna/requisites ничего не сохранено */
+const REQ_DEF={name:'ИП РАЗГУЛЯЕВ',bin:'970223350159',addr:'г. Павлодар, ул. Академика Чокина, д. 25, кв/офис 167',bank:'АО «Kaspi Bank»',bik:'CASPKZKA',iik:'KZ85722S000046171476',kbe:'19',knp:'',boss:INV_BOSS};
+/* постоянные контрагенты, которые есть с самого начала */
+const KNOWN_BUYERS=[{name:'ТОО «One-two-sleep»',bin:'141040009658',addr:'РК, Павлодарская обл., г. Павлодар, ул. Лермонтова, 94/1, офис 102',director:'Мусинов Дидар Ерланович'}];
+/* логотип из шапки CRM; у копии свои id, чтобы при печати не зависеть от скрытой шапки */
+const invLogo=()=>{const l=document.querySelector('.logo svg');return l?l.outerHTML.replace(/id="g/g,'id="ivg').replace(/#g(\d)/g,'#ivg$1').replace('class="logo-svg"','class="iv-logo-svg"'):''};
+const REQ_NEED=['name','bin','bank','iik','bik'];
+const binOk=b=>/^\d{12}$/.test(b||'');
+const digits12=e=>{const v=e.target.value.replace(/\D/g,'').slice(0,12);if(v!==e.target.value)e.target.value=v};
+let studioReq=null,studioReqP=null;
+function loadStudioReq(){
+  if(studioReq)return Promise.resolve(studioReq);
+  if(!studioReqP)studioReqP=db.doc('wa_anna/requisites').get().then(s=>{studioReq=s.exists?(s.data()||{}):{};renderReqForm();return studioReq}).catch(e=>{studioReqP=null;try{console.warn('requisites',e)}catch(_){}return {}});
+  return studioReqP;
+}
+const reqNow=()=>({...REQ_DEF,...Object.fromEntries(Object.entries(studioReq||{}).filter(([,v])=>v!==''&&v!=null))});
+const reqOk=r=>!!r&&REQ_NEED.every(k=>String(r[k]||'').trim());
+function renderReqForm(){
+  const r=reqNow();
+  $('r-fields').innerHTML=REQ_F.map(([k,l,ph,w])=>`<div class="fld${w?' wide':''}"><label for="r-${k}">${esc(l)}</label><input id="r-${k}" autocomplete="off" value="${esc(r[k]||'')}" placeholder="${esc(ph)}" ${canWrite?'':'disabled'}></div>`).join('');
+  $('r-vat').checked=!!r.vat;$('r-vatrate').value=r.vatRate??'';$('r-vatw').hidden=!r.vat;
+  $('r-save').hidden=!canWrite;reqState();
+}
+function reqState(){const ok=reqOk(reqNow()),el=$('r-state');el.textContent=!studioReq?'загружаем…':ok?'заполнены':'нужно заполнить';el.className='rst'+(!studioReq?'':ok?' ok':' need')}
+function readReqForm(){const r={};REQ_F.forEach(([k])=>{r[k]=$('r-'+k).value.trim()});r.vat=$('r-vat').checked;r.vatRate=$('r-vatrate').value===''?16:Math.max(0,+$('r-vatrate').value||0);return r}
+async function saveStudioReq(){
+  if(!db||!canWrite)return false;
+  const r=readReqForm();$('r-err').hidden=true;
+  if(!reqOk(r)){showErr('r-err','Заполните хотя бы наименование, БИН, банк, ИИК и БИК.');return false}
+  const b=$('r-save');b.disabled=true;
+  try{await db.doc('wa_anna/requisites').set({...r,updatedAt:Date.now(),by:ROLE().name||''});studioReq=r;reqState();toast('Реквизиты студии сохранены');return true}
+  catch(e){showErr('r-err',handleWriteError(e));return false}
+  finally{b.disabled=false}
+}
+/* общая запись wa_anna/legal: перед изменением перечитываем, чтобы не затереть то, что сохранил коллега */
+let legal={buyers:[],invoices:[]},legalLoaded=false,legalP=null;
+const legalOf=d=>({buyers:(d&&d.buyers)||[],invoices:(d&&d.invoices)||[]});
+function loadLegal(force){
+  if(legalP&&!force)return legalP;
+  legalP=db.doc('wa_anna/legal').get().then(s=>{legal=legalOf(s.exists?s.data():null);legalLoaded=true;if(page==='docs')renderDocsPage();return legal})
+    .catch(e=>{legalP=null;legalLoaded=true;try{console.warn('legal',e)}catch(_){}return legal});
+  return legalP;
+}
+async function legalMut(fn){
+  const s=await db.doc('wa_anna/legal').get();const cur=legalOf(s.exists?s.data():null);fn(cur);
+  await db.doc('wa_anna/legal').set({...cur,updatedAt:Date.now(),by:ROLE().name||''});legal=cur;legalLoaded=true;
+}
+/* контрагенты: постоянные + сохранённые в разделе + покупатели из заказов (по БИН, сохранённые важнее) */
+function buyerList(){
+  const m=new Map();
+  ordersRaw.forEach(o=>{const b=o.buyer;if(o.legal&&b&&binOk(b.bin)&&b.name&&!m.has(b.bin))m.set(b.bin,{name:b.name,bin:b.bin,addr:b.addr||'',contract:b.contract||'',src:'order'})});
+  KNOWN_BUYERS.forEach(b=>m.set(b.bin,{...b,src:'known'}));
+  legal.buyers.forEach(b=>m.set(b.bin,{...b,src:'saved'}));
+  return [...m.values()].sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+}
+const buyerOpts=(cur,first)=>first+buyerList().map(b=>`<option value="${esc(b.bin)}"${b.bin===cur?' selected':''}>${esc(b.name)} · ${esc(b.bin)}</option>`).join('');
+/* строки счёта: позиции заказа, а если их нет — одна строка услуги на сумму заказа */
+function orderLines(o){
+  const L=(o.items||[]).filter(i=>i.name&&(+i.qty||0)>0).map(i=>({name:i.name,qty:+i.qty||0,unit:i.unit||'шт',price:+i.price||0}));
+  if(L.length)return L;
+  const p=+o.price||0;if(!p)return [];
+  const nm=svcLabel(o.service,o),d=String(o.desc||'').trim();
+  return [{name:(d?nm+': '+d:nm).slice(0,240),qty:1,unit:'усл.',price:p}];
+}
+const invLines=()=>orderLines({items:edItems,price:$('f-price').value,service:edSvc,customService:$('f-custom').value.trim(),desc:$('f-desc').value});
+const r2=n=>Math.round((+n||0)*100)/100;
+const lineSum=l=>r2(l.price*l.qty);
+const linesTot=L=>r2(L.reduce((s,l)=>s+lineSum(l),0));
+function allInvoices(){
+  const A=legal.invoices.map(v=>({...v,src:'own',total:linesTot(v.lines||[])}));
+  ordersRaw.filter(o=>o.legal&&o.buyer&&o.buyer.name).forEach(o=>{const L=orderLines(o);
+    A.push({id:'o:'+o.id,src:'order',orderId:o.id,orderNum:o.num,num:(o.invoice&&o.invoice.num)||String(o.num||''),date:(o.invoice&&o.invoice.date)||receivedOf(o),buyer:o.buyer,lines:L,total:linesTot(L),paid:+o.price>0&&!debtOf(o)})});
+  return A.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(parseInt(b.num)||0)-(parseInt(a.num)||0));
+}
+const nextInvNum=()=>String(allInvoices().reduce((m,v)=>Math.max(m,parseInt(v.num)||0),0)+1);
+/* ---- вкладка «Документы» в заказе ---- */
+function fillDocs(o,id){
+  const b=o.buyer||{},iv=o.invoice||{};
+  $('f-legal').checked=!!o.legal;$('tab-docs').hidden=!o.legal;
+  $('d-name').value=b.name||'';$('d-bin').value=b.bin||'';$('d-addr').value=b.addr||'';$('d-contract').value=b.contract||'';
+  $('d-num').value=iv.num||'';setDM($('d-date'),iv.date||todayStr());
+  if(o.legal&&db){loadStudioReq();loadLegal()}
+}
+const docBuyer=()=>({name:$('d-name').value.trim(),bin:$('d-bin').value.replace(/\s/g,''),addr:$('d-addr').value.trim(),contract:$('d-contract').value.trim()});
+function renderDocs(){
+  if(db){loadStudioReq();loadLegal()}
+  $('d-pick').innerHTML=buyerOpts($('d-bin').value.replace(/\s/g,''),'<option value="">Новый покупатель: впишите ниже</option>');$('d-pick').disabled=!canWrite;syncCs($('d-pick'));
+  if(!$('d-num').value.trim()&&canWrite)$('d-num').value=(edOrig&&edOrig.invoice&&edOrig.invoice.num)||nextInvNum();
+  if(!$('d-name').value.trim()&&$('f-client').value.trim()&&canWrite)$('d-name').value=$('f-client').value.trim();
+  const L=invLines(),tot=linesTot(L),price=+$('f-price').value||0;
+  $('d-sum').innerHTML=L.length?L.map(l=>`<div class="inv-ln"><b>${esc(l.name)} <small class="hint">${fmtQty(l.qty)} ${esc(l.unit)} × ${esc(money(l.price))}</small></b><span>${esc(money(lineSum(l)))}</span></div>`).join('')
+    +`<div class="inv-ln tot"><b>Итого к оплате</b><span>${esc(money(tot))}</span></div>`
+    +(price&&Math.round(price)!==Math.round(tot)?`<div class="inv-warn">Сумма заказа ${esc(money(price))}, а по позициям ${esc(money(tot))}. В счёт пойдут позиции: при необходимости поправьте их на вкладке «Заказ».</div>`:'')
+    :`<div class="inv-warn">В заказе нет позиций и суммы. Добавьте позиции или сумму на вкладке «Заказ», и они попадут в счёт.</div>`;
+  $('d-make').hidden=!L.length;
+}
+function makeInvoice(){
+  $('f-err').hidden=true;
+  const b=docBuyer();
+  if(!b.name){showErr('f-err','Впишите наименование покупателя.');$('d-name').focus();return}
+  if(!binOk(b.bin)){showErr('f-err','БИН или ИИН покупателя: ровно 12 цифр.');$('d-bin').focus();return}
+  const date=valIso($('d-date'));
+  if(!date){showErr('f-err','Укажите дату счёта, например 19.10.');$('d-date').focus();return}
+  const num=$('d-num').value.trim();
+  if(!num){showErr('f-err','Впишите номер счёта.');$('d-num').focus();return}
+  const L=invLines();if(!L.length){renderDocs();return}
+  showInvoice({num,date,buyer:b,lines:L});
+}
+/* ---- сам счёт ---- */
+/* сумма прописью: «Сто двадцать тысяч тенге 00 тиын» */
+function sumWords(n){
+  const t=Math.floor(r2(n)),k=Math.round((r2(n)-t)*100);
+  const U=['','один','два','три','четыре','пять','шесть','семь','восемь','девять'],UF=['','одна','две','три','четыре','пять','шесть','семь','восемь','девять'];
+  const T=['десять','одиннадцать','двенадцать','тринадцать','четырнадцать','пятнадцать','шестнадцать','семнадцать','восемнадцать','девятнадцать'];
+  const D=['','','двадцать','тридцать','сорок','пятьдесят','шестьдесят','семьдесят','восемьдесят','девяносто'];
+  const H=['','сто','двести','триста','четыреста','пятьсот','шестьсот','семьсот','восемьсот','девятьсот'];
+  const tri=(x,f)=>{const r=x%100;return [H[Math.floor(x/100)],r>=10&&r<20?T[r-10]:D[Math.floor(r/10)],r>=10&&r<20?'':(f?UF:U)[r%10]].filter(Boolean).join(' ')};
+  const out=[];let x=t;
+  for(const [v,f,w] of [[1e9,0,['миллиард','миллиарда','миллиардов']],[1e6,0,['миллион','миллиона','миллионов']],[1e3,1,['тысяча','тысячи','тысяч']]]){const q=Math.floor(x/v);if(q)out.push(tri(q,f)+' '+plural(q,...w));x%=v}
+  if(x)out.push(tri(x,0));
+  const s=out.join(' ')||'ноль';
+  return s[0].toUpperCase()+s.slice(1)+' тенге '+String(k).padStart(2,'0')+' тиын';
+}
+const m2=n=>r2(n).toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2});
+const ivDate=iso=>{const [y,m,d]=iso.split('-').map(Number);return d+' '+MONTHS_GEN[m-1]+' '+y+' г.'};
+async function showInvoice({num,date,buyer:b,lines:L}){
+  if(db)await loadStudioReq();
+  const R=reqNow();
+  if(!reqOk(R)){toast('Сначала заполните реквизиты студии в разделе «Документы».');return}
+  const tot=linesTot(L),rate=+R.vatRate||16,vat=R.vat?r2(tot*rate/(100+rate)):0;
+  const party=(bin,name,addr)=>esc(['БИН / ИИН '+bin,name,addr].filter(Boolean).join(', '));
+  $('inv-sheet').innerHTML=`<div class="iv-logo">${invLogo()}</div><p class="iv-warn">Внимание! Оплата данного счета означает согласие с условиями оказания услуг. Уведомление об оплате обязательно. Работы выполняются после поступления оплаты на расчётный счёт Поставщика.</p>
+  <div class="iv-cap">Образец платежного поручения</div>
+  <table class="iv-bank"><tr><td><b>Бенефициар:</b></td><td class="c"><b>ИИК</b></td><td class="c"><b>Кбе</b></td></tr>
+  <tr><td><b>${esc(R.name)}</b><br>БИН: ${esc(R.bin)}</td><td class="c"><b>${esc(R.iik)}</b></td><td class="c"><b>${esc(R.kbe||'')}</b></td></tr>
+  <tr><td>Банк бенефициара:</td><td class="c"><b>БИК</b></td><td class="c"><b>Код назначения платежа</b></td></tr>
+  <tr><td>${esc(R.bank)}</td><td class="c"><b>${esc(R.bik)}</b></td><td class="c"><b>${esc(R.knp||'')}</b></td></tr></table>
+  <h1>Счет на оплату № ${esc(num)} от ${esc(ivDate(date))}</h1>
+  <table class="iv-party"><tr><td>Поставщик:</td><td><b>${party(R.bin,R.name,R.addr)}</b></td></tr>
+  <tr><td>Покупатель:</td><td><b>${party(b.bin,b.name,b.addr)}</b></td></tr>
+  <tr><td>Договор:</td><td><b>${esc(b.contract||'Без договора')}</b></td></tr></table>
+  <table class="iv-items"><thead><tr><th style="width:28px">№</th><th>Наименование</th><th style="width:62px">Кол-во</th><th style="width:44px">Ед.</th><th style="width:96px">Цена</th><th style="width:106px">Сумма</th></tr></thead><tbody>
+  ${L.map((l,i)=>`<tr><td class="c">${i+1}</td><td>${esc(l.name)}</td><td class="n">${esc(fmtQty(l.qty))}</td><td class="c">${esc(l.unit)}</td><td class="n">${m2(l.price)}</td><td class="n">${m2(lineSum(l))}</td></tr>`).join('')}
+  </tbody></table>
+  <table class="iv-tot"><tr><td>Итого:</td><td>${m2(tot)}</td></tr><tr><td>${R.vat?'В том числе НДС ('+esc(rate)+'%):':'Без налога (НДС):'}</td><td>${R.vat?m2(vat):'-'}</td></tr></table>
+  <p>Всего наименований ${L.length}, на сумму ${m2(tot)} KZT</p>
+  <p><b>Всего к оплате: ${esc(sumWords(tot))}</b></p>
+  <div class="iv-line"></div>
+  <div class="iv-sign">Исполнитель <i></i> /${esc(R.boss||INV_BOSS)}/ <em>М.П.</em></div>`;
+  invTitle='Счет на оплату № '+num+' от '+isoToDM(date)+'.'+date.slice(0,4)+' '+b.name;
+  $('inv').hidden=false;invZoom();
+}
+let invTitle='',invOldTitle='';
+function invZoom(){const sh=$('inv-sheet');sh.style.zoom=Math.min(1,(innerWidth-24)/794).toFixed(3)}
+function invPrint(){invOldTitle=document.title;document.title=invTitle.replace(/[\\/:*?"<>|«»]/g,'').slice(0,120);document.body.classList.add('printing');setTimeout(()=>window.print(),50)}
+window.addEventListener('afterprint',()=>{document.body.classList.remove('printing');if(invOldTitle){document.title=invOldTitle;invOldTitle=''}});
+window.addEventListener('resize',()=>{if(!$('inv').hidden)invZoom()});
+/* ---- раздел «Документы» ---- */
+let bEdit=null;
+function renderDocsPage(){
+  if(db){loadLegal();loadStudioReq()}
+  if(!$('r-fields').children.length)renderReqForm();else reqState();
+  $('dc-new').hidden=!canWrite;$('dc-badd').hidden=!canWrite;
+  const A=allInvoices();
+  $('dc-inv-c').textContent=A.length?A.length+' '+plural(A.length,'счёт','счёта','счетов'):'';
+  $('dc-inv').innerHTML=!legalLoaded&&db?'<div class="w-empty">Загружаем…</div>':A.length?A.map(v=>`<div class="dc-row">
+      <div><b>№ ${esc(v.num)} от ${esc(v.date?fmtDate(v.date)+' '+v.date.slice(0,4):'—')}${v.src==='order'?`<span class="dc-tag${v.paid?' ok':''}">${v.paid?'оплачен':'заказ № '+String(v.orderNum||0).padStart(3,'0')}</span>`:''}</b>
+      <small>${esc(v.buyer.name)} · БИН ${esc(v.buyer.bin||'—')}</small></div>
+      <div class="dc-s">${esc(money(v.total))}</div>
+      <div class="dc-a"><button class="btn primary sm" type="button" data-ivshow="${esc(v.id)}">Счёт</button><button class="btn white sm" type="button" data-ivopen="${esc(v.id)}">${v.src==='order'?'Заказ':'Изменить'}</button></div></div>`).join('')
+    :`<div class="w-empty">Счетов пока нет. Нажмите «Новый счёт» или поставьте галочку «Юрлицо» в заказе.</div>`;
+  const B=buyerList();
+  $('dc-b-c').textContent=B.length?String(B.length):'';
+  $('dc-buyers').innerHTML=B.length?B.map(b=>`<div class="dc-row">
+      <div><b>${esc(b.name)}</b><small>БИН ${esc(b.bin)}${b.addr?' · '+esc(b.addr):''}${b.director?' · директор '+esc(b.director):''}</small></div><span></span>
+      <div class="dc-a">${canWrite?`<button class="btn primary sm" type="button" data-bnew="${esc(b.bin)}">Счёт</button><button class="btn white sm" type="button" data-bedit="${esc(b.bin)}">Изменить</button>`:''}</div></div>`).join('')
+    :'<div class="w-empty">Контрагентов пока нет.</div>';
+}
+function openBForm(bin){
+  bEdit=bin||'new';const b=bin?buyerList().find(x=>x.bin===bin)||{}:{};
+  [['name','name'],['bin','bin'],['contract','contract'],['addr','addr'],['dir','director'],['phone','phone'],['email','email']].forEach(([i,k])=>$('bf-'+i).value=b[k]||'');
+  $('bf-del').innerHTML=bin&&legal.buyers.some(x=>x.bin===bin)?'<button class="btn danger sm" type="button" id="bf-delb">Удалить</button>':'';
+  $('bf-err').hidden=true;$('dc-bform').hidden=false;$('bf-name').focus();
+}
+async function saveBForm(){
+  const b={name:$('bf-name').value.trim(),bin:$('bf-bin').value.replace(/\s/g,''),contract:$('bf-contract').value.trim(),addr:$('bf-addr').value.trim(),director:$('bf-dir').value.trim(),phone:$('bf-phone').value.trim(),email:$('bf-email').value.trim()};
+  if(!b.name){showErr('bf-err','Впишите наименование.');$('bf-name').focus();return}
+  if(!binOk(b.bin)){showErr('bf-err','БИН или ИИН: ровно 12 цифр.');$('bf-bin').focus();return}
+  const old=bEdit,btn=$('bf-save');btn.disabled=true;
+  try{await legalMut(c=>{c.buyers=c.buyers.filter(x=>x.bin!==b.bin&&x.bin!==old);c.buyers.push(b)});$('dc-bform').hidden=true;bEdit=null;toast('Контрагент сохранён');renderDocsPage()}
+  catch(e){showErr('bf-err',handleWriteError(e))}
+  finally{btn.disabled=false}
+}
+async function delBuyer(bin){
+  try{await legalMut(c=>{c.buyers=c.buyers.filter(x=>x.bin!==bin)});$('dc-bform').hidden=true;bEdit=null;toast('Контрагент удалён');renderDocsPage()}
+  catch(e){showErr('bf-err',handleWriteError(e))}
+}
+/* ---- отдельный счёт (без заказа) ---- */
+let ivEdit=null,ivLinesE=[];
+function openIv(id,bin){
+  if(!canWrite&&id==='new')return;
+  ivEdit=id;const v=id==='new'?null:legal.invoices.find(x=>x.id===id);if(id!=='new'&&!v)return;
+  const cur=v?v.buyer.bin:(bin||'');
+  $('iv-title').textContent=v?'Счёт № '+v.num:'Новый счёт';
+  $('iv-pick').innerHTML=buyerOpts(cur,'<option value="">Выберите покупателя</option>')+'<option value="+">+ Новый контрагент</option>';
+  if(v&&!buyerList().some(b=>b.bin===cur))$('iv-pick').insertAdjacentHTML('afterbegin',`<option value="${esc(cur)}" selected>${esc(v.buyer.name)} · ${esc(cur)}</option>`);
+  syncCs($('iv-pick'));
+  ['iv-bn','iv-bb','iv-bc','iv-ba','iv-ln','iv-lq','iv-lu','iv-lp'].forEach(i=>$(i).value='');$('iv-nb').hidden=true;
+  $('iv-num').value=v?v.num:nextInvNum();setDM($('iv-date'),v?v.date:todayStr());
+  ivLinesE=v?(v.lines||[]).map(l=>({...l})):[];renderIvLines();
+  $('iv-del').innerHTML=v&&canWrite?'<button class="btn danger sm" type="button" id="iv-delb">Удалить</button>':'';
+  $('iv-err').hidden=true;$('ived').hidden=false;
+}
+function closeIv(){dpClose();$('ived').hidden=true;ivEdit=null}
+function renderIvLines(){
+  $('iv-lines').innerHTML=ivLinesE.length?ivLinesE.map((l,i)=>`<div class="exp"><b>${esc(l.name)}<small class="hint" style="display:block;font-weight:500">${esc(fmtQty(l.qty))} ${esc(l.unit)} × ${esc(money(l.price))}</small></b><span>${esc(money(lineSum(l)))}</span><button class="tdel" type="button" data-ivrm="${i}" aria-label="Убрать ${esc(l.name)}">×</button></div>`).join('')
+    :'<div class="w-empty" style="background:var(--tile)">Добавьте, за что выставляете счёт: наименование, количество и цену.</div>';
+  $('iv-tot').querySelector('span').textContent=money(linesTot(ivLinesE));
+}
+function addIvLine(){
+  const name=$('iv-ln').value.trim(),qty=$('iv-lq').value===''?1:+$('iv-lq').value,price=+$('iv-lp').value;
+  if(!name){showErr('iv-err','Впишите наименование.');$('iv-ln').focus();return false}
+  if(!(qty>0)){showErr('iv-err','Количество должно быть больше нуля.');$('iv-lq').focus();return false}
+  if(!($('iv-lp').value!==''&&price>=0)){showErr('iv-err','Впишите цену за единицу.');$('iv-lp').focus();return false}
+  $('iv-err').hidden=true;ivLinesE.push({name,qty,unit:$('iv-lu').value.trim()||'шт',price});
+  ['iv-ln','iv-lq','iv-lu','iv-lp'].forEach(i=>$(i).value='');renderIvLines();$('iv-ln').focus();return true;
+}
+async function saveIv(show){
+  if(!db||!canWrite)return;
+  if(($('iv-ln').value.trim()||$('iv-lp').value)&&!addIvLine())return;
+  const pick=$('iv-pick').value;let buyer,isNew=false;
+  if(pick==='+'){buyer={name:$('iv-bn').value.trim(),bin:$('iv-bb').value.replace(/\s/g,''),contract:$('iv-bc').value.trim(),addr:$('iv-ba').value.trim()};isNew=true;
+    if(!buyer.name){showErr('iv-err','Впишите наименование контрагента.');$('iv-bn').focus();return}
+    if(!binOk(buyer.bin)){showErr('iv-err','БИН или ИИН контрагента: ровно 12 цифр.');$('iv-bb').focus();return}}
+  else{const b=buyerList().find(x=>x.bin===pick)||(ivEdit!=='new'&&(legal.invoices.find(x=>x.id===ivEdit)||{}).buyer);
+    if(!pick||!b){showErr('iv-err','Выберите покупателя.');$('iv-pick').focus();return}
+    buyer={name:b.name,bin:b.bin,addr:b.addr||'',contract:b.contract||''}}
+  const num=$('iv-num').value.trim();if(!num){showErr('iv-err','Впишите номер счёта.');$('iv-num').focus();return}
+  const date=valIso($('iv-date'));if(!date){showErr('iv-err','Укажите дату счёта, например 19.10.');$('iv-date').focus();return}
+  if(!ivLinesE.length){showErr('iv-err','Добавьте хотя бы одну строку в счёт.');$('iv-ln').focus();return}
+  const now=Date.now(),id=ivEdit==='new'?uid():ivEdit,lines=ivLinesE.map(l=>({name:l.name,qty:+l.qty||0,unit:l.unit||'шт',price:+l.price||0}));
+  const btns=document.querySelectorAll('#iv-form .ed-foot .btn');btns.forEach(b=>b.disabled=true);
+  try{
+    await legalMut(c=>{const prev=c.invoices.find(x=>x.id===id);c.invoices=c.invoices.filter(x=>x.id!==id);
+      c.invoices.push({id,num,date,buyer,lines,createdAt:prev?prev.createdAt:now,updatedAt:now,by:ROLE().name||''});
+      if(isNew){c.buyers=c.buyers.filter(x=>x.bin!==buyer.bin);c.buyers.push(buyer)}});
+    closeIv();toast('Счёт № '+num+' сохранён');render();
+    if(show)showInvoice({num,date,buyer,lines});
+  }catch(e){showErr('iv-err',handleWriteError(e))}
+  finally{btns.forEach(b=>b.disabled=false)}
+}
+async function delIv(){
+  const id=ivEdit;
+  try{await legalMut(c=>{c.invoices=c.invoices.filter(x=>x.id!==id)});closeIv();toast('Счёт удалён');render()}
+  catch(e){showErr('iv-err',handleWriteError(e))}
+}
+/* ---- события ---- */
+$('f-legal').addEventListener('change',e=>{
+  const on=e.target.checked;$('tab-docs').hidden=!on;
+  if(on){setTab('docs');if(!$('d-name').value.trim())$('d-name').value=$('f-client').value.trim()}else if(edTab==='docs')setTab('main');
+});
+$('d-pick').addEventListener('change',e=>{const b=buyerList().find(x=>x.bin===e.target.value);if(!b)return;$('d-name').value=b.name;$('d-bin').value=b.bin;$('d-addr').value=b.addr||'';$('d-contract').value=b.contract||''});
+['d-bin','bf-bin','iv-bb'].forEach(i=>$(i).addEventListener('input',digits12));
+$('d-make').addEventListener('click',makeInvoice);
+$('r-save').addEventListener('click',saveStudioReq);
+$('r-vat').addEventListener('change',e=>{$('r-vatw').hidden=!e.target.checked;if(e.target.checked&&!$('r-vatrate').value)$('r-vatrate').value=16});
+$('dc-new').addEventListener('click',()=>openIv('new'));
+$('dc-badd').addEventListener('click',()=>openBForm(null));
+$('bf-cancel').addEventListener('click',()=>{$('dc-bform').hidden=true;bEdit=null});
+$('bf-save').addEventListener('click',saveBForm);
+$('iv-pick').addEventListener('change',e=>{$('iv-nb').hidden=e.target.value!=='+';if(e.target.value==='+')$('iv-bn').focus()});
+$('iv-ladd').addEventListener('click',addIvLine);
+['iv-ln','iv-lq','iv-lu','iv-lp'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addIvLine()}}));
+$('iv-save').addEventListener('click',()=>saveIv(false));
+$('iv-form').addEventListener('submit',e=>{e.preventDefault();saveIv(true)});
+document.addEventListener('click',e=>{
+  const t=e.target;
+  if(t.closest('[data-ivclose]')){closeIv();return}
+  const rm=t.closest('[data-ivrm]');if(rm){ivLinesE.splice(+rm.dataset.ivrm,1);renderIvLines();return}
+  if(t.closest('#iv-delb')){delIv();return}
+  if(t.closest('#bf-delb')){delBuyer(bEdit);return}
+  const be=t.closest('[data-bedit]');if(be){openBForm(be.dataset.bedit);return}
+  const bn=t.closest('[data-bnew]');if(bn){openIv('new',bn.dataset.bnew);return}
+  const sh=t.closest('[data-ivshow]');if(sh){const v=allInvoices().find(x=>x.id===sh.dataset.ivshow);if(v)showInvoice(v);return}
+  const op=t.closest('[data-ivopen]');if(op){const v=allInvoices().find(x=>x.id===op.dataset.ivopen);if(!v)return;if(v.src==='order')openEditor(v.orderId,{tab:'docs'});else openIv(v.id);return}
+});
+$('inv-print').addEventListener('click',invPrint);
+$('inv-close').addEventListener('click',()=>{$('inv').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('inv').hidden){e.stopPropagation();$('inv').hidden=true}else if(!$('ived').hidden){e.stopPropagation();closeIv()}},true);
 /* ---------- аналитика ---------- */
 let anPer='3m';
 const AN_PER=[['month','Этот месяц'],['3m','3 месяца'],['year','12 месяцев'],['all','Всё время']];
@@ -3543,7 +4014,8 @@ function formData(){
     kaspi:edK.map(l=>({id:l.id,name:l.name,price:+l.price||0,qty:+l.qty||0,date:l.date||'',cost:+l.cost||0,src:l.src||''})),kaspiFee:kFee(),
     qty:edItems.length?edItems.reduce((s,i)=>s+(+i.qty||0),0):(edOrig&&edOrig.qty!=null?edOrig.qty:null),desc:$('f-desc').value.trim(),
     status:$('f-status').value,price:num($('f-price').value),paid:num($('f-paid').value),
-    owner:$('f-owner').value.trim(),notes:$('f-notes').value.trim()
+    owner:$('f-owner').value.trim(),notes:$('f-notes').value.trim(),
+    ...($('f-legal').checked||(edOrig&&edOrig.legal!=null)?{legal:$('f-legal').checked,buyer:docBuyer(),invoice:{num:$('d-num').value.trim(),date:$('d-date').dataset.iso||''}}:{})
   };
 }
 function showErr(id,msg){const e=$(id);e.textContent=msg;e.hidden=false}
@@ -3577,6 +4049,7 @@ async function saveOrder(ev){
   if(dTo===null){setTab('main');showErr('f-err','Дата «по» не распознана. Пишите день и месяц, например 16.10.');$('f-deadline').focus();return}
   if(dFrom&&!dTo){setTab('main');showErr('f-err','Укажите, по какое число сдать заказ.');$('f-deadline').focus();return}
   d.receivedAt=rec||todayStr();d.deadlineFrom=dFrom&&dFrom!==dTo?dFrom:'';d.deadline=dTo||'';
+  if(d.invoice){const iv=valIso($('d-date'));if(iv===null){setTab('docs');showErr('f-err','Дата счёта не распознана. Пишите день и месяц, например 19.10.');$('d-date').focus();return}d.invoice.date=iv}
   if(d.service==='other'&&!d.customService){setTab('main');showErr('f-err','Впишите название услуги.');$('f-custom').focus();return}
   if(($('e-title').value.trim()||$('e-amount').value)&&!confirmPendingExp()){return}
 
@@ -3895,7 +4368,7 @@ document.addEventListener('click',e=>{
   const ta=t.closest('[data-tattach]');if(ta){pickFiles({kind:'task',id:ta.dataset.tattach});return}
   const g=t.closest('[data-go]');
   if(g){if(g.dataset.f){view={f:g.dataset.f,svc:'all',q:'',day:''};$('q').value=''}go(g.dataset.go);return}
-  if(t.closest('[data-new]')){if(t.closest('.fab')&&mgrLimited()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
+  if(t.closest('[data-new]')){if(t.closest('.fab')&&mgrLimited()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&page==='docs'){openIv('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
   const op=t.closest('[data-open]');if(op){openEditor(op.dataset.open);return}
   const dn=t.closest('[data-tdone]');if(dn){toggleTask(dn.dataset.tdone);return}
   const td=t.closest('[data-tdel]');if(td&&mgrLimited()&&(x=>x&&x.kind==='boss'&&!isMgrTask(x))(tasks.find(x=>x.id===td.dataset.tdel))){toast('Удалять эту задачу может только руководитель');return}
@@ -4877,7 +5350,7 @@ $('anna-ask').addEventListener('submit',async e=>{
 setInterval(()=>{if(!document.hidden&&!$('p-home').hidden)renderAnna()},60000);
 renderAnna();
 initPack();
-{const h=(location.hash||'').slice(1);go(['orders','kaspi','calendar','office','supplies','projects','prices','analytics'].includes(h)?h:'home')}
+{const h=(location.hash||'').slice(1);go(['orders','kaspi','calendar','office','supplies','docs','projects','prices','analytics'].includes(h)?h:'home')}
 setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('input,select,textarea'))))render()},60000);
 </script>
 <div id="upd-bar" hidden style="position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:200;background:#4358ef;color:#fff;border-radius:999px;padding:8px 8px 8px 18px;display:flex;gap:12px;align-items:center;font:600 14px 'Inter Tight',Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(67,88,239,.35);max-width:calc(100% - 24px)">
