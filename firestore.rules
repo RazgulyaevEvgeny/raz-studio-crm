@@ -1,34 +1,52 @@
 rules_version = '2';
-// Доступ только для сотрудников, вошедших по почте и паролю.
-// Руководитель и менеджер работают с одинаковыми правами.
+// Доступ только для сотрудников, которых руководитель отметил в учёте (кнопка «Сотрудники»).
+// Вошедший, но не отмеченный человек не видит ничего: может только попросить доступ.
+// Руководитель и менеджер работают с одинаковыми правами; удалить заказ навсегда (из корзины) может только руководитель.
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.email == 'design.onegin@gmail.com'; }
+    function staff() { return isAdmin() || (signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid))); }
+
+    // Список сотрудников с доступом (документ = uid). Меняет только руководитель.
+    match /staff/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if isAdmin();
+    }
+    // Просьбы о доступе: каждый вошедший записывает только свою (почта, имя, когда заходил)
+    match /staff_req/{uid} {
+      allow read, delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email','name','at'])
+        && request.resource.data.email == request.auth.token.email;
+    }
 
     // Заказы, закупки, расходы офиса, проекты, прайс, задачи, фото и файлы — всем сотрудникам
-    match /orders/{id}   { allow read, write: if signedIn(); }
-    match /supplies/{id} { allow read, write: if signedIn(); }
-    match /office/{id}   { allow read, write: if signedIn(); }
-    match /projects/{id} { allow read, write: if signedIn(); }
-    match /prices/{id}   { allow read, write: if signedIn(); }
-    match /tasks/{id}    { allow read, write: if signedIn(); }
-    match /blobs/{id}    { allow read, write: if signedIn(); }
+    match /orders/{id}   { allow read, create, update: if staff(); allow delete: if isAdmin(); }
+    match /supplies/{id} { allow read, write: if staff(); }
+    match /office/{id}   { allow read, write: if staff(); }
+    match /projects/{id} { allow read, write: if staff(); }
+    match /prices/{id}   { allow read, write: if staff(); }
+    match /tasks/{id}    { allow read, write: if staff(); }
+    match /blobs/{id}    { allow read, write: if staff(); }
     // Маркетинговый отдел: разговоры с ИИ-специалистами и бриф студии
-    match /marketing/{id} { allow read, write: if signedIn(); }
+    match /marketing/{id} { allow read, write: if staff(); }
     // Магазин Kaspi: заказы из кабинета продавца (подтягивает воркер kaspi-orders)
-    match /kaspi_orders/{id} { allow read, write: if signedIn(); }
+    match /kaspi_orders/{id} { allow read, write: if staff(); }
     // WhatsApp-бот (папка whatsapp-bot, работает на рабочем компьютере под отдельным входом бота):
     // переписка с клиентами и задания на уведомления о заказах
-    match /wa_chats/{id} { allow read, write: if signedIn(); }
-    match /wa_outbox/{id} { allow read, write: if signedIn(); }
+    match /wa_chats/{id} { allow read, write: if staff(); }
+    match /wa_outbox/{id} { allow read, write: if staff(); }
     // Менеджер Анна: сводка для главной, просьба обновить её и вопросы сотрудников
-    match /wa_anna/{id} { allow read, write: if signedIn(); }
-    match /wa_anna_q/{id} { allow read, write: if signedIn(); }
+    match /wa_anna/{id} { allow read, write: if staff(); }
+    match /wa_anna_q/{id} { allow read, write: if staff(); }
+    // Полный архив переписки WhatsApp (документ = чат за месяц) для аналитики Ани
+    match /wa_log/{id} { allow read, write: if staff(); }
 
     // Заявки с сайта топперов: сайт может только создать новую заявку (без входа),
     // читать, подтверждать и удалять их могут только сотрудники
     match /requests/{id} {
-      allow read, update, delete: if signedIn();
+      allow read, update, delete: if staff();
       allow create: if request.resource.data.keys().hasOnly(['source','code','status','createdAt','name','cafe','note','customDesc','items','total','qty','text','hasCustom'])
         && request.resource.data.source == 'toppers'
         && request.resource.data.status == 'new'

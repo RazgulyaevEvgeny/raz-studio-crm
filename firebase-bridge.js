@@ -224,6 +224,9 @@
     const auth = firebase.auth();
     const fs = firebase.firestore();
     try { fs.settings({ ignoreUndefinedProperties: true, merge: true }); } catch (_) {}
+    /* Данные запоминаются на устройстве: повторное открытие показывает учёт сразу (даже без интернета),
+       а из базы докачивается только изменившееся. Несколько вкладок делят один кэш. */
+    try { fs.enablePersistence({ synchronizeTabs: true }).catch(() => {}); } catch (_) {}
 
     api.db = { collection: p => wrapCol(fs.collection(p)), doc: p => wrapDoc(fs.doc(p)) };
     api.user = { can: async () => true, canEdit: async () => true, isOwner: async () => true };
@@ -249,12 +252,37 @@
           : a ? { role: 'admin', name: a.name, title: a.title, email: u.email }
           : { role: 'admin', name: u.displayName || 'Руководитель', title: '', email: u.email };
         authEl.hidden = true; addLogout(auth, u);
-        if (!started) { started = true; resolveReady(); }
+        checkAccess(fs, u).then(ok => {
+          if (!ok) { showNoAccess(auth, u); return; }
+          if (!started) { started = true; resolveReady(); }
+        });
       } else {
         authEl.hidden = false;
         setTimeout(() => document.getElementById('auth-email').focus(), 50);
       }
     });
+  }
+
+  /* Доступ сотрудника. Каждый вход оставляет «просьбу о доступе» (почта и имя) — руководитель видит её
+     в учёте (кнопка «Сотрудники») и отмечает, кому можно. Пока правила базы не опубликованы, пускает всех. */
+  async function checkAccess(fs, u) {
+    const r = window.APP_ROLE || {};
+    try { await fs.doc('staff_req/' + u.uid).set({ email: String(u.email || '').toLowerCase(), name: r.name || '', at: Date.now() }); } catch (_) {}
+    if (String(u.email || '').toLowerCase() === 'design.onegin@gmail.com') return true;
+    try { await fs.doc('wa_anna/requisites').get(); return true; }
+    catch (e) { return !(e && e.code === 'permission-denied'); }
+  }
+  function showNoAccess(auth, u) {
+    const el = document.getElementById('auth');
+    el.hidden = false;
+    el.querySelector('.auth-card').innerHTML = `<div class="auth-logo">${(document.querySelector('.logo svg') || {}).outerHTML || ''}</div>
+      <h1>Ждём доступ</h1>
+      <p>Вы вошли как <b>${String(u.email || '').replace(/[<>&]/g, '')}</b>. Руководитель ещё не открыл вам доступ к учёту.
+      Попросите его нажать в учёте «Сотрудники» и отметить вашу почту, потом обновите страницу.</p>
+      <button type="button" id="auth-retry">Обновить</button>
+      <button type="button" id="auth-out" style="background:transparent;color:#5b5f7b;box-shadow:inset 0 0 0 2px #e3e5f1">Выйти</button>`;
+    document.getElementById('auth-retry').onclick = () => location.reload();
+    document.getElementById('auth-out').onclick = () => auth.signOut().then(() => location.reload());
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

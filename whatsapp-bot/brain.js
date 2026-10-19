@@ -32,13 +32,13 @@ export const SERVICE_NAMES = {
 };
 
 // Что ИИ-консультант знает о студии. Адрес, график и оплату — дописать.
-const STUDIO = `Тебя зовут Анна, ты виртуальный помощник студии брендирования «Разгуляев» (RAZ Brand Studio, Казахстан, Instagram @raz.brandstudio) в WhatsApp.
+const STUDIO = `Тебя зовут Аня, ты виртуальный помощник студии брендирования «Разгуляев» (RAZ Brand Studio, Казахстан, Instagram @raz.brandstudio) в WhatsApp.
 Ты отвечаешь клиентам с рабочего номера студии. Команда студии: руководитель Евгений и менеджер Милана.
 Если клиент обращается лично к Милане или Евгению (например, «Милана, здравствуйте» или «Евгений, это вы?»), объясни,
-что это Анна, виртуальный помощник студии, передай, что ты сообщишь Милане (или Евгению) и он(а) скоро ответит, и вызови call_manager с пометкой, к кому обращались.
+что это Аня, виртуальный помощник студии, передай, что ты сообщишь Милане (или Евгению) и он(а) скоро ответит, и вызови call_manager с пометкой, к кому обращались.
 Голосовые сообщения клиента приходят тебе расшифрованными, с пометкой [голосовое сообщение]: отвечай на них как на обычный текст.
 В первом ответе клиенту (если в переписке ещё нет твоих сообщений и живой менеджер в ней не писал) представься ровно так:
-«Здравствуйте! Меня зовут Анна, я виртуальный помощник студии брендирования Разгуляев. Как я могу к вам обращаться?»
+«Здравствуйте! Меня зовут Аня, я виртуальный помощник студии брендирования Разгуляев. Как я могу к вам обращаться?»
 Если клиент сразу задал вопрос — после этого ответь и на него. Когда клиент назовёт имя, вызови save_client_name и дальше обращайся к нему по имени.
 Если в начале переписки указано «Клиент просил обращаться: …» — обращайся так и имя заново не спрашивай.
 Дальше в этом чате не здоровайся и не представляйся заново (в том числе если клиенту уже ушло уведомление о заказе). Если спросят, живой ли ты человек, честно скажи, что ты виртуальный помощник и можешь позвать менеджера.
@@ -63,7 +63,11 @@ const STUDIO = `Тебя зовут Анна, ты виртуальный пом
   Когда размер известен — вызови vinyl_price и назови цену так: «≈ 12 400 ₸ (примерно)». Затем добавь: «Точные сроки и стоимость подскажет менеджер».
 - 3D-топперы: отправь ссылку на наш сайт топперов https://razgulyaevevgeny.github.io/toppers-site/ (отдельной строкой) и скажи,
   что там можно ознакомиться с топперами, выбрать цвет и размер, заказать свою фигурку и сразу оформить заказ — он сразу появится у нас.
-- Если клиент прислал фото или картинку — сначала поддержи его («Отличная идея!», «Классный вариант!» по смыслу), потом передай менеджеру.
+- Фото от клиента приходят тебе с описанием: «[клиент прислал фото] На фото: …». Сначала поддержи его по смыслу («Классный логотип!», «Отличная идея!»),
+  потом по описанию пойми, что он хочет, предложи подходящую услугу и уточни детали (сколько штук, какой размер, на чём печатать).
+  Если без макета и расчёта не обойтись — скажи, что менеджер посмотрит и посчитает, и вызови call_manager.
+- Если клиент просит показать примеры работ или фото — вызови send_examples с нужной услугой: фото уйдут клиенту сразу после твоего ответа,
+  в ответе напиши одну фразу вроде «Вот несколько наших работ». Если фото нет (инструмент так ответит) — предложи посмотреть наш Instagram @raz.brandstudio.
 - Если спрашивают про услугу, которой нет в списке выше, скажи: «Я передам ваш запрос менеджеру, он подскажет более точно» — и вызови call_manager.
 - Никогда не пиши «уточню у руководителя» и не обещай руководителя: все вопросы идут через менеджера.
   Только если клиент жалуется или недоволен, скажи: «Передам руководителю, он в ближайшее время с вами свяжется» — и вызови call_manager с пометкой «жалоба».
@@ -95,7 +99,7 @@ const STUDIO = `Тебя зовут Анна, ты виртуальный пом
   Когда всё понятно и клиент согласен — вызови create_order и скажи, что заявка принята и менеджер подтвердит её.
 - Позови менеджера (call_manager), если: клиент просит живого человека, недоволен или жалуется, вопрос не по услугам студии
   (например, пишет поставщик, знакомый или по личному делу), нужен расчёт нестандартного заказа, торг или скидка,
-  клиент прислал фото, файл или голосовое, или ты не уверен в ответе.
+  клиент прислал файл, или ты не уверен в ответе.
   После call_manager скажи клиенту, что менеджер скоро ответит в этом чате.
   Если менеджера уже позвали, а клиент задаёт новый вопрос — не бросай его: ответь сама, если можешь, и не обещай менеджера заново без нужды.
 - Если не уверен в ответе или клиента интересует, можем ли мы сделать что-то конкретное (например, разработать модель 3D-вывески,
@@ -163,6 +167,16 @@ const TOOLS = [
     },
   },
   {
+    name: 'send_examples',
+    description: 'Отправляет клиенту до 3 фото наших работ по услуге (из «Примеров работ» в учёте). Вызывай, когда клиент просит показать работы или примеры.',
+    input_schema: {
+      type: 'object',
+      properties: { service: { type: 'string', enum: Object.keys(SERVICE_NAMES) } },
+      required: ['service'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'save_client_name',
     description: 'Запоминает, как обращаться к клиенту (имя, которое он назвал). Вызывай, как только клиент представился.',
     input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'], additionalProperties: false },
@@ -194,7 +208,7 @@ const TOOLS = [
 // Готовит уведомление по заказу. Возвращает {text, phone, key} или {skipped}.
 export async function prepareNotice(fs, orderId, event) {
   const o = await fs.get('orders/' + orderId);
-  if (!o) return { skipped: 'нет заказа' };
+  if (!o || o.deletedAt) return { skipped: 'нет заказа' };
   if (o.service === 'kaspi' || (Array.isArray(o.kaspi) && o.kaspi.length)) return { skipped: 'kaspi' };
   const phone = normPhone(o.phone);
   if (!phone) return { skipped: 'нет телефона' };
@@ -223,9 +237,9 @@ function talkedRecently(list) {
 }
 
 // После отправки: отметка в заказе (второй раз не уйдёт) и запись в чат клиента
-export async function markNoticeSent(fs, orderId, n) {
+export async function markNoticeSent(fs, orderId, n, id = '') {
   await fs.patch('orders/' + orderId, { waSent: { ...n.sent, [n.key]: Date.now() } }).catch(() => {});
-  await appendChat(fs, n.phone, { role: 'notice', text: n.text, at: Date.now() }).catch(() => {});
+  await appendChat(fs, n.phone, { role: 'notice', text: n.text, at: Date.now(), ...(id ? { id } : {}) }).catch(() => {});
 }
 
 /* ---------- ИИ-консультант ---------- */
@@ -236,26 +250,45 @@ export async function markNoticeSent(fs, orderId, n) {
 export const GEMINI_MODELS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
 
 // Ответ бота на последние сообщения клиента: {text, handoff}, либо {silent}, если Аня решила, что отвечать не нужно
-export async function runAgent(fs, env, phone, chat) {
+export async function runAgent(fs, env, phone, chat, opts = {}) {
   const now = new Date(Date.now() + 5 * 3600e3); // время Казахстана, UTC+5
+  const list = chat.messages || [];
+  const lastClient = [...list].reverse().find(m => m.role === 'client');
+  const waited = lastClient && !opts.followUp ? Date.now() - (lastClient.at || Date.now()) : 0;
   const today = `Сейчас ${WD_FULL[now.getUTCDay()]}, ${now.getUTCDate()} ${MONTHS_GEN[now.getUTCMonth()]} ${now.getUTCFullYear()}, ` +
     `${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} по Алматы.` +
     (chat.clientName ? ` Клиент просил обращаться: ${chat.clientName}.` : '') + (chat.name ? ` Имя клиента в WhatsApp: ${chat.name}.` : '') +
     (phone ? '' : ' Номер телефона клиента скрыт, его заказы по номеру не найти: спроси номер заказа или позови менеджера.') +
     managerNote(chat.messages || []) +
-    (talkedRecently(chat.messages || []) ? ' Ты или менеджер уже писали этому клиенту в последние дни: НЕ здоровайся и не представляйся снова, сразу отвечай по делу.' : '');
+    (talkedRecently(chat.messages || []) ? ' Ты или менеджер уже писали этому клиенту в последние дни: НЕ здоровайся и не представляйся снова, сразу отвечай по делу.' : '') +
+    (waited > 60 * 60e3 ? ` Клиент ждёт ответа уже ${Math.round(waited / 3600e3)} ч (рабочий компьютер был выключен): начни с короткого извинения за ожидание.` : '') +
+    ' ' + hoursNote() +
+    (chat.older ? `\nРаньше в этой переписке (старые сообщения, коротко): ${String(chat.older).slice(-1500)}` : '');
   const messages = toClaudeMessages(chat.messages || []);
+  if (opts.followUp) {
+    // Дожим: клиент замолчал после разговора. Добавляем служебную реплику, чтобы ИИ решил, напомнить ли о себе
+    if (!list.length) return {};
+    messages.length = 0;
+    messages.push(...toClaudeMessages([...list, { role: 'client', text: `[служебно, клиент этого не писал] Клиент молчит уже ${Math.round((Date.now() - (list.at(-1).at || Date.now())) / 3600e3)} ч. ` +
+      'Если вы обсуждали цену или заказ, клиент не отказался и заказ ещё не оформлен — напиши ОДНО короткое дружелюбное напоминание (1–2 предложения), например уточни, актуален ли ещё заказ, и предложи сразу оформить. ' +
+      'Не здоровайся заново и не представляйся. Если клиент уже отказался, договорился с менеджером, заказ оформлен, разговор был не о заказе или напоминать неуместно — вызови stay_silent.', at: Date.now() }]));
+  }
   if (!messages.length) return {};
-  const ctx = { fs, phone, chat, handoff: '', silent: '' };
+  const ctx = { fs, phone, chat, handoff: '', silent: '', media: null };
   try {
     const text = String(env.ANTHROPIC_API_KEY || '').trim()
       ? await viaClaude(env, today, messages, ctx)
       : await viaGemini(env, today, messages, ctx);
     if (ctx.silent) return { silent: ctx.silent };
-    return text ? { text, handoff: ctx.handoff } : fallbackReply();
+    return text ? { text, handoff: ctx.handoff, media: ctx.media } : fallbackReply();
   } catch (e) {
     console.log('ИИ не ответил:', String(e?.message || e).slice(0, 300));
-    return fallbackReply();
+    // Бесплатный лимит Gemini кончился — отвечает запасной бесплатный ИИ Cloudflare (через воркер отдела маркетинга)
+    if (!opts.followUp) try {
+      const text = await viaReserve(env, today, messages, fs);
+      if (text) return { text, reserve: String(e?.message || e) };
+    } catch (e2) { console.log('Запасной ИИ не ответил:', String(e2?.message || e2).slice(0, 200)); }
+    return opts.followUp ? {} : fallbackReply();
   }
 }
 
@@ -264,6 +297,7 @@ async function useTool(name, input, ctx) {
     const out = await runTool(name, input || {}, ctx);
     if (name === 'call_manager') ctx.handoff = String(input?.reason || 'нужен менеджер');
     if (name === 'stay_silent') ctx.silent = String(input?.reason || 'ответ не нужен');
+    if (name === 'send_examples' && out?.ok) ctx.media = out.media;
     return out;
   } catch (e) {
     return { error: String(e && e.message || e) };
@@ -284,6 +318,32 @@ export async function transcribe(env, audio, mimeType) {
           { text: 'Дословно запиши, что говорит человек в этом голосовом сообщении, на языке оригинала. Только текст речи, без пояснений. Если речи нет — ответь пустой строкой.' },
         ] }],
         generationConfig: { temperature: 0, maxOutputTokens: 2048 },
+      }),
+    });
+    if (r.status === 429 || r.status === 503) continue;
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || ('Gemini ответил ' + r.status));
+    return (j.candidates?.[0]?.content?.parts || []).filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
+  }
+  return '';
+}
+
+/* Фото от клиента → короткое описание (Gemini видит картинки бесплатно). Возвращает текст или '' */
+export async function describeImage(env, image, mimeType, caption) {
+  const key = String(env.GEMINI_API_KEY || '').trim();
+  if (!key) return '';
+  for (const model of GEMINI_MODELS) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [
+          { inlineData: { mimeType: (mimeType || 'image/jpeg').split(';')[0], data: Buffer.from(image).toString('base64') } },
+          { text: 'Клиент прислал это фото в WhatsApp студии брендирования (винил на авто, DTF-печать на одежде, вышивка, 3D-печать и вывески).' +
+            (caption ? ` Подпись клиента: «${caption}».` : '') +
+            ' Опиши по-русски в 1–2 предложениях, что на фото и что, скорее всего, хочет клиент: логотип, надпись, одежда, автомобиль, вывеска, примерный размер, цвета, есть ли текст. Без вступлений.' },
+        ] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 400 },
       }),
     });
     if (r.status === 429 || r.status === 503) continue;
@@ -389,7 +449,60 @@ function vinylMeters(L, H, N, W) {
 }
 
 function fallbackReply() {
-  return { text: 'Извините, к сожалению, у менеджеров сейчас большая загрузка. Как только они освободятся, они вам ответят.', handoff: 'бот не смог ответить сам' };
+  return { text: busyText(), handoff: 'бот не смог ответить сам' };
+}
+
+/* ---------- график студии: Павлодар, UTC+5 ---------- */
+// пн–чт 11–19, пт 11–17, обед 13–14, сб–вс выходной
+const OPEN_H = { 1: [11, 19], 2: [11, 19], 3: [11, 19], 4: [11, 19], 5: [11, 17] };
+const kzDate = (t = Date.now()) => new Date(t + 5 * 3600e3);
+export function isWorkTime(t = Date.now()) {
+  const d = kzDate(t), h = d.getUTCHours() + d.getUTCMinutes() / 60, w = OPEN_H[d.getUTCDay()];
+  return !!w && h >= w[0] && h < w[1] && !(h >= 13 && h < 14);
+}
+// Когда менеджер сможет ответить: «сегодня после 14:00», «завтра после 11:00», «в понедельник после 11:00»
+export function nextOpen(t = Date.now()) {
+  const d = kzDate(t), h = d.getUTCHours() + d.getUTCMinutes() / 60, w = OPEN_H[d.getUTCDay()];
+  if (w && h >= 13 && h < 14) return 'сегодня после 14:00';
+  if (w && h < w[0]) return 'сегодня после 11:00';
+  const WD = ['в воскресенье', 'в понедельник', 'во вторник', 'в среду', 'в четверг', 'в пятницу', 'в субботу'];
+  for (let i = 1; i <= 7; i++) {
+    const n = (d.getUTCDay() + i) % 7;
+    if (OPEN_H[n]) return (i === 1 ? 'завтра' : WD[n]) + ' после 11:00';
+  }
+  return 'в рабочее время';
+}
+// Начало текущего рабочего отрезка (11:00 или 14:00 после обеда) — от него считаем ожидание менеджера
+export function workStartedAt(t = Date.now()) {
+  const d = kzDate(t), h = d.getUTCHours();
+  const base = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - 5 * 3600e3;
+  return base + (h >= 14 ? 14 : 11) * 3600e3;
+}
+export function busyText(t = Date.now()) {
+  return isWorkTime(t)
+    ? 'Извините, к сожалению, у менеджеров сейчас большая загрузка. Как только они освободятся, они вам ответят.'
+    : `Сейчас студия закрыта. Милана ответит вам ${nextOpen(t)}, я уже передала ей ваш вопрос.`;
+}
+function hoursNote() {
+  return isWorkTime() ? 'Сейчас рабочее время студии.'
+    : `Сейчас студия закрыта (нерабочее время или обед). Если нужен менеджер, скажи, что Милана ответит ${nextOpen()}.`;
+}
+
+/* ---------- запасной ИИ: Cloudflare Workers AI через воркер отдела маркетинга (бесплатно, без инструментов) ---------- */
+const RESERVE_API = 'https://raz-marketing.design-onegin.workers.dev/api/gen';
+async function viaReserve(env, today, messages, fs) {
+  const prices = (await fs.list('prices').catch(() => [])).filter(p => !p.hidden).slice(0, 80)
+    .map(p => `${SERVICE_NAMES[p.svc] || p.svc}: ${p.name} — ${p.from ? 'от ' : ''}${p.price} ₸ за ${p.unit || 'шт'}`).join('\n');
+  const system = STUDIO + '\n\n' + today + '\n\nИнструменты сейчас недоступны: не оформляй заказ и не обещай проверить статус, а предложи, что менеджер всё уточнит. ' +
+    'Цены бери только из прайса ниже.\nПрайс:\n' + (prices || 'нет данных — цены называет менеджер');
+  const r = await fetch(RESERVE_API, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Authorization: 'Bearer ' + await botToken(env) },
+    body: JSON.stringify({ system, messages: messages.map(m => ({ role: m.role, text: typeof m.content === 'string' ? m.content : '' })), maxTokens: 1024, temperature: 0.4 }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'воркер ответил ' + r.status);
+  return String(j.text || '').trim();
 }
 
 async function runTool(name, input, { fs, phone, chat }) {
@@ -412,6 +525,12 @@ async function runTool(name, input, { fs, phone, chat }) {
     const r = vinylMeters(input.width_cm, input.height_cm, input.qty, c.roll);
     if (!r) return { error: 'нужен размер в сантиметрах: ширина и высота' };
     return { price: Math.round(perM * r.m / 10) * 10, meters: r.m, say: 'Назови цену с пометкой «(примерно)» и добавь, что точные сроки и стоимость подскажет менеджер.' };
+  }
+  if (name === 'send_examples') {
+    const all = ((await fs.get('wa_anna/portfolio'))?.items || []).filter(x => x.svc === input.service);
+    if (!all.length) return { ok: false, note: 'Фото по этой услуге пока нет — предложи Instagram @raz.brandstudio.' };
+    const pick = all.sort(() => Math.random() - 0.5).slice(0, 3).map(x => String(x.blob || '').replace('fsblob:', '')).filter(Boolean);
+    return { ok: true, sent: pick.length, media: pick, say: 'Фото уйдут клиенту сразу после твоего ответа. Напиши коротко, например: «Вот несколько наших работ».' };
   }
   if (name === 'save_client_name') {
     const n = String(input.name || '').trim().slice(0, 60);
@@ -437,8 +556,7 @@ async function runTool(name, input, { fs, phone, chat }) {
   if (name === 'create_order') {
     const svc = SERVICE_NAMES[input.service] ? input.service : 'other';
     const due = addWorkDays(new Date(Date.now() + 5 * 3600e3), ORDER_DAYS[svc] || ORDER_DAYS_DEFAULT);
-    const last = await fs.query('orders', { orderBy: [{ field: { fieldPath: 'num' }, direction: 'DESCENDING' }], limit: 1 });
-    const num = ((last[0] && last[0].num) || 0) + 1;
+    const num = await nextOrderNum(fs);
     const now = Date.now();
     const notes = ['Оформлено ИИ-ботом в WhatsApp, проверить и подтвердить.',
       input.wanted_by ? 'Клиенту нужно к: ' + input.wanted_by : '', input.estimate ? 'Оценка бота: ' + input.estimate : ''].filter(Boolean).join('\n');
@@ -450,6 +568,7 @@ async function runTool(name, input, { fs, phone, chat }) {
       receivedAt: isoDate(new Date(now + 5 * 3600e3)), deadlineFrom: '', deadline: isoDate(due),
       source: 'whatsapp', num, createdAt: now, updatedAt: now, createdBy: 'WhatsApp-бот',
       waSent: { new: now }, // клиенту бот уже сам написал, что заказ принят
+      statusAt: { new: now }, history: [{ at: now, by: 'Аня (WhatsApp)', t: 'Заказ оформлен в WhatsApp' }],
     });
     return { ok: true, num: String(num).padStart(3, '0'), deadline: fmtDue('', isoDate(due)) };
   }
@@ -457,10 +576,22 @@ async function runTool(name, input, { fs, phone, chat }) {
   return { error: 'unknown tool' };
 }
 
+// Номер заказа из общего счётчика wa_anna/counter (тот же, что в учёте): два заказа не получат один номер
+async function nextOrderNum(fs) {
+  const last = await fs.query('orders', { orderBy: [{ field: { fieldPath: 'num' }, direction: 'DESCENDING' }], limit: 1 });
+  const top = (last[0] && last[0].num) || 0;
+  for (let i = 0; i < 5; i++) {
+    const { data, updateTime } = await fs.getWithTime('wa_anna/counter');
+    const n = Math.max(top, (data && data.orderNum) || 0) + 1;
+    if (await fs.setIf('wa_anna/counter', { ...(data || {}), orderNum: n, at: Date.now() }, updateTime)) return n;
+  }
+  return top + 1;
+}
+
 export async function openOrders(fs) {
   return fs.query('orders', {
     where: { fieldFilter: { field: { fieldPath: 'status' }, op: 'IN', value: { arrayValue: { values: OPEN.map(s => ({ stringValue: s })) } } } },
-  });
+  }).then(list => list.filter(o => !o.deletedAt)); // заказы из корзины не показываем
 }
 
 // История чата → сообщения для Claude: клиент — user, бот и менеджер — assistant; подряд идущие склеиваются
@@ -496,15 +627,34 @@ function managerNote(list) {
 
 export async function appendChat(fs, chatId, msg, extra = {}) {
   const chat = (await fs.get('wa_chats/' + chatId)) || { messages: [] };
-  const messages = [...(chat.messages || []), msg].slice(-HISTORY);
-  const next = { ...chat, ...extra, messages, updatedAt: Date.now(), lastText: msg.text.slice(0, 200), lastRole: msg.role };
+  const list = chat.messages || [];
+  // Одно и то же сообщение может прийти дважды (после перезапуска бота WhatsApp досылает пропущенное) — второй раз не пишем
+  if (msg.id && list.some(m => m.id === msg.id)) return chat;
+  // Сообщения, которые пришли с опозданием, встают на своё место по времени
+  const all = [...list, msg].sort((a, b) => (a.at || 0) - (b.at || 0));
+  const dropped = all.length > HISTORY ? all.slice(0, all.length - HISTORY) : [];
+  const messages = all.slice(-HISTORY);
+  const who = { client: 'клиент', bot: 'Аня', manager: 'менеджер', notice: 'уведомление' };
+  const older = dropped.length
+    ? (String(chat.older || '') + ' ' + dropped.map(m => `${who[m.role] || m.role}: ${String(m.text || '').slice(0, 160)}`).join(' | ')).slice(-3000).trim()
+    : chat.older;
+  const last = messages[messages.length - 1];
+  const next = { ...chat, ...extra, messages, ...(older ? { older } : {}), updatedAt: Date.now(), lastAt: last.at || Date.now(), lastText: String(last.text || '').slice(0, 200), lastRole: last.role };
   await fs.set('wa_chats/' + chatId, next);
+  logChat(fs, chatId, msg).catch(() => {});
   return next;
+}
+
+// Полный архив переписки: документ wa_log/<чат>_<ГГГГММ>, сообщения дописываются в конец (для аналитики за месяц)
+async function logChat(fs, chatId, msg) {
+  const d = new Date((msg.at || Date.now()) + 5 * 3600e3);
+  const id = chatId + '_' + d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, '0');
+  await fs.append('wa_log/' + id, 'messages', { role: msg.role, text: String(msg.text || '').slice(0, 2000), at: msg.at || Date.now(), ...(msg.id ? { id: msg.id } : {}) }, { chat: chatId });
 }
 
 /* ---------- Firestore через REST, вход под пользователем бота ---------- */
 
-let botCache = null;
+let botCache = null, botAsked = false;
 export async function botToken(env) {
   if (botCache && botCache.exp > Date.now()) return botCache.token;
   const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${env.FIREBASE_API_KEY}`, {
@@ -514,6 +664,14 @@ export async function botToken(env) {
   const d = await r.json();
   if (!d.idToken) throw new Error('вход бота в учёт не удался: ' + (d.error?.message || r.status));
   botCache = { token: d.idToken, exp: Date.now() + 50 * 60e3 };
+  if (!botAsked) {
+    // просьба о доступе, как у сотрудников: руководитель отмечает бота в учёте («Сотрудники»)
+    botAsked = true;
+    fetch(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents/staff_req/${d.localId}`, {
+      method: 'PATCH', headers: { Authorization: 'Bearer ' + d.idToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: toFields({ email: String(d.email || env.BOT_EMAIL).toLowerCase(), name: 'WhatsApp-бот', at: Date.now() }) }),
+    }).catch(() => {});
+  }
   return d.idToken;
 }
 
@@ -541,6 +699,31 @@ export function firestore(env) {
       const r = await fetch(`${base}/${col}`, { method: 'POST', headers: await H(), body: JSON.stringify({ fields: toFields(data) }) });
       if (!r.ok) throw new Error('firestore create ' + r.status);
       return doc(await r.json());
+    },
+    // Дописать элемент в массив документа (создаст документ, если его нет)
+    async append(path, field, item, fields = {}) {
+      const name = `projects/${env.FIREBASE_PROJECT}/databases/(default)/documents/${path}`;
+      const r = await fetch(`${base}:commit`, {
+        method: 'POST', headers: await H(),
+        body: JSON.stringify({ writes: [
+          { update: { name, fields: toFields(fields) }, updateMask: { fieldPaths: Object.keys(fields) } },
+          { transform: { document: name, fieldTransforms: [{ fieldPath: field, appendMissingElements: { values: [toValue(item)] } }] } },
+        ] }),
+      });
+      if (!r.ok) throw new Error('firestore append ' + r.status);
+    },
+    // Записать, только если документ не менялся с прочтения (updateTime) — для счётчика номеров
+    async getWithTime(path) {
+      const r = await fetch(`${base}/${path}`, { headers: await H() });
+      if (r.status === 404) return { data: null, updateTime: null };
+      if (!r.ok) throw new Error('firestore get ' + r.status);
+      const j = await r.json();
+      return { data: fromFirestore(j.fields || {}), updateTime: j.updateTime };
+    },
+    async setIf(path, data, updateTime) {
+      const pre = updateTime ? 'currentDocument.updateTime=' + encodeURIComponent(updateTime) : 'currentDocument.exists=false';
+      const r = await fetch(`${base}/${path}?${pre}`, { method: 'PATCH', headers: await H(), body: JSON.stringify({ fields: toFields(data) }) });
+      return r.ok;
     },
     async remove(path) {
       const r = await fetch(`${base}/${path}`, { method: 'DELETE', headers: await H() });

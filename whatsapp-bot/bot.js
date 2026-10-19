@@ -7,9 +7,11 @@
 //   - если менеджер сам написал клиенту, бот молчит в этом чате 30 минут, а потом читает переписку и сам решает,
 //     нужно ли отвечать (на «спасибо» и «хорошо» молчит, на новый вопрос отвечает и представляется: «Милана сейчас занята заказом»);
 //   - если бот позвал менеджера, а тот не ответил за 10 минут, бот извиняется перед клиентом (один раз);
-//   - готовит для учёта сводку «Менеджер Анна» (утром и по кнопке «Обновить») и отвечает на вопросы сотрудников (anna.js);
-//   - присылает команде в Telegram уведомления: Анна зовёт менеджера, новый заказ Kaspi (notify.js);
-//   - сообщения не отмечает прочитанными, чтобы менеджеры видели новые чаты в телефоне.
+//   - готовит для учёта сводку «Менеджер Аня» (утром и по кнопке «Обновить») и отвечает на вопросы сотрудников (anna.js);
+//   - присылает команде в Telegram уведомления: Аня зовёт менеджера, новый заказ Kaspi (notify.js);
+//   - сообщения не отмечает прочитанными, чтобы менеджеры видели новые чаты в телефоне;
+//   - фото клиента смотрит через Gemini, примеры работ присылает из учёта; после включения компьютера отвечает всем, кто ждал;
+//   - копия базы каждую ночь, дожим замолчавших клиентов, просьба об отзыве, цены конкурентов Kaspi (extras.js).
 // Состояние и QR-код: http://localhost:3777 на этом компьютере.
 //
 // Настройки — в файле .env рядом (образец: .env.example). Запуск: start.bat, автозапуск ставит install.bat.
@@ -22,20 +24,21 @@ import { dirname, join } from 'node:path';
 import makeWASocket, { downloadMediaMessage, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, isJidGroup, isJidBroadcast, isLidUser, isPnUser } from 'baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, botToken, PAUSE_AFTER_MANAGER } from './brain.js';
+import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, describeImage, botToken, PAUSE_AFTER_MANAGER, isWorkTime, busyText, workStartedAt } from './brain.js';
+import { startExtras } from './extras.js';
 import { makeDigest, digestDue, answerQuestions, makeInsights, insightsDue } from './anna.js';
 import { startNotify } from './notify.js';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const AUTH_DIR = join(DIR, 'auth');          // вход в WhatsApp; если удалить папку — снова попросит QR
 const PORT = 3777;
-const REPLY_DELAY = 7 * 60e3;                // даём менеджеру 7 минут ответить самому; не ответил — Анна отвечает сама (отсчёт с последнего сообщения клиента)
-const MAX_AGE = 30 * 60e3;                   // на сообщения старше 30 минут (пришли, пока компьютер был выключен) не отвечаем сами
+// В рабочее время даём менеджеру 7 минут ответить самому; вечером, в обед и в выходные Аня отвечает через минуту (отсчёт с последнего сообщения клиента)
+const replyDelay = () => (isWorkTime() ? 7 : 1) * 60e3;
+const MAX_AGE = 3 * 24 * 3600e3;             // компьютер был выключен: после включения отвечаем всем, кто ждал до 3 дней (с извинением за ожидание)
 const OUTBOX_EVERY = 15e3;                   // как часто проверять задания на уведомления
 const OUTBOX_TTL = 7 * 24 * 3600e3;          // задания старше недели выбрасываем
 const SEND_GAP = 3e3;                        // не чаще одного сообщения в 3 секунды
 const MANAGER_WAIT = 10 * 60e3;              // если менеджер не ответил за 10 минут после вызова — извиняемся перед клиентом
-const BUSY_TEXT = 'Извините, к сожалению, у менеджеров сейчас большая загрузка. Как только они освободятся, они вам ответят.';
 
 const env = process.env;
 const missing = ['FIREBASE_API_KEY', 'FIREBASE_PROJECT', 'BOT_EMAIL', 'BOT_PASSWORD'].filter(k => !String(env[k] || '').trim());
@@ -92,8 +95,12 @@ async function connect() {
   });
 
   sock.ev.on('messages.upsert', ({ messages, type }) => {
-    if (type !== 'notify') return; // история переписки при первом подключении нам не нужна
+    // notify — новые сообщения; append — то, что WhatsApp досылает после включения компьютера
+    // (в том числе ответы менеджера с телефона). Досланное только записываем: ответит проверка раз в минуту
+    if (type !== 'notify' && type !== 'append') return;
     for (const m of messages) {
+      if (type === 'append' && Date.now() - (+m.messageTimestamp || 0) * 1000 > MAX_AGE) continue;
+      m._late = type === 'append';
       // По одному на чат: иначе сообщения альбома одновременно перезаписывают переписку в учёте и часть теряется
       const key = m.key?.remoteJid || '';
       const next = (inbox.get(key) || Promise.resolve()).then(() => onMessage(m)).catch(e => log('ошибка обработки сообщения', e?.message || e));
@@ -117,25 +124,42 @@ async function onMessage(m) {
   if (m.key.fromMe) {
     if (sentByBot.has(m.key.id)) return;
     // Менеджер написал клиенту сам (с телефона или компьютера): бот уступает чат
-    await appendChat(fs, chatId, { role: 'manager', text, at }, {
-      phone, jid, needsManager: false, busyNoticeAt: 0, botPausedUntil: Date.now() + PAUSE_AFTER_MANAGER * 60e3,
+    const paused = Math.max(at + PAUSE_AFTER_MANAGER * 60e3, Date.now() - 1);
+    await appendChat(fs, chatId, { role: 'manager', text, at, id: m.key.id || '' }, {
+      phone, jid, needsManager: false, busyNoticeAt: 0, botPausedUntil: paused,
     });
     clearTimeout(pending.get(chatId));
     return;
   }
 
-  const heard = await voiceText(m);
+  const heard = (await voiceText(m)) || (await photoText(m, text));
   await appendChat(fs, chatId, { role: 'client', text: heard || text, at, id: m.key.id || '' }, {
     phone, jid, unread: true, ...(m.pushName ? { name: m.pushName } : {}),
   });
-  if (!aiOn || Date.now() - at > MAX_AGE) return;
+  if (!aiOn || m._late || Date.now() - at > MAX_AGE) return;
 
   // Клиенты часто пишут несколькими сообщениями подряд: отвечаем, когда допишет
   clearTimeout(pending.get(chatId));
   pending.set(chatId, setTimeout(() => {
     pending.delete(chatId);
     answer(jid, chatId, phone).catch(e => log('ошибка ответа', e?.message || e));
-  }, REPLY_DELAY));
+  }, replyDelay()));
+}
+
+// Фото от клиента → описание для Ани (Gemini). Не получилось — '' и в чат попадёт просто «[клиент прислал фото]»
+async function photoText(m, text) {
+  let msg = m.message || {};
+  for (const wrap of ['ephemeralMessage', 'viewOnceMessage', 'viewOnceMessageV2']) if (msg[wrap]?.message) msg = msg[wrap].message;
+  const img = msg.imageMessage;
+  if (!img || !env.GEMINI_API_KEY || m.key.fromMe) return '';
+  try {
+    const buf = await downloadMediaMessage(m, 'buffer', {}, { reuploadRequest: sock.updateMediaMessage });
+    const t = await describeImage(env, buf, img.mimetype, img.caption || '');
+    return t ? `${text} На фото: ${t}` : '';
+  } catch (e) {
+    log('не удалось посмотреть фото', e?.message || e);
+    return '';
+  }
 }
 
 // Голосовое от клиента → текст (Gemini). Не получилось — вернёт '' и в чат попадёт «[клиент прислал голосовое сообщение]»
@@ -184,12 +208,14 @@ async function answerNow(jid, chatId, phone) {
     return;
   }
   if (!reply.text) return;
-  let ok = true;
-  try { await send(jid, reply.text, true); } catch (e) { ok = false; log('не отправлено', e?.message || e); }
+  let ok = true, id = '';
+  try { id = await send(jid, reply.text, true); } catch (e) { ok = false; log('не отправлено', e?.message || e); }
   // Менеджера зовём один раз: повторный вызов, пока он не подключился, не сбрасывает 10-минутное ожидание
   const call = reply.handoff && !chat.needsManager;
-  await appendChat(fs, chatId, { role: 'bot', text: ok ? reply.text : '[не отправлено] ' + reply.text, at: Date.now() },
+  await appendChat(fs, chatId, { role: 'bot', text: ok ? reply.text : '[не отправлено] ' + reply.text, at: Date.now(), ...(id ? { id } : {}) },
     call ? { needsManager: true, managerReason: reply.handoff, managerCalledAt: Date.now(), busyNoticeAt: 0 } : {});
+  if (ok && reply.media?.length) await sendExamples(jid, chatId, reply.media);
+  if (reply.reserve) extras?.reserveUsed(reply.reserve);
   if (call) {
     log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
     notify?.managerNeeded({ name: chat.clientName || chat.name, phone }, reply.handoff).catch(() => {});
@@ -207,12 +233,29 @@ async function send(jid, text, typing) {
     await sleep(Math.min(8e3, 1500 + text.length * 40));
     await sock.sendPresenceUpdate('paused', jid).catch(() => {});
   }
-  const res = await sock.sendMessage(jid, { text });
+  const res = await sock.sendMessage(jid, typeof text === 'string' ? { text } : text);
   if (res?.key?.id) {
     sentByBot.add(res.key.id);
     if (sentByBot.size > 2000) sentByBot.delete(sentByBot.values().next().value);
   }
   lastSend = Date.now();
+  return res?.key?.id || '';
+}
+
+// Примеры работ из учёта (wa_anna/portfolio → картинки в коллекции blobs)
+async function sendExamples(jid, chatId, ids) {
+  let n = 0;
+  for (const id of ids) {
+    try {
+      const b = await fs.get('blobs/' + id);
+      const data = String(b?.data || '');
+      if (!data.startsWith('data:image')) continue;
+      const mid = await send(jid, { image: Buffer.from(data.split(',')[1], 'base64') }, false);
+      await appendChat(fs, chatId, { role: 'bot', text: '[Аня отправила фото наших работ]', at: Date.now(), ...(mid ? { id: mid } : {}) });
+      n++;
+    } catch (e) { log('фото работы не отправлено', e?.message || e); }
+  }
+  if (n) log('Аня отправила примеры работ:', n);
 }
 
 // Собеседник: номер телефона (если WhatsApp его показывает) и ключ чата в учёте
@@ -255,8 +298,8 @@ async function checkWaitingChats() {
       where: { fieldFilter: { field: { fieldPath: 'lastRole' }, op: 'EQUAL', value: { stringValue: 'client' } } },
     });
     for (const chat of silent) {
-      const age = Date.now() - (chat.updatedAt || 0);
-      if (pending.has(chat.id) || answering.has(chat.id) || age < REPLY_DELAY || age > MAX_AGE || skipped(chat)) continue;
+      const age = Date.now() - (chat.lastAt || chat.updatedAt || 0);
+      if (pending.has(chat.id) || answering.has(chat.id) || age < replyDelay() || age > MAX_AGE || skipped(chat)) continue;
       const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
       if (!jid) continue;
       pending.set(chat.id, null); // отметка «уже отвечаем», чтобы следующая проверка не ответила второй раз
@@ -270,11 +313,14 @@ async function checkWaitingChats() {
       where: { fieldFilter: { field: { fieldPath: 'needsManager' }, op: 'EQUAL', value: { booleanValue: true } } },
     });
     for (const chat of waiting) {
-      if (chat.busyNoticeAt || !chat.managerCalledAt || Date.now() - chat.managerCalledAt < MANAGER_WAIT) continue;
+      // В нерабочее время Аня уже сказала, когда ответит Милана; извиняемся только в рабочие часы,
+      // если менеджер не подключился за 10 минут (утром — считая от открытия студии)
+      if (!isWorkTime() || chat.busyNoticeAt || !chat.managerCalledAt || Date.now() - Math.max(chat.managerCalledAt, workStartedAt()) < MANAGER_WAIT) continue;
       const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
       if (!jid) continue;
-      await send(jid, BUSY_TEXT, true);
-      await appendChat(fs, chat.id, { role: 'bot', text: BUSY_TEXT, at: Date.now() }, { busyNoticeAt: Date.now() });
+      const text = busyText();
+      const id = await send(jid, text, true);
+      await appendChat(fs, chat.id, { role: 'bot', text, at: Date.now(), ...(id ? { id } : {}) }, { busyNoticeAt: Date.now() });
       log('Менеджер не ответил за 10 минут, клиенту', chat.phone || chat.id, 'отправлено извинение');
     }
   } catch (e) {
@@ -282,18 +328,19 @@ async function checkWaitingChats() {
   }
 }
 
-/* ---------- «Менеджер Анна» в учёте: сводка и вопросы ---------- */
+/* ---------- «Менеджер Аня» в учёте: сводка и вопросы ---------- */
 
 let notify = null; // уведомления команде в Telegram (notify.js)
+let extras = null; // копии базы, дожим, отзывы, проверка цен Kaspi (extras.js)
 let annaBusy = false, annaErr = '';
 async function checkAnna() {
   if (annaBusy || missing.length || !aiOn) return;
   annaBusy = true;
   try {
     const n = await answerQuestions(fs, env);
-    if (n) log('Анна ответила на вопросы из учёта:', n);
+    if (n) log('Аня ответила на вопросы из учёта:', n);
     const why = await digestDue(fs);
-    if (why) { await makeDigest(fs, env); log('Анна подготовила сводку для учёта (' + why + ')'); }
+    if (why) { await makeDigest(fs, env); log('Аня подготовила сводку для учёта (' + why + ')'); }
     const per = await insightsDue(fs);
     if (per) { await makeInsights(fs, env, per); log('Аня подготовила аналитику переписок за', per === 'month' ? 'месяц' : 'неделю'); }
     annaErr = '';
@@ -324,8 +371,8 @@ async function processOutbox() {
           log('Уведомление не отправлено: номера', n.phone, 'нет в WhatsApp');
         } else {
           try {
-            await send(wa.jid, n.text, false);
-            await markNoticeSent(fs, job.orderId, n);
+            const id = await send(wa.jid, n.text, false);
+            await markNoticeSent(fs, job.orderId, n, id);
             log('Уведомление клиенту', n.phone, '—', n.key);
           } catch (e) {
             log('Уведомление не ушло, попробую позже:', e?.message || e);
@@ -377,8 +424,9 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   setInterval(checkWaitingChats, 60e3);
   setInterval(checkAnna, 30e3);
   if (!missing.length) notify = startNotify(fs, env, () => botToken(env), log);
+  if (!missing.length) extras = startExtras({ fs, env, log, notify, send, online: () => state.status === 'online' && !!sock, sock: () => sock, aiOn, DIR });
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
-  for (const f of ['brain.js', 'anna.js', 'notify.js', 'bot.js', '.env']) {
+  for (const f of ['brain.js', 'anna.js', 'notify.js', 'extras.js', 'bot.js', '.env']) {
     watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
       if (cur.mtimeMs !== prev.mtimeMs) { log('Файл ' + f + ' изменился, перезапускаюсь'); process.exit(0); }
     });

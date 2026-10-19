@@ -1,5 +1,5 @@
 // Бот команды в Telegram (бесплатно). Уведомления:
-//   - Анна позвала менеджера в WhatsApp;
+//   - Аня позвала менеджера в WhatsApp;
 //   - пришёл новый заказ Kaspi (бот сам раз в 5 минут спрашивает воркер kaspi-orders, учёт открывать не нужно);
 //   - то, о чём попросили Аню: «оповести, когда принтер закончит печать / закроется заказ / выполнят задачу» (раз в минуту).
 // Подписка: открыть своего бота в Telegram и отправить ему /start. Список подписчиков — wa_anna/telegram.
@@ -148,6 +148,7 @@ export function startNotify(fs, env, idToken, log) {
     setInterval(checkKaspi, KASPI_EVERY);
   }
   return {
+    alert: text => send(text),
     managerNeeded: (chat, reason) => send(`🔔 Нужен менеджер в WhatsApp\n${chat.name || 'Клиент'}${chat.phone ? ' +' + chat.phone : ''}: ${reason}${chat.phone ? '\nhttps://wa.me/' + chat.phone : ''}`),
   };
 }

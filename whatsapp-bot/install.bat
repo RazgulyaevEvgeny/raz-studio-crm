@@ -43,6 +43,10 @@ echo [3/4] Включаю автозапуск при входе в Windows...
 set "VBS=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\RAZ WhatsApp bot.vbs"
 > "%VBS%" echo CreateObject("WScript.Shell").Run """%~dp0start.bat""", 0, False
 
+echo Отключаю спящий режим, чтобы Аня отвечала и ночью...
+powercfg /change standby-timeout-ac 0 >nul 2>&1
+powercfg /change hibernate-timeout-ac 0 >nul 2>&1
+
 echo [4/4] Запускаю бота в фоне...
 call "%~dp0stop.bat" >nul
 wscript "%VBS%"
