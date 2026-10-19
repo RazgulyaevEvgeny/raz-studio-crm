@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261019143000">
+<meta name="app-build" content="20261019200000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1617,6 +1617,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
       <button class="pill" type="button" data-go="calendar">Календарь <span class="n hot" id="n-late" hidden>0</span></button>
       <button class="pill" type="button" data-go="office"><span class="lf">Расходы офиса</span><span class="ls">Расходы</span></button>
       <button class="pill" type="button" data-go="supplies">Закупки</button>
+      <button class="pill" type="button" data-go="clients">Клиенты</button>
       <button class="pill" type="button" data-go="docs">Документы</button>
       <button class="pill" type="button" data-go="projects">Проекты</button>
       <button class="pill" type="button" data-go="prices">Прайс</button>
@@ -1732,6 +1733,19 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   </section>
   <section id="p-office" class="page" style="gap:16px" hidden></section>
   <section id="p-supplies" class="page" style="gap:16px" hidden></section>
+  <!-- КЛИЕНТЫ -->
+  <section id="p-clients" class="page" style="gap:16px" hidden>
+    <div class="ph">
+      <div><h1>Клиенты</h1><p id="cl-sub"></p></div>
+      <div class="btns"><button class="btn outline" type="button" id="cl-csv">Скачать список</button></div>
+    </div>
+    <div class="filters">
+      <div class="top"><label class="search"><input id="cl-q" type="search" placeholder="Имя или телефон" aria-label="Поиск клиента"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></label></div>
+      <div class="chips" id="cl-chips"></div>
+    </div>
+    <div class="cl-grid" id="cl-list"></div>
+  </section>
+
   <section id="p-docs" class="page" style="gap:16px" hidden>
     <div class="ph"><div><h1>Документы</h1><p>Счета на оплату для юрлиц, контрагенты и реквизиты студии.</p></div><button class="btn primary" type="button" id="dc-new">Новый счёт</button></div>
     <div class="w"><div class="w-h"><h2>Документы</h2></div><div class="chips" id="dc-f" role="group" aria-label="Вид документа"></div><div class="dc-list" id="dc-inv"></div>
@@ -1787,6 +1801,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   <section id="p-prices" class="page" style="gap:16px" hidden>
     <div class="ph"><div><h1>Прайс</h1><p id="pr-sub">Цены студии по услугам.</p></div><div class="btns"><button class="btn outline" type="button" id="pr-copy">Скопировать для клиента</button><button class="btn primary" type="button" data-qnew>Добавить позицию</button></div></div>
     <div class="kpis" id="pr-kpi"></div>
+    <div id="pf-box"></div>
     <div class="filters">
       <div class="top">
         <label class="search"><input id="pr-q" type="search" placeholder="Поиск по прайсу" data-phm="Поиск" aria-label="Поиск по прайсу"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></label>
@@ -1820,7 +1835,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   <section id="p-orders" class="page" style="gap:16px" hidden>
     <div class="ph">
       <div><h1>Ведомость</h1><p id="orders-sub"></p></div>
-      <div class="btns"><button class="btn primary" type="button" data-new>Новый заказ</button></div>
+      <div class="btns"><button class="btn soft" type="button" id="trash-btn" hidden>Корзина</button><button class="btn primary" type="button" data-new>Новый заказ</button></div>
     </div>
     <div class="filters">
       <div class="top">
@@ -1988,6 +2003,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         <span class="hint" data-need-assets>Фото, PDF до 700 КБ, STL и 3MF до 50 МБ</span>
       </div>
       <div class="meta" id="f-meta"></div>
+      <details class="hist" id="f-hist" hidden><summary>История изменений</summary><div id="f-hist-list"></div></details>
     </div>
     <div class="ed-body" id="pane-cost" hidden>
       <div class="pnl"><div><small>Сумма заказа</small><b id="c-price">0 ₸</b></div><div><small>Потратили</small><b id="c-cost">0 ₸</b></div><div><small>Прибыль</small><b id="c-profit">0 ₸</b></div></div>
@@ -2331,7 +2347,7 @@ for(const k of ['office','supplies']){const c=LEDGERS[k];document.getElementById
       <div class="lrow head" id="${k}-head"><div>Дата</div><div>${k==='supplies'?'Что купили':'Что оплатили'}</div><div>Категория</div><div>${k==='supplies'?'Поставщик':'Кто оплатил'}</div><div style="text-align:right">Сумма</div></div>
       <div class="rows" id="${k}-list"></div>
     </div>`}
-var ordersRaw=[];
+var ordersRaw=[],ordersAll=[],trashOrders=[];
 const isKaspiLedger=o=>o.source==='kaspi'||o.service==='kaspi'||((o.kaspi||[]).length>0)||/^kaspi(\s|·|$)/i.test(String(o.client||'').trim());
 let db=null, ordersCol=null, tasksCol=null, canWrite=true, loaded=false, tasksLoaded=false;
 let orders=[], tasks=[];
@@ -2459,7 +2475,7 @@ const MGR_LIMITS=false;const mgrLimited=()=>MGR_LIMITS&&isMgr();
 function applyRoleWrite(){canWrite=baseWrite&&!(mgrLimited()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
 function go(p,opts={}){
   page=p;applyRoleWrite();
-  ['home','orders','kaspi','calendar','office','supplies','docs','projects','prices','analytics'].forEach(x=>$('p-'+x).hidden=x!==p);
+  ['home','orders','kaspi','calendar','office','supplies','docs','projects','prices','analytics','clients'].forEach(x=>$('p-'+x).hidden=x!==p);
   document.querySelectorAll('.pills [data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===p));
   if(p==='calendar'){selDay=opts.day||selDay||todayStr();const [y,m]=selDay.split('-').map(Number);calY=y;calM=m-1}
   render();
@@ -2800,6 +2816,7 @@ function render(){
   if(page==='projects')renderProjects();
   if(page==='prices')renderPrices();
   if(page==='analytics')renderAnalytics();
+  if(window.extRender)extRender(); /* клиенты, примеры работ, корзина, нижнее меню — в отдельном скрипте ниже */
   enhanceSelects();
   keep.forEach(([id,v,f])=>{const x=document.querySelector('textarea[data-cmtext="'+CSS.escape(id)+'"]');if(x){x.value=v;if(f)x.focus()}});
 }
@@ -2974,7 +2991,7 @@ function packHome(){
   if(packN===n)return;packN=n;pack.innerHTML='';pack.style.setProperty('--cols',n);pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
   /* Анна — первой, во всю ширину левой части */
-  if(n===1){const c=mk('pcol');pack.appendChild(c);[packAnna,...packL].forEach(x=>c.appendChild(x));return}
+  if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
   if(n===3){const L=mk('pleft'),Rt=mk('pcol');[packAnna,...packWide].forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(L,Rt);return}
   const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(packAnna,packWide[0]);a.appendChild(packSide[0]);b.appendChild(packSide[1]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(top,a,b,bot);
 }
@@ -3250,6 +3267,7 @@ function openEditor(id,preset={}){
   $('f-owner').value=o.owner||(id==='new'&&isMgr()?ROLE().name:'');$('f-notes').value=o.notes||'';
   const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
   $('f-meta').textContent=o.createdAt?'Создан '+f(o.createdAt)+(o.createdBy?' ('+o.createdBy+')':'')+(o.updatedAt&&o.updatedAt!==o.createdAt?', изменён '+f(o.updatedAt):''):'';
+  renderHist(id==='new'?null:o);
   $('f-err').hidden=true;
   renderDelete(false);renderSvcPick();
   document.querySelectorAll('#ed-form input,#ed-form select,#ed-form textarea').forEach(el=>el.disabled=!canWrite);
@@ -4362,16 +4380,16 @@ async function saveOrder(ev){
   const now=Date.now();const btn=$('ed-save');btn.disabled=true;
   try{
     if(editing==='new'){
-      const nextNum=ordersRaw.reduce((m,o)=>Math.max(m,o.num||0),0)+1;
+      const nextNum=await nextOrderNum();
       const ref=ordersCol.doc();const rq=edReq;
       if(rq){d.requestId=rq.id;d.source='toppers'}
-      await ref.set({...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||''});
+      await ref.set({...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||'',statusAt:{[d.status]:now},history:[{at:now,by:ROLE().name||'',t:'Заказ создан'}]});
       if(rq){try{await db.doc('requests/'+rq.id).update({status:'accepted',orderId:ref.id,orderNum:nextNum,handledBy:ROLE().name||'',handledAt:now})}catch(_){}}
       toast(rq?'Заявка подтверждена: заказ № '+String(nextNum).padStart(3,'0'):'Заказ № '+String(nextNum).padStart(3,'0')+' добавлен');
       waNotify(ref.id);
     }else{
       const id=editing,prev=edOrig;
-      await db.doc('orders/'+id).update({...d,updatedAt:now});
+      await db.doc('orders/'+id).update({...d,...histPatch(prev,d,now),updatedAt:now});
       toast('Сохранено');
       if(prev&&prev.status!==d.status)waNotify(id);
       else if(prev&&prev.deadline&&d.deadline>prev.deadline&&!CLOSED.has(d.status))waNotify(id,'delay');
@@ -4383,7 +4401,8 @@ async function saveOrder(ev){
   finally{btn.disabled=false}
 }
 async function quickStatus(id,status){
-  try{await db.doc('orders/'+id).update({status,updatedAt:Date.now()});toast('Статус: '+ST[status].label);waNotify(id)}
+  const now=Date.now(),prev=orders.find(o=>o.id===id);
+  try{await db.doc('orders/'+id).update({status,...(prev?histPatch(prev,{...prev,status},now):{}),updatedAt:now});toast('Статус: '+ST[status].label);waNotify(id)}
   catch(e){toast(handleWriteError(e));render()}
 }
 /* уведомление клиенту в WhatsApp: учёт кладёт задание в wa_outbox, бот на рабочем компьютере (папка whatsapp-bot)
@@ -4394,7 +4413,8 @@ async function waNotify(id,event='status'){
   catch(_){/* правило для wa_outbox ещё не опубликовано — молча пропускаем */}
 }
 async function delOrder(){
-  try{await db.doc('orders/'+editing).delete();closeEditor();toast('Заказ удалён')}
+  const o=orders.find(x=>x.id===editing),now=Date.now(),who=ROLE().name||'';
+  try{await db.doc('orders/'+editing).update({deletedAt:now,deletedBy:who,updatedAt:now,history:[...((o&&o.history)||[]),{at:now,by:who,t:'Заказ удалён в корзину'}].slice(-60)});closeEditor();toast('Заказ в корзине: его можно вернуть 30 дней')}
   catch(e){showErr('f-err',handleWriteError(e))}
 }
 
@@ -4837,7 +4857,9 @@ $('task-form').addEventListener('submit',async e=>{
   ordersCol=db.collection('orders');tasksCol=db.collection('tasks');
   const fail=()=>banner('Связь с базой прервалась. Обновите страницу, чтобы видеть свежие данные.');
   ordersCol.onSnapshot(snap=>{
-    ordersRaw=snap.docs.map(d=>({id:d.id,...d.data()}));
+    ordersAll=snap.docs.map(d=>({id:d.id,...d.data()}));
+    ordersRaw=ordersAll.filter(o=>!o.deletedAt); // удалённые лежат в корзине 30 дней
+    trashOrders=ordersAll.filter(o=>o.deletedAt&&!isKaspiLedger(o));
     orders=ordersRaw.filter(o=>!isKaspiLedger(o)); // заказы Kaspi теперь в разделе Kaspi, в ведомости их не показываем
     loaded=true;render();
     if(editing&&editing!=='new'&&!orders.find(o=>o.id===editing)){closeEditor();toast('Этот заказ удалили')}
@@ -4845,7 +4867,7 @@ $('task-form').addEventListener('submit',async e=>{
   tasksCol.onSnapshot(snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));tasksLoaded=true;render()},fail);
   db.collection('prices').onSnapshot(snap=>{prices=snap.docs.map(d=>({id:d.id,...d.data()}));pricesLoaded=true;render();setTimeout(importPendingPrices,400);if(qEditing&&qEditing!=='new'&&!prices.find(x=>x.id===qEditing)){closeQ();toast('Эту позицию удалили')}},fail);
   kaspiCol=db.collection('kaspi_orders');
-  kaspiCol.onSnapshot(snap=>{const all=snap.docs.map(d=>({id:d.id,...d.data()}));kaspiMeta=all.find(x=>x.id==='_meta')||{};kaspiProducts=all.filter(x=>x.kind==='product');kaspiOrders=all.filter(x=>x.id!=='_meta'&&x.kind!=='product');kaspiLoaded=true;kaspiDbErr='';setTimeout(render,0)},
+  kaspiCol.onSnapshot(snap=>{const all=snap.docs.map(d=>({id:d.id,...d.data()}));kaspiMeta=all.find(x=>x.id==='_meta')||{};kaspiProducts=all.filter(x=>x.kind==='product');kaspiArch=all.filter(x=>x.kind==='archive');kaspiOrders=kExpandArch(all.filter(x=>x.id!=='_meta'&&x.kind!=='product'&&x.kind!=='archive'),kaspiArch);setTimeout(kArchiveOld,60e3);kaspiLoaded=true;kaspiDbErr='';setTimeout(render,0)},
     e=>{kaspiLoaded=true;kaspiDbErr='rules';try{console.warn('kaspi_orders',e)}catch(_){}render()});
   db.collection('requests').onSnapshot(snap=>{requests=snap.docs.map(d=>({id:d.id,...d.data()}));requestsLoaded=true;render();setTimeout(importPendingReq,300)},e=>{requestsLoaded=true;try{console.warn('requests',e)}catch(_){}});
   db.collection('projects').onSnapshot(snap=>{projects=snap.docs.map(d=>({id:d.id,...d.data()}));projLoaded=true;render();if(pEditing&&pEditing!=='new'&&!projects.find(x=>x.id===pEditing)){closeP();toast('Этот проект удалили')}},fail);
@@ -5686,6 +5708,353 @@ renderAnna();
 initPack();
 {const h=(location.hash||'').slice(1);go(['orders','kaspi','calendar','office','supplies','docs','projects','prices','analytics'].includes(h)?h:'home')}
 setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('input,select,textarea'))))render()},60000);
+</script>
+<style>
+/* ---------- история заказа, корзина, сотрудники, клиенты, примеры работ, нижнее меню ---------- */
+.hist{margin-top:4px;border-radius:16px;background:var(--tile);padding:0 16px}
+.hist summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font:600 14px var(--f);color:var(--muted)}
+.hist ol{list-style:none;margin:0;padding:0 0 12px;display:flex;flex-direction:column;gap:8px}
+.hist li{display:flex;gap:10px;font:400 13.5px/1.4 var(--fb)}
+.hist li time{flex:none;color:var(--muted);min-width:96px}
+.hist li b{font-weight:600}
+.sh-ov{position:fixed;inset:0;z-index:40;background:rgba(10,11,20,.35);display:flex;align-items:center;justify-content:center;padding:16px}
+.sh{background:var(--paper);border-radius:28px;width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 80px -20px rgba(10,11,20,.4)}
+.sh-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.sh-h h2{margin:0;font:800 26px/1.1 var(--f);letter-spacing:-.03em}
+.sh-x{flex:none;width:44px;height:44px;border-radius:50%;background:var(--tile);font-size:22px;line-height:1}
+.sh p.hint{margin:0;color:var(--muted);font:400 14px/1.5 var(--fb)}
+.sh-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:var(--tile)}
+.sh-row .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.sh-row .t b{font:600 15px var(--f);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-row .t small{color:var(--muted);font:400 13px var(--fb)}
+.sh-row .a{display:flex;gap:6px;flex:none}
+.sh-row .btn{min-height:38px;padding:0 14px;font-size:13.5px}
+.sw{position:relative;flex:none;width:52px;height:30px;border-radius:999px;background:var(--tile-2);transition:background .2s}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s var(--ease)}
+.sw[aria-checked=true]{background:var(--ok)}.sw[aria-checked=true]::after{transform:translateX(22px)}
+.sw:disabled{opacity:.5}
+.who-pill.adm{cursor:pointer}.who-pill.adm:hover{box-shadow:inset 0 0 0 2px var(--blue)}
+.cl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:12px}
+.cl{background:var(--tile);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cl-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.cl-top b{font:700 17px/1.2 var(--f);overflow-wrap:anywhere}
+.cl-top small{display:block;color:var(--muted);font:400 13px var(--fb);margin-top:3px}
+.cl-tag{flex:none;font:600 12px var(--f);padding:4px 10px;border-radius:999px;background:var(--paper);color:var(--muted)}
+.cl-tag.vip{background:color-mix(in srgb,var(--ok) 16%,#fff);color:var(--ok)}
+.cl-tag.sleep{background:color-mix(in srgb,var(--st-prod) 16%,#fff);color:#b46a00}
+.cl-n{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cl-n div{background:var(--paper);border-radius:14px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.cl-n small{color:var(--muted);font:500 11.5px var(--fb)}
+.cl-n b{font:700 15px var(--f);white-space:nowrap}
+.cl-a{display:flex;gap:8px;flex-wrap:wrap}
+.cl-a .btn{min-height:40px;padding:0 16px;font-size:14px;text-decoration:none}
+.pf{background:var(--tile);border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.pf-h{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.pf-h h2{margin:0;font:800 22px var(--f);letter-spacing:-.02em}
+.pf-h p{margin:4px 0 0;color:var(--muted);font:400 14px/1.45 var(--fb);max-width:640px}
+.pf-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.pf-i{position:relative;aspect-ratio:1;border-radius:16px;overflow:hidden;background:var(--paper)}
+.pf-i img{width:100%;height:100%;object-fit:cover;display:block}
+.pf-i small{position:absolute;left:6px;bottom:6px;background:rgba(10,11,20,.6);color:#fff;font:600 11px var(--f);padding:3px 8px;border-radius:999px}
+.pf-i button{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;background:rgba(10,11,20,.6);color:#fff;font-size:17px;line-height:1}
+.pf .chip{background:var(--paper)}.pf .chip.on{background:var(--blue)}
+.pf-empty{color:var(--muted);font:400 14px var(--fb);padding:6px 0}
+.net-bar{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--danger);color:#fff;border-radius:999px;padding:10px 18px;font:600 14px var(--f);box-shadow:0 12px 30px -10px rgba(229,72,77,.6);max-width:calc(100vw - 32px);text-align:center}
+.bnav{display:none}
+@media(max-width:560px){
+  .nav .pills{display:none}
+  body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .fab:not(.bn-plus){display:none}
+  .bnav{display:grid;grid-template-columns:repeat(6,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 -1px 0 var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+  .bnav button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:56px;border-radius:14px;font:600 11px var(--f);color:var(--muted)}
+  .bnav button svg{width:24px;height:24px}
+  .bnav button.on{color:var(--blue)}
+  .bnav .n{position:absolute;top:3px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--blue);color:#fff;font:700 11px/18px var(--f)}
+  .bnav .n.hot{background:var(--danger)}
+  .bnav .fab.bn-plus{position:static;width:52px;height:52px;margin:2px auto;box-shadow:0 10px 24px -8px rgba(67,88,239,.7);color:#fff;border-radius:50%;min-height:0}
+  .net-bar{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .more-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .more-g button{min-height:56px;border-radius:18px;background:var(--tile);font:600 15px var(--f);display:flex;align-items:center;justify-content:center;gap:8px}
+  .more-g button.on{background:var(--blue);color:#fff}
+  .sh-ov{align-items:flex-end;padding:0}
+  .sh-row{flex-wrap:wrap}.sh-row .a{width:100%}.sh-row .a .btn{flex:1}
+  .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+}
+</style>
+<nav class="bnav" id="bnav" aria-label="Разделы">
+  <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная<span class="n req" data-src="n-req" hidden></span></button>
+  <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-all" hidden></span></button>
+  <button class="fab bn-plus" type="button" data-new aria-label="Добавить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button type="button" data-bgo="kaspi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Kaspi<span class="n hot" data-src="n-kaspi" hidden></span></button>
+  <button type="button" data-bgo="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Календарь<span class="n hot" data-src="n-late" hidden></span></button>
+  <button type="button" data-bgo="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Ещё</button>
+</nav>
+<div class="net-bar" id="net-bar" hidden></div>
+<script>
+/* ---------- общий счётчик номеров заказов (учёт и бот берут номер по очереди, без повторов) ---------- */
+async function nextOrderNum(){
+  const local=ordersAll.reduce((m,o)=>Math.max(m,o.num||0),0)+1;
+  try{
+    const fs=firebase.firestore(),ref=fs.doc('wa_anna/counter');
+    return await fs.runTransaction(async tx=>{const s=await tx.get(ref);const n=Math.max(local,((s.exists&&s.data().orderNum)||0)+1);tx.set(ref,{orderNum:n,at:Date.now()},{merge:true});return n});
+  }catch(_){return local}
+}
+
+/* ---------- история изменений заказа ---------- */
+const HIST_F=[
+  ['client','Клиент',v=>v||'—'],['phone','Телефон',v=>v||'—'],['status','Статус',v=>(ST[v]||{}).label||v||'—'],
+  ['price','Сумма',v=>v==null||v===''?'—':money(v)],['paid','Оплачено',v=>v==null||v===''?'—':money(v)],
+  ['deadline','Срок',v=>v?fmtDate(v):'—'],['owner','Ответственный',v=>v||'—'],['service','Услуга',v=>(SV[v]||{}).label||v||'—']
+];
+function histPatch(prev,d,now){
+  const by=ROLE().name||'',out=[];
+  for(const [k,l,f] of HIST_F){const a=prev[k]??null,b=d[k]??null;if(String(a??'')!==String(b??''))out.push(l+': '+f(a)+' → '+f(b))}
+  const sum=o=>(o.items||[]).reduce((s,i)=>s+(+i.price||0)*(+i.qty||0),0);
+  if(d.items&&JSON.stringify(prev.items||[])!==JSON.stringify(d.items))out.push('Позиции заказа изменены'+(sum(prev)!==sum(d)?' ('+money(sum(prev))+' → '+money(sum(d))+')':''));
+  if(d.desc!=null&&(prev.desc||'')!==(d.desc||''))out.push('Описание изменено');
+  const patch={};
+  if(out.length)patch.history=[...(prev.history||[]),...out.map(t=>({at:now,by,t}))].slice(-60);
+  if(prev.status!==d.status)patch.statusAt={...(prev.statusAt||{}),[d.status]:now};
+  return patch;
+}
+function renderHist(o){
+  const box=$('f-hist'),h=(o&&o.history)||[];
+  box.hidden=!h.length;if(!h.length)return;
+  const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  $('f-hist-list').innerHTML='<ol>'+[...h].reverse().map(x=>`<li><time>${f(x.at)}</time><span>${x.by?'<b>'+esc(x.by)+':</b> ':''}${esc(x.t)}</span></li>`).join('')+'</ol>';
+}
+
+/* ---------- общее окно ---------- */
+function sheet(title,html,hint){
+  closeSheet();
+  const ov=document.createElement('div');ov.className='sh-ov';ov.id='sh-ov';
+  ov.innerHTML=`<div class="sh" role="dialog" aria-label="${esc(title)}"><div class="sh-h"><div><h2>${esc(title)}</h2></div><button class="sh-x" type="button" data-shx aria-label="Закрыть">×</button></div>${hint?`<p class="hint">${hint}</p>`:''}<div id="sh-body" style="display:flex;flex-direction:column;gap:8px">${html}</div></div>`;
+  ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('[data-shx]'))closeSheet()});
+  document.body.appendChild(ov);return ov;
+}
+function closeSheet(){const o=$('sh-ov');if(o)o.remove()}
+addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+
+/* ---------- корзина: удалённые заказы хранятся 30 дней ---------- */
+const TRASH_DAYS=30;
+const isBoss=()=>String((ROLE().email)||(firebase.auth().currentUser||{}).email||'').toLowerCase()==='design.onegin@gmail.com';
+function renderTrashBtn(){const b=$('trash-btn');if(!b)return;b.hidden=!trashOrders.length;b.textContent='Корзина · '+trashOrders.length}
+function openTrash(){
+  const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  const left=o=>Math.max(1,TRASH_DAYS-Math.floor((Date.now()-o.deletedAt)/864e5));
+  const rows=[...trashOrders].sort((a,b)=>b.deletedAt-a.deletedAt).map(o=>`<div class="sh-row"><div class="t"><b>№ ${String(o.num||0).padStart(3,'0')} · ${esc(o.client||'Без клиента')}</b><small>Удалён ${f(o.deletedAt)}${o.deletedBy?' ('+esc(o.deletedBy)+')':''} · исчезнет через ${left(o)} ${plural(left(o),'день','дня','дней')}</small></div><div class="a">${canWrite?`<button class="btn primary" type="button" data-trback="${esc(o.id)}">Вернуть</button>`:''}${isBoss()?`<button class="btn danger" type="button" data-trkill="${esc(o.id)}">Навсегда</button>`:''}</div></div>`).join('');
+  sheet('Корзина',rows||'<p class="hint">Корзина пуста.</p>','Удалённые заказы лежат здесь '+TRASH_DAYS+' дней, потом исчезают сами. Удалить навсегда сразу может только руководитель.');
+}
+async function trashBack(id){
+  const o=trashOrders.find(x=>x.id===id),now=Date.now(),by=ROLE().name||'';
+  try{await db.doc('orders/'+id).update({deletedAt:firebase.firestore.FieldValue.delete(),deletedBy:firebase.firestore.FieldValue.delete(),updatedAt:now,history:[...((o&&o.history)||[]),{at:now,by,t:'Заказ возвращён из корзины'}].slice(-60)});toast('Заказ вернулся в ведомость')}
+  catch(e){toast(handleWriteError(e))}
+  setTimeout(()=>trashOrders.length?openTrash():closeSheet(),300);
+}
+async function trashKill(id,silent){
+  const o=trashOrders.find(x=>x.id===id);
+  try{await db.doc('orders/'+id).delete();if(assets&&o)(o.files||[]).forEach(f=>assets.delete(f.id).catch(()=>{}));if(!silent)toast('Заказ удалён навсегда')}
+  catch(e){if(!silent)toast(handleWriteError(e))}
+  if(!silent)setTimeout(()=>trashOrders.length?openTrash():closeSheet(),300);
+}
+let trashPurged=false;
+function purgeTrash(){
+  if(trashPurged||!loaded||!isBoss())return;trashPurged=true;
+  trashOrders.filter(o=>Date.now()-o.deletedAt>TRASH_DAYS*864e5).forEach(o=>trashKill(o.id,true));
+}
+
+/* ---------- сотрудники: кому открыт доступ к учёту ---------- */
+let staffReq=[],staffOk=new Set();
+async function openStaff(){
+  const fs=firebase.firestore();
+  sheet('Сотрудники','<p class="hint">Загружаем…</p>');
+  try{
+    const [r,s]=await Promise.all([fs.collection('staff_req').get(),fs.collection('staff').get()]);
+    staffReq=r.docs.map(d=>({uid:d.id,...d.data()})).sort((a,b)=>(b.at||0)-(a.at||0));staffOk=new Set(s.docs.map(d=>d.id));
+  }catch(e){$('sh-body').innerHTML='<p class="hint">Не удалось загрузить список: '+esc(e.message||'')+'</p>';return}
+  renderStaff();
+}
+function renderStaff(){
+  const f=t=>t?new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):'';
+  const rows=staffReq.map(x=>{const me=x.email==='design.onegin@gmail.com',on=me||staffOk.has(x.uid);
+    return `<div class="sh-row"><div class="t"><b>${esc(x.name||x.email)}</b><small>${esc(x.email)} · заходил ${f(x.at)}</small></div><button class="sw" type="button" role="switch" aria-checked="${on}" aria-label="Доступ для ${esc(x.email)}" data-staff="${esc(x.uid)}" ${me?'disabled':''}></button></div>`}).join('');
+  const box=$('sh-body');if(!box)return;
+  box.innerHTML=(rows||'<p class="hint">Пока никто не заходил.</p>')+
+    `<button class="btn soft" type="button" id="backup-btn" style="margin-top:8px">Скачать копию всей базы</button>`;
+}
+async function toggleStaff(uid){
+  const x=staffReq.find(r=>r.uid===uid);if(!x)return;
+  const fs=firebase.firestore(),on=staffOk.has(uid);
+  try{
+    if(on){await fs.doc('staff/'+uid).delete();staffOk.delete(uid);toast('Доступ закрыт: '+x.email)}
+    else{await fs.doc('staff/'+uid).set({email:x.email,name:x.name||'',at:Date.now(),by:ROLE().name||''});staffOk.add(uid);toast('Доступ открыт: '+x.email)}
+  }catch(e){toast('Не получилось: '+(e.message||''))}
+  renderStaff();
+}
+/* копия базы одним файлом: всё, кроме самих фото и файлов (их можно скачать из заказов) */
+async function downloadBackup(){
+  const b=$('backup-btn');if(b){b.disabled=true;b.textContent='Собираем копию…'}
+  const fs=firebase.firestore(),out={at:new Date().toISOString(),collections:{}};
+  for(const c of ['orders','tasks','prices','projects','office','supplies','kaspi_orders','requests','marketing','wa_chats','wa_anna','wa_anna_q','staff']){
+    try{const s=await fs.collection(c).get();out.collections[c]=Object.fromEntries(s.docs.map(d=>[d.id,d.data()]))}catch(_){}
+  }
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out)],{type:'application/json'}));
+  a.download='raz-crm-копия-'+todayStr()+'.json';document.body.appendChild(a);a.click();a.remove();
+  if(b){b.disabled=false;b.textContent='Скачать копию всей базы'}
+  toast('Копия базы скачана');
+}
+
+/* ---------- клиенты: все заказы одного человека вместе ---------- */
+let clView={q:'',f:'all'};
+const clKey=o=>{const p=waLink(o.phone).replace('https://wa.me/','');return p?'p'+p:'n'+String(o.client||'').trim().toLowerCase()};
+function clientList(){
+  const m=new Map();
+  for(const o of orders){
+    if(!o.client&&!o.phone)continue;const k=clKey(o);
+    const c=m.get(k)||{key:k,name:'',phone:'',orders:[],sum:0,debt:0,last:'',svc:{}};
+    c.orders.push(o);if(o.status!=='cancel'){c.sum+=+o.price||0;c.debt+=debtOf(o);c.svc[o.service]=(c.svc[o.service]||0)+1}
+    const d=receivedOf(o);if(d>=c.last){c.last=d;c.name=o.client||c.name;c.phone=o.phone||c.phone}
+    m.set(k,c);
+  }
+  return [...m.values()].map(c=>{const top=Object.entries(c.svc).sort((a,b)=>b[1]-a[1])[0];c.top=top?svcLabel(top[0],{}):'';c.days=c.last?Math.floor((Date.now()-new Date(c.last))/864e5):999;return c});
+}
+function renderClients(){
+  const all=clientList();
+  const q=clView.q.toLowerCase();
+  let list=all.filter(c=>!q||(c.name+' '+c.phone).toLowerCase().includes(q));
+  if(clView.f==='vip')list=list.filter(c=>c.orders.length>=2);
+  if(clView.f==='sleep')list=list.filter(c=>c.days>=60);
+  if(clView.f==='debt')list=list.filter(c=>c.debt>0);
+  list.sort((a,b)=>b.last.localeCompare(a.last));
+  const n=f=>f==='all'?all.length:f==='vip'?all.filter(c=>c.orders.length>=2).length:f==='sleep'?all.filter(c=>c.days>=60).length:all.filter(c=>c.debt>0).length;
+  $('cl-sub').textContent=all.length+' '+plural(all.length,'клиент','клиента','клиентов')+', из них постоянных '+n('vip')+'.';
+  $('cl-chips').innerHTML=[['all','Все'],['vip','Постоянные'],['sleep','Давно не заказывали'],['debt','С долгом']].map(([f,l])=>`<button class="chip ${clView.f===f?'on':''}" type="button" data-clf="${f}">${l} <em>${n(f)}</em></button>`).join('');
+  $('cl-list').innerHTML=list.length?list.slice(0,300).map(c=>{
+    const wa=waLink(c.phone);
+    const tag=c.orders.length>=2?'<span class="cl-tag vip">постоянный</span>':c.days>=60?'<span class="cl-tag sleep">давно не был</span>':'';
+    return `<div class="cl"><div class="cl-top"><div><b>${esc(c.name||'Без имени')}</b><small>${esc(c.phone||'телефон не указан')}${c.top?' · '+esc(c.top):''}</small></div>${tag}</div>
+      <div class="cl-n"><div><small>Заказов</small><b>${c.orders.length}</b></div><div><small>На сумму</small><b>${money(c.sum)}</b></div><div><small>${c.debt?'Долг':'Последний'}</small><b>${c.debt?money(c.debt):c.last?fmtDate(c.last):'—'}</b></div></div>
+      <div class="cl-a"><button class="btn white" type="button" data-clopen="${esc(c.phone||c.name)}">Заказы</button>${wa?`<a class="btn outline" href="${wa}" target="_blank" rel="noopener">Написать в WhatsApp ↗</a>`:''}</div></div>`}).join('')
+    :'<div class="w-empty" style="background:var(--tile)">Клиентов не найдено.</div>';
+}
+function clientsCsv(){
+  const rows=[['Клиент','Телефон','Заказов','Сумма','Долг','Последний заказ','Чаще заказывает']].concat(clientList().map(c=>[c.name,c.phone,c.orders.length,c.sum,c.debt,c.last,c.top]));
+  const csv='﻿'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='клиенты-'+todayStr()+'.csv';document.body.appendChild(a);a.click();a.remove();
+}
+
+/* ---------- примеры работ: Аня присылает их клиентам в WhatsApp ---------- */
+let pfItems=null,pfSvc='dtf',pfBusy=false;
+async function pfLoad(){try{const s=await db.doc('wa_anna/portfolio').get();pfItems=(s.exists&&s.data().items)||[]}catch(_){pfItems=[]}render()}
+async function pfSave(fn){const s=await db.doc('wa_anna/portfolio').get();const cur=(s.exists&&s.data().items)||[];pfItems=fn(cur);await db.doc('wa_anna/portfolio').set({items:pfItems,updatedAt:Date.now()})}
+function renderPortfolio(){
+  const box=$('pf-box');if(!box)return;
+  if(pfItems===null){pfItems=[];pfLoad()}
+  const svcs=SERVICES.filter(s=>s.id!=='kaspi'&&s.id!=='other');
+  const mine=pfItems.filter(x=>x.svc===pfSvc);
+  box.innerHTML=`<div class="pf"><div class="pf-h"><div><h2>Примеры работ для Ани</h2><p>Когда клиент просит показать работы, Аня присылает в WhatsApp до 3 фото по нужной услуге. Лучше всего 3–6 удачных фото на каждую услугу.</p></div>
+    ${canWrite&&assets?`<button class="btn primary" type="button" id="pf-add" ${pfBusy?'disabled':''}>${pfBusy?'Загружаем…':'Добавить фото'}</button>`:''}</div>
+    <div class="chips">${svcs.map(s=>`<button class="chip ${pfSvc===s.id?'on':''}" type="button" data-pfsvc="${s.id}">${esc(s.label)} <em>${pfItems.filter(x=>x.svc===s.id).length}</em></button>`).join('')}</div>
+    ${mine.length?`<div class="pf-g">${mine.map(x=>`<div class="pf-i"><img src="${esc(x.blob)}" alt="${esc(x.name||'')}" loading="lazy">${canWrite?`<button type="button" data-pfdel="${esc(x.id)}" aria-label="Убрать фото">×</button>`:''}</div>`).join('')}</div>`:`<div class="pf-empty">По услуге «${esc((SV[pfSvc]||{}).label||'')}» фото пока нет: Аня отвечает словами и предлагает посмотреть Instagram.</div>`}</div>`;
+}
+function pfPick(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;
+  inp.onchange=async()=>{
+    const files=[...inp.files].slice(0,10);if(!files.length)return;
+    pfBusy=true;render();const add=[];
+    for(const f of files){try{const r=await assets.upload(f);add.push({id:r.id.replace('fsblob:',''),svc:pfSvc,blob:r.id,name:f.name.slice(0,80),at:Date.now()})}catch(e){toast('Фото «'+f.name+'» не загрузилось')}}
+    try{await pfSave(cur=>[...cur,...add]);toast('Добавлено фото: '+add.length)}catch(e){toast(handleWriteError(e))}
+    pfBusy=false;render();
+  };
+  inp.click();
+}
+async function pfDel(id){
+  const x=pfItems.find(i=>i.id===id);
+  try{await pfSave(cur=>cur.filter(i=>i.id!==id));if(x&&assets)assets.delete(x.blob).catch(()=>{})}catch(e){toast(handleWriteError(e))}
+  render();
+}
+
+/* ---------- архив Kaspi: старые закрытые заказы собираются в несколько документов по месяцам,
+   чтобы учёт при каждом открытии читал из базы десятки документов, а не тысячи ---------- */
+var kaspiArch=[],kaspiLiveIds=new Set();
+const K_ARCH_DAYS=60,K_ARCH_CHUNK=200;
+function kExpandArch(live,arch){
+  kaspiLiveIds=new Set(live.map(k=>k.id));
+  if(!arch.length)return live;
+  const ids=new Set(live.map(k=>k.id)),out=[...live];
+  for(const a of arch)for(const k of (a.items||[]))if(k&&k.id&&!ids.has(k.id)){ids.add(k.id);out.push(k)}
+  return out;
+}
+let kArchBusy=false,kArchDone=false;
+async function kArchiveOld(){
+  if(kArchBusy||kArchDone||!kaspiLoaded||kaspiDbErr||!canWrite||!isBoss()||!kaspiCol)return;
+  const live=kaspiLiveIds;
+  const old=Date.now()-K_ARCH_DAYS*864e5;
+  const cand=kaspiOrders.filter(k=>live.has(k.id)).filter(k=>['sold','cancel'].includes(kStage(k))&&(+k.completed||+k.created||0)&&(+k.completed||+k.created)<old);
+  kArchDone=true;if(cand.length<20)return; // мелочь не трогаем
+  kArchBusy=true;
+  try{
+    const month=k=>{const d=new Date(+k.created||+k.completed);return d.getFullYear()+'_'+String(d.getMonth()+1).padStart(2,'0')};
+    const groups={};cand.forEach(k=>(groups[month(k)]=groups[month(k)]||[]).push(k));
+    for(const [m,list] of Object.entries(groups)){
+      const prev=kaspiArch.filter(a=>a.month===m);
+      const byId=new Map();prev.forEach(a=>(a.items||[]).forEach(k=>byId.set(k.id,k)));list.forEach(k=>byId.set(k.id,k));
+      const items=[...byId.values()].sort((a,b)=>(+a.created||0)-(+b.created||0));
+      const n=Math.ceil(items.length/K_ARCH_CHUNK);
+      for(let i=0;i<n;i++)await kaspiCol.doc('arch_'+m+'_'+i).set({kind:'archive',month:m,part:i,items:items.slice(i*K_ARCH_CHUNK,(i+1)*K_ARCH_CHUNK),at:Date.now()});
+      for(const a of prev)if(+a.part>=n)await kaspiCol.doc(a.id).delete();
+      for(let i=0;i<list.length;i+=20)await Promise.all(list.slice(i,i+20).map(k=>kaspiCol.doc(k.id).delete()));
+    }
+  }catch(e){try{console.warn('kaspi archive',e)}catch(_){}}
+  finally{kArchBusy=false}
+}
+
+function extRender(){if(page==='clients')renderClients();if(page==='prices')renderPortfolio();renderTrashBtn();syncBottomNav()}
+/* ---------- нижнее меню на телефоне ---------- */
+function syncBottomNav(){
+  const nav=$('bnav');if(!nav)return;
+  nav.querySelectorAll('[data-bgo]').forEach(b=>b.classList.toggle('on',b.dataset.bgo===page||(b.dataset.bgo==='more'&&!['home','orders','kaspi','calendar'].includes(page))));
+  nav.querySelectorAll('[data-src]').forEach(s=>{const src=$(s.dataset.src);const v=src&&!src.hidden?src.textContent.trim():'';s.hidden=!v||v==='0';s.textContent=v});
+}
+function openMore(){
+  const pills=[...document.querySelectorAll('.pills [data-go]')];
+  const who=document.querySelector('.who-pill');
+  sheet('Разделы',`<div class="more-g">${pills.map(p=>`<button type="button" class="${p.dataset.go===page?'on':''}" data-mgo="${p.dataset.go}">${esc((p.querySelector('.ls')||p.querySelector('.lf')||p).textContent.replace(/\d+$/,'').trim())}</button>`).join('')}</div>
+    <div class="sh-row" style="margin-top:6px"><div class="t"><b>${esc(who?who.textContent:'')}</b><small>${esc((firebase.auth().currentUser||{}).email||'')}</small></div><div class="a">${isBoss()?'<button class="btn white" type="button" data-mstaff>Сотрудники</button>':''}<button class="btn danger" type="button" data-mout>Выйти</button></div></div>`);
+}
+
+/* ---------- нет интернета или запись не прошла — говорим об этом прямо ---------- */
+function netBar(msg){const b=$('net-bar');if(!b)return;b.textContent=msg||'';b.hidden=!msg}
+addEventListener('offline',()=>netBar('Нет интернета. Изменения сохранятся, когда связь вернётся.'));
+addEventListener('online',()=>{netBar('');toast('Связь вернулась')});
+if(!navigator.onLine)netBar('Нет интернета. Изменения сохранятся, когда связь вернётся.');
+addEventListener('unhandledrejection',e=>{
+  const r=e.reason||{},code=String(r.code||'');
+  if(/permission|denied|invalid_argument|not_granted|unavailable|quota|resource-exhausted|deadline/.test(code)){toast('Не сохранилось: '+handleWriteError(r));}
+});
+
+/* ---------- клики ---------- */
+document.addEventListener('click',e=>{
+  const t=e.target;if(!(t instanceof Element))return;
+  if(t.closest('#trash-btn')){openTrash();return}
+  const tb=t.closest('[data-trback]');if(tb){trashBack(tb.dataset.trback);return}
+  const tk=t.closest('[data-trkill]');if(tk){if(tk.dataset.sure){trashKill(tk.dataset.trkill)}else{tk.dataset.sure=1;tk.textContent='Точно?'}return}
+  if(t.closest('.who-pill.adm')||t.closest('[data-mstaff]')){openStaff();return}
+  const sw=t.closest('[data-staff]');if(sw){toggleStaff(sw.dataset.staff);return}
+  if(t.closest('#backup-btn')){downloadBackup();return}
+  const cf=t.closest('[data-clf]');if(cf){clView.f=cf.dataset.clf;render();return}
+  const co=t.closest('[data-clopen]');if(co){view={f:'all',svc:'all',q:co.dataset.clopen,day:''};$('q').value=co.dataset.clopen;go('orders');return}
+  if(t.closest('#cl-csv')){clientsCsv();return}
+  const ps=t.closest('[data-pfsvc]');if(ps){pfSvc=ps.dataset.pfsvc;render();return}
+  if(t.closest('#pf-add')){pfPick();return}
+  const pd=t.closest('[data-pfdel]');if(pd){pfDel(pd.dataset.pfdel);return}
+  const bg=t.closest('[data-bgo]');if(bg){if(bg.dataset.bgo==='more')openMore();else go(bg.dataset.bgo);return}
+  const mg=t.closest('[data-mgo]');if(mg){closeSheet();go(mg.dataset.mgo);return}
+  if(t.closest('[data-mout]')){const b=$('logout-btn');if(b)b.click();return}
+},true);
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='cl-q'){clView.q=e.target.value.trim();clearTimeout(renderClients._t);renderClients._t=setTimeout(renderClients,120)}});
+/* имя руководителя в шапке открывает «Сотрудников»; старые заказы из корзины чистятся сами */
+setInterval(()=>{const w=document.querySelector('.who-pill');if(w&&isBoss()&&!w.classList.contains('adm')){w.classList.add('adm');w.setAttribute('role','button');w.tabIndex=0;w.title='Сотрудники: кому открыт доступ к учёту'}purgeTrash()},1500);
 </script>
 <div id="upd-bar" hidden style="position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:200;background:#4358ef;color:#fff;border-radius:999px;padding:8px 8px 8px 18px;display:flex;gap:12px;align-items:center;font:600 14px 'Inter Tight',Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(67,88,239,.35);max-width:calc(100% - 24px)">
 <span>Вышла новая версия сайта</span><button type="button" onclick="location.reload()" style="border:0;border-radius:999px;background:#fff;color:#4358ef;font:inherit;padding:8px 14px;cursor:pointer">Обновить</button></div>
