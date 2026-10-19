@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261019100000">
+<meta name="app-build" content="20261019110000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1551,7 +1551,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
 .inv{position:fixed;inset:0;z-index:60;background:rgba(10,11,20,.82);display:flex;flex-direction:column}
 .inv[hidden]{display:none}
 .inv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));color:#fff}
-.inv-bar b{font:700 16px var(--f)}.inv-bar .r{display:flex;gap:8px}
+.inv-bar b{font:700 16px var(--f);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.inv-bar .r{display:flex;gap:8px;flex-shrink:0}
+@media(max-width:520px){.inv-bar b{display:none}.inv-bar .r{width:100%}.inv-bar .r .btn{flex:1;padding-left:8px;padding-right:8px}}
 .inv-scroll{flex:1;overflow:auto;padding:4px 12px 24px;display:flex;justify-content:center;align-items:flex-start}
 .inv-sheet{width:794px;flex:none;background:#fff;color:#000;font:12px/1.35 Arial,Helvetica,sans-serif;padding:40px 48px 56px;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
 .inv-sheet p{margin:0 0 8px}
@@ -1902,7 +1903,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   </form>
 </div>
 <div class="inv" id="inv" hidden role="dialog" aria-modal="true" aria-label="Счёт на оплату">
-  <div class="inv-bar"><b id="inv-bar-t">Счёт на оплату</b><div class="r"><button class="btn primary sm" type="button" id="inv-print">Печать или PDF</button><button class="btn white sm" type="button" id="inv-close">Закрыть</button></div></div>
+  <div class="inv-bar"><b id="inv-bar-t">Счёт на оплату</b><div class="r"><button class="btn primary sm" type="button" id="inv-pdf">Скачать PDF</button><button class="btn white sm" type="button" id="inv-print">Печать</button><button class="btn white sm" type="button" id="inv-close">Закрыть</button></div></div>
   <div class="inv-scroll"><div class="inv-sheet" id="inv-sheet"></div></div>
 </div>
 <datalist id="owners-dl"></datalist>
@@ -3404,6 +3405,32 @@ async function showInvoice({num,date,buyer:b,lines:L}){
 }
 let invTitle='',invOldTitle='';
 function invZoom(){const sh=$('inv-sheet');sh.style.zoom=Math.min(1,(innerWidth-24)/(sh.classList.contains('land')?1123:794)).toFixed(3)}
+const invFile=()=>invTitle.replace(/[\\/:*?"<>|«»]/g,'').replace(/\s+/g,' ').trim().slice(0,120)||'Документ';
+let pdfLibs=null;
+function loadPdfLibs(){return pdfLibs||(pdfLibs=Promise.all(['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'].map(u=>new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=u;sc.onload=ok;sc.onerror=()=>{pdfLibs=null;no(new Error('Не загрузилась библиотека PDF. Проверьте интернет.'))};document.head.appendChild(sc)}))))}
+async function invPdf(){
+  const btn=$('inv-pdf'),lbl=btn.textContent;btn.disabled=true;btn.textContent='Готовлю…';
+  try{
+    await loadPdfLibs();
+    const sh=$('inv-sheet'),land=sh.classList.contains('land'),W=land?1123:794,pw=land?297:210,ph=land?210:297;
+    const box=document.createElement('div');box.style.cssText='position:fixed;left:-20000px;top:0';
+    const c=sh.cloneNode(true);c.removeAttribute('id');c.style.cssText=`zoom:1;width:${W}px;box-shadow:none;border-radius:0;margin:0`;
+    box.appendChild(c);document.body.appendChild(box);
+    c.querySelectorAll('svg').forEach(v=>{const col=getComputedStyle(v).color;v.querySelectorAll('path,use').forEach(e=>{const f=e.getAttribute('fill');if(!f||f==='currentColor')e.setAttribute('fill',col)});v.querySelectorAll('[fill="currentColor"]').forEach(e=>e.setAttribute('fill',col));v.querySelectorAll('[stroke="currentColor"]').forEach(e=>e.setAttribute('stroke',col))});
+    if(document.fonts)await document.fonts.ready;
+    let cv;try{cv=await html2canvas(c,{scale:2,backgroundColor:'#ffffff',logging:false})}finally{box.remove()}
+    const pdf=new jspdf.jsPDF({orientation:land?'landscape':'portrait',unit:'mm',format:'a4'}),step=Math.floor(cv.width*ph/pw);
+    for(let y=0;y<cv.height;y+=step){
+      const h=Math.min(step,cv.height-y);if(y&&h<40)break;
+      const pc=document.createElement('canvas');pc.width=cv.width;pc.height=h;const g=pc.getContext('2d');
+      g.fillStyle='#fff';g.fillRect(0,0,pc.width,h);g.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+      if(y)pdf.addPage();pdf.addImage(pc.toDataURL('image/jpeg',.92),'JPEG',0,0,pw,h*pw/cv.width);
+    }
+    const url=URL.createObjectURL(pdf.output('blob')),a=document.createElement('a');
+    a.href=url;a.download=invFile()+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){toast(e.message||'Не получилось сделать PDF')}
+  finally{btn.disabled=false;btn.textContent=lbl}
+}
 function invPrint(){invOldTitle=document.title;document.title=invTitle.replace(/[\\/:*?"<>|«»]/g,'').slice(0,120);document.body.classList.add('printing');setTimeout(()=>window.print(),50)}
 window.addEventListener('afterprint',()=>{document.body.classList.remove('printing');if(invOldTitle){document.title=invOldTitle;invOldTitle=''}});
 window.addEventListener('resize',()=>{if(!$('inv').hidden)invZoom()});
@@ -3715,7 +3742,7 @@ document.addEventListener('click',e=>{
   if(t.closest('[data-bhclose]')){$('bh').hidden=true;bhBin=null;return}
   if(t.closest('#bh-new')){openIv('new',bhBin);return}
 });
-$('inv-print').addEventListener('click',invPrint);
+$('inv-print').addEventListener('click',invPrint);$('inv-pdf').addEventListener('click',invPdf);
 $('inv-close').addEventListener('click',()=>{$('inv').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('inv').hidden){e.stopPropagation();$('inv').hidden=true}else if(!$('ived').hidden){e.stopPropagation();closeIv()}else if(!$('bh').hidden){e.stopPropagation();$('bh').hidden=true}},true);
 /* ---------- аналитика ---------- */
