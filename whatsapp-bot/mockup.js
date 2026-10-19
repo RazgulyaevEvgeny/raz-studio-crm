@@ -172,6 +172,23 @@ function garmentSvg(item, side, hex) {
 </svg>`;
 }
 
+/* ---------- размерные стрелки над принтом и справа от него ---------- */
+function sizeArrows(x, y, w, h, wcm, hcm, dark) {
+  const c = dark ? '#ffffff' : '#1d1d1f', pill = dark ? '#000000a0' : '#ffffffc0';
+  const cm = v => (v >= 10 ? Math.round(v) : Math.round(v * 2) / 2).toString().replace('.', ',') + ' см';
+  const gy = Math.max(30, y - 22), gx = Math.min(W - 30, x + w + 22);
+  const head = (x1, y1, dx, dy) => `<path d="M${x1} ${y1} l${-dx * 10 - dy * 6} ${-dy * 10 + dx * 6} M${x1} ${y1} l${-dx * 10 + dy * 6} ${-dy * 10 - dx * 6}" />`;
+  const label = (tx, ty, t, lw = 68) => `<rect x="${tx - lw / 2}" y="${ty - 15}" width="${lw}" height="24" rx="12" fill="${pill}"/><text x="${tx}" y="${ty + 3}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="16" fill="${c}">${t}</text>`;
+  const low = h < 40; // низкая надпись: высоту пишем в верхней подписи, без вертикальной стрелки
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+  <g stroke="${c}" stroke-width="2.5" fill="none" stroke-linecap="round">
+    <path d="M${x} ${gy - 7} v14 M${x + w} ${gy - 7} v14 M${x} ${gy} H${x + w}"/>${head(x, gy, -1, 0)}${head(x + w, gy, 1, 0)}
+    ${low ? '' : `<path d="M${gx - 7} ${y} h14 M${gx - 7} ${y + h} h14 M${gx} ${y} V${y + h}"/>${head(gx, y, 0, -1)}${head(gx, y + h, 0, 1)}`}
+  </g>
+  ${low ? label(x + w / 2, gy - 20, cm(wcm).replace(' см', '') + ' × ' + cm(hcm), 120) : label(x + w / 2, gy - 20, cm(wcm)) + label(Math.min(W - 40, gx + 40), y + h / 2, cm(hcm))}
+</svg>`);
+}
+
 /* ---------- логотип: убираем однотонный фон, обрезаем поля ---------- */
 async function cleanLogo(buf) {
   const S = await sharp();
@@ -229,7 +246,11 @@ export async function makeMockup(opts) {
     : photo ? photo.base : await S(Buffer.from(garmentSvg(item, side, hex))).png().toBuffer();
 
   let logo = opts.logo ? await cleanLogo(opts.logo) : await S(textLogo(opts.text || 'LOGO', hex)).trim().png().toBuffer();
-  const [cw, ch] = side === 'chest_left' ? [Math.min(10, SIZES[size][0]), Math.min(10, SIZES[size][1])] : SIZES[size];
+  const emb = opts.method === 'embroidery';
+  let [cw, ch] = emb ? (side === 'chest_left' ? [8, 8] : [20, 20])
+    : side === 'chest_left' ? [Math.min(10, SIZES[size][0]), Math.min(10, SIZES[size][1])] : SIZES[size];
+  // Клиент назвал ширину в см — подгоняем по ширине (вышивка не больше 20×20 см)
+  if (+opts.width_cm > 0) { cw = Math.min(+opts.width_cm, emb ? 20 : 37); ch = emb ? 20 : 45; }
   const px = photo ? photo.px : g.px;
   const box = { w: Math.round(cw * px), h: Math.round(ch * px) };
   logo = await S(logo).ensureAlpha().resize(box.w, box.h, { fit: 'inside' }).png().toBuffer();
@@ -250,10 +271,13 @@ export async function makeMockup(opts) {
     }
     layers.push({ input: shadeBuf, raw: { width: meta.width, height: meta.height, channels: 4 }, left, top, blend: 'soft-light' });
   }
+  // Правило Евгения: на мокапе стрелками показываем примерный размер принта или вышивки в см
+  layers.push({ input: sizeArrows(left, top, meta.width, meta.height, meta.width / px, meta.height / px, isDark(hex)), left: 0, top: 0 });
   return S(base).composite(layers).jpeg({ quality: 88 }).toBuffer();
 }
 
 export function describe(o) {
   const size = SIZES[o.size] ? o.size : o.side === 'chest_left' ? 'A6' : 'A4';
-  return `${ITEMS[o.item] || ITEMS.tshirt}, ${String(o.color || 'чёрный').toLowerCase()}, ${SIDES[o.side] || SIDES.front}, DTF ${size}`;
+  const how = o.method === 'embroidery' ? `вышивка${+o.width_cm > 0 ? ' ~' + Math.min(+o.width_cm, 20) + ' см' : ''}` : +o.width_cm > 0 ? `DTF ~${o.width_cm} см` : `DTF ${size}`;
+  return `${ITEMS[o.item] || ITEMS.tshirt}, ${String(o.color || 'чёрный').toLowerCase()}, ${SIDES[o.side] || SIDES.front}, ${how}`;
 }
