@@ -10,13 +10,12 @@ const OPEN = ['new', 'design', 'prod', 'ready'];
 const HISTORY = 40;                        // сколько последних сообщений чата хранить и показывать ИИ
 export const PAUSE_AFTER_MANAGER = 30;     // минут: бот молчит в чате, где только что писал менеджер
 
-// Тексты уведомлений клиенту. {client} — имя из заказа, {num} — номер заказа, {due} — срок.
+// Тексты уведомлений клиенту. {client} — имя из заказа, {num} — номер заказа.
+// Правило Евгения (19.10): пишем клиенту только «принят в работу» (статус «Производство», без сроков) и «готов».
+// На «Новый», «Макет», «Выдан», «Отменён» и перенос срока уведомлений нет.
 const NOTICES = {
-  new:    'Здравствуйте, {client}! Ваш заказ № {num} принят в работу. Ориентировочный срок готовности: {due}. Если появятся вопросы, пишите в этот чат.',
-  design: 'Здравствуйте, {client}! Макет по заказу № {num} готов. Менеджер пришлёт его на согласование в этом чате.',
-  prod:   'Здравствуйте, {client}! Заказ № {num} передан в производство. Срок готовности: {due}. Мы напишем, когда всё будет готово.',
+  prod:   'Здравствуйте, {client}! Ваш заказ № {num} принят в работу. Мы напишем, когда всё будет готово.',
   ready:  'Здравствуйте, {client}! Ваш заказ № {num} готов, можно забирать. Спасибо, что выбрали нас!',
-  delay:  'Здравствуйте, {client}! К сожалению, заказ № {num} задерживается. Новый срок готовности: {due}. Приносим извинения за ожидание.',
 };
 
 // Срок, который бот ставит в заказ, оформленный из WhatsApp, в рабочих днях (суббота и воскресенье — выходные).
@@ -198,7 +197,6 @@ export async function prepareNotice(fs, orderId, event) {
   const kind = event === 'delay' ? 'delay' : o.status;
   const tpl = NOTICES[kind];
   if (!tpl) return { skipped: 'статус без уведомления' };
-  if ((kind === 'new' || kind === 'prod' || kind === 'delay') && !o.deadline) return { skipped: 'нет срока' };
   const key = kind === 'delay' ? 'delay_' + o.deadline : kind;
   const sent = o.waSent && typeof o.waSent === 'object' ? o.waSent : {};
   if (sent[key]) return { skipped: 'уже отправлено' };
@@ -206,7 +204,6 @@ export async function prepareNotice(fs, orderId, event) {
   const view = {
     client: String(o.client || '').trim() || 'клиент',
     num: String(o.num || '').padStart(3, '0'),
-    due: fmtDue(o.deadlineFrom, o.deadline),
   };
   const text = tpl.replace(/\{(\w+)\}/g, (_, k) => view[k] ?? '');
   return { text, phone, key, sent };
