@@ -322,20 +322,30 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
   // В нерабочее время первый ответ обязателен: молчать нельзя, если Аня не писала клиенту последние 3 часа
   const mustAnswer = !opts.followUp && !isWorkTime() && !list.some(m => m.role === 'bot' && Date.now() - (m.at || 0) < 3 * 3600e3);
   const ctx = { fs, phone, chat, handoff: '', silent: '', media: null, mockup: null, mustAnswer };
+  // Жёсткое правило: если Аня не представлялась клиенту последние 12 часов, первое её сообщение начинается с представления
+  // (вставляем сами, не полагаясь на ИИ). Уведомления о заказе представлением не считаются
+  const introduced = list.some(m => m.role === 'bot' && /Аня/.test(m.text || '') && Date.now() - (m.at || 0) < 12 * 3600e3);
+  const intro = r => {
+    if (opts.followUp || introduced) return r;
+    const t = typeof r === 'string' ? r : r.text;
+    if (!t || /Аня/.test(t.slice(0, 200))) return r;
+    const out = INTRO + ' ' + t.replace(/^\s*(здравствуйте|добрый (день|вечер)|доброе утро|привет)[!.,]*\s*/i, '');
+    return typeof r === 'string' ? out : { ...r, text: out };
+  };
   try {
     const text = String(env.ANTHROPIC_API_KEY || '').trim()
       ? await viaClaude(env, today, messages, ctx)
       : await viaGemini(env, today, messages, ctx);
     if (ctx.silent) return { silent: ctx.silent };
-    return text ? { text, handoff: ctx.handoff, media: ctx.media, mockup: ctx.mockup } : fallbackReply();
+    return text ? { text: intro(text), handoff: ctx.handoff, media: ctx.media, mockup: ctx.mockup } : intro(fallbackReply());
   } catch (e) {
     console.log('ИИ не ответил:', String(e?.message || e).slice(0, 300));
     // Бесплатный лимит Gemini кончился — отвечает запасной бесплатный ИИ Cloudflare (через воркер отдела маркетинга)
     if (!opts.followUp) try {
       const text = await viaReserve(env, today, messages, fs);
-      if (text) return { text, reserve: String(e?.message || e) };
+      if (text) return { text: intro(text), reserve: String(e?.message || e) };
     } catch (e2) { console.log('Запасной ИИ не ответил:', String(e2?.message || e2).slice(0, 200)); }
-    return opts.followUp ? {} : fallbackReply();
+    return opts.followUp ? {} : intro(fallbackReply());
   }
 }
 
@@ -499,6 +509,7 @@ function vinylMeters(L, H, N, W) {
   return r;
 }
 
+const INTRO = 'Здравствуйте! Меня зовут Аня, я виртуальный помощник студии брендирования Разгуляев.';
 function fallbackReply() {
   return { text: busyText(), handoff: 'бот не смог ответить сам' };
 }
