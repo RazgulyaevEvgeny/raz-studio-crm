@@ -67,7 +67,8 @@ export async function lastPhoto(chatId) {
 const BLANKS = join(DIR, 'blanks');
 const PHOTO = {
   tshirt: { chest: 60, body: 0.6, front: 0.2, back: 0.16, left: [0.63, 0.22] },
-  hoodie: { chest: 64, body: 0.56, front: 0.28, back: 0.29, left: [0.61, 0.33] },
+  hoodie: { chest: 64, body: 0.6, front: 0.3, back: 0.34, left: [0.62, 0.33] },
+  sweatshirt: { chest: 62, body: 0.62, front: 0.2, back: 0.17, left: [0.62, 0.24] },
 };
 async function photoBase(S, item, side, hex) {
   const p = PHOTO[item];
