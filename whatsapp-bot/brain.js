@@ -325,11 +325,23 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
   // Жёсткое правило: если Аня не представлялась клиенту последние 3 часа, первое её сообщение начинается с представления
   // (вставляем сами, не полагаясь на ИИ). Уведомления о заказе представлением не считаются
   const introduced = list.some(m => m.role === 'bot' && /Аня/.test(m.text || '') && Date.now() - (m.at || 0) < 3 * 3600e3);
+  // Жёсткое правило: в нерабочее время в начале разговора Аня один раз говорит, когда ответит менеджер (вставляем сами).
+  // Дальше не повторяет — только в конце, если клиент прощается («понял», «хорошо, напишу завтра»), об этом заботится ИИ (hoursNote)
+  const hoursSaid = saidOffHours(list);
   const intro = r => {
-    if (opts.followUp || introduced) return r;
-    const t = typeof r === 'string' ? r : r.text;
-    if (!t || /Аня/.test(t.slice(0, 200))) return r;
-    const out = INTRO + ' ' + t.replace(/^\s*(здравствуйте|добрый (день|вечер)|доброе утро|привет)[!.,]*\s*/i, '');
+    if (opts.followUp) return r;
+    let t = typeof r === 'string' ? r : r.text;
+    if (!t) return r;
+    const hours = !isWorkTime() && !hoursSaid && !/нерабоч|менеджер[^.!?]{0,40}(ответит|напишет|свяжется)/i.test(t);
+    const hasIntro = introduced || /Аня/.test(t.slice(0, 200));
+    if (hasIntro && !hours) return r;
+    let out;
+    if (hasIntro) {
+      // Представление уже есть — фразу о нерабочем времени ставим сразу после него (или в начало)
+      const m = t.match(/^[\s\S]{0,300}?Разгуляев[.!]?\s*/);
+      out = m ? m[0] + hoursLine() + ' ' + t.slice(m[0].length) : hoursLine() + ' ' + t;
+    } else out = INTRO + ' ' + (hours ? hoursLine() + ' ' : '') + t.replace(/^\s*(здравствуйте|добрый (день|вечер)|доброе утро|привет)[!.,]*\s*/i, '');
+    out = out.trim();
     return typeof r === 'string' ? out : { ...r, text: out };
   };
   try {
@@ -337,6 +349,11 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
       ? await viaClaude(env, today, messages, ctx)
       : await viaGemini(env, today, messages, ctx);
     if (ctx.silent) return { silent: ctx.silent };
+    // ИИ пишет «сделала визуализацию», но инструмент не вызвал — делаем картинку сами, чтобы клиент её получил
+    if (text && !ctx.mockup && /визуализаци|как это (примерно )?будет выглядеть/i.test(text) && !/(не могу|не получ|пришлите|отправьте) .{0,40}визуализаци|согласован|передан/i.test(text)) {
+      const out = await useTool('make_mockup', guessMockup(text + ' ' + (lastClient?.text || '')), ctx);
+      console.log(new Date().toLocaleString('ru-RU'), 'Визуализация по тексту ответа:', out?.ok ? 'сделана' : (out?.error || out?.note || 'нет'));
+    }
     return text ? { text: intro(text), handoff: ctx.handoff, media: ctx.media, mockup: ctx.mockup } : intro(fallbackReply());
   } catch (e) {
     console.log('ИИ не ответил:', String(e?.message || e).slice(0, 300));
@@ -357,8 +374,10 @@ async function useTool(name, input, ctx) {
     if (name === 'stay_silent') ctx.silent = String(input?.reason || 'ответ не нужен');
     if (name === 'send_examples' && out?.ok) ctx.media = out.media;
     if (name === 'make_mockup' && out?.ok) { ctx.mockup = out.image; delete out.image; }
+    if (name === 'make_mockup' && !out?.ok) console.log(new Date().toLocaleString('ru-RU'), 'Визуализация не сделана:', out?.note || '');
     return out;
   } catch (e) {
+    if (name === 'make_mockup') console.log(new Date().toLocaleString('ru-RU'), 'Ошибка визуализации:', String(e?.message || e).slice(0, 300));
     return { error: String(e && e.message || e) };
   }
 }
@@ -513,6 +532,21 @@ const INTRO = 'Здравствуйте! Меня зовут Аня, я вирт
 function fallbackReply() {
   return { text: busyText(), handoff: 'бот не смог ответить сам' };
 }
+// Фраза о нерабочем времени для начала разговора (вставляется программой)
+const hoursLine = () => `Сейчас у нас нерабочее время, менеджер ответит вам ${nextOpen()}, а я пока помогу.`;
+// Аня уже сказала клиенту про нерабочее время в этот вечер (последние 12 часов)
+function saidOffHours(list = []) {
+  return list.some(m => m.role === 'bot' && /нерабоч/i.test(m.text || '') && Date.now() - (m.at || 0) < 12 * 3600e3);
+}
+// Параметры визуализации из текста, если ИИ не вызвал make_mockup сам
+function guessMockup(t = '') {
+  const s = String(t).toLowerCase();
+  const item = /худи/.test(s) ? 'hoodie' : /свитшот/.test(s) ? 'sweatshirt' : /шоппер|сумк/.test(s) ? 'shopper' : 'tshirt';
+  const side = /спин/.test(s) ? 'back' : /груд/.test(s) ? 'chest_left' : 'front';
+  const size = /а3|a3/.test(s) ? 'A3' : /а5|a5/.test(s) ? 'A5' : undefined;
+  const c = s.match(/(бел|чёрн|черн|сер|красн|син|зел[её]н|ж[её]лт|оранж|розов|бордов|беж|голуб|фиолет|коричн|хаки)[а-яё]*/);
+  return { item, side, size, color: c ? c[0] : 'чёрный' };
+}
 
 /* ---------- график студии: Павлодар, UTC+5 ---------- */
 // пн–чт 11–19, пт 11–17, обед 13–14, сб–вс выходной
@@ -548,9 +582,13 @@ export function busyText(t = Date.now()) {
 function hoursNote(list = []) {
   if (isWorkTime()) return 'Сейчас рабочее время студии.';
   // Про нерабочее время говорим один раз: если Аня уже писала клиенту за последние 3 часа, не повторяем
-  const said = list.some(m => m.role === 'bot' && Date.now() - (m.at || 0) < 3 * 3600e3);
-  return `Сейчас нерабочее время студии (менеджер ответит ${nextOpen()}).` + (said ? ' Про нерабочее время ты уже говорила, не повторяй.'
-    : ' В этом ответе скажи, что сейчас нерабочее время, но ты можешь помочь: подсказать по заказу и предварительно оформить его для менеджера.' +
+  const said = saidOffHours(list);
+  const rule = ' Правило про «менеджер ответит»: это говорится ОДИН раз в начале разговора (программа сама добавит фразу в начало твоего первого ответа, ты её не пиши)' +
+    ` и ещё раз в конце, только если клиент закругляется или откладывает: «понял», «хорошо», «спасибо», «напишу завтра», «буду ждать», «до завтра» — тогда коротко ответь, что менеджер напишет ему ${nextOpen()}.` +
+    ' Во всех остальных ответах НЕ пиши, что менеджер ответит/напишет завтра или после 11:00, и не повторяй про нерабочее время.' +
+    ' Если в конце ты это уже сказала, а клиент снова пишет «ок»/«спасибо», ответь одной короткой фразой («Хорошего вечера!») без повторов.';
+  return `Сейчас нерабочее время студии (менеджер ответит ${nextOpen()}).` + rule + (said ? ' В этом разговоре ты уже сказала про нерабочее время.'
+    : ' Сразу помогай: подсказать по заказу и предварительно оформить его для менеджера.' +
       ' В нерабочее время ты ОБЯЗАТЕЛЬНО отвечаешь на каждое сообщение (stay_silent нельзя), даже на «здравствуйте»: представься, если ещё не представлялась,' +
       ' и сразу помогай по делу — цены и расчёт, визуализация (make_mockup), предварительный заказ (create_order).' +
       ' Не отвечай только «менеджер ответит завтра»: сама спроси, что клиент хочет заказать, и предложи посчитать цену и показать, как это будет выглядеть.' +

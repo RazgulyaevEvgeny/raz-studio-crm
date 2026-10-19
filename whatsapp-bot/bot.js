@@ -447,6 +447,7 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
 });
 
 // Аня уже решила промолчать на последние сообщения клиента (новое сообщение сдвигает updatedAt, и решение пересматривается)
-function skipped(chat) { return (chat.botSkippedAt || 0) >= (chat.updatedAt || 0) && !!chat.botSkippedAt; }
+// В нерабочее время решение «не отвечать» не действует: Аня обязана ответить
+function skipped(chat) { return isWorkTime() && (chat.botSkippedAt || 0) >= (chat.updatedAt || 0) && !!chat.botSkippedAt; }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
