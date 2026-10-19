@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261019130000">
+<meta name="app-build" content="20261019140000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1089,6 +1089,17 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .an-todo{display:flex;flex-direction:column;gap:6px}
 .an-todo li{position:relative;list-style:none;display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;background:rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;font:500 14px/1.35 var(--f);overflow-wrap:anywhere}
 .an-todo li::before{content:"";width:14px;height:14px;margin-top:2px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85)}
+/* дела «Сегодня сделать»: кружок нажимается — дело отмечается и через мгновение уходит из списка (повторное нажатие — вернуть) */
+.an-todo li.ck::before{content:none}
+.an-ck{all:unset;position:relative;z-index:1;box-sizing:border-box;width:18px;height:18px;margin-top:0;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85);display:grid;place-items:center;cursor:pointer;transition:background .15s,box-shadow .15s}
+.an-ck::before{content:"";position:absolute;inset:-12px}
+.an-ck::after{content:"";width:5px;height:9px;border-right:2px solid var(--ab);border-bottom:2px solid var(--ab);transform:translateY(-1px) rotate(45deg);opacity:0;transition:opacity .15s}
+@media (hover:hover){.an-ck:hover{background:rgba(255,255,255,.22)}}
+.an-ck:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.an-todo li.dn{opacity:.6}
+.an-todo li.dn .an-ck{background:#fff;box-shadow:none}.an-todo li.dn .an-ck::after{opacity:1}
+.an-todo li.dn .an-tx,.an-todo li.dn .an-lk{text-decoration:line-through 1.5px rgba(255,255,255,.8)}
+.an-todo li.an-all{grid-template-columns:minmax(0,1fr);color:rgba(255,255,255,.85);font-weight:400}.an-todo li.an-all::before{content:none}
 .an-todo{margin:0;padding:0}
 /* свёртки внутри Ани: «Сегодня сделать» и чат */
 #w-anna,#w-anna button,#w-anna a{-webkit-tap-highlight-color:transparent}
@@ -5503,6 +5514,16 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadPrinte
    wa_anna/request — просьба обновить сводку {refreshAt, by}; wa_anna_q — вопросы {q, at, by, status:'new'|'done', a}.
    Обёртка db не умеет doc.onSnapshot, add и orderBy, поэтому здесь Firestore напрямую. */
 let annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={},annaWait=null;
+/* отмеченные дела из «Сегодня сделать»: wa_anna/done {items:{ключ:{text, at, by, orderId?, kaspiId?}}}.
+   Видно всем, кто открыл учёт; дело скрыто сутки после отметки, Аня его в новую сводку не возвращает. */
+let annaDoneT={};const annaTick={},ANNA_DONE_TTL=24*3600e3;
+const annaTodoKey=t=>{const x=String(t.text||'').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,'');let h=0;for(let i=0;i<x.length;i++)h=(h*31+x.charCodeAt(i))|0;return 'k'+(h>>>0).toString(36)};
+function annaIsDone(t){
+  const now=Date.now(),fresh=r=>r&&now-(+r.at||0)<ANNA_DONE_TTL;
+  if(fresh(annaDoneT[annaTodoKey(t)]))return true;
+  const id=t.orderId?['orderId',String(t.orderId)]:t.kaspiId?['kaspiId',String(t.kaspiId)]:null;
+  return !!id&&Object.values(annaDoneT).some(r=>fresh(r)&&String(r[id[0]]||'')===id[1]);
+}
 const annaFs=()=>window.firebase&&firebase.firestore&&firebase.firestore();
 const annaWho=()=>{const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;return (u&&u.email)||''};
 function annaAgo(ts){const m=Math.max(0,Math.round((Date.now()-ts)/6e4));if(m<1)return 'только что';if(m<60)return m+' мин назад';const h=Math.round(m/60);return h<48?h+' ч назад':Math.round(h/24)+' дн назад'}
@@ -5512,6 +5533,7 @@ function annaListen(){
   fs.doc('wa_anna/digest').onSnapshot(s=>{annaD=s.exists?s.data():null;annaLoaded=true;annaErr='';renderAnna()},fail);
   /* кто ждёт менеджера — прямо из чатов: менеджер ответил клиенту или сняли вручную — строка сразу уходит */
   fs.collection('wa_chats').where('needsManager','==',true).onSnapshot(s=>{annaWait=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaWait=null});
+  fs.doc('wa_anna/done').onSnapshot(s=>{annaDoneT=(s.exists&&s.data().items)||{};renderAnna()},()=>{});
   fs.doc('wa_anna/insights').onSnapshot(s=>{annaIns=s.exists?s.data():null;renderAnna()},()=>{});
   fs.collection('wa_anna_q').orderBy('at','desc').limit(30).onSnapshot(s=>{annaQ=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},fail);
 }
@@ -5541,6 +5563,7 @@ $('w-anna').addEventListener('click',e=>{const t=e.target;
   if(t.closest('#anna-hist-tg')){annaHist=!annaHist;renderAnna();return}
   const nm=t.closest('[data-annm]');if(nm){annaNm=annaNm===nm.dataset.annm?null:nm.dataset.annm;
     document.querySelectorAll('#w-anna-need .an-nm').forEach(r=>{const b=r.querySelector('[data-annm]'),o=b.dataset.annm===annaNm;r.classList.toggle('open',o);b.setAttribute('aria-expanded',o)});return}
+  const ck=t.closest('[data-anck]');if(ck){annaCheck(ck.dataset.anck);return}
   const dn=t.closest('[data-andone]');if(dn){annaDone(dn.dataset.andone);return}
   const od=t.closest('[data-anord]');if(od){annaOrder(od.dataset.anord);return}
   const kp=t.closest('[data-ankas]');if(kp)annaKaspi(kp.dataset.ankas)});
@@ -5561,10 +5584,13 @@ function renderAnna(){
   else if(!annaD)say.textContent='Аня ещё не готовила сводку. Нажмите «Обновить» внизу, когда рабочий компьютер включён.';
   else say.textContent=String(d.summary||'').trim()||'Пока без новостей.';
   if(!annaErr){
-    const td=todo.map(t=>typeof t==='string'?{text:t}:t).filter(t=>t&&t.text).slice(0,6);
-    $('w-anna-todo').innerHTML=td.length?`<div class="an-sec"><button type="button" class="an-tg" data-antodo aria-expanded="${annaUi.todo}" aria-controls="anna-todo-l"><span>Сегодня сделать · ${td.length}</span><i class="ch" aria-hidden="true"></i></button><ul class="an-todo" id="anna-todo-l"${annaUi.todo?'':' hidden'}>${td.map(t=>{const x=esc(String(t.text));
-      return t.orderId?`<li><button type="button" class="an-lk" data-anord="${esc(String(t.orderId))}" title="Открыть заказ">${x}<i aria-hidden="true">→</i></button></li>`
-        :t.kaspiId?`<li><button type="button" class="an-lk" data-ankas="${esc(String(t.kaspiId))}" title="Открыть заказ на странице Kaspi">${x}<i aria-hidden="true">→</i></button></li>`:`<li>${x}</li>`}).join('')}</ul></div>`:'';
+    const all=todo.map(t=>typeof t==='string'?{text:t}:t).filter(t=>t&&t.text).slice(0,6);
+    const td=all.filter(t=>annaTick[annaTodoKey(t)]||!annaIsDone(t)),left=td.filter(t=>!annaTick[annaTodoKey(t)]).length;
+    $('w-anna-todo').innerHTML=all.length?`<div class="an-sec"><button type="button" class="an-tg" data-antodo aria-expanded="${annaUi.todo}" aria-controls="anna-todo-l"><span>Сегодня сделать · ${left}</span><i class="ch" aria-hidden="true"></i></button><ul class="an-todo" id="anna-todo-l"${annaUi.todo?'':' hidden'}>${td.length?td.map(t=>{const x=esc(String(t.text)),k=annaTodoKey(t),on=!!annaTick[k];
+      const cb=canWrite&&db?`<button type="button" class="an-ck" data-anck="${k}" aria-pressed="${on}" title="${on?'Вернуть дело':'Отметить: сделано'}" aria-label="${on?'Вернуть дело':'Отметить сделанным'}: ${x}"></button>`:'';
+      const li=`<li class="${cb?'ck':''}${on?' dn':''}">${cb}`;
+      return t.orderId?`${li}<button type="button" class="an-lk" data-anord="${esc(String(t.orderId))}" title="Открыть заказ">${x}<i aria-hidden="true">→</i></button></li>`
+        :t.kaspiId?`${li}<button type="button" class="an-lk" data-ankas="${esc(String(t.kaspiId))}" title="Открыть заказ на странице Kaspi">${x}<i aria-hidden="true">→</i></button></li>`:`${li}<span class="an-tx">${x}</span></li>`}).join(''):'<li class="an-all">Все дела на сегодня сделаны 👍</li>'}</ul></div>`:'';
     $('w-anna-need').innerHTML=need.length?`<p class="an-h">Ждут менеджера <em>${need.length}</em></p><div class="mini">${need.slice(0,8).map((n,i)=>{
       const ph=String(n.phone||'').replace(/\D/g,''),who=esc(n.name||(ph?'+'+ph:'Клиент')),key=ph||n.name||'#'+i,op=annaNm===key;
       const say=String(n.brief||n.reason||'').trim()||'Клиент просит менеджера, подробностей Аня не записала.';
@@ -5601,6 +5627,19 @@ function annaInsHtml(){
     b+=`<div class="an-ins-f"><small>${r?'обновлено '+printWhen(r.at)+' · '+(+r.chats||0)+' '+plural(+r.chats||0,'диалог','диалога','диалогов')+', '+(+r.orders||0)+' '+plural(+r.orders||0,'заказ','заказа','заказов'):''}</small>${canWrite?`<button type="button" class="an-hb" data-aninsgo${wait?' disabled':''}>${wait?'Аня думает…':r?'Сделать новый разбор':'Сделать разбор'}</button>`:''}</div>`;
   }
   return `<div class="an-sec"><button type="button" class="an-tg" data-anins aria-expanded="${op}" aria-controls="anna-ins-b"><span>Аналитика переписок</span><i class="ch" aria-hidden="true"></i></button>${op?`<div class="an-sb" id="anna-ins-b">${b}</div>`:''}</div>`;
+}
+/* кружок у дела: сразу зачёркиваем, через 1,5 с дело уходит и записывается в wa_anna/done; второе нажатие до этого — передумали */
+function annaCheck(k){
+  if(annaTick[k]){clearTimeout(annaTick[k]);delete annaTick[k];renderAnna();return}
+  const d=annaD||{},t=(Array.isArray(d.todo)?d.todo:[]).map(x=>typeof x==='string'?{text:x}:x).find(x=>x&&x.text&&annaTodoKey(x)===k);if(!t)return;
+  annaTick[k]=setTimeout(async()=>{
+    const r={text:String(t.text).slice(0,200),at:Date.now(),by:annaWho(),...(t.orderId?{orderId:String(t.orderId)}:{}),...(t.kaspiId?{kaspiId:String(t.kaspiId)}:{})};
+    annaDoneT={...annaDoneT,[k]:r};delete annaTick[k];renderAnna();
+    const fs=annaFs();
+    try{if(!fs)throw 0;await fs.doc('wa_anna/done').set({items:{[k]:r}},{merge:true})}
+    catch(e){const c={...annaDoneT};delete c[k];annaDoneT=c;renderAnna();toast('Не получилось отметить, попробуйте ещё раз')}
+  },1500);
+  renderAnna();
 }
 /* снять клиента из «Ждут менеджера» вручную; Аня снова пометит его, если позже опять позовёт менеджера */
 async function annaDone(id){
