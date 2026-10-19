@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261019140000">
+<meta name="app-build" content="20261019143000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -778,6 +778,10 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .wsum{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--paper);border-radius:16px;padding:12px 14px}
 .wsum b{font:800 24px/1 var(--f);letter-spacing:-.04em}
 .wsum small{color:var(--muted);font-size:12.5px}
+.wsum .kbuy-w{flex-basis:100%}
+.kbuy{display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;background:var(--tile);border-radius:18px;padding:12px 16px;border-left:4px solid var(--danger)}
+.kbuy span{font:600 14px var(--f)}.kbuy b{font-weight:800}
+.kbuy small{color:var(--muted);font-size:12.5px}
 .home-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:980px){.home-grid2{grid-template-columns:minmax(0,1fr)}}
 .stat .neg{color:var(--danger)}
@@ -1776,7 +1780,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
       <div class="w"><div class="w-h"><h2>Дни недели</h2><span class="c">заказы и заявки</span></div><div class="cols wd" id="an-wd"></div><p class="an-note" id="an-wd-n"></p></div>
       <div class="w"><div class="w-h"><h2>Время суток</h2><span class="c">когда приходят</span></div><div class="cols hr" id="an-hr"></div><p class="an-note" id="an-hr-n"></p></div>
       <div class="w"><div class="w-h"><h2>Кто ведёт заказы</h2><span class="c">по выручке</span></div><div class="hbars" id="an-own"></div></div>
-      <div class="w"><div class="w-h"><h2>Расходы</h2><span class="c">офис и закупки</span></div><div class="hbars" id="an-exp"></div></div>
+      <div class="w"><div class="w-h"><h2>Расходы</h2><span class="c">офис и закупки, без Kaspi</span></div><div class="hbars" id="an-exp"></div></div>
+      <div class="w"><div class="w-h"><h2>Закупки Kaspi</h2><span class="c">отдельно от расходов</span></div><div class="hbars" id="an-kbuy"></div><p class="an-note" id="an-kbuy-n"></p></div>
     </div>
   </section>
   <section id="p-prices" class="page" style="gap:16px" hidden>
@@ -2314,7 +2319,7 @@ const ARROW='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-w
 const CLIP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>';
 for(const k of ['office','supplies']){const c=LEDGERS[k];document.getElementById('p-'+k).innerHTML=`
     <div class="ph"><div><h1>${c.title}</h1><p id="${k}-sub"></p></div><div class="btns"><button class="btn primary" type="button" data-xnew="${k}">${c.add}</button></div></div>
-    <div class="kpis" id="${k}-kpi"></div>
+    <div class="kpis" id="${k}-kpi"></div>${k==='supplies'?'<div id="supplies-kbuy"></div>':''}
     <div class="filters">
       <div class="top">
         <label class="search"><input id="${k}-q" data-lq="${k}" data-phm="Поиск" type="search" placeholder="${k==='supplies'?'Поиск по названию, поставщику, заметкам':'Поиск по названию и заметкам'}" aria-label="Поиск"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></label>
@@ -2468,7 +2473,11 @@ const monthName=ym=>{const [y,m]=ym.split('-').map(Number);return MONTHS_FULL[m-
 const monthNameIn=ym=>{const n=['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'];const [y,m]=ym.split('-').map(Number);return n[m-1]+(y!==new Date().getFullYear()?' '+y:'')};
 const inMonth=(o,ym)=>receivedOf(o).slice(0,7)===ym&&o.status!=='cancel';
 const profitOf=o=>(+o.price||0)-costOf(o);
-const lsum=(k,ym)=>ledger[k].filter(x=>(x.date||'').slice(0,7)===ym).reduce((s,x)=>s+(+x.amount||0),0);
+/* закупки товаров для Kaspi уже сидят в себестоимости проданных товаров, поэтому в расходы и прибыль их не считаем, показываем отдельно */
+const isKBuy=(k,x)=>k==='supplies'&&x.cat==='kaspi';
+const lsum=(k,ym)=>ledger[k].filter(x=>!isKBuy(k,x)&&(x.date||'').slice(0,7)===ym).reduce((s,x)=>s+(+x.amount||0),0);
+const ksum=ym=>ledger.supplies.filter(x=>x.cat==='kaspi'&&(!ym||(x.date||'').slice(0,7)===ym)).reduce((s,x)=>s+(+x.amount||0),0);
+const kbuyNote=(ym,tail)=>{const v=ksum(ym);return v?`<div class="kbuy"><span>Закупки Kaspi за ${esc(monthName(ym))}: <b>${money(v)}</b></span><small>${tail||'идут в себестоимость товаров Kaspi, в расходы и прибыль не входят'}</small></div>`:''};
 function series(){
   const past=[...Array(14)].map((_,i)=>dayOffset(i-13)), fut=[...Array(14)].map((_,i)=>dayOffset(i));
   const created=o=>o.createdAt?ds(new Date(o.createdAt)):'';
@@ -2805,7 +2814,8 @@ function lrowMini(k,x){
 function renderLedgerWidgets(){
   for(const k of ['office','supplies']){
     const ym=curMonth(),tot=lsum(k,ym),prev=(()=>{const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-1);return ds(d).slice(0,7)})(),pt=lsum(k,prev);
-    $('w-'+k+'-sum').innerHTML=`<span><small>За ${esc(monthName(ym))}</small><br><b>${money(tot)}</b></span><small>${pt?'в '+esc(monthNameIn(prev))+' '+money(pt):''}</small>`;
+    const kv=k==='supplies'?ksum(ym):0;
+    $('w-'+k+'-sum').innerHTML=`<span><small>За ${esc(monthName(ym))}</small><br><b>${money(tot)}</b></span><small>${pt?'в '+esc(monthNameIn(prev))+' '+money(pt):''}</small>${kv?`<small class="kbuy-w">+ закупки Kaspi ${money(kv)}, они в себестоимости и сюда не входят</small>`:''}`;
     const rows=lsorted(k).slice(0,4);
     $('w-'+k+'-list').innerHTML=rows.length?rows.map(x=>lrowMini(k,x)).join(''):`<div class="w-empty">Записей пока нет. Нажмите, чтобы открыть раздел и добавить первую.</div>`;
   }
@@ -2823,14 +2833,16 @@ function renderLedger(k){
   // kpi
   const prevD=new Date();prevD.setDate(1);prevD.setMonth(prevD.getMonth()-1);const prev=ds(prevD).slice(0,7);
   const tot=lsum(k,ym),pt=lsum(k,prev);
-  const byCat={};all.filter(x=>(x.date||'').slice(0,7)===ym).forEach(x=>{const l=catLabel(k,x);byCat[l]=(byCat[l]||0)+(+x.amount||0)});
+  const byCat={};all.filter(x=>!isKBuy(k,x)&&(x.date||'').slice(0,7)===ym).forEach(x=>{const l=catLabel(k,x);byCat[l]=(byCat[l]||0)+(+x.amount||0)});
   const top=Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
   const third=k==='supplies'?(()=>{const w=all.filter(x=>x.status==='ordered');return `<div class="kpi"><span>Ждём доставку</span><b>${w.length}</b><small>${w.length?'на '+money(w.reduce((s,x)=>s+(+x.amount||0),0)):'всё получено'}</small></div>`})()
     :`<div class="kpi"><span>Больше всего</span><b>${top?esc(top[0]):'—'}</b><small>${top?money(top[1])+' за '+esc(monthName(ym)):'в этом месяце записей нет'}</small></div>`;
-  $(k+'-kpi').innerHTML=`<div class="kpi"><span>За ${esc(monthName(ym))}</span><b>${money(tot)}</b><small>${all.filter(x=>(x.date||'').slice(0,7)===ym).length} ${plural(all.filter(x=>(x.date||'').slice(0,7)===ym).length,'запись','записи','записей')}</small></div>
+  const nM=all.filter(x=>!isKBuy(k,x)&&(x.date||'').slice(0,7)===ym).length;
+  $(k+'-kpi').innerHTML=`<div class="kpi"><span>За ${esc(monthName(ym))}</span><b>${money(tot)}</b><small>${nM} ${plural(nM,'запись','записи','записей')}</small></div>
     <div class="kpi"><span>За ${esc(monthName(prev))}</span><b>${money(pt)}</b><small>${pt&&tot?(tot>pt?'в этом месяце больше на '+money(tot-pt):'в этом месяце меньше на '+money(pt-tot)):'для сравнения'}</small></div>${third}`;
-  const shown=rows.reduce((s,x)=>s+(+x.amount||0),0);
-  $(k+'-sub').textContent=ledgerLoaded[k]?`Показано ${rows.length} ${plural(rows.length,'запись','записи','записей')} на ${money(shown)}`:'Подключаемся к базе…';
+  if(k==='supplies')$('supplies-kbuy').innerHTML=kbuyNote(v.m||ym);
+  const shown=rows.filter(x=>!isKBuy(k,x)).reduce((s,x)=>s+(+x.amount||0),0),shownK=rows.filter(x=>isKBuy(k,x)).reduce((s,x)=>s+(+x.amount||0),0);
+  $(k+'-sub').textContent=ledgerLoaded[k]?`Показано ${rows.length} ${plural(rows.length,'запись','записи','записей')} на ${money(shown)}${shownK?' + закупки Kaspi '+money(shownK)+' отдельно':''}`:'Подключаемся к базе…';
   $(k+'-head').hidden=!rows.length;
   $(k+'-list').innerHTML=rows.length?rows.map(x=>{const col=catOf(k,x.cat)[2];const st=k==='supplies'&&SSTAT[x.status];
     const kp=k==='supplies'&&x.cat==='kaspi'?kaspiMath(x):null;
@@ -3800,7 +3812,8 @@ function renderAnalytics(){
   const [from,to]=anRange(),inR=d=>d&&d>=from&&d<=to;
   const os=[...orders,...kVirtualOrders()].filter(o=>o.status!=='cancel'&&inR(receivedOf(o)));
   const rev=os.reduce((s,o)=>s+(+o.price||0),0),prof=os.reduce((s,o)=>s+profitOf(o),0);
-  const expL=['office','supplies'].flatMap(k=>ledger[k].filter(x=>inR(x.date)).map(x=>({...x,k})));
+  const expL=['office','supplies'].flatMap(k=>ledger[k].filter(x=>!isKBuy(k,x)&&inR(x.date)).map(x=>({...x,k})));
+  const kbL=ledger.supplies.filter(x=>x.cat==='kaspi'&&inR(x.date)),kbT=kbL.reduce((s,x)=>s+(+x.amount||0),0);
   const exp=expL.reduce((s,x)=>s+(+x.amount||0),0),net=prof-exp;
   const perTxt=anPer==='all'?'за всё время':anPer==='month'?'за '+monthName(curMonth()):anPer==='3m'?'за 3 месяца':'за 12 месяцев';
   $('an-sub').textContent='Данные '+perTxt+' по дате получения заказа. Отменённые заказы не считаются.';
@@ -3810,7 +3823,7 @@ function renderAnalytics(){
   $('an-kpis').innerHTML=k('Выручка',money(rev),os.length+' '+plural(os.length,'заказ','заказа','заказов'))
     +k('Чистыми с заказов',money(prof),'студия '+money(profSt)+' · Kaspi '+money(profK),prof<0?'neg':prof>0?'pos':'')
     +k('Рентабельность',rev?Math.round(prof/rev*100)+'%':'—','себестоимость и комиссия Kaspi вычтены',prof<0?'neg':'')
-    +k('После офиса и закупок',money(net),'офис и закупки: '+money(exp),net<0?'neg':net>0?'pos':'')
+    +k('После офиса и закупок',money(net),'офис и закупки: '+money(exp)+(kbT?', без Kaspi':''),net<0?'neg':net>0?'pos':'')
     +k('Средний чек',money(os.length?rev/os.length:0),'на один заказ');
   /* динамика */
   let dyn=[],cur=-1;
@@ -3872,6 +3885,10 @@ function renderAnalytics(){
   /* расходы по категориям */
   const ex=new Map();expL.forEach(x=>bump(ex,(x.k==='office'?'Офис: ':'Закупки: ')+catLabel(x.k,x),+x.amount||0));
   $('an-exp').innerHTML=hbars(topN(ex,8).map(r=>({...r,s:r.n+' '+plural(r.n,'запись','записи','записей')})));
+  /* закупки Kaspi отдельно: в расходы не входят */
+  const kb=new Map();kbL.forEach(x=>bump(kb,x.title||'Без названия',+x.amount||0));
+  $('an-kbuy').innerHTML=hbars(topN(kb,8).map(r=>({...r,s:r.n+' '+plural(r.n,'закупка','закупки','закупок')})));
+  $('an-kbuy-n').textContent=kbT?'Всего '+money(kbT)+' '+perTxt+'. Эти деньги уже в себестоимости товаров Kaspi, поэтому в расходы и «После офиса и закупок» не входят.':'';
 }
 /* подсказка у столбиков и полосок */
 {const tip=document.createElement('div');tip.id='an-tip';tip.hidden=true;document.body.appendChild(tip);
