@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261019090000">
+<meta name="app-build" content="20261019100000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1524,6 +1524,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
 #bh .dc-row{background:var(--tile)}
 .inv-sheet.land{width:1123px;font-size:10.5px;line-height:1.3;padding:28px 36px 32px}
 .inv-sheet .fz{text-align:right;font-size:9.5px;line-height:1.3;margin-bottom:8px}
+.inv-sheet .dh{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid #d9dcef}
+.inv-sheet .dh .iv-logo{padding:0;margin:0;border:0}.inv-sheet .dh .iv-logo svg{height:46px}.inv-sheet .dh .fz{margin:0}
 .inv-sheet .fh{margin-bottom:8px}.inv-sheet .fh td{padding:3px 6px 3px 0;vertical-align:bottom}
 .inv-sheet .fh td:first-child{border-bottom:1px solid #000;width:72%}
 .inv-sheet .fh .fl{text-align:right;white-space:nowrap;font-size:10px;padding-left:12px}
@@ -3521,7 +3523,8 @@ async function showDoc(d){
   const R=reqNow();
   if(!reqOk(R)){toast('Сначала заполните реквизиты студии в разделе «Документы».');return}
   const sh=$('inv-sheet');sh.className='inv-sheet land';
-  sh.innerHTML=d.type==='waybill'?sheetWaybill(d,R):d.type==='act'?sheetAct(d,R):sheetSf(d,R);
+  const h=d.type==='waybill'?sheetWaybill(d,R):d.type==='act'?sheetAct(d,R):sheetSf(d,R),fz=(h.match(/^<div class="fz">[\s\S]*?<\/div>/)||[''])[0];
+  sh.innerHTML=`<div class="dh"><div class="iv-logo">${invLogo()}</div>${fz}</div>`+h.slice(fz.length);
   invTitle=DOC_T[d.type].l+' № '+d.num+' от '+dLong(d.date)+' '+d.buyer.name;
   $('inv-bar-t').textContent=DOC_T[d.type].l;
   $('inv').hidden=false;invZoom();
