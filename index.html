@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261019075000">
+<meta name="app-build" content="20261019110000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1510,10 +1510,49 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
 .inv-ln b{font-weight:600;overflow-wrap:anywhere}.inv-ln span{white-space:nowrap;font-weight:700}
 .inv-ln.tot{background:var(--ink);color:#fff}
 .inv-warn{font-size:13px;background:color-mix(in srgb,var(--st-prod) 10%,var(--paper));border-radius:12px;padding:9px 12px}
+.dc-type{display:inline-block;font:700 11.5px var(--f);padding:3px 9px;border-radius:999px;margin-right:8px;vertical-align:2px;background:var(--tile);color:var(--ink)}
+.t-invoice{background:color-mix(in srgb,var(--blue) 14%,var(--paper))!important;color:var(--blue)!important}
+.t-waybill{background:color-mix(in srgb,var(--ok) 15%,var(--paper))!important;color:var(--ok)!important}
+.t-act{background:color-mix(in srgb,var(--st-prod) 18%,var(--paper))!important;color:var(--ink)!important}
+.t-sf{background:color-mix(in srgb,var(--danger) 11%,var(--paper))!important;color:var(--danger)!important}
+.dc-chain{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.dc-ch{font:600 12.5px var(--f);padding:5px 10px;border-radius:999px;cursor:pointer}
+.dc-ch:hover{filter:brightness(.95)}
+.dc-row .dc-a{flex-wrap:wrap;justify-content:flex-end}
+#dc-f{margin-top:-4px}
+.bh-panel{width:min(720px,100%)}
+#bh .dc-row{background:var(--tile)}
+.inv-sheet.land{width:1123px;font-size:10.5px;line-height:1.3;padding:28px 36px 32px}
+.inv-sheet .fz{text-align:right;font-size:9.5px;line-height:1.3;margin-bottom:8px}
+.inv-sheet .dh{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:8px;margin-bottom:10px;border-bottom:1px solid #d9dcef}
+.inv-sheet .dh .iv-logo{padding:0;margin:0;border:0}.inv-sheet .dh .iv-logo svg{height:46px}.inv-sheet .dh .fz{margin:0}
+.inv-sheet .fh{margin-bottom:8px}.inv-sheet .fh td{padding:3px 6px 3px 0;vertical-align:bottom}
+.inv-sheet .fh td:first-child{border-bottom:1px solid #000;width:72%}
+.inv-sheet .fh .fl{text-align:right;white-space:nowrap;font-size:10px;padding-left:12px}
+.inv-sheet .fh .fb{border:1px solid #000;text-align:center;font-weight:700;width:140px;padding:3px 6px}
+.inv-sheet .fnd{width:auto!important;margin:4px 0 6px auto}.inv-sheet .fnd th,.inv-sheet .fnd td{border:1px solid #000;padding:3px 10px;text-align:center;font-size:10.5px}
+.inv-sheet .fnd td{font-weight:700}
+.inv-sheet .ft{font:700 14px/1.3 Arial,Helvetica,sans-serif;text-align:center;margin:8px 0 10px}
+.inv-sheet .fg{margin-bottom:8px}.inv-sheet .fg th,.inv-sheet .fg td{border:1px solid #000;padding:3px 5px;vertical-align:top}
+.inv-sheet .fg th{font-weight:400;font-size:9.5px;text-align:center;vertical-align:middle;background:#f3f3f3}
+.inv-sheet .fg td.n{text-align:right;white-space:nowrap}.inv-sheet .fg td.c{text-align:center}.inv-sheet .fg td.r{text-align:right;font-weight:700}
+.inv-sheet .fg .nn td{text-align:center;font-size:9px;padding:1px;background:#fafafa}
+.inv-sheet .fg .tt td{font-weight:700}
+.inv-sheet .fw{margin:6px 0 10px}
+.inv-sheet .fs2{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:8px}
+.inv-sheet .fs2 p{margin:0 0 12px}
+.inv-sheet .sg{display:inline-block;width:110px;border-bottom:1px solid #000;height:12px;vertical-align:bottom}
+.inv-sheet .sgc{font-size:8.5px;color:#444;padding-left:110px}
+.inv-sheet .mp{font-weight:700}
+.inv-sheet .fn{font-size:8.5px;color:#333;margin-top:6px;line-height:1.25}
+.inv-sheet .fkv{margin-bottom:8px}.inv-sheet .fkv td{padding:1px 8px 1px 0;vertical-align:top;border-bottom:1px solid #ddd;line-height:1.25}
+.inv-sheet .fs2 p{margin:0 0 8px}
+.inv-sheet .fkv td.k{width:330px;color:#333}
 .inv{position:fixed;inset:0;z-index:60;background:rgba(10,11,20,.82);display:flex;flex-direction:column}
 .inv[hidden]{display:none}
 .inv-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));color:#fff}
-.inv-bar b{font:700 16px var(--f)}.inv-bar .r{display:flex;gap:8px}
+.inv-bar b{font:700 16px var(--f);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.inv-bar .r{display:flex;gap:8px;flex-shrink:0}
+@media(max-width:520px){.inv-bar b{display:none}.inv-bar .r{width:100%}.inv-bar .r .btn{flex:1;padding-left:8px;padding-right:8px}}
 .inv-scroll{flex:1;overflow:auto;padding:4px 12px 24px;display:flex;justify-content:center;align-items:flex-start}
 .inv-sheet{width:794px;flex:none;background:#fff;color:#000;font:12px/1.35 Arial,Helvetica,sans-serif;padding:40px 48px 56px;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
 .inv-sheet p{margin:0 0 8px}
@@ -1545,6 +1584,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   body.printing #inv{position:static;display:block;background:none}
   body.printing .inv-bar{display:none}
   body.printing .inv-scroll{overflow:visible;padding:0;display:block}
+  body.printing .inv-sheet.land{page:land;padding:7mm 9mm 6mm}
+  @page land{size:A4 landscape;margin:0}
   body.printing .inv-sheet{zoom:1!important;width:auto;box-shadow:none;border-radius:0;padding:12mm 12mm 14mm;box-decoration-break:clone;-webkit-box-decoration-break:clone}
   /* поля страницы 0: браузер тогда не печатает свои колонтитулы (адрес сайта, название, дату) — отступы даёт сам лист */
   @page{size:A4;margin:0}
@@ -1678,7 +1719,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   <section id="p-supplies" class="page" style="gap:16px" hidden></section>
   <section id="p-docs" class="page" style="gap:16px" hidden>
     <div class="ph"><div><h1>Документы</h1><p>Счета на оплату для юрлиц, контрагенты и реквизиты студии.</p></div><button class="btn primary" type="button" id="dc-new">Новый счёт</button></div>
-    <div class="w"><div class="w-h"><h2>Счета на оплату <span class="c" id="dc-inv-c"></span></h2></div><div class="dc-list" id="dc-inv"></div></div>
+    <div class="w"><div class="w-h"><h2>Документы</h2></div><div class="chips" id="dc-f" role="group" aria-label="Вид документа"></div><div class="dc-list" id="dc-inv"></div>
+      <span class="hint">Цепочка поставки: счёт на оплату → «+ Накладная» (товары) или «+ Акт» (работы и услуги). После накладной счёт-фактура формируется сама, к акту её можно добавить кнопкой.</span></div>
     <div class="dc-grid">
       <div class="w"><div class="w-h"><h2>Контрагенты <span class="c" id="dc-b-c"></span></h2><button class="btn white sm" type="button" id="dc-badd">Добавить</button></div>
         <div class="dc-bform" id="dc-bform" hidden>
@@ -1689,6 +1731,9 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="grid2"><div class="fld"><label for="bf-dir">Директор</label><input id="bf-dir" autocomplete="off" placeholder="ФИО"></div>
           <div class="fld"><label for="bf-phone">Телефон</label><input id="bf-phone" type="tel" autocomplete="off" placeholder="+7 7__ ___ __ __"></div></div>
           <div class="fld"><label for="bf-email">Почта</label><input id="bf-email" type="email" autocomplete="off" placeholder="для отправки счёта"></div>
+          <div class="fld"><label for="bf-bank">Банк покупателя</label><input id="bf-bank" autocomplete="off" placeholder="для счёта-фактуры, например АО «Kaspi Bank»"></div>
+          <div class="grid2"><div class="fld"><label for="bf-iik">ИИК покупателя</label><input id="bf-iik" autocomplete="off" placeholder="KZ…"></div>
+          <div class="fld"><label for="bf-bik">БИК банка</label><input id="bf-bik" autocomplete="off" placeholder="CASPKZKA"></div></div>
           <div class="err" id="bf-err" hidden></div>
           <div class="dc-acts"><span id="bf-del"></span><span style="flex:1"></span><button class="btn soft sm" type="button" id="bf-cancel">Отмена</button><button class="btn primary sm" type="button" id="bf-save">Сохранить</button></div>
         </div>
@@ -1811,11 +1856,21 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   </section>
 </div>
 
+<div class="ed" id="bh" hidden>
+  <div class="ed-back" data-bhclose></div>
+  <div class="ed-panel bh-panel">
+    <div class="ed-head"><h2 id="bh-title">Контрагент</h2><button class="x" type="button" data-bhclose aria-label="Закрыть">×</button></div>
+    <div class="ed-body"><div id="bh-meta" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div class="fld"><span class="lb">История: счета, накладные, акты, счета-фактуры</span><div class="dc-list" id="bh-list"></div></div></div>
+    <div class="ed-foot"><span></span><div class="r"><button class="btn soft sm" type="button" data-bhclose>Закрыть</button><button class="btn primary sm" type="button" id="bh-new">Новый счёт</button></div></div>
+  </div>
+</div>
 <div class="ed" id="ived" hidden>
   <div class="ed-back" data-ivclose></div>
   <form class="ed-panel" id="iv-form" novalidate>
     <div class="ed-head"><h2 id="iv-title">Новый счёт</h2><button class="x" type="button" data-ivclose aria-label="Закрыть">×</button></div>
     <div class="ed-body">
+      <div class="inv-warn" id="iv-basis" hidden></div>
       <div class="fld"><label for="iv-pick">Покупатель *</label><select id="iv-pick"></select></div>
       <div class="dsec" id="iv-nb" hidden><b class="dsec-h">Новый контрагент</b>
         <div class="fld"><label for="iv-bn">Наименование *</label><input id="iv-bn" autocomplete="off" placeholder="ТОО «Название»"></div>
@@ -1825,8 +1880,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         <span class="hint">Сохранится в контрагентах, в следующий раз просто выберете из списка.</span>
       </div>
       <div class="grid2">
-        <div class="fld"><label for="iv-num">Номер счёта</label><input id="iv-num" inputmode="numeric" autocomplete="off"></div>
-        <div class="fld"><label for="iv-date">Дата счёта</label><input id="iv-date" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div>
+        <div class="fld"><label for="iv-num" id="iv-numl">Номер счёта</label><input id="iv-num" inputmode="numeric" autocomplete="off"></div>
+        <div class="fld"><label for="iv-date" id="iv-datel">Дата счёта</label><input id="iv-date" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div>
       </div>
       <div class="fld"><span class="lb">Что в счёте</span><div class="exps" id="iv-lines"></div></div>
       <div class="iv-add">
@@ -1848,7 +1903,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   </form>
 </div>
 <div class="inv" id="inv" hidden role="dialog" aria-modal="true" aria-label="Счёт на оплату">
-  <div class="inv-bar"><b>Счёт на оплату</b><div class="r"><button class="btn primary sm" type="button" id="inv-print">Печать или PDF</button><button class="btn white sm" type="button" id="inv-close">Закрыть</button></div></div>
+  <div class="inv-bar"><b id="inv-bar-t">Счёт на оплату</b><div class="r"><button class="btn primary sm" type="button" id="inv-pdf">Скачать PDF</button><button class="btn white sm" type="button" id="inv-print">Печать</button><button class="btn white sm" type="button" id="inv-close">Закрыть</button></div></div>
   <div class="inv-scroll"><div class="inv-sheet" id="inv-sheet"></div></div>
 </div>
 <datalist id="owners-dl"></datalist>
@@ -3230,8 +3285,8 @@ async function saveStudioReq(){
   finally{b.disabled=false}
 }
 /* общая запись wa_anna/legal: перед изменением перечитываем, чтобы не затереть то, что сохранил коллега */
-let legal={buyers:[],invoices:[]},legalLoaded=false,legalP=null;
-const legalOf=d=>({buyers:(d&&d.buyers)||[],invoices:(d&&d.invoices)||[]});
+let legal={buyers:[],invoices:[],docs:[]},legalLoaded=false,legalP=null;
+const legalOf=d=>({buyers:(d&&d.buyers)||[],invoices:(d&&d.invoices)||[],docs:(d&&d.docs)||[]});
 function loadLegal(force){
   if(legalP&&!force)return legalP;
   legalP=db.doc('wa_anna/legal').get().then(s=>{legal=legalOf(s.exists?s.data():null);legalLoaded=true;if(page==='docs')renderDocsPage();return legal})
@@ -3326,6 +3381,7 @@ async function showInvoice({num,date,buyer:b,lines:L}){
   if(!reqOk(R)){toast('Сначала заполните реквизиты студии в разделе «Документы».');return}
   const tot=linesTot(L),rate=+R.vatRate||16,vat=R.vat?r2(tot*rate/(100+rate)):0;
   const party=(bin,name,addr)=>esc(['БИН / ИИН '+bin,name,addr].filter(Boolean).join(', '));
+  $('inv-sheet').className='inv-sheet';$('inv-bar-t').textContent='Счёт на оплату';
   $('inv-sheet').innerHTML=`<div class="iv-logo">${invLogo()}</div><p class="iv-warn">Внимание! Оплата данного счета означает согласие с условиями оказания услуг. Уведомление об оплате обязательно. Работы выполняются после поступления оплаты на расчётный счёт Поставщика.</p>
   <div class="iv-cap">Образец платежного поручения</div>
   <table class="iv-bank"><tr><td><b>Бенефициар:</b></td><td class="c"><b>ИИК</b></td><td class="c"><b>Кбе</b></td></tr>
@@ -3348,39 +3404,224 @@ async function showInvoice({num,date,buyer:b,lines:L}){
   $('inv').hidden=false;invZoom();
 }
 let invTitle='',invOldTitle='';
-function invZoom(){const sh=$('inv-sheet');sh.style.zoom=Math.min(1,(innerWidth-24)/794).toFixed(3)}
+function invZoom(){const sh=$('inv-sheet');sh.style.zoom=Math.min(1,(innerWidth-24)/(sh.classList.contains('land')?1123:794)).toFixed(3)}
+const invFile=()=>invTitle.replace(/[\\/:*?"<>|«»]/g,'').replace(/\s+/g,' ').trim().slice(0,120)||'Документ';
+let pdfLibs=null;
+function loadPdfLibs(){return pdfLibs||(pdfLibs=Promise.all(['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'].map(u=>new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=u;sc.onload=ok;sc.onerror=()=>{pdfLibs=null;no(new Error('Не загрузилась библиотека PDF. Проверьте интернет.'))};document.head.appendChild(sc)}))))}
+async function invPdf(){
+  const btn=$('inv-pdf'),lbl=btn.textContent;btn.disabled=true;btn.textContent='Готовлю…';
+  try{
+    await loadPdfLibs();
+    const sh=$('inv-sheet'),land=sh.classList.contains('land'),W=land?1123:794,pw=land?297:210,ph=land?210:297;
+    const box=document.createElement('div');box.style.cssText='position:fixed;left:-20000px;top:0';
+    const c=sh.cloneNode(true);c.removeAttribute('id');c.style.cssText=`zoom:1;width:${W}px;box-shadow:none;border-radius:0;margin:0`;
+    box.appendChild(c);document.body.appendChild(box);
+    c.querySelectorAll('svg').forEach(v=>{const col=getComputedStyle(v).color;v.querySelectorAll('path,use').forEach(e=>{const f=e.getAttribute('fill');if(!f||f==='currentColor')e.setAttribute('fill',col)});v.querySelectorAll('[fill="currentColor"]').forEach(e=>e.setAttribute('fill',col));v.querySelectorAll('[stroke="currentColor"]').forEach(e=>e.setAttribute('stroke',col))});
+    if(document.fonts)await document.fonts.ready;
+    let cv;try{cv=await html2canvas(c,{scale:2,backgroundColor:'#ffffff',logging:false})}finally{box.remove()}
+    const pdf=new jspdf.jsPDF({orientation:land?'landscape':'portrait',unit:'mm',format:'a4'}),step=Math.floor(cv.width*ph/pw);
+    for(let y=0;y<cv.height;y+=step){
+      const h=Math.min(step,cv.height-y);if(y&&h<40)break;
+      const pc=document.createElement('canvas');pc.width=cv.width;pc.height=h;const g=pc.getContext('2d');
+      g.fillStyle='#fff';g.fillRect(0,0,pc.width,h);g.drawImage(cv,0,y,cv.width,h,0,0,cv.width,h);
+      if(y)pdf.addPage();pdf.addImage(pc.toDataURL('image/jpeg',.92),'JPEG',0,0,pw,h*pw/cv.width);
+    }
+    const url=URL.createObjectURL(pdf.output('blob')),a=document.createElement('a');
+    a.href=url;a.download=invFile()+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){toast(e.message||'Не получилось сделать PDF')}
+  finally{btn.disabled=false;btn.textContent=lbl}
+}
 function invPrint(){invOldTitle=document.title;document.title=invTitle.replace(/[\\/:*?"<>|«»]/g,'').slice(0,120);document.body.classList.add('printing');setTimeout(()=>window.print(),50)}
 window.addEventListener('afterprint',()=>{document.body.classList.remove('printing');if(invOldTitle){document.title=invOldTitle;invOldTitle=''}});
 window.addEventListener('resize',()=>{if(!$('inv').hidden)invZoom()});
+/* ---- накладные, акты, счета-фактуры ----
+   wa_anna/legal.docs: [{id,type:'waybill'|'act'|'sf',from,num,date,buyer,lines,createdAt,updatedAt,by}].
+   from — на основании чего: id счёта (у счёта из заказа 'o:<id заказа>'), у счёта-фактуры — id накладной или акта.
+   Цепочка поставки: счёт на оплату → накладная (З-2) или акт (Р-1) → счёт-фактура (после накладной создаётся сама). */
+const DOC_T={invoice:{l:'Счёт на оплату',s:'Счёт',n:'счёт',a:'счёта'},waybill:{l:'Накладная',s:'Накладная',n:'накладная',a:'накладной'},act:{l:'Акт выполненных работ',s:'Акт',n:'акт',a:'акта'},sf:{l:'Счёт-фактура',s:'Счёт-фактура',n:'счёт-фактура',a:'счёта-фактуры'}};
+const docTot=d=>linesTot(d.lines||[]);
+function allDocs(){return [...allInvoices().map(v=>({...v,type:'invoice'})),...legal.docs.map(d=>({...d,src:'own',total:docTot(d)}))]}
+const findDoc=id=>allDocs().find(d=>d.id===id);
+const kidsOf=id=>legal.docs.filter(d=>d.from===id);
+const nextDocNum=t=>t==='invoice'?nextInvNum():String(legal.docs.filter(d=>d.type===t).reduce((m,d)=>Math.max(m,parseInt(d.num)||0),0)+1);
+const dLong=iso=>iso?isoToDM(iso)+'.'+iso.slice(0,4):'';
+/* число прописью без валюты: «тридцать пять» */
+function numWords(n){
+  const t=Math.floor(Math.abs(+n||0));
+  const U=['','один','два','три','четыре','пять','шесть','семь','восемь','девять'],UF=['','одна','две','три','четыре','пять','шесть','семь','восемь','девять'];
+  const T=['десять','одиннадцать','двенадцать','тринадцать','четырнадцать','пятнадцать','шестнадцать','семнадцать','восемнадцать','девятнадцать'];
+  const D=['','','двадцать','тридцать','сорок','пятьдесят','шестьдесят','семьдесят','восемьдесят','девяносто'];
+  const H=['','сто','двести','триста','четыреста','пятьсот','шестьсот','семьсот','восемьсот','девятьсот'];
+  const tri=(x,f)=>{const r=x%100;return [H[Math.floor(x/100)],r>=10&&r<20?T[r-10]:D[Math.floor(r/10)],r>=10&&r<20?'':(f?UF:U)[r%10]].filter(Boolean).join(' ')};
+  const out=[];let x=t;
+  for(const [v,f,w] of [[1e9,0,['миллиард','миллиарда','миллиардов']],[1e6,0,['миллион','миллиона','миллионов']],[1e3,1,['тысяча','тысячи','тысяч']]]){const q=Math.floor(x/v);if(q)out.push(tri(q,f)+' '+plural(q,...w));x%=v}
+  if(x)out.push(tri(x,0));
+  return out.join(' ')||'ноль';
+}
+const cap=s=>s?s[0].toUpperCase()+s.slice(1):s;
+const qtyWords=L=>{const q=L.reduce((s,l)=>s+(+l.qty||0),0);return Number.isInteger(q)?cap(numWords(q)):fmtQty(q)};
+const pline=(bin,name,addr)=>esc([name,bin?'БИН/ИИН '+bin:'',addr].filter(Boolean).join(', '));
+const SGN='<span class="sg"></span>';
+const sgCap=t=>`<span class="sgc">${t}</span>`;
+/* НДС по строке: цена уже с НДС (как в счёте на оплату) */
+function vatOf(R,sum){const rate=+R.vatRate||16;return R.vat?r2(sum*rate/(100+rate)):0}
+function sheetWaybill(d,R){
+  const b=d.buyer,L=d.lines||[],tot=linesTot(L),vt=r2(L.reduce((s,l)=>s+vatOf(R,lineSum(l)),0)),q=L.reduce((s,l)=>s+(+l.qty||0),0);
+  return `<div class="fz">Приложение 26<br>к приказу Министра финансов<br>Республики Казахстан<br>от 20 декабря 2012 года № 562<br><b>Форма З-2</b></div>
+  <table class="fh"><tr><td>Организация (индивидуальный предприниматель) <b>${esc(R.name)}</b></td><td class="fl">ИИН/БИН</td><td class="fb">${esc(R.bin)}</td></tr></table>
+  <table class="fnd"><tr><th>Номер документа</th><th>Дата составления</th></tr><tr><td>${esc(d.num)}</td><td>${esc(dLong(d.date))}</td></tr></table>
+  <h2 class="ft">НАКЛАДНАЯ НА ОТПУСК ЗАПАСОВ НА СТОРОНУ</h2>
+  <table class="fg"><tr><th>Организация (индивидуальный предприниматель) — отправитель</th><th>Организация (индивидуальный предприниматель) — получатель</th><th>Ответственный за поставку (Ф.И.О.)</th><th>Транспортная организация</th><th>Товарно-транспортная накладная (номер, дата)</th></tr>
+  <tr><td>${pline(R.bin,R.name,'')}</td><td>${pline(b.bin,b.name,'')}</td><td>${esc(R.boss||INV_BOSS)}</td><td></td><td></td></tr></table>
+  <table class="fg ft2"><thead><tr><th rowspan="2">Номер по порядку</th><th rowspan="2">Наименование, характеристика</th><th rowspan="2">Номенкла&shy;турный номер</th><th rowspan="2">Единица измерения</th><th colspan="2">Количество</th><th rowspan="2">Цена за единицу, в KZT</th><th rowspan="2">Сумма с НДС, в KZT</th><th rowspan="2">Сумма НДС, в KZT</th></tr><tr><th>подлежит отпуску</th><th>отпущено</th></tr>
+  <tr class="nn">${[1,2,3,4,5,6,7,8,9].map(i=>`<td>${i}</td>`).join('')}</tr></thead><tbody>
+  ${L.map((l,i)=>`<tr><td class="c">${i+1}</td><td>${esc(l.name)}</td><td></td><td class="c">${esc(l.unit)}</td><td class="n">${esc(fmtQty(l.qty))}</td><td class="n">${esc(fmtQty(l.qty))}</td><td class="n">${m2(l.price)}</td><td class="n">${m2(lineSum(l))}</td><td class="n">${R.vat?m2(vatOf(R,lineSum(l))):'—'}</td></tr>`).join('')}
+  <tr class="tt"><td colspan="4" class="r">Итого</td><td class="n">${esc(fmtQty(q))}</td><td class="n">${esc(fmtQty(q))}</td><td></td><td class="n">${m2(tot)}</td><td class="n">${R.vat?m2(vt):'—'}</td></tr></tbody></table>
+  <p class="fw">Всего отпущено количество запасов (прописью): <b>${esc(qtyWords(L))}</b> на сумму (прописью), в KZT: <b>${esc(sumWords(tot))}</b></p>
+  <div class="fs2"><div>
+    <p>Отпуск разрешил ${SGN} / ${SGN} / <b>${esc(R.boss||INV_BOSS)}</b><br>${sgCap('должность &nbsp; подпись &nbsp; расшифровка подписи')}</p>
+    <p>Главный бухгалтер ${SGN} / <b>не предусмотрен</b><br>${sgCap('подпись &nbsp; расшифровка подписи')}</p>
+    <p class="mp">М.П.</p>
+    <p>Отпустил ${SGN} / <b>${esc(R.boss||INV_BOSS)}</b><br>${sgCap('подпись &nbsp; расшифровка подписи')}</p>
+  </div><div>
+    <p>По доверенности № ${SGN} от «___» ____________ 20___ года</p>
+    <p>выданной ${SGN}${SGN}</p>
+    <p>Запасы получил ${SGN} / ${SGN}<br>${sgCap('подпись &nbsp; расшифровка подписи')}</p>
+  </div></div>`;
+}
+function sheetAct(d,R){
+  const b=d.buyer,L=d.lines||[],tot=linesTot(L);
+  return `<div class="fz">Приложение 50<br>к приказу Министра финансов<br>Республики Казахстан<br>от 20 декабря 2012 года № 562<br><b>Форма Р-1</b></div>
+  <table class="fh"><tr><td>Заказчик <b>${pline('',b.name,b.addr)}</b></td><td class="fl">ИИН/БИН</td><td class="fb">${esc(b.bin)}</td></tr>
+  <tr><td>Исполнитель <b>${pline('',R.name,R.addr)}</b></td><td class="fl">ИИН/БИН</td><td class="fb">${esc(R.bin)}</td></tr>
+  <tr><td>Договор (контракт) <b>${esc(b.contract||'Без договора')}</b></td><td></td><td></td></tr></table>
+  <table class="fnd"><tr><th>Номер документа</th><th>Дата составления</th></tr><tr><td>${esc(d.num)}</td><td>${esc(dLong(d.date))}</td></tr></table>
+  <h2 class="ft">АКТ ВЫПОЛНЕННЫХ РАБОТ (ОКАЗАННЫХ УСЛУГ)*</h2>
+  <table class="fg ft2"><thead><tr><th rowspan="2">Номер по порядку</th><th rowspan="2" style="width:30%">Наименование работ (услуг) (в разрезе их подвидов в соответствии с технической спецификацией, заданием, графиком выполнения работ (услуг) при их наличии)</th><th rowspan="2">Дата выполнения работ (оказания услуг)**</th><th rowspan="2">Сведения об отчете о научных исследованиях, маркетинговых, консультационных и прочих услугах (дата, номер, количество страниц) (при их наличии)***</th><th rowspan="2">Единица измерения</th><th colspan="3">Выполнено работ (оказано услуг)</th></tr><tr><th>количество</th><th>цена за единицу</th><th>стоимость</th></tr>
+  <tr class="nn">${[1,2,3,4,5,6,7,8].map(i=>`<td>${i}</td>`).join('')}</tr></thead><tbody>
+  ${L.map((l,i)=>`<tr><td class="c">${i+1}</td><td>${esc(l.name)}</td><td class="c">${esc(dLong(d.date))}</td><td></td><td class="c">${esc(l.unit)}</td><td class="n">${esc(fmtQty(l.qty))}</td><td class="n">${m2(l.price)}</td><td class="n">${m2(lineSum(l))}</td></tr>`).join('')}
+  <tr class="tt"><td colspan="5" class="r">Итого</td><td class="n">${esc(fmtQty(L.reduce((s,l)=>s+(+l.qty||0),0)))}</td><td class="c">х</td><td class="n">${m2(tot)}</td></tr></tbody></table>
+  <p class="fw">Сведения об использовании запасов, полученных от заказчика: ${SGN}${SGN}<br>${sgCap('наименование, количество, стоимость')}</p>
+  <p class="fw">Приложение: Перечень документации, в том числе отчет(ы) о маркетинговых, научных исследованиях, консультационных и прочих услугах (обязательны при его (их) наличии) на ______ страниц</p>
+  <div class="fs2"><div>
+    <p>Сдал (Исполнитель) ${SGN} / ${SGN} / <b>${esc(R.boss||INV_BOSS)}</b><br>${sgCap('должность &nbsp; подпись &nbsp; расшифровка подписи')}</p><p class="mp">М.П.</p>
+  </div><div>
+    <p>Принял (Заказчик) ${SGN} / ${SGN} / ${SGN}<br>${sgCap('должность &nbsp; подпись &nbsp; расшифровка подписи')}</p>
+    <p>Дата подписания (принятия) работ (услуг) ${SGN}</p><p class="mp">М.П.</p>
+  </div></div>
+  <p class="fn">* Применяется для приемки-передачи выполненных работ (оказанных услуг), за исключением строительно-монтажных работ.<br>** Заполняется в случае, если даты выполненных работ (оказанных услуг) приходятся на различные периоды, а также в случае, если даты выполнения работ (оказания услуг) и даты подписания (принятия) работ (услуг) различны.<br>*** Заполняется в случае наличия отчета о научных исследованиях, маркетинговых, консультационных и прочих услугах.</p>`;
+}
+function sheetSf(d,R){
+  const b=d.buyer,L=d.lines||[],tot=linesTot(L),rate=+R.vatRate||16;
+  const base=d.from&&findDoc(d.from),basis=base?`${DOC_T[base.type].l} № ${base.num} от ${dLong(base.date)}`:'';
+  const rows=L.map(l=>{const s=lineSum(l),v=vatOf(R,s);return {l,s,v,nb:r2(s-v)}});
+  const nb=r2(rows.reduce((a,x)=>a+x.nb,0)),vt=r2(rows.reduce((a,x)=>a+x.v,0));
+  const kv=(k,v)=>`<tr><td class="k">${k}</td><td>${v}</td></tr>`;
+  return `<h2 class="ft" style="text-align:left;margin-top:0">СЧЕТ-ФАКТУРА № ${esc(d.num)} от ${esc(ivDate(d.date))}</h2>
+  <table class="fkv">${kv('Дата совершения оборота',esc(dLong(d.date)))}
+  ${kv('Поставщик',`<b>${esc(R.name)}</b>`)}${kv('БИН/ИИН и адрес места нахождения поставщика',esc([R.bin,R.addr].filter(Boolean).join(', ')))}
+  ${kv('ИИК поставщика',esc([R.iik,R.bank?'в '+R.bank:'',R.bik?'БИК '+R.bik:''].filter(Boolean).join(' ')))}
+  ${R.vat?kv('Свидетельство о постановке на регистрационный учет по НДС',esc(R.vatCert||'')):''}
+  ${kv('Договор (контракт) на поставку товаров (работ, услуг)',esc(b.contract||'Без договора'))}
+  ${kv('Условия оплаты по договору (контракту)','Безналичный расчет')}
+  ${kv('Пункт назначения поставляемых товаров (работ, услуг)',esc(b.addr||''))}
+  ${kv('Поставка товаров (работ, услуг) осуществлена по доверенности','—')}
+  ${kv('Способ отправления','—')}
+  ${kv('Товарно-транспортная накладная',esc(base&&base.type==='waybill'?basis:'—'))}
+  ${base&&base.type==='act'?kv('Основание',esc(basis)):''}
+  ${kv('Грузоотправитель',pline(R.bin,R.name,R.addr))}${kv('Грузополучатель',pline(b.bin,b.name,b.addr))}
+  ${kv('Получатель',`<b>${esc(b.name)}</b>`)}${kv('БИН/ИИН и адрес места нахождения получателя',esc([b.bin,b.addr].filter(Boolean).join(', ')))}
+  ${kv('ИИК получателя',esc([b.iik,b.bank?'в '+b.bank:'',b.bik?'БИК '+b.bik:''].filter(Boolean).join(' ')||'—'))}</table>
+  <table class="fg ft2"><thead><tr><th rowspan="2">№ п/п</th><th rowspan="2" style="width:28%">Наименование товаров (работ, услуг)</th><th rowspan="2">Ед. изм.</th><th rowspan="2">Кол-во (объем)</th><th rowspan="2">Цена (KZT)</th><th rowspan="2">Стоимость товаров (работ, услуг) без косвенных налогов</th><th colspan="2">НДС</th><th rowspan="2">Всего стоимость реализации</th><th colspan="2">Акциз</th></tr><tr><th>ставка</th><th>сумма</th><th>ставка</th><th>сумма</th></tr>
+  <tr class="nn">${[1,2,3,4,5,6,7,8,9,10,11].map(i=>`<td>${i}</td>`).join('')}</tr></thead><tbody>
+  ${rows.map((x,i)=>`<tr><td class="c">${i+1}</td><td>${esc(x.l.name)}</td><td class="c">${esc(x.l.unit)}</td><td class="n">${esc(fmtQty(x.l.qty))}</td><td class="n">${m2(R.vat?x.nb/(+x.l.qty||1):x.l.price)}</td><td class="n">${m2(x.nb)}</td><td class="c">${R.vat?esc(rate)+'%':'Без НДС'}</td><td class="n">${R.vat?m2(x.v):'—'}</td><td class="n">${m2(x.s)}</td><td class="c">—</td><td class="c">—</td></tr>`).join('')}
+  <tr class="tt"><td colspan="5" class="r">Всего по счету:</td><td class="n">${m2(nb)}</td><td></td><td class="n">${R.vat?m2(vt):'—'}</td><td class="n">${m2(tot)}</td><td></td><td></td></tr></tbody></table>
+  <div class="fs2"><div>
+    <p>Руководитель организации ${SGN} / <b>${esc(R.boss||INV_BOSS)}</b><br>${sgCap('подпись &nbsp; Ф.И.О.')}</p>
+    <p>Главный бухгалтер ${SGN} / <b>не предусмотрен</b><br>${sgCap('подпись &nbsp; Ф.И.О.')}</p><p class="mp">М.П.</p>
+  </div><div>
+    <p>ВЫДАЛ (ответственное лицо поставщика) ${SGN} / <b>${esc(R.boss||INV_BOSS)}</b><br>${sgCap('должность &nbsp; подпись &nbsp; Ф.И.О.')}</p>
+  </div></div>
+  <p class="fn">Примечание. Без печати недействительно. Оригинал (первый экземпляр) — покупателю. Копия (второй экземпляр) — поставщику.</p>`;
+}
+async function showDoc(d){
+  if(d.type==='invoice'||!d.type)return showInvoice(d);
+  if(db)await loadStudioReq();
+  const R=reqNow();
+  if(!reqOk(R)){toast('Сначала заполните реквизиты студии в разделе «Документы».');return}
+  const sh=$('inv-sheet');sh.className='inv-sheet land';
+  const h=d.type==='waybill'?sheetWaybill(d,R):d.type==='act'?sheetAct(d,R):sheetSf(d,R),fz=(h.match(/^<div class="fz">[\s\S]*?<\/div>/)||[''])[0];
+  sh.innerHTML=`<div class="dh"><div class="iv-logo">${invLogo()}</div>${fz}</div>`+h.slice(fz.length);
+  invTitle=DOC_T[d.type].l+' № '+d.num+' от '+dLong(d.date)+' '+d.buyer.name;
+  $('inv-bar-t').textContent=DOC_T[d.type].l;
+  $('inv').hidden=false;invZoom();
+}
 /* ---- раздел «Документы» ---- */
-let bEdit=null;
+let bEdit=null,dcF='all',bhBin=null;
+const DC_F=[['all','Все'],['invoice','Счета на оплату'],['waybill','Накладные'],['act','Акты'],['sf','Счета-фактуры']];
+function docRow(v,chain){
+  const T=DOC_T[v.type],kids=chain&&v.type!=='sf'?kidsOf(v.id):[];
+  const sub=[v.buyer.name+' · БИН '+(v.buyer.bin||'—')];
+  if(!chain&&v.from){const p=findDoc(v.from);if(p)sub.push('на основании: '+DOC_T[p.type].n+' № '+p.num)}
+  const gk=kids.flatMap(k=>[k,...kidsOf(k.id)]);
+  const has=t=>kids.some(k=>k.type===t);
+  const acts=[`<button class="btn primary sm" type="button" data-ivshow="${esc(v.id)}">Открыть</button>`];
+  if(canWrite){
+    if(v.type==='invoice'&&!has('waybill')&&!has('act'))acts.push(`<button class="btn soft sm" type="button" data-dmk="waybill" data-dfrom="${esc(v.id)}">+ Накладная</button><button class="btn soft sm" type="button" data-dmk="act" data-dfrom="${esc(v.id)}">+ Акт</button>`);
+    if(chain)kids.filter(k=>(k.type==='act'||k.type==='waybill')&&!kidsOf(k.id).some(x=>x.type==='sf')).forEach(k=>acts.push(`<button class="btn soft sm" type="button" data-dmk="sf" data-dfrom="${esc(k.id)}">+ Счёт-фактура</button>`));
+    if((v.type==='act'||v.type==='waybill')&&!kidsOf(v.id).some(k=>k.type==='sf'))acts.push(`<button class="btn soft sm" type="button" data-dmk="sf" data-dfrom="${esc(v.id)}">+ Счёт-фактура</button>`);
+    acts.push(`<button class="btn white sm" type="button" data-ivopen="${esc(v.id)}">${v.src==='order'?'Заказ':'Изменить'}</button>`);
+  }
+  return `<div class="dc-row">
+    <div><b><span class="dc-type t-${v.type}">${esc(T.s)}</span>№ ${esc(v.num)} от ${esc(v.date?fmtDate(v.date)+' '+v.date.slice(0,4):'—')}${v.src==='order'?`<span class="dc-tag${v.paid?' ok':''}">${v.paid?'оплачен':'заказ № '+String(v.orderNum||0).padStart(3,'0')}</span>`:''}</b>
+    <small>${esc(sub.join(' · '))}</small>
+    ${gk.length?`<span class="dc-chain">${gk.map(k=>`<button type="button" class="dc-ch t-${k.type}" data-ivshow="${esc(k.id)}">${esc(DOC_T[k.type].s)} № ${esc(k.num)}</button>`).join('')}</span>`:''}</div>
+    <div class="dc-s">${esc(money(v.total))}</div>
+    <div class="dc-a">${acts.join('')}</div></div>`;
+}
+/* в «Все» показываем цепочки: счёт и под ним его накладная/акт и счёт-фактура; в остальных — плоский список нужного типа */
+function docRows(list,f){
+  const ids=new Set(list.map(d=>d.id));
+  const rows=f==='all'?list.filter(d=>!d.from||!ids.has(d.from)):list.filter(d=>d.type===f);
+  return rows.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(parseInt(b.num)||0)-(parseInt(a.num)||0));
+}
 function renderDocsPage(){
   if(db){loadLegal();loadStudioReq()}
   if(!$('r-fields').children.length)renderReqForm();else reqState();
   $('dc-new').hidden=!canWrite;$('dc-badd').hidden=!canWrite;
-  const A=allInvoices();
-  $('dc-inv-c').textContent=A.length?A.length+' '+plural(A.length,'счёт','счёта','счетов'):'';
-  $('dc-inv').innerHTML=!legalLoaded&&db?'<div class="w-empty">Загружаем…</div>':A.length?A.map(v=>`<div class="dc-row">
-      <div><b>№ ${esc(v.num)} от ${esc(v.date?fmtDate(v.date)+' '+v.date.slice(0,4):'—')}${v.src==='order'?`<span class="dc-tag${v.paid?' ok':''}">${v.paid?'оплачен':'заказ № '+String(v.orderNum||0).padStart(3,'0')}</span>`:''}</b>
-      <small>${esc(v.buyer.name)} · БИН ${esc(v.buyer.bin||'—')}</small></div>
-      <div class="dc-s">${esc(money(v.total))}</div>
-      <div class="dc-a"><button class="btn primary sm" type="button" data-ivshow="${esc(v.id)}">Счёт</button><button class="btn white sm" type="button" data-ivopen="${esc(v.id)}">${v.src==='order'?'Заказ':'Изменить'}</button></div></div>`).join('')
-    :`<div class="w-empty">Счетов пока нет. Нажмите «Новый счёт» или поставьте галочку «Юрлицо» в заказе.</div>`;
+  const A=allDocs(),rows=docRows(A,dcF);
+  $('dc-f').innerHTML=DC_F.map(([id,l])=>{const n=id==='all'?A.length:A.filter(d=>d.type===id).length;return `<button type="button" class="chip${dcF===id?' on':''}${!n&&dcF!==id?' zero':''}" data-dcf="${id}">${esc(l)} <em>${n}</em></button>`}).join('');
+  $('dc-inv').innerHTML=!legalLoaded&&db?'<div class="w-empty">Загружаем…</div>':rows.length?rows.map(v=>docRow(v,dcF==='all')).join('')
+    :`<div class="w-empty">${dcF==='all'?'Документов пока нет. Нажмите «Новый счёт» или поставьте галочку «Юрлицо» в заказе.':'Таких документов пока нет. Их делают из счёта на оплату кнопками «+ Накладная» и «+ Акт».'}</div>`;
   const B=buyerList();
   $('dc-b-c').textContent=B.length?String(B.length):'';
-  $('dc-buyers').innerHTML=B.length?B.map(b=>`<div class="dc-row">
+  $('dc-buyers').innerHTML=B.length?B.map(b=>{const n=A.filter(d=>d.buyer&&d.buyer.bin===b.bin).length;return `<div class="dc-row">
       <div><b>${esc(b.name)}</b><small>БИН ${esc(b.bin)}${b.addr?' · '+esc(b.addr):''}${b.director?' · директор '+esc(b.director):''}</small></div><span></span>
-      <div class="dc-a">${canWrite?`<button class="btn primary sm" type="button" data-bnew="${esc(b.bin)}">Счёт</button><button class="btn white sm" type="button" data-bedit="${esc(b.bin)}">Изменить</button>`:''}</div></div>`).join('')
+      <div class="dc-a"><button class="btn soft sm" type="button" data-bhist="${esc(b.bin)}">История${n?' ('+n+')':''}</button>${canWrite?`<button class="btn primary sm" type="button" data-bnew="${esc(b.bin)}">Счёт</button><button class="btn white sm" type="button" data-bedit="${esc(b.bin)}">Изменить</button>`:''}</div></div>`}).join('')
     :'<div class="w-empty">Контрагентов пока нет.</div>';
+  if(!$('bh').hidden)renderBHist();
+}
+/* история контрагента: все его поставки цепочками */
+function openBHist(bin){bhBin=bin;$('bh').hidden=false;renderBHist()}
+function renderBHist(){
+  const b=buyerList().find(x=>x.bin===bhBin)||{name:'',bin:bhBin};
+  const A=allDocs().filter(d=>d.buyer&&d.buyer.bin===bhBin),rows=docRows(A,'all');
+  $('bh-title').textContent=b.name||'Контрагент';
+  const sum=t=>A.filter(d=>d.type===t).reduce((s,d)=>s+d.total,0);
+  $('bh-meta').innerHTML=`<div class="pnl"><div><small>Счетов на оплату</small><b>${A.filter(d=>d.type==='invoice').length}</b></div><div><small>Выставлено на</small><b>${esc(money(sum('invoice')))}</b></div><div><small>Отгружено (накладные и акты)</small><b>${esc(money(sum('waybill')+sum('act')))}</b></div></div>
+    <p class="hint" style="margin:0">БИН ${esc(b.bin)}${b.addr?' · '+esc(b.addr):''}${b.director?' · директор '+esc(b.director):''}${b.phone?' · '+esc(b.phone):''}${b.email?' · '+esc(b.email):''}</p>`;
+  $('bh-list').innerHTML=rows.length?rows.map(v=>docRow(v,true)).join(''):'<div class="w-empty" style="background:var(--tile)">С этим контрагентом документов ещё не было.</div>';
+  $('bh-new').hidden=!canWrite;
 }
 function openBForm(bin){
   bEdit=bin||'new';const b=bin?buyerList().find(x=>x.bin===bin)||{}:{};
-  [['name','name'],['bin','bin'],['contract','contract'],['addr','addr'],['dir','director'],['phone','phone'],['email','email']].forEach(([i,k])=>$('bf-'+i).value=b[k]||'');
+  BF.forEach(([i,k])=>$('bf-'+i).value=b[k]||'');
   $('bf-del').innerHTML=bin&&legal.buyers.some(x=>x.bin===bin)?'<button class="btn danger sm" type="button" id="bf-delb">Удалить</button>':'';
   $('bf-err').hidden=true;$('dc-bform').hidden=false;$('bf-name').focus();
 }
+const BF=[['name','name'],['bin','bin'],['contract','contract'],['addr','addr'],['dir','director'],['phone','phone'],['email','email'],['bank','bank'],['iik','iik'],['bik','bik']];
 async function saveBForm(){
-  const b={name:$('bf-name').value.trim(),bin:$('bf-bin').value.replace(/\s/g,''),contract:$('bf-contract').value.trim(),addr:$('bf-addr').value.trim(),director:$('bf-dir').value.trim(),phone:$('bf-phone').value.trim(),email:$('bf-email').value.trim()};
+  const b={};BF.forEach(([i,k])=>{b[k]=$('bf-'+i).value.trim()});b.bin=b.bin.replace(/\s/g,'');
   if(!b.name){showErr('bf-err','Впишите наименование.');$('bf-name').focus();return}
   if(!binOk(b.bin)){showErr('bf-err','БИН или ИИН: ровно 12 цифр.');$('bf-bin').focus();return}
   const old=bEdit,btn=$('bf-save');btn.disabled=true;
@@ -3392,26 +3633,32 @@ async function delBuyer(bin){
   try{await legalMut(c=>{c.buyers=c.buyers.filter(x=>x.bin!==bin)});$('dc-bform').hidden=true;bEdit=null;toast('Контрагент удалён');renderDocsPage()}
   catch(e){showErr('bf-err',handleWriteError(e))}
 }
-/* ---- отдельный счёт (без заказа) ---- */
-let ivEdit=null,ivLinesE=[];
-function openIv(id,bin){
+/* ---- окно документа: счёт, накладная, акт, счёт-фактура ---- */
+let ivEdit=null,ivType='invoice',ivFrom=null,ivLinesE=[];
+const buyerFull=b=>{const k=buyerList().find(x=>x.bin===b.bin);return {name:b.name,bin:b.bin,addr:b.addr||'',contract:b.contract||'',...(k?{bank:k.bank||'',iik:k.iik||'',bik:k.bik||''}:{})}};
+function openIv(id,bin,o={}){
   if(!canWrite&&id==='new')return;
-  ivEdit=id;const v=id==='new'?null:legal.invoices.find(x=>x.id===id);if(id!=='new'&&!v)return;
-  const cur=v?v.buyer.bin:(bin||'');
-  $('iv-title').textContent=v?'Счёт № '+v.num:'Новый счёт';
+  const v=id==='new'?null:(legal.invoices.find(x=>x.id===id)&&{...legal.invoices.find(x=>x.id===id),type:'invoice'})||legal.docs.find(x=>x.id===id);
+  if(id!=='new'&&!v)return;
+  ivEdit=id;ivType=v?v.type:(o.type||'invoice');ivFrom=v?(v.from||null):(o.from||null);
+  const base=ivFrom&&findDoc(ivFrom),T=DOC_T[ivType];
+  const by=v?v.buyer:base?base.buyer:null,cur=by?by.bin:(bin||'');
+  $('iv-title').textContent=v?T.l+' № '+v.num:(ivType==='invoice'?'Новый счёт':ivType==='act'?'Новый акт':'Новая '+T.n);
+  $('iv-basis').hidden=!base;$('iv-basis').textContent=base?'На основании: '+DOC_T[base.type].n+' № '+base.num+' от '+dLong(base.date)+'. Строки скопированы, их можно поправить.':'';
   $('iv-pick').innerHTML=buyerOpts(cur,'<option value="">Выберите покупателя</option>')+'<option value="+">+ Новый контрагент</option>';
-  if(v&&!buyerList().some(b=>b.bin===cur))$('iv-pick').insertAdjacentHTML('afterbegin',`<option value="${esc(cur)}" selected>${esc(v.buyer.name)} · ${esc(cur)}</option>`);
+  if(by&&!buyerList().some(b=>b.bin===cur))$('iv-pick').insertAdjacentHTML('afterbegin',`<option value="${esc(cur)}" selected>${esc(by.name)} · ${esc(cur)}</option>`);
   syncCs($('iv-pick'));
   ['iv-bn','iv-bb','iv-bc','iv-ba','iv-ln','iv-lq','iv-lu','iv-lp'].forEach(i=>$(i).value='');$('iv-nb').hidden=true;
-  $('iv-num').value=v?v.num:nextInvNum();setDM($('iv-date'),v?v.date:todayStr());
-  ivLinesE=v?(v.lines||[]).map(l=>({...l})):[];renderIvLines();
+  $('iv-numl').textContent='Номер: '+T.n;$('iv-datel').textContent='Дата';
+  $('iv-num').value=v?v.num:nextDocNum(ivType);setDM($('iv-date'),v?v.date:todayStr());
+  ivLinesE=(v?v.lines:base?base.lines:[]||[]).map(l=>({...l}));renderIvLines();
   $('iv-del').innerHTML=v&&canWrite?'<button class="btn danger sm" type="button" id="iv-delb">Удалить</button>':'';
   $('iv-err').hidden=true;$('ived').hidden=false;
 }
 function closeIv(){dpClose();$('ived').hidden=true;ivEdit=null}
 function renderIvLines(){
   $('iv-lines').innerHTML=ivLinesE.length?ivLinesE.map((l,i)=>`<div class="exp"><b>${esc(l.name)}<small class="hint" style="display:block;font-weight:500">${esc(fmtQty(l.qty))} ${esc(l.unit)} × ${esc(money(l.price))}</small></b><span>${esc(money(lineSum(l)))}</span><button class="tdel" type="button" data-ivrm="${i}" aria-label="Убрать ${esc(l.name)}">×</button></div>`).join('')
-    :'<div class="w-empty" style="background:var(--tile)">Добавьте, за что выставляете счёт: наименование, количество и цену.</div>';
+    :'<div class="w-empty" style="background:var(--tile)">Добавьте строки: наименование, количество и цену.</div>';
   $('iv-tot').querySelector('span').textContent=money(linesTot(ivLinesE));
 }
 function addIvLine(){
@@ -3429,26 +3676,35 @@ async function saveIv(show){
   if(pick==='+'){buyer={name:$('iv-bn').value.trim(),bin:$('iv-bb').value.replace(/\s/g,''),contract:$('iv-bc').value.trim(),addr:$('iv-ba').value.trim()};isNew=true;
     if(!buyer.name){showErr('iv-err','Впишите наименование контрагента.');$('iv-bn').focus();return}
     if(!binOk(buyer.bin)){showErr('iv-err','БИН или ИИН контрагента: ровно 12 цифр.');$('iv-bb').focus();return}}
-  else{const b=buyerList().find(x=>x.bin===pick)||(ivEdit!=='new'&&(legal.invoices.find(x=>x.id===ivEdit)||{}).buyer);
+  else{const prev=ivEdit!=='new'&&findDoc(ivEdit),b=buyerList().find(x=>x.bin===pick)||(prev&&prev.buyer&&prev.buyer.bin===pick?prev.buyer:null)||(ivFrom&&(findDoc(ivFrom)||{}).buyer);
     if(!pick||!b){showErr('iv-err','Выберите покупателя.');$('iv-pick').focus();return}
-    buyer={name:b.name,bin:b.bin,addr:b.addr||'',contract:b.contract||''}}
-  const num=$('iv-num').value.trim();if(!num){showErr('iv-err','Впишите номер счёта.');$('iv-num').focus();return}
-  const date=valIso($('iv-date'));if(!date){showErr('iv-err','Укажите дату счёта, например 19.10.');$('iv-date').focus();return}
-  if(!ivLinesE.length){showErr('iv-err','Добавьте хотя бы одну строку в счёт.');$('iv-ln').focus();return}
+    buyer=buyerFull(b)}
+  const T=DOC_T[ivType];
+  const num=$('iv-num').value.trim();if(!num){showErr('iv-err','Впишите номер.');$('iv-num').focus();return}
+  const date=valIso($('iv-date'));if(!date){showErr('iv-err','Укажите дату, например 19.10.');$('iv-date').focus();return}
+  if(!ivLinesE.length){showErr('iv-err','Добавьте хотя бы одну строку.');$('iv-ln').focus();return}
   const now=Date.now(),id=ivEdit==='new'?uid():ivEdit,lines=ivLinesE.map(l=>({name:l.name,qty:+l.qty||0,unit:l.unit||'шт',price:+l.price||0}));
+  const by=ROLE().name||'';let made=null,sf=null;
   const btns=document.querySelectorAll('#iv-form .ed-foot .btn');btns.forEach(b=>b.disabled=true);
   try{
-    await legalMut(c=>{const prev=c.invoices.find(x=>x.id===id);c.invoices=c.invoices.filter(x=>x.id!==id);
-      c.invoices.push({id,num,date,buyer,lines,createdAt:prev?prev.createdAt:now,updatedAt:now,by:ROLE().name||''});
+    await legalMut(c=>{
+      if(ivType==='invoice'){const prev=c.invoices.find(x=>x.id===id);c.invoices=c.invoices.filter(x=>x.id!==id);
+        made={id,num,date,buyer,lines,createdAt:prev?prev.createdAt:now,updatedAt:now,by};c.invoices.push(made);made={...made,type:'invoice'}}
+      else{const prev=c.docs.find(x=>x.id===id);c.docs=c.docs.filter(x=>x.id!==id);
+        made={id,type:ivType,from:ivFrom||'',num,date,buyer,lines,createdAt:prev?prev.createdAt:now,updatedAt:now,by};c.docs.push(made);
+        /* после накладной счёт-фактура формируется сама; при правке накладной она обновляется вместе с ней */
+        if(ivType==='waybill'){const ex=c.docs.find(x=>x.type==='sf'&&x.from===id);
+          if(ex){Object.assign(ex,{buyer,lines,updatedAt:now})}
+          else{const n=String(c.docs.filter(x=>x.type==='sf').reduce((m,x)=>Math.max(m,parseInt(x.num)||0),0)+1);sf={id:uid(),type:'sf',from:id,num:n,date,buyer,lines,createdAt:now,updatedAt:now,by};c.docs.push(sf)}}}
       if(isNew){c.buyers=c.buyers.filter(x=>x.bin!==buyer.bin);c.buyers.push(buyer)}});
-    closeIv();toast('Счёт № '+num+' сохранён');render();
-    if(show)showInvoice({num,date,buyer,lines});
+    closeIv();toast(T.s+' № '+num+(ivType==='waybill'||ivType==='sf'?' сохранена':' сохранён')+(sf?'. Счёт-фактура № '+sf.num+' сформирована':''));render();
+    if(show)showDoc(made);
   }catch(e){showErr('iv-err',handleWriteError(e))}
   finally{btns.forEach(b=>b.disabled=false)}
 }
 async function delIv(){
-  const id=ivEdit;
-  try{await legalMut(c=>{c.invoices=c.invoices.filter(x=>x.id!==id)});closeIv();toast('Счёт удалён');render()}
+  const id=ivEdit,t=ivType;
+  try{await legalMut(c=>{if(t==='invoice')c.invoices=c.invoices.filter(x=>x.id!==id);else c.docs=c.docs.filter(x=>x.id!==id&&!(x.type==='sf'&&x.from===id))});closeIv();toast(DOC_T[t].s+' удалён'+(t==='waybill'||t==='sf'?'а':''));render()}
   catch(e){showErr('iv-err',handleWriteError(e))}
 }
 /* ---- события ---- */
@@ -3478,12 +3734,17 @@ document.addEventListener('click',e=>{
   if(t.closest('#bf-delb')){delBuyer(bEdit);return}
   const be=t.closest('[data-bedit]');if(be){openBForm(be.dataset.bedit);return}
   const bn=t.closest('[data-bnew]');if(bn){openIv('new',bn.dataset.bnew);return}
-  const sh=t.closest('[data-ivshow]');if(sh){const v=allInvoices().find(x=>x.id===sh.dataset.ivshow);if(v)showInvoice(v);return}
-  const op=t.closest('[data-ivopen]');if(op){const v=allInvoices().find(x=>x.id===op.dataset.ivopen);if(!v)return;if(v.src==='order')openEditor(v.orderId,{tab:'docs'});else openIv(v.id);return}
+  const sh=t.closest('[data-ivshow]');if(sh){const v=findDoc(sh.dataset.ivshow);if(v)showDoc(v);return}
+  const op=t.closest('[data-ivopen]');if(op){const v=findDoc(op.dataset.ivopen);if(!v)return;if(v.src==='order'){$('bh').hidden=true;openEditor(v.orderId,{tab:'docs'})}else openIv(v.id);return}
+  const mk=t.closest('[data-dmk]');if(mk){openIv('new',null,{type:mk.dataset.dmk,from:mk.dataset.dfrom});return}
+  const df=t.closest('[data-dcf]');if(df){dcF=df.dataset.dcf;renderDocsPage();return}
+  const bh=t.closest('[data-bhist]');if(bh){openBHist(bh.dataset.bhist);return}
+  if(t.closest('[data-bhclose]')){$('bh').hidden=true;bhBin=null;return}
+  if(t.closest('#bh-new')){openIv('new',bhBin);return}
 });
-$('inv-print').addEventListener('click',invPrint);
+$('inv-print').addEventListener('click',invPrint);$('inv-pdf').addEventListener('click',invPdf);
 $('inv-close').addEventListener('click',()=>{$('inv').hidden=true});
-document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('inv').hidden){e.stopPropagation();$('inv').hidden=true}else if(!$('ived').hidden){e.stopPropagation();closeIv()}},true);
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('inv').hidden){e.stopPropagation();$('inv').hidden=true}else if(!$('ived').hidden){e.stopPropagation();closeIv()}else if(!$('bh').hidden){e.stopPropagation();$('bh').hidden=true}},true);
 /* ---------- аналитика ---------- */
 let anPer='3m';
 const AN_PER=[['month','Этот месяц'],['3m','3 месяца'],['year','12 месяцев'],['all','Всё время']];
