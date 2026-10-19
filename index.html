@@ -1495,6 +1495,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
 .inv-sheet{width:794px;flex:none;background:#fff;color:#000;font:12px/1.35 Arial,Helvetica,sans-serif;padding:40px 48px 56px;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
 .inv-sheet p{margin:0 0 8px}
 .inv-sheet table{border-collapse:collapse;width:100%}
+.iv-logo{color:#4358ef;line-height:0;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid #d9dcef}
+.iv-logo svg{height:62px;width:auto}
 .iv-warn{font-size:10.5px;text-align:center;margin-bottom:14px!important}
 .iv-cap{font-weight:700;font-size:13px;margin-bottom:4px}
 .iv-bank td{border:1px solid #000;padding:4px 6px;vertical-align:top}
@@ -3104,7 +3106,12 @@ function addExpense(){
    У заказа: legal (галочка «Юрлицо»), buyer {name, bin, addr, contract}, invoice {num, date}.
    Реквизиты студии — одна запись wa_anna/requisites (правило для wa_anna уже опубликовано, новое публиковать не нужно).
    Счёт по типовой форме РК («Счет на оплату» с образцом платёжного поручения), печать или PDF прямо из браузера. */
-const REQ_F=[['name','Наименование (как в документах)','ИП Разгуляев Е. К.',1],['bin','БИН / ИИН','12 цифр'],['kbe','Кбе','19'],['addr','Адрес','г. Павлодар, ул. Абая, 115а',1],['bank','Банк','АО «Kaspi Bank»',1],['iik','ИИК (номер счёта)','KZ00 0000 0000 0000 0000',1],['bik','БИК','CASPKZKA'],['knp','Код назначения платежа','859'],['boss','Подпись: исполнитель (ФИО)','Разгуляев Е. К.',1]];
+const REQ_F=[['name','Наименование (как в документах)','ИП Разгуляев Е. К.',1],['bin','БИН / ИИН','12 цифр'],['kbe','Кбе','19'],['addr','Адрес','г. Павлодар, ул. Абая, 115а',1],['bank','Банк','АО «Kaspi Bank»',1],['iik','ИИК (номер счёта)','KZ00 0000 0000 0000 0000',1],['bik','БИК','CASPKZKA'],['knp','Код назначения платежа','859'],['boss','Подпись: исполнитель (ФИО)','Рябиков Е. К.',1]];
+const INV_BOSS='Рябиков Е. К.';
+/* реквизиты студии по умолчанию: подставляются, пока в wa_anna/requisites ничего не сохранено */
+const REQ_DEF={name:'ИП РАЗГУЛЯЕВ',bin:'970223350159',addr:'г. Павлодар, ул. Академика Чокина, д. 25, кв/офис 167',bank:'АО «Kaspi Bank»',bik:'CASPKZKA',iik:'KZ85722S000046171476',kbe:'19',knp:'',boss:INV_BOSS};
+/* логотип из шапки CRM; у копии свои id, чтобы при печати не зависеть от скрытой шапки */
+const invLogo=()=>{const l=document.querySelector('.logo svg');return l?l.outerHTML.replace(/id="g/g,'id="ivg').replace(/#g(\d)/g,'#ivg$1').replace('class="logo-svg"','class="iv-logo-svg"'):''};
 const REQ_NEED=['name','bin','bank','iik','bik'];
 let studioReq=null,studioReqP=null;
 function loadStudioReq(){
@@ -3114,13 +3121,13 @@ function loadStudioReq(){
 }
 const reqOk=r=>!!r&&REQ_NEED.every(k=>String(r[k]||'').trim());
 function renderReqForm(){
-  const r=studioReq||{};
+  const r={...REQ_DEF,...Object.fromEntries(Object.entries(studioReq||{}).filter(([,v])=>v!==''&&v!=null))};
   $('r-fields').innerHTML=REQ_F.map(([k,l,ph,w])=>`<div class="fld${w?' w':''}"><label for="r-${k}">${esc(l)}</label><input id="r-${k}" autocomplete="off" value="${esc(r[k]||'')}" placeholder="${esc(ph)}" ${canWrite?'':'disabled'}></div>`).join('');
   $('r-vat').checked=!!r.vat;$('r-vatrate').value=r.vatRate??'';$('r-vatw').hidden=!r.vat;
   reqState();
 }
 function reqState(){
-  const ok=reqOk(studioReq),el=$('r-state');
+  const ok=reqOk({...REQ_DEF,...(studioReq||{})}),el=$('r-state');
   el.textContent=!studioReq?'загружаем…':ok?'заполнены':'нужно заполнить';el.className=!studioReq?'':ok?'ok':'need';
   if(studioReq&&!ok)$('r-box').open=true;
 }
@@ -3188,13 +3195,13 @@ async function makeInvoice(){
   const num=$('d-num').value.trim();
   if(!num){showErr('f-err','Впишите номер счёта.');$('d-num').focus();return}
   await loadStudioReq();
-  const R=$('r-fields').children.length?readReqForm():(studioReq||{});
+  const R=$('r-fields').children.length?readReqForm():{...REQ_DEF,...(studioReq||{})};
   if(!reqOk(R)){$('r-box').open=true;reqState();showErr('f-err','Сначала заполните реквизиты студии: наименование, БИН, банк, ИИК и БИК.');const miss=REQ_NEED.find(k=>!String(R[k]||'').trim());if(miss&&$('r-'+miss))$('r-'+miss).focus();return}
   if(canWrite&&!sameReq(R,studioReq))await saveStudioReq();
   const L=invLines();if(!L.length){renderDocs();return}
   const tot=r2(L.reduce((s,l)=>s+lineSum(l),0)),rate=+R.vatRate||16,vat=R.vat?r2(tot*rate/(100+rate)):0;
   const party=(bin,name,addr)=>esc(['БИН / ИИН '+bin,name,addr].filter(Boolean).join(', '));
-  $('inv-sheet').innerHTML=`<p class="iv-warn">Внимание! Оплата данного счета означает согласие с условиями оказания услуг. Уведомление об оплате обязательно. Работы выполняются после поступления оплаты на расчётный счёт Поставщика.</p>
+  $('inv-sheet').innerHTML=`<div class="iv-logo">${invLogo()}</div><p class="iv-warn">Внимание! Оплата данного счета означает согласие с условиями оказания услуг. Уведомление об оплате обязательно. Работы выполняются после поступления оплаты на расчётный счёт Поставщика.</p>
   <div class="iv-cap">Образец платежного поручения</div>
   <table class="iv-bank"><tr><td><b>Бенефициар:</b></td><td class="c"><b>ИИК</b></td><td class="c"><b>Кбе</b></td></tr>
   <tr><td><b>${esc(R.name)}</b><br>БИН: ${esc(R.bin)}</td><td class="c"><b>${esc(R.iik)}</b></td><td class="c"><b>${esc(R.kbe||'')}</b></td></tr>
@@ -3211,7 +3218,7 @@ async function makeInvoice(){
   <p>Всего наименований ${L.length}, на сумму ${m2(tot)} KZT</p>
   <p><b>Всего к оплате: ${esc(sumWords(tot))}</b></p>
   <div class="iv-line"></div>
-  <div class="iv-sign">Исполнитель <i></i> /${esc(R.boss||'')}/ <em>М.П.</em></div>`;
+  <div class="iv-sign">Исполнитель <i></i> /${esc(R.boss||INV_BOSS)}/ <em>М.П.</em></div>`;
   invTitle='Счет на оплату № '+num+' от '+isoToDM(date)+'.'+date.slice(0,4)+' '+b.name;
   $('inv').hidden=false;invZoom();
 }
