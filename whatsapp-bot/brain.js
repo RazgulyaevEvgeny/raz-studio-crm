@@ -3,6 +3,7 @@
 // Нейросеть: бесплатный Google Gemini (GEMINI_API_KEY), либо платный Claude, если задан ANTHROPIC_API_KEY.
 
 import Anthropic from '@anthropic-ai/sdk';
+import { makeMockup, lastPhoto, describe as mockupText, ITEMS as MOCKUP_ITEMS, SIDES as MOCKUP_SIDES, SIZES as MOCKUP_SIZES } from './mockup.js';
 
 const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 const WD_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
@@ -48,11 +49,17 @@ const STUDIO = `Тебя зовут Аня, ты виртуальный помо
 Адрес студии: г. Павлодар, ул. Абая, 115а. Ссылка 2ГИС: https://2gis.kz/pavlodar/firm/70000001103891578?m=76.956216%2C52.280095%2F16
 Сайт: razbrandstudio.taplink.kz.
 График работы студии (время Павлодара): понедельник–четверг 11:00–19:00, пятница 11:00–17:00, обед каждый день 13:00–14:00, суббота и воскресенье — выходные.
-Если клиент пишет в нерабочее время или в обед и нужен менеджер, скажи, что менеджер ответит в рабочее время.
+Если клиент пишет в нерабочее время или в обед, в первом ответе ему в это время скажи: «Сейчас у нас нерабочее время, но я могу вам помочь:
+подсказать по заказу и предварительно оформить его для менеджера». Помогай как обычно: подбирай услугу, называй цены из прайса, делай визуализацию,
+оформляй предварительный заказ (create_order). Если клиенту нужен именно менеджер — скажи, когда Милана ответит.
 Мы работаем ПО ПРЕДВАРИТЕЛЬНОЙ ЗАПИСИ: команда часто на доставках и закупках расходников, поэтому в студии бываем не всегда.
 Каждый раз, когда клиент хочет приехать, забрать заказ или спрашивает адрес и как подъехать, говори, что наша студия находится по адресу ул. Абая, 115а, и ВСЕГДА присылай ссылку 2ГИС (ровно ту, что выше, отдельной строкой),
 и обязательно предупреди, что приезд по предварительной записи: предложи договориться о дне и времени, и позови менеджера (call_manager), чтобы он подтвердил время.
-Способы оплаты и доставки: [уточнить у Евгения]. Пока их нет — говори, что менеджер подскажет.
+Оплата: у нас всегда 100% предоплата. Способы оплаты: наличными, Kaspi удалённая оплата (счёт на номер клиента в Kaspi), Kaspi QR, Kaspi Red,
+Kaspi рассрочка (к сумме заказа добавляется 15% за возможность рассрочки). Ты только рассказываешь, какие есть способы оплаты.
+Оплату принимает и выставляет менеджер: сама счёт не выставляй, реквизиты и номер для перевода не называй, оплату не подтверждай.
+Если клиент готов оплатить — скажи, что менеджер выставит оплату удобным ему способом, и вызови call_manager.
+Доставка: пока говори, что про доставку подскажет менеджер.
 
 Что говорить по услугам:
 - DTF-печать: когда спрашивают стоимость печати, называй из прайса только варианты А4 и А3 (другие форматы не перечисляй).
@@ -65,7 +72,16 @@ const STUDIO = `Тебя зовут Аня, ты виртуальный помо
   что там можно ознакомиться с топперами, выбрать цвет и размер, заказать свою фигурку и сразу оформить заказ — он сразу появится у нас.
 - Фото от клиента приходят тебе с описанием: «[клиент прислал фото] На фото: …». Сначала поддержи его по смыслу («Классный логотип!», «Отличная идея!»),
   потом по описанию пойми, что он хочет, предложи подходящую услугу и уточни детали (сколько штук, какой размер, на чём печатать).
-  Если без макета и расчёта не обойтись — скажи, что менеджер посмотрит и посчитает, и вызови call_manager.
+  Если это логотип или картинка для печати на одежде — сделай визуализацию (make_mockup, см. ниже). Если без расчёта не обойтись — скажи, что менеджер посмотрит и посчитает, и вызови call_manager.
+- Визуализация макета (DTF-печать на одежде и шопперах). Если клиент прислал логотип, картинку для печати или назвал надпись — сделай визуализацию:
+  вызови make_mockup (изделие, цвет, где нанести, формат). Картинка уйдёт клиенту сразу после твоего ответа. Если изделие или цвет не названы,
+  бери чёрную футболку, спереди, А4, а в ответе спроси, на каком изделии и в каком цвете он хочет. Если логотипа картинкой нет, а есть только надпись — передай её в text.
+  В ответе напиши коротко: «Вот как это примерно будет выглядеть» и что точный макет и размер подготовит менеджер.
+  Затем предложи (не навязывай): «Могу согласовать этот макет с вами прямо сейчас, или можете дождаться менеджера, Милана посмотрит и ответит. Как вам удобнее?»
+  Хочет поменять цвет, изделие, место или формат — сделай новую визуализацию. Клиент выбрал согласовать сейчас и сказал, что всё устраивает, — вызови approve_mockup,
+  поблагодари и скажи, что макет передан менеджеру; если заказ ещё не оформлен, собери недостающие детали и оформи его (create_order).
+  Хочет дождаться менеджера — вызови call_manager. Для вышивки, винила, 3D-печати и вывесок визуализацию не делай.
+  Если на фото не логотип, а, например, готовая вещь, машина или пример чужой работы, — make_mockup не вызывай.
 - Если клиент просит показать примеры работ или фото — вызови send_examples с нужной услугой: фото уйдут клиенту сразу после твоего ответа,
   в ответе напиши одну фразу вроде «Вот несколько наших работ». Если фото нет (инструмент так ответит) — предложи посмотреть наш Instagram @raz.brandstudio.
 - Если спрашивают про услугу, которой нет в списке выше, скажи: «Я передам ваш запрос менеджеру, он подскажет более точно» — и вызови call_manager.
@@ -177,6 +193,31 @@ const TOOLS = [
     },
   },
   {
+    name: 'make_mockup',
+    description: 'Делает примерную визуализацию: логотип клиента (последнее фото, которое он прислал) или надпись на изделии. Картинка уйдёт клиенту после твоего ответа.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        item: { type: 'string', enum: Object.keys(MOCKUP_ITEMS), description: 'tshirt — футболка, hoodie — худи, sweatshirt — свитшот или лонгслив, shopper — шоппер' },
+        color: { type: 'string', description: 'Цвет изделия по-русски, например «чёрный», «белый», «тёмно-синий»' },
+        side: { type: 'string', enum: Object.keys(MOCKUP_SIDES), description: 'front — спереди по центру, back — на спине, chest_left — маленький логотип на груди слева' },
+        size: { type: 'string', enum: Object.keys(MOCKUP_SIZES), description: 'Формат DTF: A3 27×37, A4 21×27, A5 21×15, A6 10×14 см' },
+        text: { type: 'string', description: 'Надпись, если клиент не присылал картинку, а назвал текст' },
+      },
+      required: ['item', 'color', 'side'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'approve_mockup',
+    description: 'Клиент согласовал последнюю визуализацию макета прямо сейчас (после твоего предложения). Макет попадёт в заказ для менеджера.',
+    input_schema: {
+      type: 'object',
+      properties: { comment: { type: 'string', description: 'Пожелания клиента к макету, если были' } },
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'save_client_name',
     description: 'Запоминает, как обращаться к клиенту (имя, которое он назвал). Вызывай, как только клиент представился.',
     input_schema: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'], additionalProperties: false },
@@ -262,7 +303,7 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
     managerNote(chat.messages || []) +
     (talkedRecently(chat.messages || []) ? ' Ты или менеджер уже писали этому клиенту в последние дни: НЕ здоровайся и не представляйся снова, сразу отвечай по делу.' : '') +
     (waited > 60 * 60e3 ? ` Клиент ждёт ответа уже ${Math.round(waited / 3600e3)} ч (рабочий компьютер был выключен): начни с короткого извинения за ожидание.` : '') +
-    ' ' + hoursNote() +
+    ' ' + hoursNote(list) +
     (chat.older ? `\nРаньше в этой переписке (старые сообщения, коротко): ${String(chat.older).slice(-1500)}` : '');
   const messages = toClaudeMessages(chat.messages || []);
   if (opts.followUp) {
@@ -274,13 +315,13 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
       'Не здоровайся заново и не представляйся. Если клиент уже отказался, договорился с менеджером, заказ оформлен, разговор был не о заказе или напоминать неуместно — вызови stay_silent.', at: Date.now() }]));
   }
   if (!messages.length) return {};
-  const ctx = { fs, phone, chat, handoff: '', silent: '', media: null };
+  const ctx = { fs, phone, chat, handoff: '', silent: '', media: null, mockup: null };
   try {
     const text = String(env.ANTHROPIC_API_KEY || '').trim()
       ? await viaClaude(env, today, messages, ctx)
       : await viaGemini(env, today, messages, ctx);
     if (ctx.silent) return { silent: ctx.silent };
-    return text ? { text, handoff: ctx.handoff, media: ctx.media } : fallbackReply();
+    return text ? { text, handoff: ctx.handoff, media: ctx.media, mockup: ctx.mockup } : fallbackReply();
   } catch (e) {
     console.log('ИИ не ответил:', String(e?.message || e).slice(0, 300));
     // Бесплатный лимит Gemini кончился — отвечает запасной бесплатный ИИ Cloudflare (через воркер отдела маркетинга)
@@ -298,6 +339,7 @@ async function useTool(name, input, ctx) {
     if (name === 'call_manager') ctx.handoff = String(input?.reason || 'нужен менеджер');
     if (name === 'stay_silent') ctx.silent = String(input?.reason || 'ответ не нужен');
     if (name === 'send_examples' && out?.ok) ctx.media = out.media;
+    if (name === 'make_mockup' && out?.ok) { ctx.mockup = out.image; delete out.image; }
     return out;
   } catch (e) {
     return { error: String(e && e.message || e) };
@@ -483,9 +525,12 @@ export function busyText(t = Date.now()) {
     ? 'Извините, к сожалению, у менеджеров сейчас большая загрузка. Как только они освободятся, они вам ответят.'
     : `Сейчас студия закрыта. Милана ответит вам ${nextOpen(t)}, я уже передала ей ваш вопрос.`;
 }
-function hoursNote() {
-  return isWorkTime() ? 'Сейчас рабочее время студии.'
-    : `Сейчас студия закрыта (нерабочее время или обед). Если нужен менеджер, скажи, что Милана ответит ${nextOpen()}.`;
+function hoursNote(list = []) {
+  if (isWorkTime()) return 'Сейчас рабочее время студии.';
+  // Про нерабочее время говорим один раз: если Аня уже писала клиенту за последние 3 часа, не повторяем
+  const said = list.some(m => m.role === 'bot' && Date.now() - (m.at || 0) < 3 * 3600e3);
+  return `Сейчас нерабочее время студии (Милана ответит ${nextOpen()}).` + (said ? ' Про нерабочее время ты уже говорила, не повторяй.'
+    : ' В этом ответе скажи, что сейчас нерабочее время, но ты можешь помочь: подсказать по заказу и предварительно оформить его для менеджера.');
 }
 
 /* ---------- запасной ИИ: Cloudflare Workers AI через воркер отдела маркетинга (бесплатно, без инструментов) ---------- */
@@ -532,6 +577,31 @@ async function runTool(name, input, { fs, phone, chat }) {
     const pick = all.sort(() => Math.random() - 0.5).slice(0, 3).map(x => String(x.blob || '').replace('fsblob:', '')).filter(Boolean);
     return { ok: true, sent: pick.length, media: pick, say: 'Фото уйдут клиенту сразу после твоего ответа. Напиши коротко, например: «Вот несколько наших работ».' };
   }
+  if (name === 'make_mockup') {
+    const photo = input.text ? null : await lastPhoto(chat.id);
+    if (!photo && !input.text) return { ok: false, note: 'Клиент ещё не присылал логотип картинкой. Попроси прислать логотип (лучше PNG или фото на светлом фоне) или назвать надпись.' };
+    const image = await makeMockup({ ...input, logo: photo });
+    const what = mockupText(input);
+    // Картинку сохраняем в учёт: если клиент согласует, она попадёт в заказ
+    const blob = await fs.create('blobs', { data: 'data:image/jpeg;base64,' + image.toString('base64'), type: 'image/jpeg', name: 'Визуализация Ани: ' + what, createdAt: Date.now() }).catch(() => null);
+    if (chat.id) await fs.patch('wa_chats/' + chat.id, { lastMockup: { blob: blob ? blob.id : '', what, at: Date.now(), approvedAt: 0 } }).catch(() => {});
+    chat.lastMockup = { blob: blob ? blob.id : '', what, at: Date.now(), approvedAt: 0 };
+    return { ok: true, image, made: what, say: 'Визуализация уйдёт клиенту после твоего ответа. Скажи, что это примерный вид, точный макет подготовит менеджер, и предложи согласовать сейчас или дождаться менеджера.' };
+  }
+  if (name === 'approve_mockup') {
+    const mk = chat.lastMockup;
+    if (!mk || !mk.at) return { ok: false, note: 'Визуализацию ты ещё не делала: сначала make_mockup.' };
+    const now = Date.now(), comment = String(input.comment || '').slice(0, 500);
+    const approved = { ...mk, approvedAt: now, comment };
+    if (chat.id) await fs.patch('wa_chats/' + chat.id, { lastMockup: approved }).catch(() => {});
+    chat.lastMockup = approved;
+    const order = phone ? (await openOrders(fs)).filter(o => normPhone(o.phone) === phone).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0] : null;
+    if (order) {
+      await attachMockup(fs, order, approved);
+      return { ok: true, order: String(order.num || '').padStart(3, '0'), say: 'Макет добавлен в заказ клиента. Скажи, что макет согласован и передан менеджеру.' };
+    }
+    return { ok: true, say: 'Макет согласован. Заказа ещё нет: если детали собраны и клиент согласен, оформи его (create_order) — макет попадёт в заказ сам.' };
+  }
   if (name === 'save_client_name') {
     const n = String(input.name || '').trim().slice(0, 60);
     if (n && chat.id) { await fs.patch('wa_chats/' + chat.id, { clientName: n }); chat.clientName = n; }
@@ -570,10 +640,26 @@ async function runTool(name, input, { fs, phone, chat }) {
       waSent: { new: now }, // клиенту бот уже сам написал, что заказ принят
       statusAt: { new: now }, history: [{ at: now, by: 'Аня (WhatsApp)', t: 'Заказ оформлен в WhatsApp' }],
     });
+    const mk = chat.lastMockup;
+    if (mk && mk.approvedAt && Date.now() - mk.approvedAt < 3 * 24 * 3600e3) {
+      const made = (await fs.query('orders', { where: { fieldFilter: { field: { fieldPath: 'num' }, op: 'EQUAL', value: { integerValue: String(num) } } }, limit: 1 }).catch(() => []))[0];
+      if (made) await attachMockup(fs, made, mk).catch(() => {});
+    }
     return { ok: true, num: String(num).padStart(3, '0'), deadline: fmtDue('', isoDate(due)) };
   }
   if (name === 'call_manager' || name === 'stay_silent') return { ok: true };
   return { error: 'unknown tool' };
+}
+
+// Согласованная визуализация → в заказ (раздел «Макет») и запись в историю заказа
+async function attachMockup(fs, order, mk) {
+  const files = Array.isArray(order.files) ? order.files : [];
+  if (mk.blob && !files.some(f => f.id === mk.blob)) {
+    files.push({ id: mk.blob, url: 'fsblob:' + mk.blob, durableUrl: 'fsblob:' + mk.blob, name: 'Визуализация Ани.jpg', type: 'image/jpeg', contentType: 'image/jpeg', fk: 'mockup' });
+  }
+  const history = [...(Array.isArray(order.history) ? order.history : []),
+    { at: Date.now(), by: 'Аня (WhatsApp)', t: 'Клиент согласовал визуализацию макета в WhatsApp: ' + mk.what + (mk.comment ? '. Пожелания: ' + mk.comment : '') }];
+  await fs.patch('orders/' + order.id, { files, history, updatedAt: Date.now() });
 }
 
 // Номер заказа из общего счётчика wa_anna/counter (тот же, что в учёте): два заказа не получат один номер
