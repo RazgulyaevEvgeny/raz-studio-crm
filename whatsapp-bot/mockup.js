@@ -80,14 +80,19 @@ async function photoBase(S, item, side, hex) {
   if (!file) { file = await load('white'); tint = !!file && h !== '#f3f3f1'; }
   if (!file) return null;
   if (tint) {
+    // Светотень берём размытой: на тёмном цвете иначе проступают квадратики сжатия исходного фото; края тоже сглаживаем
     const { data, info } = await S(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const dark = isDark(hex);
+    const lum = await S(file).flatten({ background: '#ffffff' }).greyscale().blur(dark ? 3 : 1.2).extractChannel(0).raw().toBuffer();
+    const alpha = await S(file).ensureAlpha().extractChannel(3).blur(dark ? 1.6 : 0.8).raw().toBuffer();
     const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
     let sum = 0, cnt = 0;
-    for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 200) { sum += data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11; cnt++; }
-    const mean = cnt ? sum / cnt : 230, k = isDark(hex) ? 0.55 : 1;
-    for (let i = 0; i < data.length; i += 4) {
-      const d = (data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11 - mean) * k;
-      for (let j = 0; j < 3; j++) data[i + j] = Math.max(0, Math.min(255, Math.round(c[j] + d)));
+    for (let i = 0; i < lum.length; i++) if (data[i * 4 + 3] > 200) { sum += lum[i]; cnt++; }
+    const mean = cnt ? sum / cnt : 230, k = dark ? 0.9 : 1;
+    for (let i = 0; i < lum.length; i++) {
+      const d = (lum[i] - mean) * k;
+      for (let j = 0; j < 3; j++) data[i * 4 + j] = Math.max(0, Math.min(255, Math.round(c[j] + d)));
+      data[i * 4 + 3] = alpha[i];
     }
     file = await S(data, { raw: info }).png().toBuffer();
   }
