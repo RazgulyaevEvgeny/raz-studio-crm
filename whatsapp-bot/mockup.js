@@ -60,6 +60,57 @@ export async function lastPhoto(chatId) {
   try { return await readFile(join(PHOTOS, safe(chatId) + '.img')); } catch (_) { return null; }
 }
 
+/* ---------- фото заготовок (blanks/) ---------- */
+// Настоящие фото пустых изделий: blanks/<изделие>_<black|white>_<front|back>.png (фон вырезан).
+// body — какая доля ширины фото приходится на корпус (без рукавов), chest — ширина груди в см,
+// front/back — где верх принта (доля высоты), left — центр и верх логотипа на груди слева
+const BLANKS = join(DIR, 'blanks');
+const PHOTO = {
+  tshirt: { chest: 60, body: 0.6, front: 0.2, back: 0.16, left: [0.63, 0.22] },
+  hoodie: { chest: 64, body: 0.6, front: 0.3, back: 0.34, left: [0.62, 0.33] },
+  sweatshirt: { chest: 62, body: 0.62, front: 0.2, back: 0.17, left: [0.62, 0.24] },
+};
+async function photoBase(S, item, side, hex) {
+  const p = PHOTO[item];
+  if (!p) return null;
+  const face = side === 'back' ? 'back' : 'front';
+  const load = tone => readFile(join(BLANKS, `${item}_${tone}_${face}.png`)).catch(() => null);
+  const h = hex.toLowerCase();
+  // Чёрное и белое — как на фото; любой другой цвет — перекрашиваем белую заготовку, сохраняя складки и тени ткани
+  let file = h === '#1f1f22' ? await load('black') : h === '#f3f3f1' ? await load('white') : null, tint = false;
+  if (!file) { file = await load('white'); tint = !!file && h !== '#f3f3f1'; }
+  if (!file) return null;
+  if (tint) {
+    // Светотень берём размытой: на тёмном цвете иначе проступают квадратики сжатия исходного фото; края тоже сглаживаем
+    const { data, info } = await S(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const dark = isDark(hex);
+    const lum = await S(file).flatten({ background: '#ffffff' }).greyscale().blur(dark ? 3 : 1.2).extractChannel(0).raw().toBuffer();
+    const alpha = await S(file).ensureAlpha().extractChannel(3).blur(dark ? 1.6 : 0.8).raw().toBuffer();
+    const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    let sum = 0, cnt = 0;
+    for (let i = 0; i < lum.length; i++) if (data[i * 4 + 3] > 200) { sum += lum[i]; cnt++; }
+    const mean = cnt ? sum / cnt : 230, k = dark ? 0.9 : 1;
+    for (let i = 0; i < lum.length; i++) {
+      const d = (lum[i] - mean) * k;
+      for (let j = 0; j < 3; j++) data[i * 4 + j] = Math.max(0, Math.min(255, Math.round(c[j] + d)));
+      data[i * 4 + 3] = alpha[i];
+    }
+    file = await S(data, { raw: info }).png().toBuffer();
+  }
+  const g = await S(file).resize(900, 900, { fit: 'inside' }).png().toBuffer();
+  const m = await S(g).metadata();
+  const gx = Math.round((W - m.width) / 2), gy = Math.round(30 + (900 - m.height) / 2);
+  const bg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#f7f7f5"/><stop offset="1" stop-color="#dedfdc"/></radialGradient></defs>
+    <rect width="${W}" height="${H}" fill="url(#bg)"/><ellipse cx="500" cy="${gy + m.height + 8}" rx="${Math.round(m.width * 0.38)}" ry="14" fill="#00000018"/>
+    <text x="500" y="1092" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#777">Разгуляев · студия брендирования · примерная визуализация</text></svg>`);
+  const base = await S(bg).png().composite([{ input: g, left: gx, top: gy }]).png().toBuffer();
+  const px = m.width * p.body / p.chest;
+  const cx = gx + m.width * (side === 'chest_left' ? p.left[0] : 0.5);
+  const top = gy + m.height * (side === 'chest_left' ? p.left[1] : p[face]);
+  return { base, px, cx, top: Math.round(top) };
+}
+
 /* ---------- изделия (SVG) ---------- */
 // Каждое изделие: силуэт, детали поверх и где печатать. px — сколько пикселей в 1 см (ширина груди ~52 см)
 const GARMENTS = {
@@ -118,8 +169,27 @@ function garmentSvg(item, side, hex) {
     <path d="${g.body(s)}" fill="url(#sh)"/><path d="${g.body(s)}" fill="url(#hl)"/>
     ${g.extra(s)}
   </g>
-  <text x="500" y="1092" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#777">RAZ Brand Studio · примерная визуализация</text>
+  <text x="500" y="1092" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#777">Разгуляев · студия брендирования · примерная визуализация</text>
 </svg>`;
+}
+
+/* ---------- размерные стрелки над принтом и справа от него ---------- */
+function sizeArrows(x, y, w, h, wcm, hcm, dark, emb, capY) {
+  // Стрелки полупрозрачные, чтобы не спорили с принтом; размер ещё раз крупно подписан рядом с изделием
+  const c = dark ? '#ffffff' : '#1d1d1f', pill = dark ? '#00000055' : '#ffffff66';
+  const cm = v => (v >= 10 ? Math.round(v) : Math.round(v * 2) / 2).toString().replace('.', ',') + ' см';
+  const gy = Math.max(30, y - 22), gx = Math.min(W - 30, x + w + 22);
+  const head = (x1, y1, dx, dy) => `<path d="M${x1} ${y1} l${-dx * 10 - dy * 6} ${-dy * 10 + dx * 6} M${x1} ${y1} l${-dx * 10 + dy * 6} ${-dy * 10 - dx * 6}" />`;
+  const label = (tx, ty, t, lw = 68) => `<rect x="${tx - lw / 2}" y="${ty - 15}" width="${lw}" height="24" rx="12" fill="${pill}"/><text x="${tx}" y="${ty + 3}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="15" fill="${c}" fill-opacity=".6">${t}</text>`;
+  const low = h < 40; // низкая надпись: высоту пишем в верхней подписи, без вертикальной стрелки
+  return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+  <g stroke="${c}" stroke-opacity=".45" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M${x} ${gy - 7} v14 M${x + w} ${gy - 7} v14 M${x} ${gy} H${x + w}"/>${head(x, gy, -1, 0)}${head(x + w, gy, 1, 0)}
+    ${low ? '' : `<path d="M${gx - 7} ${y} h14 M${gx - 7} ${y + h} h14 M${gx} ${y} V${y + h}"/>${head(gx, y, 0, -1)}${head(gx, y + h, 0, 1)}`}
+  </g>
+  ${low ? label(x + w / 2, gy - 20, cm(wcm).replace(' см', '') + ' × ' + cm(hcm), 120) : label(x + w / 2, gy - 20, cm(wcm)) + label(Math.min(W - 40, gx + 40), y + h / 2, cm(hcm))}
+  <text x="500" y="${capY}" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="26" fill="#3a3a3c">Размер ${emb ? 'вышивки' : 'принта'} ≈ ${cm(wcm).replace(' см', '')} × ${cm(hcm)}</text>
+</svg>`);
 }
 
 /* ---------- логотип: убираем однотонный фон, обрезаем поля ---------- */
@@ -172,24 +242,45 @@ export async function makeMockup(opts) {
   const hex = colorOf(opts.color);
   const g = GARMENTS[item];
 
+  // Сначала настоящее фото заготовки (blanks/), если для изделия его нет — рисованное изделие
+  const photo = opts.blank ? null : await photoBase(S, item, side, hex).catch(e => { console.log('Фото заготовки не подошло:', String(e?.message || e).slice(0, 200)); return null; });
   const base = opts.blank
     ? await S(opts.blank).rotate().resize(W, H, { fit: 'cover' }).png().toBuffer()
-    : await S(Buffer.from(garmentSvg(item, side, hex))).png().toBuffer();
+    : photo ? photo.base : await S(Buffer.from(garmentSvg(item, side, hex))).png().toBuffer();
 
   let logo = opts.logo ? await cleanLogo(opts.logo) : await S(textLogo(opts.text || 'LOGO', hex)).trim().png().toBuffer();
-  const [cw, ch] = side === 'chest_left' ? [Math.min(10, SIZES[size][0]), Math.min(10, SIZES[size][1])] : SIZES[size];
-  const box = { w: Math.round(cw * g.px), h: Math.round(ch * g.px) };
-  logo = await S(logo).resize(box.w, box.h, { fit: 'inside' }).png().toBuffer();
+  const emb = opts.method === 'embroidery';
+  let [cw, ch] = emb ? (side === 'chest_left' ? [8, 8] : [20, 20])
+    : side === 'chest_left' ? [Math.min(10, SIZES[size][0]), Math.min(10, SIZES[size][1])] : SIZES[size];
+  // Клиент назвал ширину в см — подгоняем по ширине (вышивка не больше 20×20 см)
+  if (+opts.width_cm > 0) { cw = Math.min(+opts.width_cm, emb ? 20 : 37); ch = emb ? 20 : 45; }
+  const px = photo ? photo.px : g.px;
+  const box = { w: Math.round(cw * px), h: Math.round(ch * px) };
+  logo = await S(logo).ensureAlpha().resize(box.w, box.h, { fit: 'inside' }).png().toBuffer();
   const meta = await S(logo).metadata();
-  const cx = side === 'chest_left' ? (item === 'shopper' ? 500 : 640) : 500;
-  const top = opts.blank ? Math.round(H * (side === 'back' ? 0.24 : 0.28)) : g.top[side];
-  const out = await S(base)
-    .composite([{ input: logo, left: Math.round(cx - meta.width / 2), top }])
-    .jpeg({ quality: 86 }).toBuffer();
-  return out;
+  const cx = photo ? photo.cx : side === 'chest_left' ? (item === 'shopper' ? 500 : 640) : 500;
+  const top = photo ? photo.top : opts.blank ? Math.round(H * (side === 'back' ? 0.24 : 0.28)) : g.top[side];
+  const left = Math.round(cx - meta.width / 2);
+  const layers = [{ input: logo, left, top }];
+  if (photo) {
+    // Складки ткани поверх принта: берём светотень фото под принтом и накладываем мягким светом — печать выглядит «на ткани»
+    const region = await S(base).extract({ left, top, width: meta.width, height: meta.height }).greyscale().raw().toBuffer({ resolveWithObject: true });
+    const avg = region.data.reduce((a, v) => a + v, 0) / region.data.length;
+    const alpha = await S(logo).extractChannel(3).raw().toBuffer();
+    const shadeBuf = Buffer.alloc(meta.width * meta.height * 4);
+    for (let i = 0; i < meta.width * meta.height; i++) {
+      const v = Math.max(0, Math.min(255, Math.round(128 + (region.data[i] - avg) * 1.8)));
+      shadeBuf[i * 4] = shadeBuf[i * 4 + 1] = shadeBuf[i * 4 + 2] = v; shadeBuf[i * 4 + 3] = alpha[i];
+    }
+    layers.push({ input: shadeBuf, raw: { width: meta.width, height: meta.height, channels: 4 }, left, top, blend: 'soft-light' });
+  }
+  // Правило Евгения: на мокапе стрелками показываем примерный размер принта или вышивки в см
+  layers.push({ input: sizeArrows(left, top, meta.width, meta.height, meta.width / px, meta.height / px, isDark(hex), emb, photo ? 1040 : 44), left: 0, top: 0 });
+  return S(base).composite(layers).jpeg({ quality: 88 }).toBuffer();
 }
 
 export function describe(o) {
   const size = SIZES[o.size] ? o.size : o.side === 'chest_left' ? 'A6' : 'A4';
-  return `${ITEMS[o.item] || ITEMS.tshirt}, ${String(o.color || 'чёрный').toLowerCase()}, ${SIDES[o.side] || SIDES.front}, DTF ${size}`;
+  const how = o.method === 'embroidery' ? `вышивка${+o.width_cm > 0 ? ' ~' + Math.min(+o.width_cm, 20) + ' см' : ''}` : +o.width_cm > 0 ? `DTF ~${o.width_cm} см` : `DTF ${size}`;
+  return `${ITEMS[o.item] || ITEMS.tshirt}, ${String(o.color || 'чёрный').toLowerCase()}, ${SIDES[o.side] || SIDES.front}, ${how}`;
 }
