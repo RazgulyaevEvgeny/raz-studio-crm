@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261019230000">
+<meta name="app-build" content="20261020130000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -639,6 +639,9 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .sum b.debt{color:var(--danger)}.sum b.ok{color:var(--ok)}
 .linkbtn{color:var(--blue);padding:0;font-weight:600;font-size:13.5px}
 .wa{color:var(--blue);font-size:13px;font-weight:600;text-decoration:none}
+.pub-row{display:flex;justify-content:space-between;align-items:center;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:-4px}
+.pub-a{display:inline-flex;gap:14px;align-items:center}
+.pub-a .linkbtn{font-size:13px;font-weight:600}
 .meta{font-size:12.5px;color:var(--muted)}
 .ed-foot{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:14px 24px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
 .ed-foot .r{display:flex;gap:8px;margin-left:auto}
@@ -2035,6 +2038,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         <div class="fld"><label for="f-paid">Оплачено</label><div class="suffix"><input id="f-paid" type="number" min="0" step="1" inputmode="numeric"><span>₸</span></div></div>
       </div>
       <div class="sum"><span>Остаток к оплате <button class="linkbtn" type="button" id="pay-full">· оплачено полностью</button></span><b id="f-rest">0 ₸</b></div>
+      <div class="pub-row" id="pub-row" hidden><span>Страница заказа для клиента: состав, сроки, оплата и статус</span><span class="pub-a"><a class="wa" id="pub-open" target="_blank" rel="noopener">Открыть ↗</a><button class="linkbtn" type="button" id="pub-copy">Скопировать ссылку</button></span></div>
       <div class="fld"><label for="f-notes">Заметки</label><textarea id="f-notes" placeholder="Макет согласован в WhatsApp, клиент заберёт сам и т.п."></textarea></div>
       <div class="ofiles" id="o-filebox">
         <div class="ofg"><div class="ofg-h"><b>Макет</b><button class="attach sm" type="button" data-oattach="mockup" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button></div><div class="files" id="o-files-mockup"></div><p class="hint ofg-empty" id="o-empty-mockup">Эскиз, исходник или фото от клиента.</p></div>
@@ -3312,6 +3316,7 @@ function openEditor(id,preset={}){
   renderDelete(false);renderSvcPick();
   document.querySelectorAll('#ed-form input,#ed-form select,#ed-form textarea').forEach(el=>el.disabled=!canWrite);
   $('ed-save').hidden=!canWrite;$('pay-full').hidden=!canWrite;
+  $('pub-row').hidden=id==='new'||isKaspiLedger(o)||(!o.pub&&!canWrite);$('pub-open').hidden=!o.pub;if(o.pub)$('pub-open').href=PUB_URL+o.pub;$('pub-copy').hidden=!canWrite;
   updateRest();setTab(preset.tab||'main');renderCost();priceHint();
   $('ed').hidden=false;edScrollReset.delete(edTab);$('pane-'+edTab).scrollTop=0;
   setTimeout(()=>{if(canWrite&&id==='new'&&!preset.req)$('f-client').focus()},50);
@@ -4423,10 +4428,13 @@ async function saveOrder(ev){
       const nextNum=await nextOrderNum();
       const ref=ordersCol.doc();const rq=edReq;
       if(rq){d.requestId=rq.id;d.source='toppers'}
-      await ref.set({...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||'',statusAt:{[d.status]:now},history:[{at:now,by:ROLE().name||'',t:'Заказ создан'}]});
+      if(!isKaspiLedger(d))d.pub=pubToken(); // ключ страницы заказа для клиента
+      const rec={...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||'',statusAt:{[d.status]:now},history:[{at:now,by:ROLE().name||'',t:'Заказ создан'}]};
+      await ref.set(rec);
+      if(d.pub)await pubWrite({id:ref.id,...rec});
       if(rq){try{await db.doc('requests/'+rq.id).update({status:'accepted',orderId:ref.id,orderNum:nextNum,handledBy:ROLE().name||'',handledAt:now})}catch(_){}}
       toast(rq?'Заявка подтверждена: заказ № '+String(nextNum).padStart(3,'0'):'Заказ № '+String(nextNum).padStart(3,'0')+' добавлен');
-      waNotify(ref.id);
+      waNotify(ref.id,'created'); // Аня пришлёт клиенту ссылку на страницу заказа
     }else{
       const id=editing,prev=edOrig;
       await db.doc('orders/'+id).update({...d,...histPatch(prev,d,now),updatedAt:now});
@@ -4451,6 +4459,40 @@ async function waNotify(id,event='status'){
   const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;if(!u||!id)return;
   try{await db.collection('wa_outbox').doc().set({orderId:id,event,at:Date.now(),by:u.email||''})}
   catch(_){/* правило для wa_outbox ещё не опубликовано — молча пропускаем */}
+}
+/* Страница заказа для клиента (order.html). Клиенту уходит ссылка с длинным случайным ключом,
+   а в order_pub/<ключ> лежит копия только нужных полей: состав, суммы, сроки и статус. Телефон, заметки,
+   себестоимость и расходы туда не попадают. Копия обновляется сама, когда заказ меняется (pubSync). */
+const PUB_URL='https://razgulyaevevgeny.github.io/raz-studio-crm/order.html#';
+function pubToken(){const a=new Uint8Array(24);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function pubOf(o){
+  const items=(o.items||[]).map(i=>({n:String(i.name||'').slice(0,160),q:+i.qty||0,u:i.unit||'шт',p:+i.price||0}));
+  const stAt={};Object.keys(o.statusAt||{}).sort().forEach(k=>stAt[k]=o.statusAt[k]);
+  return {num:String(o.num||0).padStart(3,'0'),st:o.status||'new',stAt,svc:o.service==='other'?(o.customService||''):((SV[o.service]||{}).label||''),
+    items,desc:items.length?'':String(o.desc||'').slice(0,400),total:o.price??null,paid:o.paid??null,
+    from:o.deadlineFrom||'',to:o.deadline||'',rec:o.receivedAt||'',gone:!!o.deletedAt};
+}
+function pubHash(p){const t=JSON.stringify(p);let h=5381;for(let i=0;i<t.length;i++)h=(h*33+t.charCodeAt(i))|0;return (h>>>0).toString(36)}
+async function pubWrite(o){
+  const p=pubOf(o),h=pubHash(p);
+  await db.doc('order_pub/'+o.pub).set({...p,upd:Date.now()});
+  if(o.pubHash!==h)await db.doc('orders/'+o.id).update({pubHash:h});
+}
+let pubBusy=false,pubOff=false;
+async function pubSync(){
+  if(pubBusy||pubOff||!canWrite||!db)return;pubBusy=true;
+  try{for(const o of ordersAll){if(o.pub&&o.pubHash!==pubHash(pubOf(o)))await pubWrite(o)}}
+  catch(e){pubOff=true;try{console.warn('order_pub: правила не опубликованы?',e)}catch(_){}} // не повторяем до перезагрузки
+  finally{pubBusy=false}
+}
+async function pubLink(){
+  const o=orders.find(x=>x.id===editing);if(!o)return;
+  try{
+    if(!o.pub){o.pub=pubToken();await db.doc('orders/'+o.id).update({pub:o.pub})}
+    await pubWrite(o);
+    const url=PUB_URL+o.pub;$('pub-open').href=url;$('pub-open').hidden=false;
+    await navigator.clipboard.writeText(url).then(()=>toast('Ссылка скопирована: вставьте её клиенту в WhatsApp'),()=>prompt('Ссылка на страницу заказа:',url));
+  }catch(e){toast(handleWriteError(e))}
 }
 async function delOrder(){
   const o=orders.find(x=>x.id===editing),now=Date.now(),who=ROLE().name||'';
@@ -4782,6 +4824,7 @@ $('ed-close').onclick=$('ed-cancel').onclick=$('ed-back').onclick=closeEditor;
 $('ed-form').addEventListener('submit',saveOrder);
 ['f-price','f-paid','f-phone'].forEach(id=>$(id).addEventListener('input',updateRest));
 
+$('pub-copy').onclick=pubLink;
 $('pay-full').onclick=()=>{$('f-paid').value=$('f-price').value||'';updateRest()};
 $('del-box').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;
   if(b.dataset.del==='ask')renderDelete(true);else if(b.dataset.del==='no')renderDelete(false);else delOrder();});
@@ -4901,7 +4944,7 @@ $('task-form').addEventListener('submit',async e=>{
     ordersRaw=ordersAll.filter(o=>!o.deletedAt); // удалённые лежат в корзине 30 дней
     trashOrders=ordersAll.filter(o=>o.deletedAt&&!isKaspiLedger(o));
     orders=ordersRaw.filter(o=>!isKaspiLedger(o)); // заказы Kaspi теперь в разделе Kaspi, в ведомости их не показываем
-    loaded=true;render();
+    loaded=true;render();setTimeout(pubSync,800);
     if(editing&&editing!=='new'&&!orders.find(o=>o.id===editing)){closeEditor();toast('Этот заказ удалили')}
   },fail);
   tasksCol.onSnapshot(snap=>{tasks=snap.docs.map(d=>({id:d.id,...d.data()}));tasksLoaded=true;render()},fail);
@@ -5920,7 +5963,7 @@ async function trashBack(id){
 }
 async function trashKill(id,silent){
   const o=trashOrders.find(x=>x.id===id);
-  try{await db.doc('orders/'+id).delete();if(assets&&o)(o.files||[]).forEach(f=>assets.delete(f.id).catch(()=>{}));if(!silent)toast('Заказ удалён навсегда')}
+  try{await db.doc('orders/'+id).delete();if(o&&o.pub)db.doc('order_pub/'+o.pub).delete().catch(()=>{});if(assets&&o)(o.files||[]).forEach(f=>assets.delete(f.id).catch(()=>{}));if(!silent)toast('Заказ удалён навсегда')}
   catch(e){if(!silent)toast(handleWriteError(e))}
   if(!silent)setTimeout(()=>trashOrders.length?openTrash():closeSheet(),300);
 }
