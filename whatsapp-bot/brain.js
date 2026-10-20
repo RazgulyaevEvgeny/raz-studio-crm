@@ -16,6 +16,7 @@ export const PAUSE_AFTER_MANAGER = 30;     // минут: бот молчит в
 // Правило Евгения (19.10): пишем клиенту только «принят в работу» (статус «Производство», без сроков) и «готов».
 // На «Новый», «Макет», «Выдан», «Отменён» и перенос срока уведомлений нет.
 const NOTICES = {
+  link:    'Ссылка на ваш заказ № {num}: здесь состав заказа, примерные сроки, оплата и статус.\n{link}',
   created: 'Ваш заказ № {num} оформлен. Состав заказа, примерные сроки, оплату и статус можно посмотреть здесь:\n{link}',
   prod:   'Ваш заказ № {num} принят в работу. Мы напишем, когда всё будет готово.',
   ready:  'Ваш заказ № {num} готов, можно забирать. Спасибо, что выбрали нас!',
@@ -263,22 +264,23 @@ export async function prepareNotice(fs, orderId, event) {
   if (o.service === 'kaspi' || (Array.isArray(o.kaspi) && o.kaspi.length)) return { skipped: 'kaspi' };
   const phone = normPhone(o.phone);
   if (!phone) return { skipped: 'нет телефона' };
-  const kind = event === 'delay' ? 'delay' : event === 'created' ? 'created' : o.status;
+  // link — менеджер нажал в ведомости «отправить ссылку»: шлём каждый раз, без отметки «уже отправлено»
+  const kind = event === 'delay' ? 'delay' : event === 'created' || event === 'link' ? event : o.status;
   let tpl = NOTICES[kind];
   if (!tpl) return { skipped: 'статус без уведомления' };
   const key = kind === 'delay' ? 'delay_' + o.deadline : kind;
   const sent = o.waSent && typeof o.waSent === 'object' ? o.waSent : {};
-  if (sent[key]) return { skipped: 'уже отправлено' };
+  if (sent[key] && kind !== 'link') return { skipped: 'уже отправлено' };
   const also = [];
   // Заказ сразу оформили «в производство» — одно сообщение вместо двух
   if (kind === 'created' && o.status === 'prod' && !sent.prod) { tpl = tpl.replace('оформлен.', 'оформлен и принят в работу.'); also.push('prod'); }
 
   // Ссылка на страницу заказа: при оформлении всегда, к «Производство» и «Готов» — если её ещё не присылали
   let link = '';
-  if (kind === 'created' || ((kind === 'prod' || kind === 'ready') && !sent.link)) {
+  if (kind === 'created' || kind === 'link' || ((kind === 'prod' || kind === 'ready') && !sent.link)) {
     link = await ensureOrderPage(fs, orderId, o).catch(e => { console.log(new Date().toLocaleString('ru-RU'), 'Страница заказа не обновилась:', e?.message || e); return ''; });
-    if (kind === 'created' && !link) return { skipped: 'страница заказа недоступна' };
-    if (link) { if (kind !== 'created') tpl += NOTICE_LINK; also.push('link'); }
+    if ((kind === 'created' || kind === 'link') && !link) return { skipped: 'страница заказа недоступна' };
+    if (link) { if (kind === 'prod' || kind === 'ready') tpl += NOTICE_LINK; if (kind !== 'link') also.push('link'); }
   }
 
   const chat = await fs.get('wa_chats/' + phone).catch(() => null);
@@ -288,7 +290,7 @@ export async function prepareNotice(fs, orderId, event) {
     link,
   };
   let text;
-  if (kind === 'created') {
+  if (kind === 'created' || kind === 'link') {
     // Правило представления: если Аня не представлялась клиенту 12 часов, сообщение начинается с INTRO
     const introduced = (chat?.messages || []).some(m => m.role === 'bot' && /Аня/.test(m.text || '') && Date.now() - (m.at || 0) < 12 * 3600e3);
     const body = view.client ? '{client}, ' + tpl.charAt(0).toLowerCase() + tpl.slice(1) : tpl;
@@ -312,7 +314,8 @@ async function ensureOrderPage(fs, orderId, o) {
 }
 // Только то, что видит клиент: без телефона, заметок, себестоимости и расходов
 function orderPublic(o) {
-  const items = (Array.isArray(o.items) ? o.items : []).map(i => ({ n: String(i.name || '').slice(0, 160), q: +i.qty || 0, u: i.unit || 'шт', p: +i.price || 0 }));
+  const items = (Array.isArray(o.items) ? o.items : []).map(i => ({ n: String(i.name || '').slice(0, 160), q: +i.qty || 0, u: i.unit || 'шт', p: +i.price || 0,
+    ...(i.made != null && i.made !== '' ? { m: Math.max(0, +i.made || 0) } : {}) })); // m — сколько уже изготовлено
   const stAt = {};
   Object.keys(o.statusAt || {}).sort().forEach(k => { stAt[k] = o.statusAt[k]; });
   return {

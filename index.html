@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261020130000">
+<meta name="app-build" content="20261020133000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -639,6 +639,14 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .sum b.debt{color:var(--danger)}.sum b.ok{color:var(--ok)}
 .linkbtn{color:var(--blue);padding:0;font-weight:600;font-size:13.5px}
 .wa{color:var(--blue);font-size:13px;font-weight:600;text-decoration:none}
+.cc-h{display:flex;align-items:center;gap:8px;min-width:0}
+.cc-h b{min-width:0}
+.sl-btn{display:inline-flex;align-items:center;gap:4px;flex:none;height:26px;padding:0 9px;border-radius:999px;background:var(--paper);color:var(--blue);font:600 12px var(--f);white-space:nowrap}
+.sl-btn svg{width:14px;height:14px}
+.sl-btn:not(.ask):not(.sent){width:26px;padding:0;justify-content:center}.sl-btn:not(.ask):not(.sent) span{display:none}
+.sl-btn:hover{box-shadow:inset 0 0 0 2px var(--blue)}
+.sl-btn.ask{background:var(--blue);color:#fff}
+.sl-btn.sent{color:var(--ok);background:transparent}
 .pub-row{display:flex;justify-content:space-between;align-items:center;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:-4px}
 .pub-a{display:inline-flex;gap:14px;align-items:center}
 .pub-a .linkbtn{font-size:13px;font-weight:600}
@@ -2811,7 +2819,7 @@ function renderOrders(){
     const sub=[o.phone,o.owner?'ведёт '+o.owner:''].filter(Boolean).join(', ')||'—';
     return `<div class="row item${CLOSED.has(o.status)?' closed':''}" data-id="${esc(o.id)}" tabindex="0">
       <div class="cell num">№ ${String(o.num||0).padStart(3,'0')}${receivedOf(o)?`<small>получен ${fmtDate(receivedOf(o))}</small>`:''}</div>
-      <div class="cell c-client"><b>${esc(o.client)}</b><small>${esc(sub)}</small></div>
+      <div class="cell c-client"><span class="cc-h"><b>${esc(o.client)}</b>${canWrite&&waLink(o.phone)&&!isKaspiLedger(o)?sendLinkBtn(o.id):''}</span><small>${esc(sub)}</small></div>
       <div class="cell c-svc"><b>${esc(svcLabel(o.service,o))}${esc(qty)}</b><small>${esc(itemsText(o)||o.desc||'')}</small></div>
       <div class="cell due"><b class="${due.cls}">${o.deadline?fmtRange(o.deadlineFrom,o.deadline):'—'}</b><small class="${due.cls}">${due.txt}</small></div>
       <div class="c-status"><span class="st-w" style="--sc:var(${s.c})"><select class="st" data-id="${esc(o.id)}" aria-label="Статус заказа №${o.num}" ${canWrite?'':'disabled'}>${STATUSES.map(x=>`<option value="${x.id}" data-c="${x.c}"${x.id===s.id?' selected':''}>${x.label}</option>`).join('')}</select></span></div>
@@ -4466,7 +4474,7 @@ async function waNotify(id,event='status'){
 const PUB_URL='https://razgulyaevevgeny.github.io/raz-studio-crm/order.html#';
 function pubToken(){const a=new Uint8Array(24);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function pubOf(o){
-  const items=(o.items||[]).map(i=>({n:String(i.name||'').slice(0,160),q:+i.qty||0,u:i.unit||'шт',p:+i.price||0}));
+  const items=(o.items||[]).map(i=>({n:String(i.name||'').slice(0,160),q:+i.qty||0,u:i.unit||'шт',p:+i.price||0,...(i.made!=null&&i.made!==''?{m:Math.max(0,+i.made||0)}:{})})); // m — сколько уже изготовлено
   const stAt={};Object.keys(o.statusAt||{}).sort().forEach(k=>stAt[k]=o.statusAt[k]);
   return {num:String(o.num||0).padStart(3,'0'),st:o.status||'new',stAt,svc:o.service==='other'?(o.customService||''):((SV[o.service]||{}).label||''),
     items,desc:items.length?'':String(o.desc||'').slice(0,400),total:o.price??null,paid:o.paid??null,
@@ -4484,6 +4492,25 @@ async function pubSync(){
   try{for(const o of ordersAll){if(o.pub&&o.pubHash!==pubHash(pubOf(o)))await pubWrite(o)}}
   catch(e){pubOff=true;try{console.warn('order_pub: правила не опубликованы?',e)}catch(_){}} // не повторяем до перезагрузки
   finally{pubBusy=false}
+}
+/* Кнопка в ведомости: Аня отправляет клиенту в WhatsApp ссылку на страницу заказа (через бота, задание link в wa_outbox).
+   Первое нажатие спрашивает «Отправить?», второе отправляет — чтобы клиенту не ушло сообщение случайным касанием. */
+const SEND_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7Z"/></svg>';
+const sendLinkBtn=id=>`<button type="button" class="sl-btn" data-sendlink="${esc(id)}" title="Отправить клиенту ссылку на заказ" aria-label="Отправить клиенту ссылку на заказ">${SEND_SVG}<span>Ссылка</span></button>`;
+async function sendLink(btn){
+  const id=btn.dataset.sendlink,o=orders.find(x=>x.id===id);if(!o||btn.disabled)return;
+  if(!btn.classList.contains('ask')){
+    btn.classList.add('ask');btn.querySelector('span').textContent='Отправить?';
+    clearTimeout(btn._t);btn._t=setTimeout(()=>{btn.classList.remove('ask');btn.querySelector('span').textContent='Ссылка'},4000);return;
+  }
+  clearTimeout(btn._t);btn.disabled=true;
+  try{
+    if(!o.pub){o.pub=pubToken();await db.doc('orders/'+o.id).update({pub:o.pub})}
+    await pubWrite(o);
+    await waNotify(o.id,'link');
+    toast('Аня отправит клиенту ссылку на заказ № '+String(o.num||0).padStart(3,'0')+' в WhatsApp');
+    btn.classList.remove('ask');btn.classList.add('sent');btn.querySelector('span').textContent='Отправлено';
+  }catch(e){toast(handleWriteError(e));btn.disabled=false;btn.classList.remove('ask');btn.querySelector('span').textContent='Ссылка'}
 }
 async function pubLink(){
   const o=orders.find(x=>x.id===editing);if(!o)return;
@@ -4831,7 +4858,7 @@ $('del-box').addEventListener('click',e=>{const b=e.target.closest('[data-del]')
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(csSel){csClose(true);return}if(dpEl){dpClose();return}if(!$('xed').hidden){closeX();return}if(!$('ped').hidden){closeP();return}if(!$('qed').hidden){closeQ();return}if(!$('copy-lb').hidden){$('copy-lb').hidden=true;return}if(!$('lb').hidden){closeViewer();return}if(!$('ed').hidden)closeEditor()});
 let qt;$('q').addEventListener('input',e=>{clearTimeout(qt);qt=setTimeout(()=>{view.q=e.target.value.trim();render()},120)});
 $('list').addEventListener('change',e=>{const s=e.target.closest('select.st');if(s)quickStatus(s.dataset.id,s.value)});
-$('list').addEventListener('click',e=>{if(e.target.closest('select,.cs-btn'))return;const r=e.target.closest('.row.item');if(r)openEditor(r.dataset.id)});
+$('list').addEventListener('click',e=>{const sl=e.target.closest('[data-sendlink]');if(sl){sendLink(sl);return}if(e.target.closest('select,.cs-btn'))return;const r=e.target.closest('.row.item');if(r)openEditor(r.dataset.id)});
 $('list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList.contains('item'))openEditor(e.target.dataset.id)});
 $('svc-sel').addEventListener('change',e=>{view.svc=e.target.value;render()});
 $('cal-prev').onclick=()=>{calM--;if(calM<0){calM=11;calY--}render()};
