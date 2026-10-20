@@ -323,7 +323,7 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
   }
   if (!messages.length) return {};
   // Жёсткое правило Евгения: в нерабочее время Аня отвечает на каждое сообщение клиента, молчать нельзя
-  const mustAnswer = !opts.followUp && !isWorkTime();
+  const mustAnswer = !opts.followUp && isClosed();
   const ctx = { fs, phone, chat, handoff: '', silent: '', media: null, mockup: null, mustAnswer };
   // Жёсткое правило: если Аня не представлялась клиенту последние 3 часа, первое её сообщение начинается с представления
   // (вставляем сами, не полагаясь на ИИ). Уведомления о заказе представлением не считаются
@@ -335,7 +335,7 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
     if (opts.followUp) return r;
     let t = typeof r === 'string' ? r : r.text;
     if (!t) return r;
-    const hours = !isWorkTime() && !hoursSaid && !/нерабоч|менеджер[^.!?]{0,40}(ответит|напишет|свяжется)/i.test(t);
+    const hours = isClosed() && !hoursSaid && !/нерабоч|менеджер[^.!?]{0,40}(ответит|напишет|свяжется)/i.test(t);
     const hasIntro = introduced || /Аня/.test(t.slice(0, 200));
     if (hasIntro && !hours) return r;
     let out;
@@ -560,6 +560,13 @@ export function isWorkTime(t = Date.now()) {
   const d = kzDate(t), h = d.getUTCHours() + d.getUTCMinutes() / 60, w = OPEN_H[d.getUTCDay()];
   return !!w && h >= w[0] && h < w[1] && !(h >= 13 && h < 14);
 }
+// Обед (13–14 в рабочий день): менеджер на месте после обеда, поэтому паузы Ани как днём (7 и 30 минут)
+export function isLunch(t = Date.now()) {
+  const d = kzDate(t), h = d.getUTCHours() + d.getUTCMinutes() / 60;
+  return !!OPEN_H[d.getUTCDay()] && h >= 13 && h < 14;
+}
+// Студия закрыта: вечер, ночь, выходные. Только тогда ночное правило — ответ через 15 секунд на каждое сообщение
+export function isClosed(t = Date.now()) { return !isWorkTime(t) && !isLunch(t); }
 // Когда менеджер сможет ответить: «сегодня после 14:00», «завтра после 11:00», «в понедельник после 11:00»
 export function nextOpen(t = Date.now()) {
   const d = kzDate(t), h = d.getUTCHours() + d.getUTCMinutes() / 60, w = OPEN_H[d.getUTCDay()];
@@ -585,6 +592,7 @@ export function busyText(t = Date.now()) {
 }
 function hoursNote(list = []) {
   if (isWorkTime()) return 'Сейчас рабочее время студии.';
+  if (isLunch()) return 'Сейчас обеденный перерыв в студии (13:00–14:00), менеджер ответит после 14:00. Про нерабочее время не говори.';
   // Про нерабочее время говорим один раз: если Аня уже писала клиенту за последние 3 часа, не повторяем
   const said = saidOffHours(list);
   const rule = ' Правило про «менеджер ответит»: это говорится ОДИН раз в начале разговора (программа сама добавит фразу в начало твоего первого ответа, ты её не пиши)' +
@@ -773,7 +781,7 @@ function managerNote(list) {
     (botAfter ? ' После него ты уже писала клиенту, не представляйся заново.'
       : botBefore ? ' Ты писала в этом чате раньше, но после менеджера ещё нет: если отвечаешь, коротко скажи, что менеджер сейчас занят заказом, поэтому отвечаешь ты.'
       : ' Ты в этой переписке ещё не писала: сначала реши, нужен ли ответ; если нужен — начни с представления, как сказано в инструкции.') +
-    (isWorkTime() ? '' : ' Сейчас нерабочее время: про «менеджер занят заказом» не говори, представься без этой фразы.');
+    (isClosed() ? ' Сейчас нерабочее время: про «менеджер занят заказом» не говори, представься без этой фразы.' : '');
 }
 
 /* ---------- чаты в учёте (коллекция wa_chats, документ на собеседника) ---------- */
