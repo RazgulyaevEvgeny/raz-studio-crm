@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261020133000">
+<meta name="app-build" content="20261020133500">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -4439,7 +4439,8 @@ async function saveOrder(ev){
       if(!isKaspiLedger(d))d.pub=pubToken(); // ключ страницы заказа для клиента
       const rec={...d,num:nextNum,createdAt:now,updatedAt:now,createdBy:ROLE().name||'',statusAt:{[d.status]:now},history:[{at:now,by:ROLE().name||'',t:'Заказ создан'}]};
       await ref.set(rec);
-      if(d.pub)await pubWrite({id:ref.id,...rec});
+      // страница для клиента не должна мешать сохранению: заказ уже записан, а копию учёт допишет сам (pubSync)
+      if(d.pub)await pubWrite({id:ref.id,...rec}).catch(e=>{try{console.warn('order_pub',e)}catch(_){}});
       if(rq){try{await db.doc('requests/'+rq.id).update({status:'accepted',orderId:ref.id,orderNum:nextNum,handledBy:ROLE().name||'',handledAt:now})}catch(_){}}
       toast(rq?'Заявка подтверждена: заказ № '+String(nextNum).padStart(3,'0'):'Заказ № '+String(nextNum).padStart(3,'0')+' добавлен');
       waNotify(ref.id,'created'); // Аня пришлёт клиенту ссылку на страницу заказа
@@ -4471,6 +4472,7 @@ async function waNotify(id,event='status'){
 /* Страница заказа для клиента (order.html). Клиенту уходит ссылка с длинным случайным ключом,
    а в order_pub/<ключ> лежит копия только нужных полей: состав, суммы, сроки и статус. Телефон, заметки,
    себестоимость и расходы туда не попадают. Копия обновляется сама, когда заказ меняется (pubSync). */
+const pubErr=e=>e&&(e.code==='invalid_argument'||e.code==='not_granted')?'Ссылка пока не работает: руководителю нужно опубликовать новые правила базы в Firebase.':handleWriteError(e);
 const PUB_URL='https://razgulyaevevgeny.github.io/raz-studio-crm/order.html#';
 function pubToken(){const a=new Uint8Array(24);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 function pubOf(o){
@@ -4510,7 +4512,7 @@ async function sendLink(btn){
     await waNotify(o.id,'link');
     toast('Аня отправит клиенту ссылку на заказ № '+String(o.num||0).padStart(3,'0')+' в WhatsApp');
     btn.classList.remove('ask');btn.classList.add('sent');btn.querySelector('span').textContent='Отправлено';
-  }catch(e){toast(handleWriteError(e));btn.disabled=false;btn.classList.remove('ask');btn.querySelector('span').textContent='Ссылка'}
+  }catch(e){toast(pubErr(e));btn.disabled=false;btn.classList.remove('ask');btn.querySelector('span').textContent='Ссылка'}
 }
 async function pubLink(){
   const o=orders.find(x=>x.id===editing);if(!o)return;
@@ -4519,7 +4521,7 @@ async function pubLink(){
     await pubWrite(o);
     const url=PUB_URL+o.pub;$('pub-open').href=url;$('pub-open').hidden=false;
     await navigator.clipboard.writeText(url).then(()=>toast('Ссылка скопирована: вставьте её клиенту в WhatsApp'),()=>prompt('Ссылка на страницу заказа:',url));
-  }catch(e){toast(handleWriteError(e))}
+  }catch(e){toast(pubErr(e))}
 }
 async function delOrder(){
   const o=orders.find(x=>x.id===editing),now=Date.now(),who=ROLE().name||'';
