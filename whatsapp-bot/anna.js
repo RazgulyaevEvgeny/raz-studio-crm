@@ -6,7 +6,7 @@ import { GEMINI_MODELS, SERVICE_NAMES, openOrders, normPhone } from './brain.js'
 
 const DAY = 24 * 3600e3;
 const MORNING = 9;                          // с 9 утра по Алматы готовим сводку на день (один раз, если компьютер включён)
-const ST = { new: 'новый', design: 'макет', prod: 'в производстве', ready: 'готов, ждёт клиента' };
+const ST = { new: 'новый', design: 'разработка', prod: 'в производстве', ready: 'готов, ждёт клиента' };
 
 const PERSONA = `Ты Аня, виртуальный помощник студии брендирования «Разгуляев». Ты отвечаешь клиентам в WhatsApp,
 а сейчас говоришь с командой студии в их учёте: руководитель Евгений и менеджер Милана.
@@ -281,7 +281,7 @@ async function addWatch(fs, w) {
   await fs.set('wa_anna/watches', { list });
 }
 
-const ORDER_ST = { new: 'новый', design: 'макет', prod: 'в производстве', ready: 'готов', done: 'выдан клиенту', cancel: 'отменён' };
+const ORDER_ST = { new: 'новый', design: 'разработка', prod: 'в производстве', ready: 'готов', done: 'выдан клиенту', cancel: 'отменён' };
 const WATCH_DAYS = 7;
 // Возвращает [{w, text}] — что пора отправить; сам список обновляет
 export async function checkWatches(fs) {
