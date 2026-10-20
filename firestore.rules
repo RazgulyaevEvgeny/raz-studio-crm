@@ -40,6 +40,13 @@ service cloud.firestore {
     // Менеджер Анна: сводка для главной, просьба обновить её и вопросы сотрудников
     match /wa_anna/{id} { allow read, write: if staff(); }
     match /wa_anna_q/{id} { allow read, write: if staff(); }
+    // Страница заказа для клиента (order.html): без входа можно открыть ОДИН документ, только зная его
+    // длинный случайный ключ из ссылки. Список документов без входа не отдаётся. Внутри только состав, суммы,
+    // сроки и статус; сами заказы (orders) с телефонами и заметками остаются закрыты.
+    match /order_pub/{key} {
+      allow get: if key.size() >= 24;
+      allow list, write: if staff();
+    }
     // Полный архив переписки WhatsApp (документ = чат за месяц) для аналитики Ани
     match /wa_log/{id} { allow read, write: if staff(); }
 

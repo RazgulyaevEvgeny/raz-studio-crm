@@ -2,6 +2,7 @@
 // Сама связь с WhatsApp — в bot.js. Здесь только то, что бот говорит и что пишет в учёт.
 // Нейросеть: бесплатный Google Gemini (GEMINI_API_KEY), либо платный Claude, если задан ANTHROPIC_API_KEY.
 
+import { randomBytes } from 'node:crypto';
 import Anthropic from '@anthropic-ai/sdk';
 import { makeMockup, lastPhoto, describe as mockupText, ITEMS as MOCKUP_ITEMS, SIDES as MOCKUP_SIDES, SIZES as MOCKUP_SIZES } from './mockup.js';
 
@@ -15,9 +16,15 @@ export const PAUSE_AFTER_MANAGER = 30;     // минут: бот молчит в
 // Правило Евгения (19.10): пишем клиенту только «принят в работу» (статус «Производство», без сроков) и «готов».
 // На «Новый», «Макет», «Выдан», «Отменён» и перенос срока уведомлений нет.
 const NOTICES = {
+  link:    'Ссылка на ваш заказ № {num}: здесь состав заказа, примерные сроки, оплата и статус.\n{link}',
+  created: 'Ваш заказ № {num} оформлен. Состав заказа, примерные сроки, оплату и статус можно посмотреть здесь:\n{link}',
   prod:   'Ваш заказ № {num} принят в работу. Мы напишем, когда всё будет готово.',
   ready:  'Ваш заказ № {num} готов, можно забирать. Спасибо, что выбрали нас!',
 };
+// Ссылку на страницу заказа ещё не присылали (заказ старый или оформлен Аней в WhatsApp) — добавляем к уведомлению
+const NOTICE_LINK = '\nСтатус заказа можно смотреть здесь: {link}';
+// Страница заказа для клиента на сайте учёта (order.html), ключ после # — длинный случайный
+export const ORDER_PAGE = 'https://razgulyaevevgeny.github.io/raz-studio-crm/order.html#';
 // Здороваемся и представляемся, только если с клиентом ещё не переписывались (за GREET_GAP); иначе пишем сразу по делу
 const NOTICE_HELLO = 'Здравствуйте, {client}! Это Аня, виртуальный помощник студии брендирования Разгуляев. ';
 const NOTICE_AGAIN = '{client}, ';
@@ -257,23 +264,66 @@ export async function prepareNotice(fs, orderId, event) {
   if (o.service === 'kaspi' || (Array.isArray(o.kaspi) && o.kaspi.length)) return { skipped: 'kaspi' };
   const phone = normPhone(o.phone);
   if (!phone) return { skipped: 'нет телефона' };
-  const kind = event === 'delay' ? 'delay' : o.status;
-  const tpl = NOTICES[kind];
+  // link — менеджер нажал в ведомости «отправить ссылку»: шлём каждый раз, без отметки «уже отправлено»
+  const kind = event === 'delay' ? 'delay' : event === 'created' || event === 'link' ? event : o.status;
+  let tpl = NOTICES[kind];
   if (!tpl) return { skipped: 'статус без уведомления' };
   const key = kind === 'delay' ? 'delay_' + o.deadline : kind;
   const sent = o.waSent && typeof o.waSent === 'object' ? o.waSent : {};
-  if (sent[key]) return { skipped: 'уже отправлено' };
+  if (sent[key] && kind !== 'link') return { skipped: 'уже отправлено' };
+  const also = [];
+  // Заказ сразу оформили «в производство» — одно сообщение вместо двух
+  if (kind === 'created' && o.status === 'prod' && !sent.prod) { tpl = tpl.replace('оформлен.', 'оформлен и принят в работу.'); also.push('prod'); }
+
+  // Ссылка на страницу заказа: при оформлении всегда, к «Производство» и «Готов» — если её ещё не присылали
+  let link = '';
+  if (kind === 'created' || kind === 'link' || ((kind === 'prod' || kind === 'ready') && !sent.link)) {
+    link = await ensureOrderPage(fs, orderId, o).catch(e => { console.log(new Date().toLocaleString('ru-RU'), 'Страница заказа не обновилась:', e?.message || e); return ''; });
+    if ((kind === 'created' || kind === 'link') && !link) return { skipped: 'страница заказа недоступна' };
+    if (link) { if (kind === 'prod' || kind === 'ready') tpl += NOTICE_LINK; if (kind !== 'link') also.push('link'); }
+  }
 
   const chat = await fs.get('wa_chats/' + phone).catch(() => null);
   const view = {
     client: String(chat?.clientName || o.client || '').trim(),
     num: String(o.num || '').padStart(3, '0'),
+    link,
   };
-  const talked = talkedRecently(chat?.messages || []);
-  const lead = view.client ? (talked ? NOTICE_AGAIN : NOTICE_HELLO) : (talked ? '' : NOTICE_HELLO.replace(', {client}', ''));
-  const body = lead === NOTICE_AGAIN ? tpl.charAt(0).toLowerCase() + tpl.slice(1) : tpl;
-  const text = (lead + body).replace(/\{(\w+)\}/g, (_, k) => view[k] ?? '');
-  return { text, phone, key, sent };
+  let text;
+  if (kind === 'created' || kind === 'link') {
+    // Правило представления: если Аня не представлялась клиенту 12 часов, сообщение начинается с INTRO
+    const introduced = (chat?.messages || []).some(m => m.role === 'bot' && /Аня/.test(m.text || '') && Date.now() - (m.at || 0) < 12 * 3600e3);
+    const body = view.client ? '{client}, ' + tpl.charAt(0).toLowerCase() + tpl.slice(1) : tpl;
+    text = ((introduced ? '' : INTRO + ' ') + body).replace(/\{(\w+)\}/g, (_, k) => view[k] ?? '');
+  } else {
+    const talked = talkedRecently(chat?.messages || []);
+    const lead = view.client ? (talked ? NOTICE_AGAIN : NOTICE_HELLO) : (talked ? '' : NOTICE_HELLO.replace(', {client}', ''));
+    const body = lead === NOTICE_AGAIN ? tpl.charAt(0).toLowerCase() + tpl.slice(1) : tpl;
+    text = (lead + body).replace(/\{(\w+)\}/g, (_, k) => view[k] ?? '');
+  }
+  return { text, phone, key, sent, also };
+}
+
+// Страница заказа для клиента: ключ в заказе (pub) и копия нужных полей в order_pub/<ключ>.
+// Учёт держит копию свежей сам (pubSync в index.html); бот обновляет её перед отправкой ссылки
+async function ensureOrderPage(fs, orderId, o) {
+  let t = o.pub;
+  if (!t) { t = randomBytes(24).toString('base64url'); await fs.patch('orders/' + orderId, { pub: t }); }
+  await fs.set('order_pub/' + t, { ...orderPublic(o), upd: Date.now() });
+  return ORDER_PAGE + t;
+}
+// Только то, что видит клиент: без телефона, заметок, себестоимости и расходов
+function orderPublic(o) {
+  const items = (Array.isArray(o.items) ? o.items : []).map(i => ({ n: String(i.name || '').slice(0, 160), q: +i.qty || 0, u: i.unit || 'шт', p: +i.price || 0,
+    ...(i.made != null && i.made !== '' ? { m: Math.max(0, +i.made || 0) } : {}) })); // m — сколько уже изготовлено
+  const stAt = {};
+  Object.keys(o.statusAt || {}).sort().forEach(k => { stAt[k] = o.statusAt[k]; });
+  return {
+    num: String(o.num || 0).padStart(3, '0'), st: o.status || 'new', stAt,
+    svc: o.service === 'other' ? (o.customService || '') : (SERVICE_NAMES[o.service] || ''),
+    items, desc: items.length ? '' : String(o.desc || '').slice(0, 400), total: o.price ?? null, paid: o.paid ?? null,
+    from: o.deadlineFrom || '', to: o.deadline || '', rec: o.receivedAt || '', gone: !!o.deletedAt,
+  };
 }
 
 // Была ли переписка с клиентом за последние GREET_GAP (тогда не здороваемся повторно)
@@ -283,7 +333,8 @@ function talkedRecently(list) {
 
 // После отправки: отметка в заказе (второй раз не уйдёт) и запись в чат клиента
 export async function markNoticeSent(fs, orderId, n, id = '') {
-  await fs.patch('orders/' + orderId, { waSent: { ...n.sent, [n.key]: Date.now() } }).catch(() => {});
+  const now = Date.now();
+  await fs.patch('orders/' + orderId, { waSent: { ...n.sent, [n.key]: now, ...Object.fromEntries((n.also || []).map(k => [k, now])) } }).catch(() => {});
   await appendChat(fs, n.phone, { role: 'notice', text: n.text, at: Date.now(), ...(id ? { id } : {}) }).catch(() => {});
 }
 
