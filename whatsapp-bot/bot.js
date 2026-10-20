@@ -24,7 +24,7 @@ import { dirname, join } from 'node:path';
 import makeWASocket, { downloadMediaMessage, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, isJidGroup, isJidBroadcast, isLidUser, isPnUser } from 'baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, describeImage, botToken, PAUSE_AFTER_MANAGER, isWorkTime, isClosed, busyText, workStartedAt } from './brain.js';
+import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, describeImage, botToken, PAUSE_AFTER_MANAGER, isWorkTime, isClosed, hasQuestion, busyText, workStartedAt } from './brain.js';
 import { startExtras } from './extras.js';
 import { makeDigest, digestDue, answerQuestions, makeInsights, insightsDue } from './anna.js';
 import { startNotify } from './notify.js';
@@ -196,6 +196,7 @@ async function answerNow(jid, chatId, phone) {
   const chat = await fs.get('wa_chats/' + chatId);
   if (!chat || chat.lastRole !== 'client') return; // пока ждали, ответил менеджер
   if (skipped(chat)) { log('Аня не отвечает в чате', phone || chatId, '— уже решила раньше:', chat.botSkipReason || ''); return; } // Аня уже решила, что на эти сообщения отвечать не нужно
+  if (!hasQuestion(chat.messages)) { log('Аня не отвечает в чате', phone || chatId, '— в сообщении клиента нет вопроса'); return; } // правило Евгения 20.10, днём и ночью
   // Менеджер недавно писал в этом чате: ждём конца паузы, и если клиенту так и не ответили — отвечаем сами
   // В нерабочее время Аня отвечает сразу; уступает только живому разговору менеджера (писал меньше 3 минут назад)
   let paused = (chat.botPausedUntil || 0) - Date.now();
@@ -317,7 +318,7 @@ async function checkWaitingChats() {
     });
     for (const chat of silent) {
       const age = Date.now() - (chat.lastAt || chat.updatedAt || 0);
-      if (pending.has(chat.id) || answering.has(chat.id) || age < replyDelay() || age > MAX_AGE || skipped(chat)) continue;
+      if (pending.has(chat.id) || answering.has(chat.id) || age < replyDelay() || age > MAX_AGE || skipped(chat) || !hasQuestion(chat.messages)) continue;
       const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
       if (!jid) continue;
       pending.set(chat.id, null); // отметка «уже отвечаем», чтобы следующая проверка не ответила второй раз
