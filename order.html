@@ -5,230 +5,279 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#4358ef">
-<title>Ваш заказ · Студия Разгуляев</title>
+<meta name="theme-color" content="#eef0f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0f24" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<title>Ваш заказ в студии Разгуляев</title>
 <meta property="og:title" content="Ваш заказ в студии брендирования Разгуляев">
-<meta property="og:description" content="Состав заказа, сроки, оплата и статус">
+<meta property="og:description" content="Статус, сроки, оплата и состав заказа">
 <link rel="icon" href="favicon.ico">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
-<!-- Страница заказа для клиента. Ссылку присылает Аня в WhatsApp, когда заказ оформлен.
-     Данные — копия из учёта в order_pub/<ключ из ссылки>: только состав, сроки, оплата и статус (без телефона и заметок). -->
+<!-- Страница заказа для клиента. Ссылку присылает Аня в WhatsApp.
+     Данные — копия из учёта в order_pub/<ключ из ссылки>: только состав, сроки, оплата и статус (без телефона и заметок).
+     Сделана в первую очередь под телефон: главное — бирка заказа со статусом и «строчкой» прогресса, внизу закреплена кнопка WhatsApp. -->
 <style>
 :root{
-  --blue:#4358ef; --blue-d:#3346d8; --ink:#0a0b14; --paper:#fff; --bg:#f2f3f9;
-  --tile:#f2f3f9; --muted:#5b5f7b; --line:#e3e5f1; --ok:#1f9d5a; --ok-bg:#e6f6ee; --danger:#e5484d; --danger-bg:#fdecec;
+  --brand:#4358ef; --brand-d:#2f3fd0;
+  --ink:#151843; --muted:#5f6386; --line:#e2e4f0;
+  --canvas:#eef0f7; --card:#ffffff; --soft:#f4f5fa;
+  --ok:#17905a; --ok-soft:#e3f5ec; --warn:#a35f00; --warn-soft:#fff2dc; --bad:#d63c43; --bad-soft:#fdeaea;
+  --tag:#4358ef; --tag-2:#3242d6; --on-tag:#ffffff;
   --f:"Inter Tight","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --fb:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px);
   color-scheme:light;
 }
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#eceefe; --muted:#a3a7c9; --line:#2a2e57; --canvas:#0d0f24; --card:#171a3a; --soft:#1f2348;
+  --ok:#43c487; --ok-soft:#163a2c; --warn:#f0a83a; --warn-soft:#3a2c14; --bad:#ff6a70; --bad-soft:#3d1c22;
+  color-scheme:dark;
+}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--fb);-webkit-font-smoothing:antialiased;min-height:100vh}
-a{color:var(--blue)}
-.wrap{max-width:980px;margin:0 auto;padding:20px 16px 40px}
-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:4px 0 20px}
-.logo{height:44px;width:auto;color:var(--blue);display:block}
-.hd-num{font:600 13px var(--f);color:var(--muted);text-align:right}
-h1{margin:0 0 4px;font:800 32px/1.05 var(--f);letter-spacing:-.04em}
-.lead{margin:0 0 20px;color:var(--muted)}
-.grid{display:grid;gap:16px}
-@media (min-width:860px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
-.card{background:var(--paper);border-radius:24px;padding:22px 22px 20px}
-.card h2{margin:0 0 14px;font:700 18px/1.2 var(--f);letter-spacing:-.02em}
-.now{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-.now-dot{width:44px;height:44px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;flex:none}
-.now-dot svg{width:22px;height:22px}
-.now b{display:block;font:800 22px/1.1 var(--f);letter-spacing:-.03em}
-.now small{color:var(--muted);font-size:13.5px}
-.steps{list-style:none;margin:0;padding:0}
-.step{display:grid;grid-template-columns:28px 1fr;gap:12px;position:relative;padding-bottom:18px}
-.step:last-child{padding-bottom:0}
-.step::before{content:"";position:absolute;left:13px;top:28px;bottom:0;width:2px;background:var(--line)}
-.step:last-child::before{display:none}
-.step.done::before{background:var(--blue)}
-.mk{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:var(--paper);display:grid;place-items:center;position:relative;z-index:1}
-.mk svg{width:14px;height:14px;display:none}
-.step.done .mk{background:var(--blue);border-color:var(--blue);color:#fff}
-.step.done .mk svg{display:block}
-.step.cur .mk{border-color:var(--blue);box-shadow:0 0 0 5px rgba(67,88,239,.15)}
-.step.cur .mk::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--blue)}
-.st-t{font:600 15.5px/28px var(--f);color:var(--muted)}
-.step.done .st-t,.step.cur .st-t{color:var(--ink)}
-.step.cur .st-t{font-weight:800}
-.st-d{display:block;font-size:13px;color:var(--muted);line-height:1.35;margin-top:-2px}
-.cancel{background:var(--danger-bg);color:#a3262a;border-radius:16px;padding:14px 16px;font-weight:500}
-.cancel b{display:block;font:800 20px var(--f);color:var(--danger);margin-bottom:2px}
-.due{margin-top:18px;background:var(--tile);border-radius:16px;padding:14px 16px;display:flex;gap:12px;align-items:center}
-.due svg{width:22px;height:22px;color:var(--blue);flex:none}
-.due b{display:block;font:700 16px var(--f)}
-.due small{color:var(--muted);font-size:13px}
+body{background:var(--canvas);color:var(--ink);font:400 15px/1.5 var(--fb);-webkit-font-smoothing:antialiased;min-height:100vh;min-height:100dvh}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+:focus-visible{outline:3px solid var(--brand);outline-offset:3px;border-radius:12px}
+.wrap{max-width:480px;margin:0 auto;padding:12px 16px calc(104px + var(--safe-b))}
+
+/* верхняя строка */
+.top{display:flex;align-items:center;justify-content:space-between;height:52px;margin-bottom:8px}
+.logo{height:32px;width:auto;color:var(--brand);display:block}
+@media (prefers-color-scheme:dark){.logo{color:#8f9bff}}
+.ibtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--card);color:var(--ink)}
+.ibtn svg{width:20px;height:20px}
+
+/* бирка заказа — главное на странице */
+.tag{position:relative;border-radius:28px;padding:22px 20px 18px;color:var(--on-tag);
+  background:linear-gradient(160deg,var(--tag) 0%,var(--tag-2) 100%);
+  -webkit-mask:radial-gradient(circle at calc(100% - 30px) 30px,transparent 7px,#000 7.5px);
+          mask:radial-gradient(circle at calc(100% - 30px) 30px,transparent 7px,#000 7.5px);
+  box-shadow:0 18px 40px -22px var(--tag-2)}
+.tag::after{content:"";position:absolute;right:18px;top:18px;width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.35);pointer-events:none}
+.tag[data-st="ready"]{--tag:#1f9d5a;--tag-2:#147a45}
+.tag[data-st="done"]{--tag:#3a3f6e;--tag-2:#262a52}
+.tag[data-st="cancel"]{--tag:#c8434a;--tag-2:#a12f36}
+.t-num{display:flex;align-items:baseline;gap:10px;font:600 14px var(--f);opacity:.85;padding-right:44px}
+.t-num button{font:inherit;color:inherit;border-bottom:1px dashed rgba(255,255,255,.5)}
+.t-st{margin:10px 0 4px;font:800 clamp(30px,9vw,38px)/1 var(--f);letter-spacing:-.035em}
+.t-note{margin:0;font-size:15px;opacity:.88;line-height:1.4}
+
+/* строчка прогресса: пять узелков, пройденные стежки прошиты */
+.seam{list-style:none;margin:22px -4px 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+.knot{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
+.knot::before{content:"";position:absolute;top:10px;left:calc(50% + 12px);right:calc(-50% + 12px);height:0;border-top:2px dashed rgba(255,255,255,.35)}
+.knot:last-child::before{display:none}
+.knot.done::before{border-top-style:solid;border-color:#fff;transform-origin:left;animation:sew .45s cubic-bezier(.3,.8,.3,1) both;animation-delay:calc(var(--i) * 140ms)}
+@keyframes sew{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.dot{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.45);display:grid;place-items:center;position:relative;z-index:1}
+.dot svg{width:12px;height:12px;display:none}
+.knot.done .dot{background:#fff;border-color:#fff;color:var(--tag-2)}
+.knot.done .dot svg{display:block}
+.knot.cur .dot{background:#fff;border-color:#fff}
+.knot.cur .dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--tag)}
+.knot.cur .dot::before{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(255,255,255,.55);animation:pulse 2.2s ease-out 3}
+@keyframes pulse{from{transform:scale(.7);opacity:1}to{transform:scale(1.35);opacity:0}}
+.knot span{font:600 11.5px/1.2 var(--f);opacity:.6;padding:0 2px;hyphens:manual}
+.knot.done span,.knot.cur span{opacity:1}
+.knot.cur span{font-weight:800}
+
+.t-eta{margin-top:20px;background:rgba(255,255,255,.14);border-radius:18px;padding:12px 14px;display:flex;gap:12px;align-items:center}
+.t-eta svg{width:22px;height:22px;flex:none;opacity:.9}
+.t-eta b{display:block;font:700 17px/1.2 var(--f)}
+.t-eta small{display:block;font-size:13px;opacity:.85;line-height:1.35;margin-top:2px}
+.t-eta a{margin-left:auto;flex:none;background:#fff;color:var(--tag-2);font:700 14px var(--f);border-radius:999px;padding:9px 14px}
+.t-made{margin-top:12px;display:flex;align-items:center;gap:10px;font-size:13.5px}
+.t-made b{font:700 14px var(--f);white-space:nowrap}
+.t-made i{flex:1;height:6px;border-radius:999px;background:rgba(255,255,255,.25);overflow:hidden}
+.t-made i em{display:block;height:100%;border-radius:inherit;background:#fff}
+
+.live{display:flex;align-items:center;justify-content:center;gap:7px;margin:12px 0 18px;font-size:12.5px;color:var(--muted)}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok)}
+
+/* секции */
+.sec{background:var(--card);border-radius:22px;padding:18px 18px 16px;margin-bottom:12px}
+.sec h2{margin:0 0 12px;font:700 17px/1.2 var(--f);letter-spacing:-.015em;display:flex;align-items:baseline;gap:8px}
+.sec h2 small{font:500 14px var(--fb);color:var(--muted)}
+
+/* оплата */
+.due-big{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.due-big span{font-size:14px;color:var(--muted)}
+.due-big b{display:block;font:800 30px/1.05 var(--f);letter-spacing:-.03em;margin-top:2px}
+.due-big.ok b{color:var(--ok)}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 11px;font:700 13px var(--f);white-space:nowrap}
+.pill svg{width:14px;height:14px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.paybar{height:8px;border-radius:999px;background:var(--soft);overflow:hidden;margin:14px 0 12px}
+.paybar em{display:block;height:100%;border-radius:inherit;background:var(--brand)}
+.paybar.full em{background:var(--ok)}
+.rows{display:grid;gap:6px}
+.r{display:flex;justify-content:space-between;gap:12px;font-size:14.5px}
+.r span{color:var(--muted)}
+.r b{font:600 15px var(--f);white-space:nowrap}
+details.how{margin-top:14px;border-top:1px solid var(--line);padding-top:4px}
+details.how summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:44px;font:600 14.5px var(--f);color:var(--brand)}
+@media (prefers-color-scheme:dark){details.how summary{color:#9aa5ff}}
+details.how summary::-webkit-details-marker{display:none}
+details.how summary svg{width:18px;height:18px;transition:transform .2s}
+details.how[open] summary svg{transform:rotate(180deg)}
+.ways{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.ways span{background:var(--soft);border-radius:10px;padding:7px 10px;font-size:13.5px}
+.how p{margin:0;font-size:13px;color:var(--muted);line-height:1.45}
+
+/* позиции */
 .items{list-style:none;margin:0;padding:0}
-.it{display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
-.it:first-child{padding-top:0}
-.it-n{font-weight:500;overflow-wrap:anywhere}
-.it-n small{display:block;color:var(--muted);font-size:13px;font-weight:400}
-.it-s{font:600 15px var(--f);white-space:nowrap}
-.mk-p{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--muted)}
-.mk-p i{flex:1;max-width:160px;height:6px;border-radius:999px;background:var(--line);overflow:hidden}
-.mk-p i b{display:block;height:100%;border-radius:inherit;background:var(--blue)}
-.mk-p.full{color:var(--ok)}.mk-p.full i b{background:var(--ok)}
-.made{margin:14px 0 0;display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted)}
-.made i{flex:1;height:8px;border-radius:999px;background:var(--line);overflow:hidden}
-.made i b{display:block;height:100%;border-radius:inherit;background:var(--blue)}
-.made span{white-space:nowrap}
-.made strong{color:var(--ink);font:700 14px var(--f)}
+.it{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px 0;border-top:1px solid var(--line)}
+.it:first-child{border-top:0;padding-top:0}
+.it-n{font:500 15px/1.35 var(--fb);overflow-wrap:anywhere}
+.it-s{font:700 15px var(--f);white-space:nowrap;text-align:right}
+.it-q{font-size:13px;color:var(--muted)}
+.it-m{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-top:6px;font-size:12.5px;color:var(--muted)}
+.it-m i{flex:1;height:5px;border-radius:999px;background:var(--soft);overflow:hidden}
+.it-m i em{display:block;height:100%;border-radius:inherit;background:var(--brand)}
+.it-m.full{color:var(--ok)}.it-m.full i em{background:var(--ok)}
 .desc{margin:0;white-space:pre-line;overflow-wrap:anywhere}
-.pay{margin-top:14px;display:grid;gap:8px}
-.pr{display:flex;justify-content:space-between;gap:12px}
-.pr span{color:var(--muted)}
-.pr b{font:600 15px var(--f);white-space:nowrap}
-.pr.tot b{font:800 20px var(--f);letter-spacing:-.02em}
-.pr.tot span{color:var(--ink);font-weight:600}
-.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font:600 13.5px var(--f)}
-.badge svg{width:14px;height:14px}
-.badge.ok{background:var(--ok-bg);color:var(--ok)}
-.badge.due{background:#fff3df;color:#9a5a00}
-.paynote{margin:12px 0 0;font-size:13px;color:var(--muted)}
-.contacts p{margin:0 0 6px}
-.contacts .muted{color:var(--muted);font-size:13.5px}
-.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:999px;font:600 15px var(--f);text-decoration:none}
-.btn.p{background:var(--blue);color:#fff}
-.btn.p:hover{background:var(--blue-d)}
-.btn.s{background:var(--tile);color:var(--ink)}
-.btn svg{width:18px;height:18px}
-.state{background:var(--paper);border-radius:24px;padding:36px 22px;text-align:center}
-.state b{display:block;font:800 22px var(--f);margin-bottom:6px}
-.state p{margin:0 auto;max-width:420px;color:var(--muted)}
-.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue);margin:0 auto 14px;animation:r 1s linear infinite}
-@keyframes r{to{transform:rotate(360deg)}}
-footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12.5px}
-@media (max-width:560px){
-  /* телефон: всё компактнее, шаги статуса в одну строку */
-  body{font-size:14px}
-  .wrap{padding:10px 12px 24px}
-  header{padding:0 0 10px}
-  .logo{height:30px}
-  .hd-num{font-size:12px}
-  h1{font-size:23px;margin-bottom:2px}
-  .lead{font-size:13px;margin-bottom:12px}
-  .grid{gap:10px}
-  .card{border-radius:18px;padding:14px 14px 13px}
-  .card h2{font-size:15px;margin-bottom:10px}
-  .now{gap:10px;margin-bottom:14px}
-  .now-dot{width:36px;height:36px}
-  .now-dot svg{width:18px;height:18px}
-  .now b{font-size:18px}
-  .now small{font-size:12.5px;line-height:1.35;display:block}
-  .steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
-  .step{grid-template-columns:1fr;justify-items:center;text-align:center;gap:5px;padding:0}
-  .step::before{left:50%;width:100%;top:11px;bottom:auto;height:2px}
-  .mk{width:24px;height:24px}
-  .mk svg{width:12px;height:12px}
-  .step.cur .mk{box-shadow:0 0 0 4px rgba(67,88,239,.15)}
-  .step.cur .mk::after{width:8px;height:8px}
-  .step>span:last-child{display:block;width:100%}
-  .st-t{display:block;font-size:11px;line-height:1.2}
-  .st-d{display:none}
-  .made{margin-top:12px;font-size:12.5px;gap:8px}
-  .made strong{font-size:13px}
-  .mk-p{font-size:11.5px;margin-top:4px}
-  .due{margin-top:14px;padding:10px 12px;border-radius:14px;gap:10px}
-  .due svg{width:18px;height:18px}
-  .due b{font-size:14.5px}
-  .due small{font-size:12px;line-height:1.35;display:block}
-  .cancel{padding:10px 12px;font-size:13px}
-  .it{padding:8px 0;gap:10px}
-  .it-n{font-size:14px;line-height:1.3}
-  .it-n small{font-size:12px}
-  .it-s{font-size:14px}
-  .pay{margin-top:10px;gap:4px}
-  .pr b{font-size:14px}
-  .pr.tot b{font-size:17px}
-  .badge{padding:4px 10px;font-size:12.5px;margin-top:4px}
-  .paynote{font-size:12px;line-height:1.4;margin-top:8px}
-  .contacts p{font-size:13.5px;margin-bottom:2px}
-  .contacts .muted{font-size:12.5px}
-  .btns{gap:8px;margin-top:10px}
-  .btn{flex:1 1 0;min-height:40px;padding:0 10px;font-size:13.5px}
-  .btn svg{width:16px;height:16px}
-  footer{margin-top:14px;font-size:11.5px}
-  .hm{display:none}
-}
-@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.tot{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);margin-top:4px;padding-top:12px}
+.tot span{font:600 15px var(--f)}
+.tot b{font:800 20px var(--f);letter-spacing:-.02em}
+
+/* история */
+.hist{list-style:none;margin:0;padding:0}
+.h{display:grid;grid-template-columns:14px 1fr auto;gap:12px;align-items:center;padding:7px 0;position:relative}
+.h::before{content:"";position:absolute;left:6px;top:50%;height:100%;border-left:2px solid var(--line)}
+.h:last-child::before{display:none}
+.h i{width:14px;height:14px;border-radius:50%;background:var(--brand);position:relative;z-index:1;box-shadow:0 0 0 3px var(--card)}
+.h:last-child i{background:var(--card);border:3px solid var(--brand)}
+.h b{font:600 14.5px var(--f)}
+.h small{font-size:13px;color:var(--muted);white-space:nowrap}
+
+/* студия */
+.open{display:flex;align-items:center;gap:8px;font:600 14.5px var(--f);margin-bottom:10px}
+.open::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.open.on::before{background:var(--ok);box-shadow:0 0 0 4px var(--ok-soft)}
+.open.on{color:var(--ok)}
+.addr{display:flex;gap:12px;align-items:center;background:var(--soft);border-radius:16px;padding:12px 14px;min-height:56px}
+.addr svg{width:22px;height:22px;color:var(--brand);flex:none}
+@media (prefers-color-scheme:dark){.addr svg{color:#9aa5ff}}
+.addr b{display:block;font:600 15px var(--f)}
+.addr small{color:var(--muted);font-size:13px}
+.addr .go{margin-left:auto;width:20px;height:20px;color:var(--muted)}
+.hours{margin:12px 0 0;font-size:13.5px;color:var(--muted);line-height:1.5}
+
+/* закреплённая кнопка */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:10px 16px calc(10px + var(--safe-b));
+  background:linear-gradient(to top,var(--canvas) 70%,transparent)}
+.dock>div{max-width:448px;margin:0 auto;display:flex;gap:10px}
+.cta{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:18px;background:#1fa855;color:#fff;font:700 16.5px var(--f);box-shadow:0 10px 24px -12px #1fa855}
+.cta:active,.call:active{transform:scale(.98)}
+.cta svg{width:22px;height:22px}
+.call{width:56px;height:56px;border-radius:18px;background:var(--card);display:grid;place-items:center;flex:none;color:var(--ink)}
+.call svg{width:22px;height:22px}
+
+/* состояния */
+.sk{border-radius:28px;height:330px;background:linear-gradient(100deg,var(--card) 30%,var(--soft) 50%,var(--card) 70%) 0 0/300% 100%;animation:sk 1.4s linear infinite}
+.sk.s2{height:150px;border-radius:22px;margin-top:12px}
+@keyframes sk{to{background-position:-150% 0}}
+.empty{background:var(--card);border-radius:28px;padding:36px 22px;text-align:center}
+.empty b{display:block;font:800 22px var(--f);margin-bottom:6px}
+.empty p{margin:0;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(92px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:var(--canvas);border-radius:14px;padding:10px 16px;font:600 14px var(--f);z-index:9;white-space:nowrap}
+footer{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
+@media (min-width:700px){.wrap{padding-top:28px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <a href="https://www.instagram.com/raz.brandstudio/" aria-label="Студия брендирования Разгуляев"><svg class="logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="44.1 51.2 200.6 60.6" role="img" aria-label="Студия брендирования Разгуляев"><defs><g id="g0_0"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.3 -7.9 3 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.8 -8.7 7.5 -8.3C8.1 -8 8.6 -7.6 8.9 -7L7.7 -6.2C7.4 -6.6 7.1 -6.9 6.7 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.8 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.7C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.8 -1.3 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.7 -1.6C7.1 -1.8 7.4 -2.1 7.7 -2.5L8.9 -1.8C8.6 -1.2 8.1 -0.7 7.5 -0.4C6.8 -0.1 6.1 0.1 5.3 0.1Z"/></g><g id="g0_1"><path d="M 8 -7.4L4.8 -7.4L4.8 0L3.3 0L3.3 -7.4L0.1 -7.4L0.1 -8.7L8 -8.7Z"/></g><g id="g0_2"><path d="M 9.3 -8.7L5.1 0.9C4.7 1.8 4.3 2.4 3.8 2.8C3.3 3.1 2.7 3.3 2 3.3C1.5 3.3 1.1 3.2 0.7 3.1C0.3 3 0 2.8 -0.3 2.5L0.4 1.3C0.9 1.7 1.4 2 2 2C2.4 2 2.7 1.8 2.9 1.6C3.2 1.4 3.4 1.1 3.6 0.6L3.9 0L0.1 -8.7L1.7 -8.7L4.8 -1.7L7.8 -8.7Z"/></g><g id="g0_3"><path d="M 10.4 -1.4L10.4 2L8.9 2L8.9 0L1.6 0L1.6 2L0.1 2L0.1 -1.4L0.6 -1.4C1.2 -1.4 1.5 -1.8 1.8 -2.6C2 -3.3 2.1 -4.4 2.2 -5.8L2.3 -8.7L9.1 -8.7L9.1 -1.4ZM 3.6 -5.7C3.6 -4.6 3.5 -3.7 3.4 -2.9C3.2 -2.2 3 -1.7 2.6 -1.4L7.5 -1.4L7.5 -7.4L3.7 -7.4Z"/></g><g id="g0_4"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -2.4L8.5 -8.7L9.9 -8.7L9.9 0L8.3 0L8.3 -6.4L3 0L1.5 0Z"/></g><g id="g0_5"><path d="M 8.5 -8.7L8.5 0L7.1 0L7.1 -2.8L4.4 -2.8L2.5 0L0.8 0L2.9 -3C2.3 -3.2 1.8 -3.5 1.4 -4C1.1 -4.4 0.9 -5 0.9 -5.7C0.9 -6.7 1.2 -7.4 1.9 -8C2.6 -8.5 3.5 -8.7 4.7 -8.7ZM 2.5 -5.6C2.5 -5 2.7 -4.6 3 -4.3C3.4 -4 4 -3.9 4.7 -3.9L7.1 -3.9L7.1 -7.4L4.8 -7.4C3.2 -7.4 2.5 -6.8 2.5 -5.6Z"/></g><g id="g0_6"><path d="M 6 -8.5C6.8 -8.5 7.5 -8.3 8.2 -7.9C8.8 -7.5 9.3 -7 9.7 -6.4C10 -5.7 10.2 -5 10.2 -4.2C10.2 -3.3 10 -2.6 9.6 -1.9C9.3 -1.3 8.7 -0.8 8 -0.4C7.3 -0.1 6.6 0.1 5.7 0.1C4.2 0.1 3 -0.4 2.2 -1.4C1.4 -2.4 1 -3.8 1 -5.7C1 -7.5 1.4 -8.9 2.1 -9.9C2.9 -10.9 4 -11.6 5.5 -11.9L9.5 -12.8L9.7 -11.4L6.1 -10.6C4.9 -10.3 4.1 -9.9 3.5 -9.3C2.9 -8.7 2.6 -7.8 2.5 -6.7C2.9 -7.2 3.4 -7.7 4 -8C4.6 -8.3 5.3 -8.5 6 -8.5ZM 5.7 -1.2C6.3 -1.2 6.8 -1.3 7.2 -1.6C7.6 -1.8 8 -2.2 8.2 -2.6C8.5 -3.1 8.6 -3.6 8.6 -4.1C8.6 -5 8.3 -5.7 7.8 -6.2C7.3 -6.8 6.6 -7 5.7 -7C4.8 -7 4.2 -6.8 3.6 -6.2C3.1 -5.7 2.8 -5 2.8 -4.1C2.8 -3.6 2.9 -3.1 3.2 -2.6C3.4 -2.2 3.8 -1.8 4.2 -1.6C4.7 -1.3 5.2 -1.2 5.7 -1.2Z"/></g><g id="g0_7"><path d="M 6.2 -8.8C7 -8.8 7.8 -8.6 8.4 -8.3C9.1 -7.9 9.6 -7.4 10 -6.7C10.4 -6 10.6 -5.2 10.6 -4.4C10.6 -3.5 10.4 -2.7 10 -2C9.6 -1.4 9.1 -0.8 8.4 -0.5C7.8 -0.1 7 0.1 6.2 0.1C5.5 0.1 5 0 4.4 -0.3C3.9 -0.5 3.5 -0.9 3.1 -1.3L3.1 3.2L1.5 3.2L1.5 -8.7L3 -8.7L3 -7.4C3.4 -7.8 3.8 -8.2 4.4 -8.5C4.9 -8.7 5.5 -8.8 6.2 -8.8ZM 6 -1.3C6.6 -1.3 7.1 -1.4 7.5 -1.7C8 -1.9 8.3 -2.3 8.6 -2.8C8.9 -3.2 9 -3.8 9 -4.4C9 -5 8.9 -5.5 8.6 -6C8.3 -6.5 8 -6.8 7.5 -7.1C7.1 -7.3 6.6 -7.4 6 -7.4C5.5 -7.4 5 -7.3 4.5 -7C4.1 -6.8 3.7 -6.4 3.5 -6C3.2 -5.5 3.1 -5 3.1 -4.4C3.1 -3.8 3.2 -3.2 3.5 -2.8C3.7 -2.3 4.1 -1.9 4.5 -1.7C5 -1.4 5.5 -1.3 6 -1.3Z"/></g><g id="g0_8"><path d="M 9.4 -4.3C9.4 -4.2 9.4 -4 9.4 -3.8L2.3 -3.8C2.4 -3.1 2.7 -2.5 3.3 -2C3.9 -1.5 4.6 -1.3 5.5 -1.3C6.5 -1.3 7.4 -1.6 8 -2.3L8.9 -1.3C8.5 -0.9 8 -0.5 7.4 -0.3C6.8 0 6.1 0.1 5.4 0.1C4.5 0.1 3.7 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.5 -8.6 4.3 -8.8 5.1 -8.8C6 -8.8 6.7 -8.6 7.3 -8.2C8 -7.9 8.5 -7.3 8.9 -6.7C9.3 -6 9.4 -5.2 9.4 -4.3ZM 5.1 -7.5C4.3 -7.5 3.7 -7.3 3.2 -6.8C2.7 -6.3 2.4 -5.7 2.3 -5L7.9 -5C7.8 -5.7 7.5 -6.3 7 -6.8C6.5 -7.2 5.9 -7.5 5.1 -7.5Z"/></g><g id="g0_9"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -5L8.1 -5L8.1 -8.7L9.7 -8.7L9.7 0L8.1 0L8.1 -3.7L3.1 -3.7L3.1 0L1.5 0Z"/></g><g id="g0_10"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 2.9 -0.5C2.2 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.9 -8.6 7.6 -8.2C8.3 -7.9 8.8 -7.3 9.2 -6.7C9.6 -6 9.8 -5.2 9.8 -4.4C9.8 -3.5 9.6 -2.7 9.2 -2.1C8.8 -1.4 8.3 -0.9 7.6 -0.5C6.9 -0.1 6.1 0.1 5.3 0.1ZM 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.8 -1.7C7.2 -1.9 7.6 -2.3 7.8 -2.8C8.1 -3.2 8.2 -3.8 8.2 -4.4C8.2 -5 8.1 -5.5 7.8 -6C7.6 -6.5 7.2 -6.8 6.8 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.7 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.8C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.7 -1.3 5.3 -1.3Z"/></g><g id="g0_11"><path d="M 7.5 -4.5C8.6 -4.2 9.2 -3.5 9.2 -2.4C9.2 -1.6 8.9 -1 8.3 -0.6C7.7 -0.2 6.9 0 5.7 0L1.5 0L1.5 -8.7L5.6 -8.7C6.6 -8.7 7.4 -8.6 8 -8.2C8.6 -7.8 8.9 -7.2 8.9 -6.5C8.9 -6 8.8 -5.6 8.5 -5.3C8.3 -5 7.9 -4.7 7.5 -4.5ZM 3.1 -5L5.5 -5C6.1 -5 6.5 -5.1 6.8 -5.3C7.2 -5.5 7.3 -5.8 7.3 -6.3C7.3 -7.1 6.7 -7.5 5.5 -7.5L3.1 -7.5ZM 5.6 -1.2C6.3 -1.2 6.8 -1.3 7.1 -1.5C7.4 -1.7 7.6 -2.1 7.6 -2.5C7.6 -3 7.5 -3.3 7.2 -3.5C6.9 -3.7 6.4 -3.8 5.7 -3.8L3.1 -3.8L3.1 -1.2Z"/></g><g id="g0_12"><path d="M 4.7 -8.8C5.9 -8.8 6.8 -8.5 7.4 -7.9C8.1 -7.3 8.4 -6.5 8.4 -5.3L8.4 0L6.9 0L6.9 -1.2C6.6 -0.7 6.3 -0.4 5.8 -0.2C5.3 0 4.7 0.1 4 0.1C3.1 0.1 2.3 -0.1 1.7 -0.6C1.1 -1.1 0.8 -1.7 0.8 -2.5C0.8 -3.2 1.1 -3.9 1.6 -4.3C2.2 -4.8 3.1 -5 4.3 -5L6.8 -5L6.8 -5.3C6.8 -6 6.6 -6.6 6.2 -6.9C5.8 -7.3 5.2 -7.5 4.5 -7.5C4 -7.5 3.5 -7.4 3 -7.2C2.5 -7 2 -6.8 1.7 -6.5L1 -7.7C1.5 -8.1 2 -8.3 2.7 -8.5C3.3 -8.7 3.9 -8.8 4.7 -8.8ZM 4.3 -1.1C4.9 -1.1 5.4 -1.3 5.9 -1.5C6.3 -1.8 6.6 -2.2 6.8 -2.7L6.8 -3.9L4.4 -3.9C3 -3.9 2.4 -3.4 2.4 -2.5C2.4 -2.1 2.5 -1.7 2.9 -1.5C3.2 -1.2 3.7 -1.1 4.3 -1.1Z"/></g><g id="g1_0"><path d="M 6.4 -11.5C7.5 -11.5 8.3 -11.4 9.1 -11C9.8 -10.7 10.4 -10.2 10.8 -9.6C11.2 -9 11.5 -8.2 11.5 -7.4C11.5 -6.5 11.2 -5.8 10.8 -5.1C10.4 -4.5 9.8 -4 9.1 -3.7C8.3 -3.4 7.5 -3.2 6.4 -3.2L4.1 -3.2L4.1 0L1.4 0L1.4 -11.5ZM 6.3 -5.4C7.1 -5.4 7.7 -5.5 8.1 -5.9C8.5 -6.2 8.7 -6.7 8.7 -7.4C8.7 -8 8.5 -8.5 8.1 -8.8C7.7 -9.2 7.1 -9.4 6.3 -9.4L4.1 -9.4L4.1 -5.4Z"/></g><g id="g1_1"><path d="M 4.7 -9C6.1 -9 7.1 -8.7 7.9 -8C8.6 -7.4 9 -6.4 9 -5.1L9 0L6.6 0L6.6 -1.1C6.1 -0.3 5.2 0.1 3.8 0.1C3.2 0.1 2.6 0 2.1 -0.2C1.6 -0.4 1.2 -0.8 0.9 -1.2C0.7 -1.6 0.5 -2 0.5 -2.6C0.5 -3.4 0.8 -4 1.5 -4.5C2.1 -5 3 -5.2 4.3 -5.2L6.4 -5.2C6.4 -5.8 6.2 -6.2 5.9 -6.5C5.5 -6.8 5 -7 4.3 -7C3.9 -7 3.4 -6.9 3 -6.7C2.5 -6.6 2.1 -6.4 1.8 -6.1L0.9 -7.9C1.3 -8.3 1.9 -8.5 2.6 -8.7C3.3 -8.9 4 -9 4.7 -9ZM 4.5 -1.6C4.9 -1.6 5.3 -1.7 5.7 -1.9C6 -2.1 6.2 -2.4 6.4 -2.8L6.4 -3.7L4.6 -3.7C3.6 -3.7 3 -3.4 3 -2.7C3 -2.3 3.2 -2.1 3.4 -1.9C3.7 -1.7 4 -1.6 4.5 -1.6Z"/></g><g id="g1_2"><path d="M 7 -4.6C7.5 -4.5 7.9 -4.2 8.2 -3.9C8.5 -3.5 8.7 -3.1 8.7 -2.6C8.7 -2.1 8.5 -1.6 8.1 -1.2C7.7 -0.7 7.2 -0.4 6.5 -0.2C5.8 0.1 5.1 0.2 4.2 0.2C3.5 0.2 2.8 0.1 2.2 0C1.5 -0.2 0.9 -0.4 0.3 -0.7L1 -2.5C1.9 -2 3 -1.8 4.1 -1.8C4.7 -1.8 5.2 -1.9 5.5 -2.1C5.9 -2.3 6.1 -2.5 6.1 -2.9C6.1 -3.1 5.9 -3.4 5.7 -3.5C5.4 -3.7 5.1 -3.7 4.6 -3.7L2.8 -3.7L2.8 -5.3L4.4 -5.3C4.9 -5.3 5.2 -5.4 5.4 -5.5C5.7 -5.7 5.8 -5.9 5.8 -6.2C5.8 -6.5 5.7 -6.7 5.4 -6.8C5.1 -7 4.6 -7.1 4.1 -7.1C3.2 -7.1 2.3 -6.9 1.3 -6.5L0.6 -8.2C1.9 -8.8 3.1 -9 4.2 -9C5 -9 5.7 -8.9 6.4 -8.7C7 -8.6 7.5 -8.3 7.9 -7.9C8.2 -7.5 8.4 -7.1 8.4 -6.5C8.4 -6.1 8.3 -5.8 8 -5.4C7.8 -5.1 7.4 -4.8 7 -4.6Z"/></g><g id="g1_3"><path d="M 8.3 -6.8L3.8 -6.8L3.8 0L1.2 0L1.2 -8.9L8.3 -8.9Z"/></g><g id="g1_4"><path d="M 10.1 -8.9L6.1 0.5C5.7 1.6 5.2 2.3 4.6 2.7C4 3.1 3.3 3.3 2.4 3.3C2 3.3 1.5 3.3 1.1 3.1C0.6 3 0.2 2.8 0 2.5L0.9 0.7C1.1 0.9 1.3 1 1.6 1.1C1.8 1.2 2.1 1.3 2.4 1.3C2.7 1.3 3 1.2 3.2 1C3.4 0.8 3.6 0.6 3.8 0.2L3.8 0.1L0 -8.9L2.7 -8.9L5.1 -2.9L7.7 -8.9Z"/></g><g id="g1_5"><path d="M 9.8 -8.9L9.8 0L7.2 0L7.2 -6.8L4.4 -6.8L4.3 -5.2C4.2 -4 4.1 -3.1 4 -2.3C3.8 -1.5 3.5 -0.9 3.1 -0.5C2.7 0 2.2 0.2 1.5 0.2C1.1 0.2 0.6 0.1 0.1 0L0.3 -2.1C0.4 -2.1 0.6 -2.1 0.6 -2.1C1 -2.1 1.3 -2.2 1.5 -2.5C1.7 -2.8 1.8 -3.1 1.9 -3.6C1.9 -4 2 -4.6 2 -5.3L2.2 -8.9Z"/></g><g id="g1_6"><path d="M 9.1 -8.9L9.1 0L6.8 0L6.8 -2.5L4.9 -2.5L3.3 0L0.5 0L2.5 -2.9C1.9 -3.1 1.4 -3.5 1.1 -4C0.8 -4.4 0.6 -5 0.6 -5.6C0.6 -6.6 1 -7.5 1.8 -8C2.5 -8.6 3.6 -8.9 4.9 -8.9ZM 4.9 -6.8C4.4 -6.8 4 -6.7 3.7 -6.5C3.4 -6.3 3.3 -6 3.3 -5.5C3.3 -5.1 3.4 -4.8 3.7 -4.6C3.9 -4.4 4.4 -4.2 4.9 -4.2L6.8 -4.2L6.8 -6.8Z"/></g><g id="g1_7"><path d="M 9.9 -4.4C9.9 -4.4 9.9 -4.1 9.8 -3.7L3.1 -3.7C3.2 -3.2 3.5 -2.7 4 -2.4C4.4 -2.1 5 -1.9 5.6 -1.9C6.1 -1.9 6.5 -2 6.9 -2.1C7.2 -2.3 7.6 -2.5 7.9 -2.8L9.2 -1.3C8.4 -0.3 7.2 0.1 5.6 0.1C4.6 0.1 3.7 -0.1 2.9 -0.5C2.1 -0.8 1.6 -1.4 1.1 -2.1C0.7 -2.8 0.5 -3.6 0.5 -4.4C0.5 -5.3 0.7 -6.1 1.1 -6.8C1.5 -7.5 2.1 -8 2.8 -8.4C3.5 -8.8 4.4 -9 5.3 -9C6.1 -9 6.9 -8.8 7.6 -8.5C8.3 -8.1 8.9 -7.5 9.3 -6.8C9.7 -6.1 9.9 -5.3 9.9 -4.4ZM 5.3 -7.1C4.7 -7.1 4.2 -6.9 3.8 -6.6C3.4 -6.2 3.2 -5.8 3.1 -5.2L7.4 -5.2C7.4 -5.8 7.1 -6.2 6.7 -6.6C6.3 -6.9 5.8 -7.1 5.3 -7.1Z"/></g><g id="g1_8"><path d="M 8 -4.6C9.1 -4.3 9.6 -3.6 9.6 -2.5C9.6 -1.7 9.3 -1.1 8.7 -0.7C8.1 -0.2 7.2 0 6 0L1.2 0L1.2 -8.9L5.8 -8.9C6.9 -8.9 7.8 -8.7 8.4 -8.3C9 -7.9 9.3 -7.3 9.3 -6.6C9.3 -6.1 9.2 -5.8 9 -5.4C8.8 -5.1 8.4 -4.8 8 -4.6ZM 3.6 -5.2L5.5 -5.2C6.4 -5.2 6.9 -5.6 6.9 -6.2C6.9 -6.8 6.4 -7.1 5.5 -7.1L3.6 -7.1ZM 5.8 -1.7C6.7 -1.7 7.2 -2.1 7.2 -2.7C7.2 -3.1 7.1 -3.3 6.8 -3.5C6.6 -3.6 6.3 -3.7 5.8 -3.7L3.6 -3.7L3.6 -1.7Z"/></g><g id="g1_9"><path d="M 2.2 0.1C1.7 0.1 1.3 0 1 -0.3C0.7 -0.6 0.6 -1 0.6 -1.5C0.6 -2 0.7 -2.3 1 -2.6C1.3 -2.9 1.7 -3.1 2.2 -3.1C2.6 -3.1 3 -2.9 3.3 -2.6C3.6 -2.3 3.8 -2 3.8 -1.5C3.8 -1 3.6 -0.6 3.3 -0.3C3 0 2.6 0.1 2.2 0.1Z"/></g></defs><g fill="currentColor"><path d="M 67.7 87.3C71.2 87.3 75.3 87.7 78.2 85.3C80.8 83.1 81.3 78.8 79.5 75.9C76.2 70.9 68 72.9 63 72.5L63 92.8L67.7 92.8ZM 86.8 62.5C83.2 62.7 83.5 68.4 87.3 68.1C90.9 67.8 90.6 62.3 86.8 62.5M70.4 60.3C76.3 60.2 82.3 60.6 88.2 60.4C90.2 60.7 91.7 62.3 92 64.3C91.8 70.3 92.3 76.3 92.1 82.3C92.1 83.7 91.7 85.1 91 86.3C84.3 93.5 77.2 100.4 70.1 107.2C68.3 108.3 66.4 108 64.8 106.7C59.6 101.5 54.3 96.3 49.2 91.1C45.6 87.4 42.7 85.6 47.1 80.7C52.9 74.4 59.6 68.7 65.5 62.4C66.8 61.2 68.6 60.4 70.4 60.3"/><path d="M 67.7 83.5L67.7 76.3L72 76.3C72.3 76.3 73.4 76.6 73.8 76.7C76.7 77.8 76.6 82.1 73.7 83.1C73.3 83.3 72.2 83.5 71.8 83.5Z"/><use xlink:href="#g0_0" x="104.3" y="73.3"/><use xlink:href="#g0_1" x="113.6" y="73.3"/><use xlink:href="#g0_2" x="121.8" y="73.3"/><use xlink:href="#g0_3" x="130.8" y="73.3"/><use xlink:href="#g0_4" x="141.7" y="73.3"/><use xlink:href="#g0_5" x="153.2" y="73.3"/><use xlink:href="#g0_6" x="104.3" y="88.9"/><use xlink:href="#g0_7" x="115.2" y="88.9"/><use xlink:href="#g0_8" x="126.6" y="88.9"/><use xlink:href="#g0_9" x="136.9" y="88.9"/><use xlink:href="#g0_3" x="148.2" y="88.9"/><use xlink:href="#g0_4" x="159.1" y="88.9"/><use xlink:href="#g0_7" x="170.6" y="88.9"/><use xlink:href="#g0_10" x="181.9" y="88.9"/><use xlink:href="#g0_11" x="192.5" y="88.9"/><use xlink:href="#g0_12" x="202.6" y="88.9"/><use xlink:href="#g0_9" x="212.4" y="88.9"/><use xlink:href="#g0_4" x="223.6" y="88.9"/><use xlink:href="#g0_5" x="235" y="88.9"/><use xlink:href="#g1_0" x="104.3" y="104.5"/><use xlink:href="#g1_1" x="116" y="104.5"/><use xlink:href="#g1_2" x="125.9" y="104.5"/><use xlink:href="#g1_3" x="135.2" y="104.5"/><use xlink:href="#g1_4" x="143.7" y="104.5"/><use xlink:href="#g1_5" x="153.2" y="104.5"/><use xlink:href="#g1_6" x="164.2" y="104.5"/><use xlink:href="#g1_7" x="174.6" y="104.5"/><use xlink:href="#g1_8" x="185.2" y="104.5"/><use xlink:href="#g1_9" x="195.5" y="104.5"/></g><path fill="none" stroke-width="0.5" stroke="currentColor" d="M 99.1 52.3L99.1 111"/></svg></a>
-    <span class="hd-num" id="hd-num"></span>
-  </header>
+  <div class="top">
+    <a href="https://www.instagram.com/raz.brandstudio/" aria-label="Студия брендирования Разгуляев в Instagram"><svg class="logo" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="44.1 51.2 200.6 60.6" role="img" aria-label="Студия брендирования Разгуляев"><defs><g id="g0_0"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.3 -7.9 3 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.8 -8.7 7.5 -8.3C8.1 -8 8.6 -7.6 8.9 -7L7.7 -6.2C7.4 -6.6 7.1 -6.9 6.7 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.8 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.7C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.8 -1.3 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.7 -1.6C7.1 -1.8 7.4 -2.1 7.7 -2.5L8.9 -1.8C8.6 -1.2 8.1 -0.7 7.5 -0.4C6.8 -0.1 6.1 0.1 5.3 0.1Z"/></g><g id="g0_1"><path d="M 8 -7.4L4.8 -7.4L4.8 0L3.3 0L3.3 -7.4L0.1 -7.4L0.1 -8.7L8 -8.7Z"/></g><g id="g0_2"><path d="M 9.3 -8.7L5.1 0.9C4.7 1.8 4.3 2.4 3.8 2.8C3.3 3.1 2.7 3.3 2 3.3C1.5 3.3 1.1 3.2 0.7 3.1C0.3 3 0 2.8 -0.3 2.5L0.4 1.3C0.9 1.7 1.4 2 2 2C2.4 2 2.7 1.8 2.9 1.6C3.2 1.4 3.4 1.1 3.6 0.6L3.9 0L0.1 -8.7L1.7 -8.7L4.8 -1.7L7.8 -8.7Z"/></g><g id="g0_3"><path d="M 10.4 -1.4L10.4 2L8.9 2L8.9 0L1.6 0L1.6 2L0.1 2L0.1 -1.4L0.6 -1.4C1.2 -1.4 1.5 -1.8 1.8 -2.6C2 -3.3 2.1 -4.4 2.2 -5.8L2.3 -8.7L9.1 -8.7L9.1 -1.4ZM 3.6 -5.7C3.6 -4.6 3.5 -3.7 3.4 -2.9C3.2 -2.2 3 -1.7 2.6 -1.4L7.5 -1.4L7.5 -7.4L3.7 -7.4Z"/></g><g id="g0_4"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -2.4L8.5 -8.7L9.9 -8.7L9.9 0L8.3 0L8.3 -6.4L3 0L1.5 0Z"/></g><g id="g0_5"><path d="M 8.5 -8.7L8.5 0L7.1 0L7.1 -2.8L4.4 -2.8L2.5 0L0.8 0L2.9 -3C2.3 -3.2 1.8 -3.5 1.4 -4C1.1 -4.4 0.9 -5 0.9 -5.7C0.9 -6.7 1.2 -7.4 1.9 -8C2.6 -8.5 3.5 -8.7 4.7 -8.7ZM 2.5 -5.6C2.5 -5 2.7 -4.6 3 -4.3C3.4 -4 4 -3.9 4.7 -3.9L7.1 -3.9L7.1 -7.4L4.8 -7.4C3.2 -7.4 2.5 -6.8 2.5 -5.6Z"/></g><g id="g0_6"><path d="M 6 -8.5C6.8 -8.5 7.5 -8.3 8.2 -7.9C8.8 -7.5 9.3 -7 9.7 -6.4C10 -5.7 10.2 -5 10.2 -4.2C10.2 -3.3 10 -2.6 9.6 -1.9C9.3 -1.3 8.7 -0.8 8 -0.4C7.3 -0.1 6.6 0.1 5.7 0.1C4.2 0.1 3 -0.4 2.2 -1.4C1.4 -2.4 1 -3.8 1 -5.7C1 -7.5 1.4 -8.9 2.1 -9.9C2.9 -10.9 4 -11.6 5.5 -11.9L9.5 -12.8L9.7 -11.4L6.1 -10.6C4.9 -10.3 4.1 -9.9 3.5 -9.3C2.9 -8.7 2.6 -7.8 2.5 -6.7C2.9 -7.2 3.4 -7.7 4 -8C4.6 -8.3 5.3 -8.5 6 -8.5ZM 5.7 -1.2C6.3 -1.2 6.8 -1.3 7.2 -1.6C7.6 -1.8 8 -2.2 8.2 -2.6C8.5 -3.1 8.6 -3.6 8.6 -4.1C8.6 -5 8.3 -5.7 7.8 -6.2C7.3 -6.8 6.6 -7 5.7 -7C4.8 -7 4.2 -6.8 3.6 -6.2C3.1 -5.7 2.8 -5 2.8 -4.1C2.8 -3.6 2.9 -3.1 3.2 -2.6C3.4 -2.2 3.8 -1.8 4.2 -1.6C4.7 -1.3 5.2 -1.2 5.7 -1.2Z"/></g><g id="g0_7"><path d="M 6.2 -8.8C7 -8.8 7.8 -8.6 8.4 -8.3C9.1 -7.9 9.6 -7.4 10 -6.7C10.4 -6 10.6 -5.2 10.6 -4.4C10.6 -3.5 10.4 -2.7 10 -2C9.6 -1.4 9.1 -0.8 8.4 -0.5C7.8 -0.1 7 0.1 6.2 0.1C5.5 0.1 5 0 4.4 -0.3C3.9 -0.5 3.5 -0.9 3.1 -1.3L3.1 3.2L1.5 3.2L1.5 -8.7L3 -8.7L3 -7.4C3.4 -7.8 3.8 -8.2 4.4 -8.5C4.9 -8.7 5.5 -8.8 6.2 -8.8ZM 6 -1.3C6.6 -1.3 7.1 -1.4 7.5 -1.7C8 -1.9 8.3 -2.3 8.6 -2.8C8.9 -3.2 9 -3.8 9 -4.4C9 -5 8.9 -5.5 8.6 -6C8.3 -6.5 8 -6.8 7.5 -7.1C7.1 -7.3 6.6 -7.4 6 -7.4C5.5 -7.4 5 -7.3 4.5 -7C4.1 -6.8 3.7 -6.4 3.5 -6C3.2 -5.5 3.1 -5 3.1 -4.4C3.1 -3.8 3.2 -3.2 3.5 -2.8C3.7 -2.3 4.1 -1.9 4.5 -1.7C5 -1.4 5.5 -1.3 6 -1.3Z"/></g><g id="g0_8"><path d="M 9.4 -4.3C9.4 -4.2 9.4 -4 9.4 -3.8L2.3 -3.8C2.4 -3.1 2.7 -2.5 3.3 -2C3.9 -1.5 4.6 -1.3 5.5 -1.3C6.5 -1.3 7.4 -1.6 8 -2.3L8.9 -1.3C8.5 -0.9 8 -0.5 7.4 -0.3C6.8 0 6.1 0.1 5.4 0.1C4.5 0.1 3.7 -0.1 3 -0.5C2.3 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.5 -8.6 4.3 -8.8 5.1 -8.8C6 -8.8 6.7 -8.6 7.3 -8.2C8 -7.9 8.5 -7.3 8.9 -6.7C9.3 -6 9.4 -5.2 9.4 -4.3ZM 5.1 -7.5C4.3 -7.5 3.7 -7.3 3.2 -6.8C2.7 -6.3 2.4 -5.7 2.3 -5L7.9 -5C7.8 -5.7 7.5 -6.3 7 -6.8C6.5 -7.2 5.9 -7.5 5.1 -7.5Z"/></g><g id="g0_9"><path d="M 1.5 -8.7L3.1 -8.7L3.1 -5L8.1 -5L8.1 -8.7L9.7 -8.7L9.7 0L8.1 0L8.1 -3.7L3.1 -3.7L3.1 0L1.5 0Z"/></g><g id="g0_10"><path d="M 5.3 0.1C4.4 0.1 3.6 -0.1 2.9 -0.5C2.2 -0.9 1.7 -1.4 1.3 -2.1C0.9 -2.7 0.7 -3.5 0.7 -4.4C0.7 -5.2 0.9 -6 1.3 -6.7C1.7 -7.3 2.2 -7.9 2.9 -8.2C3.6 -8.6 4.4 -8.8 5.3 -8.8C6.1 -8.8 6.9 -8.6 7.6 -8.2C8.3 -7.9 8.8 -7.3 9.2 -6.7C9.6 -6 9.8 -5.2 9.8 -4.4C9.8 -3.5 9.6 -2.7 9.2 -2.1C8.8 -1.4 8.3 -0.9 7.6 -0.5C6.9 -0.1 6.1 0.1 5.3 0.1ZM 5.3 -1.3C5.8 -1.3 6.3 -1.4 6.8 -1.7C7.2 -1.9 7.6 -2.3 7.8 -2.8C8.1 -3.2 8.2 -3.8 8.2 -4.4C8.2 -5 8.1 -5.5 7.8 -6C7.6 -6.5 7.2 -6.8 6.8 -7.1C6.3 -7.3 5.8 -7.4 5.3 -7.4C4.7 -7.4 4.2 -7.3 3.8 -7.1C3.3 -6.8 3 -6.5 2.7 -6C2.5 -5.5 2.3 -5 2.3 -4.4C2.3 -3.8 2.5 -3.2 2.7 -2.8C3 -2.3 3.3 -1.9 3.8 -1.7C4.2 -1.4 4.7 -1.3 5.3 -1.3Z"/></g><g id="g0_11"><path d="M 7.5 -4.5C8.6 -4.2 9.2 -3.5 9.2 -2.4C9.2 -1.6 8.9 -1 8.3 -0.6C7.7 -0.2 6.9 0 5.7 0L1.5 0L1.5 -8.7L5.6 -8.7C6.6 -8.7 7.4 -8.6 8 -8.2C8.6 -7.8 8.9 -7.2 8.9 -6.5C8.9 -6 8.8 -5.6 8.5 -5.3C8.3 -5 7.9 -4.7 7.5 -4.5ZM 3.1 -5L5.5 -5C6.1 -5 6.5 -5.1 6.8 -5.3C7.2 -5.5 7.3 -5.8 7.3 -6.3C7.3 -7.1 6.7 -7.5 5.5 -7.5L3.1 -7.5ZM 5.6 -1.2C6.3 -1.2 6.8 -1.3 7.1 -1.5C7.4 -1.7 7.6 -2.1 7.6 -2.5C7.6 -3 7.5 -3.3 7.2 -3.5C6.9 -3.7 6.4 -3.8 5.7 -3.8L3.1 -3.8L3.1 -1.2Z"/></g><g id="g0_12"><path d="M 4.7 -8.8C5.9 -8.8 6.8 -8.5 7.4 -7.9C8.1 -7.3 8.4 -6.5 8.4 -5.3L8.4 0L6.9 0L6.9 -1.2C6.6 -0.7 6.3 -0.4 5.8 -0.2C5.3 0 4.7 0.1 4 0.1C3.1 0.1 2.3 -0.1 1.7 -0.6C1.1 -1.1 0.8 -1.7 0.8 -2.5C0.8 -3.2 1.1 -3.9 1.6 -4.3C2.2 -4.8 3.1 -5 4.3 -5L6.8 -5L6.8 -5.3C6.8 -6 6.6 -6.6 6.2 -6.9C5.8 -7.3 5.2 -7.5 4.5 -7.5C4 -7.5 3.5 -7.4 3 -7.2C2.5 -7 2 -6.8 1.7 -6.5L1 -7.7C1.5 -8.1 2 -8.3 2.7 -8.5C3.3 -8.7 3.9 -8.8 4.7 -8.8ZM 4.3 -1.1C4.9 -1.1 5.4 -1.3 5.9 -1.5C6.3 -1.8 6.6 -2.2 6.8 -2.7L6.8 -3.9L4.4 -3.9C3 -3.9 2.4 -3.4 2.4 -2.5C2.4 -2.1 2.5 -1.7 2.9 -1.5C3.2 -1.2 3.7 -1.1 4.3 -1.1Z"/></g><g id="g1_0"><path d="M 6.4 -11.5C7.5 -11.5 8.3 -11.4 9.1 -11C9.8 -10.7 10.4 -10.2 10.8 -9.6C11.2 -9 11.5 -8.2 11.5 -7.4C11.5 -6.5 11.2 -5.8 10.8 -5.1C10.4 -4.5 9.8 -4 9.1 -3.7C8.3 -3.4 7.5 -3.2 6.4 -3.2L4.1 -3.2L4.1 0L1.4 0L1.4 -11.5ZM 6.3 -5.4C7.1 -5.4 7.7 -5.5 8.1 -5.9C8.5 -6.2 8.7 -6.7 8.7 -7.4C8.7 -8 8.5 -8.5 8.1 -8.8C7.7 -9.2 7.1 -9.4 6.3 -9.4L4.1 -9.4L4.1 -5.4Z"/></g><g id="g1_1"><path d="M 4.7 -9C6.1 -9 7.1 -8.7 7.9 -8C8.6 -7.4 9 -6.4 9 -5.1L9 0L6.6 0L6.6 -1.1C6.1 -0.3 5.2 0.1 3.8 0.1C3.2 0.1 2.6 0 2.1 -0.2C1.6 -0.4 1.2 -0.8 0.9 -1.2C0.7 -1.6 0.5 -2 0.5 -2.6C0.5 -3.4 0.8 -4 1.5 -4.5C2.1 -5 3 -5.2 4.3 -5.2L6.4 -5.2C6.4 -5.8 6.2 -6.2 5.9 -6.5C5.5 -6.8 5 -7 4.3 -7C3.9 -7 3.4 -6.9 3 -6.7C2.5 -6.6 2.1 -6.4 1.8 -6.1L0.9 -7.9C1.3 -8.3 1.9 -8.5 2.6 -8.7C3.3 -8.9 4 -9 4.7 -9ZM 4.5 -1.6C4.9 -1.6 5.3 -1.7 5.7 -1.9C6 -2.1 6.2 -2.4 6.4 -2.8L6.4 -3.7L4.6 -3.7C3.6 -3.7 3 -3.4 3 -2.7C3 -2.3 3.2 -2.1 3.4 -1.9C3.7 -1.7 4 -1.6 4.5 -1.6Z"/></g><g id="g1_2"><path d="M 7 -4.6C7.5 -4.5 7.9 -4.2 8.2 -3.9C8.5 -3.5 8.7 -3.1 8.7 -2.6C8.7 -2.1 8.5 -1.6 8.1 -1.2C7.7 -0.7 7.2 -0.4 6.5 -0.2C5.8 0.1 5.1 0.2 4.2 0.2C3.5 0.2 2.8 0.1 2.2 0C1.5 -0.2 0.9 -0.4 0.3 -0.7L1 -2.5C1.9 -2 3 -1.8 4.1 -1.8C4.7 -1.8 5.2 -1.9 5.5 -2.1C5.9 -2.3 6.1 -2.5 6.1 -2.9C6.1 -3.1 5.9 -3.4 5.7 -3.5C5.4 -3.7 5.1 -3.7 4.6 -3.7L2.8 -3.7L2.8 -5.3L4.4 -5.3C4.9 -5.3 5.2 -5.4 5.4 -5.5C5.7 -5.7 5.8 -5.9 5.8 -6.2C5.8 -6.5 5.7 -6.7 5.4 -6.8C5.1 -7 4.6 -7.1 4.1 -7.1C3.2 -7.1 2.3 -6.9 1.3 -6.5L0.6 -8.2C1.9 -8.8 3.1 -9 4.2 -9C5 -9 5.7 -8.9 6.4 -8.7C7 -8.6 7.5 -8.3 7.9 -7.9C8.2 -7.5 8.4 -7.1 8.4 -6.5C8.4 -6.1 8.3 -5.8 8 -5.4C7.8 -5.1 7.4 -4.8 7 -4.6Z"/></g><g id="g1_3"><path d="M 8.3 -6.8L3.8 -6.8L3.8 0L1.2 0L1.2 -8.9L8.3 -8.9Z"/></g><g id="g1_4"><path d="M 10.1 -8.9L6.1 0.5C5.7 1.6 5.2 2.3 4.6 2.7C4 3.1 3.3 3.3 2.4 3.3C2 3.3 1.5 3.3 1.1 3.1C0.6 3 0.2 2.8 0 2.5L0.9 0.7C1.1 0.9 1.3 1 1.6 1.1C1.8 1.2 2.1 1.3 2.4 1.3C2.7 1.3 3 1.2 3.2 1C3.4 0.8 3.6 0.6 3.8 0.2L3.8 0.1L0 -8.9L2.7 -8.9L5.1 -2.9L7.7 -8.9Z"/></g><g id="g1_5"><path d="M 9.8 -8.9L9.8 0L7.2 0L7.2 -6.8L4.4 -6.8L4.3 -5.2C4.2 -4 4.1 -3.1 4 -2.3C3.8 -1.5 3.5 -0.9 3.1 -0.5C2.7 0 2.2 0.2 1.5 0.2C1.1 0.2 0.6 0.1 0.1 0L0.3 -2.1C0.4 -2.1 0.6 -2.1 0.6 -2.1C1 -2.1 1.3 -2.2 1.5 -2.5C1.7 -2.8 1.8 -3.1 1.9 -3.6C1.9 -4 2 -4.6 2 -5.3L2.2 -8.9Z"/></g><g id="g1_6"><path d="M 9.1 -8.9L9.1 0L6.8 0L6.8 -2.5L4.9 -2.5L3.3 0L0.5 0L2.5 -2.9C1.9 -3.1 1.4 -3.5 1.1 -4C0.8 -4.4 0.6 -5 0.6 -5.6C0.6 -6.6 1 -7.5 1.8 -8C2.5 -8.6 3.6 -8.9 4.9 -8.9ZM 4.9 -6.8C4.4 -6.8 4 -6.7 3.7 -6.5C3.4 -6.3 3.3 -6 3.3 -5.5C3.3 -5.1 3.4 -4.8 3.7 -4.6C3.9 -4.4 4.4 -4.2 4.9 -4.2L6.8 -4.2L6.8 -6.8Z"/></g><g id="g1_7"><path d="M 9.9 -4.4C9.9 -4.4 9.9 -4.1 9.8 -3.7L3.1 -3.7C3.2 -3.2 3.5 -2.7 4 -2.4C4.4 -2.1 5 -1.9 5.6 -1.9C6.1 -1.9 6.5 -2 6.9 -2.1C7.2 -2.3 7.6 -2.5 7.9 -2.8L9.2 -1.3C8.4 -0.3 7.2 0.1 5.6 0.1C4.6 0.1 3.7 -0.1 2.9 -0.5C2.1 -0.8 1.6 -1.4 1.1 -2.1C0.7 -2.8 0.5 -3.6 0.5 -4.4C0.5 -5.3 0.7 -6.1 1.1 -6.8C1.5 -7.5 2.1 -8 2.8 -8.4C3.5 -8.8 4.4 -9 5.3 -9C6.1 -9 6.9 -8.8 7.6 -8.5C8.3 -8.1 8.9 -7.5 9.3 -6.8C9.7 -6.1 9.9 -5.3 9.9 -4.4ZM 5.3 -7.1C4.7 -7.1 4.2 -6.9 3.8 -6.6C3.4 -6.2 3.2 -5.8 3.1 -5.2L7.4 -5.2C7.4 -5.8 7.1 -6.2 6.7 -6.6C6.3 -6.9 5.8 -7.1 5.3 -7.1Z"/></g><g id="g1_8"><path d="M 8 -4.6C9.1 -4.3 9.6 -3.6 9.6 -2.5C9.6 -1.7 9.3 -1.1 8.7 -0.7C8.1 -0.2 7.2 0 6 0L1.2 0L1.2 -8.9L5.8 -8.9C6.9 -8.9 7.8 -8.7 8.4 -8.3C9 -7.9 9.3 -7.3 9.3 -6.6C9.3 -6.1 9.2 -5.8 9 -5.4C8.8 -5.1 8.4 -4.8 8 -4.6ZM 3.6 -5.2L5.5 -5.2C6.4 -5.2 6.9 -5.6 6.9 -6.2C6.9 -6.8 6.4 -7.1 5.5 -7.1L3.6 -7.1ZM 5.8 -1.7C6.7 -1.7 7.2 -2.1 7.2 -2.7C7.2 -3.1 7.1 -3.3 6.8 -3.5C6.6 -3.6 6.3 -3.7 5.8 -3.7L3.6 -3.7L3.6 -1.7Z"/></g><g id="g1_9"><path d="M 2.2 0.1C1.7 0.1 1.3 0 1 -0.3C0.7 -0.6 0.6 -1 0.6 -1.5C0.6 -2 0.7 -2.3 1 -2.6C1.3 -2.9 1.7 -3.1 2.2 -3.1C2.6 -3.1 3 -2.9 3.3 -2.6C3.6 -2.3 3.8 -2 3.8 -1.5C3.8 -1 3.6 -0.6 3.3 -0.3C3 0 2.6 0.1 2.2 0.1Z"/></g></defs><g fill="currentColor"><path d="M 67.7 87.3C71.2 87.3 75.3 87.7 78.2 85.3C80.8 83.1 81.3 78.8 79.5 75.9C76.2 70.9 68 72.9 63 72.5L63 92.8L67.7 92.8ZM 86.8 62.5C83.2 62.7 83.5 68.4 87.3 68.1C90.9 67.8 90.6 62.3 86.8 62.5M70.4 60.3C76.3 60.2 82.3 60.6 88.2 60.4C90.2 60.7 91.7 62.3 92 64.3C91.8 70.3 92.3 76.3 92.1 82.3C92.1 83.7 91.7 85.1 91 86.3C84.3 93.5 77.2 100.4 70.1 107.2C68.3 108.3 66.4 108 64.8 106.7C59.6 101.5 54.3 96.3 49.2 91.1C45.6 87.4 42.7 85.6 47.1 80.7C52.9 74.4 59.6 68.7 65.5 62.4C66.8 61.2 68.6 60.4 70.4 60.3"/><path d="M 67.7 83.5L67.7 76.3L72 76.3C72.3 76.3 73.4 76.6 73.8 76.7C76.7 77.8 76.6 82.1 73.7 83.1C73.3 83.3 72.2 83.5 71.8 83.5Z"/><use xlink:href="#g0_0" x="104.3" y="73.3"/><use xlink:href="#g0_1" x="113.6" y="73.3"/><use xlink:href="#g0_2" x="121.8" y="73.3"/><use xlink:href="#g0_3" x="130.8" y="73.3"/><use xlink:href="#g0_4" x="141.7" y="73.3"/><use xlink:href="#g0_5" x="153.2" y="73.3"/><use xlink:href="#g0_6" x="104.3" y="88.9"/><use xlink:href="#g0_7" x="115.2" y="88.9"/><use xlink:href="#g0_8" x="126.6" y="88.9"/><use xlink:href="#g0_9" x="136.9" y="88.9"/><use xlink:href="#g0_3" x="148.2" y="88.9"/><use xlink:href="#g0_4" x="159.1" y="88.9"/><use xlink:href="#g0_7" x="170.6" y="88.9"/><use xlink:href="#g0_10" x="181.9" y="88.9"/><use xlink:href="#g0_11" x="192.5" y="88.9"/><use xlink:href="#g0_12" x="202.6" y="88.9"/><use xlink:href="#g0_9" x="212.4" y="88.9"/><use xlink:href="#g0_4" x="223.6" y="88.9"/><use xlink:href="#g0_5" x="235" y="88.9"/><use xlink:href="#g1_0" x="104.3" y="104.5"/><use xlink:href="#g1_1" x="116" y="104.5"/><use xlink:href="#g1_2" x="125.9" y="104.5"/><use xlink:href="#g1_3" x="135.2" y="104.5"/><use xlink:href="#g1_4" x="143.7" y="104.5"/><use xlink:href="#g1_5" x="153.2" y="104.5"/><use xlink:href="#g1_6" x="164.2" y="104.5"/><use xlink:href="#g1_7" x="174.6" y="104.5"/><use xlink:href="#g1_8" x="185.2" y="104.5"/><use xlink:href="#g1_9" x="195.5" y="104.5"/></g><path fill="none" stroke-width="0.5" stroke="currentColor" d="M 99.1 52.3L99.1 111"/></svg></a>
+    <button class="ibtn" type="button" id="share" aria-label="Поделиться ссылкой на заказ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
+  </div>
 
-  <div class="state" id="loading"><div class="spin" aria-hidden="true"></div><b>Загружаем заказ…</b></div>
-  <div class="state" id="missing" hidden><b>Заказ не найден</b><p id="missing-t">Возможно, ссылка скопировалась не полностью. Напишите нам в WhatsApp, и мы всё подскажем.</p>
-    <div class="btns" style="justify-content:center"><a class="btn p wa-link" target="_blank" rel="noopener">Написать в WhatsApp</a></div></div>
+  <div id="loading" aria-label="Загружаем заказ"><div class="sk"></div><div class="sk s2"></div></div>
+  <div class="empty" id="missing" hidden><b>Заказ не найден</b><p id="missing-t">Похоже, ссылка открылась не полностью. Напишите нам в WhatsApp, и мы пришлём её ещё раз.</p></div>
 
   <main id="main" hidden>
-    <h1 id="title">Заказ</h1>
-    <p class="lead" id="lead"></p>
-    <div class="grid">
-      <section class="card" aria-labelledby="h-status">
-        <h2 id="h-status">Статус заказа</h2>
-        <div class="now" id="now"></div>
-        <div class="cancel" id="cancel" hidden>Если это ошибка или остались вопросы, напишите нам в WhatsApp.</div>
-        <ol class="steps" id="steps"></ol>
-        <div class="made" id="made" hidden></div>
-        <div class="due" id="due"></div>
-      </section>
-      <div class="grid" style="grid-template-columns:minmax(0,1fr)">
-        <section class="card" aria-labelledby="h-items">
-          <h2 id="h-items">Что вы заказали</h2>
-          <ul class="items" id="items"></ul>
-          <p class="desc" id="desc" hidden></p>
-          <div class="pay" id="pay"></div>
-          <p class="paynote">Работаем по 100% предоплате. Оплатить можно наличными или через Kaspi: удалённая оплата, Kaspi QR, Kaspi Red, рассрочка (+15% к сумме заказа). Оплату принимает менеджер.</p>
-        </section>
-        <section class="card contacts" aria-labelledby="h-contacts">
-          <h2 id="h-contacts">Где нас найти</h2>
-          <p>Павлодар, ул. Абая, 115а · по предварительной записи</p>
-          <p class="muted">Пн–чт 11:00–19:00, пт 11:00–17:00, обед 13:00–14:00. Сб и вс выходной.</p>
-          <div class="btns">
-            <a class="btn p wa-link" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg><span><span class="hm">Написать в </span>WhatsApp</span></a>
-            <a class="btn s" href="https://2gis.kz/pavlodar/firm/70000001103891578?m=76.956216%2C52.280095%2F16" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span><span class="hm">Открыть в </span>2ГИС</span></a>
-          </div>
-        </section>
-      </div>
-    </div>
+    <section class="tag" id="tag" aria-labelledby="t-st">
+      <div class="t-num"><span id="t-num"></span><span id="t-svc"></span></div>
+      <h1 class="t-st" id="t-st"></h1>
+      <p class="t-note" id="t-note"></p>
+      <ol class="seam" id="seam" aria-label="Этапы заказа"></ol>
+      <div class="t-made" id="t-made" hidden></div>
+      <div class="t-eta" id="t-eta"></div>
+    </section>
+    <p class="live" id="live"></p>
+
+    <section class="sec" aria-labelledby="h-pay">
+      <h2 id="h-pay">Оплата</h2>
+      <div id="pay"></div>
+      <details class="how">
+        <summary>Как оплатить<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="ways"><span>Наличными в студии</span><span>Kaspi, удалённая оплата</span><span>Kaspi QR</span><span>Kaspi Red</span><span>Рассрочка Kaspi, +15%</span></div>
+        <p>Заказ запускаем после полной предоплаты. Оплату принимает менеджер: напишите нам, и он выставит счёт.</p>
+      </details>
+    </section>
+
+    <section class="sec" aria-labelledby="h-items">
+      <h2 id="h-items">Состав заказа <small id="h-items-n"></small></h2>
+      <ul class="items" id="items"></ul>
+      <p class="desc" id="desc" hidden></p>
+      <div class="tot" id="tot" hidden></div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-hist" id="hist-sec">
+      <h2 id="h-hist">История</h2>
+      <ol class="hist" id="hist"></ol>
+    </section>
+
+    <section class="sec" aria-labelledby="h-st">
+      <h2 id="h-st">Студия</h2>
+      <div class="open" id="open"></div>
+      <a class="addr" href="https://2gis.kz/pavlodar/firm/70000001103891578?m=76.956216%2C52.280095%2F16" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 19 9.5C19 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+        <span><b>Павлодар, ул. Абая, 115а</b><small>Открыть маршрут в 2ГИС</small></span>
+        <svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </a>
+      <p class="hours">Пн–чт с 11:00 до 19:00, пт с 11:00 до 17:00, обед с 13:00 до 14:00. Суббота и воскресенье выходные. Приходите по предварительной записи.</p>
+    </section>
+    <footer>Студия брендирования Разгуляев, Павлодар</footer>
   </main>
-  <footer>Студия брендирования Разгуляев · страница обновляется сама</footer>
 </div>
+
+<div class="dock" id="dock">
+  <div>
+    <a class="cta" id="wa" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>Написать по заказу</a>
+    <a class="call" href="tel:+77064230226" aria-label="Позвонить в студию"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg></a>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 (function(){
-  var PROJECT='raz-studio-5a486', KEY='AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0';
-  var WA='https://wa.me/77064230226';
+  var PROJECT='raz-studio-5a486', KEY='AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0', PHONE='77064230226';
   var STEPS=[['new','Оформлен'],['design','В разработке'],['prod','В производстве'],['ready','Готов'],['done','Выдан']];
-  var NOTE={new:'Заказ принят. Менеджер проверит детали и запустит его в работу.',design:'Готовим макет и всё согласовываем с вами.',prod:'Изготавливаем ваш заказ.',ready:'Заказ готов, можно забирать.',done:'Заказ выдан. Спасибо, что выбрали нас!'};
+  // на «строчке» колонки узкие: мягкий перенос внутри длинных слов
+  var SEAM={design:'В раз\u00ADработке',prod:'В произ\u00ADводстве'};
+  var NOTE={new:'Заказ принят. Менеджер проверит детали и запустит его в работу.',design:'Готовим макет и согласовываем его с вами.',prod:'Изготавливаем ваш заказ.',ready:'Всё готово, ждём вас в студии.',done:'Заказ у вас. Спасибо, что выбрали нас!',cancel:'Заказ больше не в работе. Если это ошибка, напишите нам.'};
   var MON=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-  var token=(location.hash||'').replace(/^#/,'').replace(/[^\w-]/g,'');
+  var token=function(){return (location.hash||'').replace(/^#/,'').replace(/[^\w-]/g,'')};
   var $=function(id){return document.getElementById(id)};
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
   var money=function(n){return Math.round(+n||0).toLocaleString('ru-RU').replace(/ /g,' ')+' ₸'};
-  var qtyFmt=function(n){return String(Math.round((+n||0)*100)/100).replace('.',',')};
-  function isoDay(s){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?{y:+m[1],m:+m[2]-1,d:+m[3]}:null}
-  function stamp(t){if(!t)return '';var d=new Date(+t);return d.getDate()+' '+MON[d.getMonth()]+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
-  function range(from,to){
-    var a=isoDay(from),b=isoDay(to);if(!b)return '';
-    if(!a)return 'к '+b.d+' '+MON[b.m];
-    if(a.m===b.m)return a.d+'–'+b.d+' '+MON[b.m];
-    return a.d+' '+MON[a.m]+' – '+b.d+' '+MON[b.m];
-  }
-  // значения Firestore REST → обычные
+  var qf=function(n){return String(Math.round((+n||0)*100)/100).replace('.',',')};
+  var CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  function iso(s){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?new Date(+m[1],+m[2]-1,+m[3]):null}
+  function dm(d){return d.getDate()+' '+MON[d.getMonth()]}
+  function stamp(t){var d=new Date(+t);return dm(d)+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+  function range(a,b){if(!b)return '';if(!a)return 'к '+dm(b);if(a.getMonth()===b.getMonth())return a.getDate()+'–'+dm(b);return dm(a)+' – '+dm(b)}
+  function daysTo(d){var t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/864e5)}
+  function plural(n,a,b,c){n=Math.abs(n)%100;var m=n%10;return n>10&&n<20?c:m===1?a:m>=2&&m<=4?b:c}
   function val(v){
     if(!v)return null;
     if('stringValue' in v)return v.stringValue;
@@ -240,96 +289,120 @@ footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12.5px}
     if('mapValue' in v){var o={},f=v.mapValue.fields||{};for(var k in f)o[k]=val(f[k]);return o}
     return null;
   }
-  var ICON_OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-  var ICON_NOW={new:'<path d="M9 5h6M9 3h6a1 1 0 0 1 1 1v1h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h2V4a1 1 0 0 1 1-1Z"/><path d="M9 13l2 2 4-4"/>',
-    design:'<path d="M12 19l7-7 3 3-7 7-3-3Z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5Z"/><path d="M2 2l7.6 7.6"/><circle cx="11" cy="11" r="2"/>',
-    prod:'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
-    ready:'<path d="M20 6L9 17l-5-5"/>',done:'<path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8"/><path d="M2 7h20v5H2z"/><path d="M12 21V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7Z"/>',
-    cancel:'<path d="M18 6L6 18M6 6l12 12"/>'};
+  function toast(t){var el=$('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(function(){el.hidden=true},2200)}
+  function copy(t,msg){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){toast(msg)},function(){prompt('Скопируйте:',t)})}
 
-  document.querySelectorAll('.wa-link').forEach(function(a){a.href=WA});
+  // студия открыта? Павлодар, UTC+5: пн–чт 11–19, пт 11–17, обед 13–14
+  function openNow(){
+    var d=new Date(Date.now()+5*36e5),w=d.getUTCDay(),h=d.getUTCHours()+d.getUTCMinutes()/60;
+    var H={1:19,2:19,3:19,4:19,5:17},end=H[w];
+    if(end&&h>=11&&h<end){if(h>=13&&h<14)return {on:false,t:'Обед, вернёмся в 14:00'};return {on:true,t:'Сейчас открыто до '+end+':00'}}
+    if(end&&h<11)return {on:false,t:'Сейчас закрыто, откроемся сегодня в 11:00'};
+    for(var i=1;i<=7;i++){var nw=(w+i)%7;if(H[nw])return {on:false,t:'Сейчас закрыто, откроемся '+(i===1?'завтра':['в воскресенье','в понедельник','во вторник','в среду','в четверг','в пятницу','в субботу'][nw])+' в 11:00'}}
+  }
 
+  var cur=null;
   function render(o){
+    cur=o;
+    var st=o.st||'new',cancel=st==='cancel',idx=Math.max(0,STEPS.findIndex(function(s){return s[0]===st})),at=o.stAt||{};
     var num=o.num||'';
-    document.title='Заказ № '+num+' · Студия Разгуляев';
-    $('hd-num').textContent='Заказ № '+num;
-    $('title').textContent='Заказ № '+num;
-    $('lead').textContent=(o.svc?o.svc+' · ':'')+(o.rec&&isoDay(o.rec)?'оформлен '+isoDay(o.rec).d+' '+MON[isoDay(o.rec).m]:'');
-    var st=o.st||'new',cancel=st==='cancel',idx=STEPS.findIndex(function(s){return s[0]===st}),at=o.stAt||{};
-    if(idx<0)idx=0;
-    // текущий статус крупно
-    var label=cancel?'Отменён':STEPS[idx][1];
-    $('now').innerHTML='<span class="now-dot" style="'+(cancel?'background:var(--danger)':st==='ready'||st==='done'?'background:var(--ok)':'')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(ICON_NOW[cancel?'cancel':st]||ICON_NOW.new)+'</svg></span><span><b>'+esc(label)+'</b><small>'+esc(cancel?'Заказ больше не в работе.':NOTE[st]||'')+'</small></span>';
-    $('cancel').hidden=!cancel;
-    $('steps').hidden=cancel;
-    // общий прогресс изготовления в карточке статуса
+    document.title='Заказ № '+num+': '+(cancel?'отменён':STEPS[idx][1].toLowerCase());
+    var tag=$('tag');tag.dataset.st=st;
+    $('t-num').innerHTML='Заказ <button type="button" id="copy-num" aria-label="Скопировать номер заказа">№ '+esc(num)+'</button>';
+    $('t-svc').textContent=o.svc||'';
+    $('t-st').textContent=cancel?'Отменён':STEPS[idx][1];
+    $('t-note').textContent=NOTE[st]||'';
+    $('seam').hidden=cancel;
+    $('seam').innerHTML=STEPS.map(function(s,i){
+      var cls=i<idx||(i===idx&&st==='done')?'done':i===idx?'cur':'';
+      return '<li class="knot '+cls+'" style="--i:'+i+'"'+(i===idx?' aria-current="step"':'')+'><span class="dot">'+CHECK+'</span><span>'+(SEAM[s[0]]||s[1])+'</span></li>';
+    }).join('');
+    // изготовлено
     var tr=(o.items||[]).filter(function(i){return i.m!=null&&+i.q>0}),tq=0,tm=0,fr=0,units={};
     tr.forEach(function(i){var m=Math.min(+i.m||0,+i.q);tq+=+i.q;tm+=m;fr+=m/(+i.q);units[i.u||'шт']=1});
-    // одна единица у всех позиций — «7 из 13 шт», разные — только процент (среднее по позициям)
-    var one=Object.keys(units).length===1,pc=tr.length?Math.round(one?tm/tq*100:fr/tr.length*100):0;
-    var mEl=$('made');mEl.hidden=!tr.length||cancel||st==='done'||st==='ready'||tm<=0;
-    if(!mEl.hidden)mEl.innerHTML='<span>Изготовлено'+(one?' <strong>'+qtyFmt(tm)+' из '+qtyFmt(tq)+' '+esc(Object.keys(units)[0])+'</strong>':'')+'</span><i><b style="width:'+pc+'%"></b></i><span>'+pc+'%</span>';
-    $('steps').innerHTML=STEPS.map(function(s,i){
-      var cls=i<idx||(i===idx&&st==='done')?'done':i===idx?'cur':'';
-      var when=at[s[0]]&&i<=idx?stamp(at[s[0]]):'';
-      return '<li class="step '+cls+'"'+(i===idx?' aria-current="step"':'')+'><span class="mk">'+ICON_OK+'</span><span><span class="st-t">'+s[1]+'</span>'+(when?'<span class="st-d">'+esc(when)+'</span>':'')+'</span></li>';
-    }).join('');
-    // сроки
-    var r=range(o.from,o.to),due=$('due'),cal='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>';
-    due.hidden=cancel;
-    if(st==='done')due.innerHTML=cal+'<span><b>Заказ выдан'+(at.done?' '+esc(stamp(at.done).split(',')[0]):'')+'</b><small>Будем рады видеть вас снова.</small></span>';
-    else if(st==='ready')due.innerHTML=cal+'<span><b>Готов, можно забирать</b><small>Ул. Абая, 115а, в рабочее время. Перед приходом лучше написать нам.</small></span>';
-    else if(r)due.innerHTML=cal+'<span><b>Примерно '+esc(r)+'</b><small>Срок примерный. Если что-то изменится, мы напишем вам в WhatsApp.</small></span>';
-    else due.innerHTML=cal+'<span><b>Сроки уточнит менеджер</b><small>Обычно 2–3 рабочих дня, вышивка дольше.</small></span>';
-    // состав
-    var items=o.items||[];
-    $('items').innerHTML=items.map(function(i){
-      var q=+i.q||0,p=+i.p||0,mp='';
-      // сколько уже изготовлено (отмечают в учёте), пока заказ в работе
-      if(i.m!=null&&q>0&&!cancel&&st!=='done'){var mm=Math.min(+i.m||0,q),full=mm>=q;
-        mp='<span class="mk-p'+(full?' full':'')+'"><i><b style="width:'+Math.round(mm/q*100)+'%"></b></i>'+(full?'готово':'сделано '+qtyFmt(mm)+' из '+qtyFmt(q))+'</span>'}
-      return '<li class="it"><span class="it-n">'+esc(i.n||'Позиция')+'<small>'+qtyFmt(q)+' '+esc(i.u||'шт')+(p?' × '+money(p):'')+'</small>'+mp+'</span>'+(p?'<span class="it-s">'+money(p*q)+'</span>':'')+'</li>';
-    }).join('');
-    $('items').hidden=!items.length;
-    $('desc').hidden=!!items.length||!o.desc;$('desc').textContent=o.desc||'';
-    if(!items.length&&!o.desc){$('desc').hidden=false;$('desc').textContent='Состав заказа уточняет менеджер.'}
+    var one=Object.keys(units).length===1,pc=tr.length?Math.round(one?tm/tq*100:fr/tr.length*100):0,mEl=$('t-made');
+    mEl.hidden=!tr.length||cancel||st==='done'||st==='ready'||tm<=0;
+    if(!mEl.hidden)mEl.innerHTML='<span>Изготовлено</span><i><em style="width:'+pc+'%"></em></i><b>'+(one?qf(tm)+' из '+qf(tq)+' '+esc(Object.keys(units)[0]):pc+'%')+'</b>';
+    // срок
+    var CAL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>';
+    var eta=$('t-eta'),from=iso(o.from),to=iso(o.to),h;
+    if(cancel)h='';
+    else if(st==='done')h=CAL+'<span><b>Выдан'+(at.done?' '+dm(new Date(+at.done)):'')+'</b><small>Будем рады сделать для вас что-то ещё.</small></span>';
+    else if(st==='ready')h=CAL+'<span><b>Можно забирать</b><small>Ул. Абая, 115а</small></span><a href="https://2gis.kz/pavlodar/firm/70000001103891578" target="_blank" rel="noopener">Маршрут</a>';
+    else if(to){var dd=daysTo(to),rel=dd<0?'срок уточнит менеджер':dd===0?'сегодня':dd===1?'завтра':'через '+dd+' '+plural(dd,'день','дня','дней');
+      h=CAL+'<span><b>Примерно '+range(from,to)+'</b><small>Ориентировочно '+rel+'. Если срок сдвинется, напишем вам.</small></span>'}
+    else h=CAL+'<span><b>Срок назовёт менеджер</b><small>Обычно 2–3 рабочих дня, вышивка дольше.</small></span>';
+    eta.hidden=!h;eta.innerHTML=h;
+    var now=new Date();$('live').textContent='Обновлено в '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+', страница обновляется сама';
     // оплата
-    var sum=items.reduce(function(s,i){return s+(+i.p||0)*(+i.q||0)},0);
-    var total=o.total!=null?+o.total:(sum||null),paid=+o.paid||0,rest=total!=null?Math.max(0,total-paid):null;
-    var h='';
-    if(total!=null){
-      h+='<div class="pr tot"><span>Сумма заказа</span><b>'+money(total)+'</b></div>';
-      h+='<div class="pr"><span>Оплачено</span><b>'+money(paid)+'</b></div>';
-      if(!cancel)h+='<div class="pr"><span>Осталось оплатить</span><b>'+money(rest)+'</b></div>';
-      if(!cancel)h+='<div>'+(rest<=0?'<span class="badge ok">'+ICON_OK+'Оплачено полностью</span>':'<span class="badge due">К оплате '+money(rest)+'</span>')+'</div>';
-    }else h='<div class="pr"><span>Сумма заказа</span><b>уточнит менеджер</b></div>'+(paid?'<div class="pr"><span>Оплачено</span><b>'+money(paid)+'</b></div>':'');
-    $('pay').innerHTML=h;
+    var items=o.items||[],sum=items.reduce(function(s,i){return s+(+i.p||0)*(+i.q||0)},0);
+    var total=o.total!=null?+o.total:(sum||null),paid=+o.paid||0,rest=total!=null?Math.max(0,total-paid):null,p='';
+    if(total==null)p='<div class="due-big"><div><span>Сумма заказа</span><b style="font-size:22px">Назовёт менеджер</b></div></div>'+(paid?'<div class="rows" style="margin-top:12px"><div class="r"><span>Оплачено</span><b>'+money(paid)+'</b></div></div>':'');
+    else{
+      var full=rest<=0;
+      p='<div class="due-big'+(full?' ok':'')+'"><div><span>'+(full?'Всё оплачено':cancel?'Оплачено':'Осталось оплатить')+'</span><b>'+(full?money(total):cancel?money(paid):money(rest))+'</b></div>'+
+        (cancel?'':full?'<span class="pill ok">'+CHECK+'Оплачено</span>':'<span class="pill warn">Ждём оплату</span>')+'</div>'+
+        '<div class="paybar'+(full?' full':'')+'" role="img" aria-label="Оплачено '+Math.round(Math.min(1,paid/(total||1))*100)+'%"><em style="width:'+Math.min(100,Math.round(paid/(total||1)*100))+'%"></em></div>'+
+        '<div class="rows"><div class="r"><span>Сумма заказа</span><b>'+money(total)+'</b></div><div class="r"><span>Оплачено</span><b>'+money(paid)+'</b></div></div>';
+    }
+    $('pay').innerHTML=p;
+    // состав
+    $('h-items-n').textContent=items.length?items.length+' '+plural(items.length,'позиция','позиции','позиций'):'';
+    $('items').hidden=!items.length;
+    $('items').innerHTML=items.map(function(i){
+      var q=+i.q||0,pr=+i.p||0,mp='';
+      if(i.m!=null&&q>0&&!cancel&&st!=='done'&&st!=='ready'){var mm=Math.min(+i.m||0,q),f=mm>=q;
+        mp='<div class="it-m'+(f?' full':'')+'"><i><em style="width:'+Math.round(mm/q*100)+'%"></em></i>'+(f?'готово':'сделано '+qf(mm)+' из '+qf(q))+'</div>'}
+      return '<li class="it"><span class="it-n">'+esc(i.n||'Позиция')+'</span>'+(pr?'<span class="it-s">'+money(pr*q)+'</span>':'<span></span>')+
+        '<span class="it-q">'+qf(q)+' '+esc(i.u||'шт')+(pr?' по '+money(pr):'')+'</span>'+mp+'</li>';
+    }).join('');
+    var desc=items.length?'':(o.desc||'Состав заказа уточняет менеджер.');
+    $('desc').hidden=!desc;$('desc').textContent=desc;
+    $('tot').hidden=!items.length||total==null;$('tot').innerHTML='<span>Итого</span><b>'+money(total)+'</b>';
+    // история
+    var hs=STEPS.concat([['cancel','Отменён']]).filter(function(s){return at[s[0]]}).sort(function(a,b){return at[a[0]]-at[b[0]]});
+    $('hist-sec').hidden=!hs.length;
+    $('hist').innerHTML=hs.map(function(s){return '<li class="h"><i></i><b>'+s[1]+'</b><small>'+stamp(at[s[0]])+'</small></li>'}).join('');
+    // студия и кнопка WhatsApp
+    var on=openNow();$('open').className='open'+(on.on?' on':'');$('open').textContent=on.t;
+    $('wa').href='https://wa.me/'+PHONE+'?text='+encodeURIComponent('Здравствуйте! Пишу по заказу № '+num+'.');
     $('loading').hidden=true;$('missing').hidden=true;$('main').hidden=false;
   }
 
   function missing(text){
     $('loading').hidden=true;$('main').hidden=true;$('missing').hidden=false;
     if(text)$('missing-t').textContent=text;
+    $('wa').href='https://wa.me/'+PHONE;
   }
 
   var last='';
   function load(first){
-    if(token.length<24){missing();return}
-    fetch('https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/order_pub/'+token+'?key='+KEY,{cache:'no-store'})
+    var t=token();
+    if(t.length<24){missing();return}
+    fetch('https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/order_pub/'+t+'?key='+KEY,{cache:'no-store'})
       .then(function(r){if(r.status===404||r.status===403)return null;if(!r.ok)throw new Error(r.status);return r.json()})
       .then(function(j){
         if(!j){missing();return}
         var o={},f=j.fields||{};for(var k in f)o[k]=val(f[k]);
-        if(o.gone){missing('Этот заказ больше не отображается. Если у вас остались вопросы, напишите нам в WhatsApp.');return}
-        var s=JSON.stringify(o);if(s===last)return;last=s;render(o);
+        if(o.gone){missing('Этот заказ больше не отображается. Если остались вопросы, напишите нам в WhatsApp.');return}
+        var s=JSON.stringify(o);
+        if(s===last){var n=new Date();$('live').textContent='Обновлено в '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+', страница обновляется сама';return}
+        last=s;render(o);
       })
       .catch(function(){if(first)missing('Не получилось загрузить заказ. Проверьте интернет и обновите страницу.')});
   }
+  $('wa').href='https://wa.me/'+PHONE;
+  document.addEventListener('click',function(e){
+    if(e.target.closest('#copy-num')&&cur)copy(cur.num,'Номер заказа скопирован');
+  });
+  $('share').onclick=function(){
+    var url=location.href,title=cur?'Заказ № '+cur.num+' в студии Разгуляев':'Заказ в студии Разгуляев';
+    if(navigator.share)navigator.share({title:title,url:url}).catch(function(){});else copy(url,'Ссылка скопирована');
+  };
   load(true);
-  // пока страница открыта, статус подтягивается сам раз в минуту
   setInterval(function(){if(!document.hidden)load(false)},60e3);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)load(false)});
-  window.addEventListener('hashchange',function(){token=(location.hash||'').replace(/^#/,'').replace(/[^\w-]/g,'');last='';load(true)});
+  window.addEventListener('hashchange',function(){last='';load(true)});
 })();
 </script>
 </body>
