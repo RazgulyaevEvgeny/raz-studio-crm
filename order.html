@@ -5,8 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta name="theme-color" content="#eef0f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d0f24" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef0f7">
 <meta name="format-detection" content="telephone=no">
 <title>Ваш заказ в студии Разгуляев</title>
 <meta property="og:title" content="Ваш заказ в студии брендирования Разгуляев">
@@ -29,13 +28,8 @@
   --f:"Inter Tight","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --fb:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --safe-b:env(safe-area-inset-bottom,0px);
-  color-scheme:light;
+  color-scheme:only light;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --ink:#eceefe; --muted:#a3a7c9; --line:#2a2e57; --canvas:#0d0f24; --card:#171a3a; --soft:#1f2348;
-  --ok:#43c487; --ok-soft:#163a2c; --warn:#f0a83a; --warn-soft:#3a2c14; --bad:#ff6a70; --bad-soft:#3d1c22;
-  color-scheme:dark;
-}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
@@ -49,7 +43,6 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 /* верхняя строка */
 .top{display:flex;align-items:center;justify-content:space-between;height:52px;margin-bottom:8px}
 .logo{height:32px;width:auto;color:var(--brand);display:block}
-@media (prefers-color-scheme:dark){.logo{color:#8f9bff}}
 .ibtn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--card);color:var(--ink)}
 .ibtn svg{width:20px;height:20px}
 
@@ -123,7 +116,6 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .r b{font:600 15px var(--f);white-space:nowrap}
 details.how{margin-top:14px;border-top:1px solid var(--line);padding-top:4px}
 details.how summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:44px;font:600 14.5px var(--f);color:var(--brand)}
-@media (prefers-color-scheme:dark){details.how summary{color:#9aa5ff}}
 details.how summary::-webkit-details-marker{display:none}
 details.how summary svg{width:18px;height:18px;transition:transform .2s}
 details.how[open] summary svg{transform:rotate(180deg)}
@@ -164,7 +156,6 @@ details.how[open] summary svg{transform:rotate(180deg)}
 .open.on{color:var(--ok)}
 .addr{display:flex;gap:12px;align-items:center;background:var(--soft);border-radius:16px;padding:12px 14px;min-height:56px}
 .addr svg{width:22px;height:22px;color:var(--brand);flex:none}
-@media (prefers-color-scheme:dark){.addr svg{color:#9aa5ff}}
 .addr b{display:block;font:600 15px var(--f)}
 .addr small{color:var(--muted);font-size:13px}
 .addr .go{margin-left:auto;width:20px;height:20px;color:var(--muted)}

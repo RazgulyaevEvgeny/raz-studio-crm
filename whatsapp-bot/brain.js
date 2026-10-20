@@ -16,13 +16,11 @@ export const PAUSE_AFTER_MANAGER = 30;     // минут: бот молчит в
 // Правило Евгения (19.10): пишем клиенту только «принят в работу» (статус «Производство», без сроков) и «готов».
 // На «Новый», «Макет», «Выдан», «Отменён» и перенос срока уведомлений нет.
 const NOTICES = {
-  link:    'Ссылка на ваш заказ № {num}: здесь состав заказа, примерные сроки, оплата и статус.\n{link}',
-  created: 'Ваш заказ № {num} оформлен. Состав заказа, примерные сроки, оплату и статус можно посмотреть здесь:\n{link}',
+  // ссылку на страницу заказа шлём только по кнопке в ведомости (правило Евгения 20.10), без состава заказа
+  link:    'У вас оформлен заказ № {num}. Отслеживать его можно здесь:\n{link}',
   prod:   'Ваш заказ № {num} принят в работу. Мы напишем, когда всё будет готово.',
   ready:  'Ваш заказ № {num} готов, можно забирать. Спасибо, что выбрали нас!',
 };
-// Ссылку на страницу заказа ещё не присылали (заказ старый или оформлен Аней в WhatsApp) — добавляем к уведомлению
-const NOTICE_LINK = '\nСтатус заказа можно смотреть здесь: {link}';
 // Страница заказа для клиента на сайте учёта (order.html), ключ после # — длинный случайный
 export const ORDER_PAGE = 'https://razgulyaevevgeny.github.io/raz-studio-crm/order.html#';
 // Здороваемся и представляемся, только если с клиентом ещё не переписывались (за GREET_GAP); иначе пишем сразу по делу
@@ -264,23 +262,19 @@ export async function prepareNotice(fs, orderId, event) {
   if (o.service === 'kaspi' || (Array.isArray(o.kaspi) && o.kaspi.length)) return { skipped: 'kaspi' };
   const phone = normPhone(o.phone);
   if (!phone) return { skipped: 'нет телефона' };
-  // link — менеджер нажал в ведомости «отправить ссылку»: шлём каждый раз, без отметки «уже отправлено»
-  const kind = event === 'delay' ? 'delay' : event === 'created' || event === 'link' ? event : o.status;
+  // link — менеджер нажал в ведомости «отправить ссылку»: шлём каждый раз, без отметки «уже отправлено».
+  // Сами при создании заказа ссылку не шлём (created пропускаем — его могла поставить старая открытая вкладка учёта)
+  if (event === 'created') return { skipped: 'ссылка только по кнопке' };
+  const kind = event === 'delay' ? 'delay' : event === 'link' ? 'link' : o.status;
   let tpl = NOTICES[kind];
   if (!tpl) return { skipped: 'статус без уведомления' };
   const key = kind === 'delay' ? 'delay_' + o.deadline : kind;
   const sent = o.waSent && typeof o.waSent === 'object' ? o.waSent : {};
   if (sent[key] && kind !== 'link') return { skipped: 'уже отправлено' };
-  const also = [];
-  // Заказ сразу оформили «в производство» — одно сообщение вместо двух
-  if (kind === 'created' && o.status === 'prod' && !sent.prod) { tpl = tpl.replace('оформлен.', 'оформлен и принят в работу.'); also.push('prod'); }
-
-  // Ссылка на страницу заказа: при оформлении всегда, к «Производство» и «Готов» — если её ещё не присылали
   let link = '';
-  if (kind === 'created' || kind === 'link' || ((kind === 'prod' || kind === 'ready') && !sent.link)) {
+  if (kind === 'link') {
     link = await ensureOrderPage(fs, orderId, o).catch(e => { console.log(new Date().toLocaleString('ru-RU'), 'Страница заказа не обновилась:', e?.message || e); return ''; });
-    if ((kind === 'created' || kind === 'link') && !link) return { skipped: 'страница заказа недоступна' };
-    if (link) { if (kind === 'prod' || kind === 'ready') tpl += NOTICE_LINK; if (kind !== 'link') also.push('link'); }
+    if (!link) return { skipped: 'страница заказа недоступна' };
   }
 
   const chat = await fs.get('wa_chats/' + phone).catch(() => null);
@@ -290,7 +284,7 @@ export async function prepareNotice(fs, orderId, event) {
     link,
   };
   let text;
-  if (kind === 'created' || kind === 'link') {
+  if (kind === 'link') {
     // Правило представления: если Аня не представлялась клиенту 12 часов, сообщение начинается с INTRO
     const introduced = (chat?.messages || []).some(m => m.role === 'bot' && /Аня/.test(m.text || '') && Date.now() - (m.at || 0) < 12 * 3600e3);
     const body = view.client ? '{client}, ' + tpl.charAt(0).toLowerCase() + tpl.slice(1) : tpl;
@@ -301,7 +295,7 @@ export async function prepareNotice(fs, orderId, event) {
     const body = lead === NOTICE_AGAIN ? tpl.charAt(0).toLowerCase() + tpl.slice(1) : tpl;
     text = (lead + body).replace(/\{(\w+)\}/g, (_, k) => view[k] ?? '');
   }
-  return { text, phone, key, sent, also };
+  return { text, phone, key, sent };
 }
 
 // Страница заказа для клиента: ключ в заказе (pub) и копия нужных полей в order_pub/<ключ>.
@@ -334,7 +328,7 @@ function talkedRecently(list) {
 // После отправки: отметка в заказе (второй раз не уйдёт) и запись в чат клиента
 export async function markNoticeSent(fs, orderId, n, id = '') {
   const now = Date.now();
-  await fs.patch('orders/' + orderId, { waSent: { ...n.sent, [n.key]: now, ...Object.fromEntries((n.also || []).map(k => [k, now])) } }).catch(() => {});
+  await fs.patch('orders/' + orderId, { waSent: { ...n.sent, [n.key]: now } }).catch(() => {});
   await appendChat(fs, n.phone, { role: 'notice', text: n.text, at: Date.now(), ...(id ? { id } : {}) }).catch(() => {});
 }
 
