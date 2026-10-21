@@ -8,3 +8,7 @@ ALLOWED_ORIGIN = "https://razgulyaevevgeny.github.io"
 # MODEL = "claude-sonnet-5-5"
 # ALLOWED_EMAILS = "design.onegin@gmail.com"
 # Ключ задаётся секретом: npx wrangler secret put ANTHROPIC_API_KEY
+
+# Отдел маркетинга на автопилоте: каждый понедельник в 08:00 по Павлодару (03:00 UTC)
+[triggers]
+crons = ["0 3 * * 1"]

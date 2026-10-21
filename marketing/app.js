@@ -212,7 +212,7 @@ caption — готовая подпись к посту с призывом и 5
     }, e => { state.loaded = true; state.dbErr = 'Нет доступа к базе: ' + (e.message || e.code); render(); }));
     fs.collection('prices').get().then(s => { state.prices = s.docs.map(d => ({ id: d.id, ...d.data() })); }).catch(() => {});
     fs.collection('orders').get().then(s => { state.orders = s.docs.map(d => ({ id: d.id, ...d.data() })); if (state.view === 'cal') render(); }).catch(() => {});
-    fetch(API + '/api/status').then(r => r.json()).then(j => { state.status = j; if (state.view === 'ig' || state.view === 'crt') render(); }).catch(() => (state.status = {}));
+    fetch(API + '/api/status').then(r => r.json()).then(j => { state.status = j; if (state.view === 'ig' || state.view === 'crt' || state.view === 'dept') render(); }).catch(() => (state.status = {}));
     render();
   });
 
@@ -361,7 +361,7 @@ caption — готовая подпись к посту с призывом и 5
   }
 
   /* ================= отрисовка ================= */
-  const NAV = [['cal', 'Календарь'], ['agents', 'Агенты'], ['ig', 'Instagram'], ['crt', 'Креативы'], ['base', 'Справочник']];
+  const NAV = [['cal', 'Календарь'], ['dept', 'Отдел'], ['agents', 'Агенты'], ['ig', 'Instagram'], ['crt', 'Креативы'], ['base', 'Справочник']];
   function render() {
     if (!state.user) return;
     $('nav').innerHTML = NAV.map(([k, l]) => `<button type="button" data-nav="${k}" ${state.view === k ? 'aria-current="page"' : ''}>${l}</button>`).join('');
@@ -370,7 +370,7 @@ caption — готовая подпись к посту с призывом и 5
     if (state.view === 'base' && document.activeElement && document.activeElement.closest && document.activeElement.closest('#about-form')) return;
     let h = state.dbErr ? `<div class="note">${E(state.dbErr)}</div>` : '';
     if (state.status && state.status.ok && !state.status.gen) h += '<div class="note" style="margin-bottom:14px"><b>Нужно обновить сервер ИИ.</b> Откройте Cloudflare → воркер raz-marketing → Edit code, вставьте новый код из файла marketing-worker/worker.js и нажмите Deploy. Без этого агенты не смогут расписывать события.</div>';
-    h += state.view === 'cal' ? vCal() : state.view === 'agents' ? vAgents() : state.view === 'ig' ? vIG() : state.view === 'crt' ? vCrt() : vBase();
+    h += state.view === 'cal' ? vCal() : state.view === 'dept' ? vDept() : state.view === 'agents' ? vAgents() : state.view === 'ig' ? vIG() : state.view === 'crt' ? vCrt() : vBase();
     const keep = state.view === 'agents' ? ($('c-in') ? $('c-in').value : '') : null;
     v.innerHTML = h;
     if (keep != null && $('c-in')) $('c-in').value = keep;
@@ -598,6 +598,44 @@ caption — готовая подпись к посту с призывом и 5
   }
 
   /* ---------- агенты ---------- */
+  /* ---------- отдел маркетинга на автопилоте ---------- */
+  function vDept() {
+    const runs = of('run').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), r = runs.find(x => x.id === state.runId) || runs[0];
+    const st = state.status || {}, working = state.deptBusy || (r && r.status === 'working' && Date.now() - (r.createdAt || 0) < 15 * 60e3);
+    let h = `<div class="row" style="margin-bottom:14px"><div><h1 class="h1">Отдел маркетинга</h1><p class="sub">Каждый понедельник в 08:00 агенты сами смотрят продажи и тренды, собирают план на неделю и расписывают ролики: 5 хуков и 3 варианта съёмки. Можно запустить и вручную.</p></div><span class="sp"></span><button class="btn pri" type="button" data-runnow ${working ? 'disabled' : ''}>${working ? 'Агенты работают…' : 'Запустить отдел сейчас'}</button></div>`;
+    if (st.ok && !st.dept) h += '<div class="note" style="margin-bottom:14px"><b>Нужно обновить сервер ИИ.</b> Cloudflare → воркер raz-marketing → Edit code: вставьте новый код из файла marketing-worker/worker.js.</div>';
+    else if (st.dept && !st.deptAuto) h += '<div class="note" style="margin-bottom:14px"><b>Автозапуск по понедельникам пока выключен.</b> Кнопка работает уже сейчас. Чтобы отдел работал сам, в Cloudflare у воркера raz-marketing задайте секреты AGENT_EMAIL и AGENT_PASSWORD и расписание (см. README).</div>';
+    if (!r) h += '<div class="empty"><b>Отдел ещё не запускался</b>Нажмите «Запустить отдел сейчас» — через 3–6 минут здесь появятся сводка недели, идеи и ролики в календаре.</div>';
+    else {
+      if (runs.length > 1) h += '<div class="row" style="margin-bottom:12px">' + runs.slice(0, 8).map(x => `<button type="button" class="chip" data-run="${E(x.id)}" style="${x === r ? 'background:var(--ink);color:#fff' : ''}">${fmtD(x.date)}${x.status === 'error' ? ' · ошибка' : ''}</button>`).join('') + '</div>';
+      if (r.status === 'working') h += `<div class="note" style="margin-bottom:14px"><b>Работаем:</b> ${E(r.stage || '')}. Обычно это 3–6 минут, страницу можно не держать открытой.</div>`;
+      if (r.status === 'error') h += `<div class="note" style="margin-bottom:14px"><b>Отдел остановился:</b> ${E(r.error || '')}</div>`;
+      const evL = (r.eventIds || []).map(evById).filter(Boolean);
+      if (evL.length) h += `<h2 class="h2" style="margin:6px 0 10px">Ролики на неделю</h2><div class="list" style="margin-bottom:18px">${evL.map(e => `<button type="button" class="lcard" style="--c:var(${TYPES[e.type].c})" data-open="${E(e.id)}"><i class="dot"></i><div><b>${E(e.title)}</b><p>${fmtDW(e.date)} · ${FORMATS[e.format] || ''} · ${E(stOf(e)[e.status])} — внутри сценарий, 5 хуков и 3 варианта съёмки</p></div><span class="lnk">Открыть</span></button>`).join('')}</div>`;
+      if (r.summary) h += `<h2 class="h2" style="margin:6px 0 10px">Сводка недели</h2><div class="md" style="margin-bottom:18px">${md(r.summary)}</div>`;
+      if ((r.ideas || []).length) h += `<h2 class="h2" style="margin:6px 0 10px">Идеи генератора</h2><div class="list" style="margin-bottom:18px">${r.ideas.map(x => `<div class="lcard" style="--c:var(--warn);cursor:default"><i class="dot"></i><div><b>${E(x.title)}</b><p>${E([x.service, x.format].filter(Boolean).join(' · '))}${x.hook ? ' — хук: ' + E(x.hook) : ''}${x.why ? '<br>' + E(x.why) : ''}${x.source && /^https?:/.test(x.source) ? ` <a href="${E(x.source)}" target="_blank" rel="noopener">источник</a>` : ''}</p></div><span></span></div>`).join('')}</div>`;
+      if (r.trends) h += `<h2 class="h2" style="margin:6px 0 10px">Тренды, которые нашёл разведчик</h2><div class="md" style="margin-bottom:18px">${md(r.trends)}</div>`;
+    }
+    const tr = of('trend').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    h += `<h2 class="h2" style="margin:6px 0 4px">Копилка трендов</h2><p class="muted" style="margin:0 0 10px;font-size:14px">Увидели рилс, который зацепил? Вставьте ссылку и пару слов — генератор идей учтёт это в следующий запуск.</p>
+      <form class="row" id="trend-form" style="margin-bottom:10px"><input class="inp" name="link" placeholder="Ссылка на рилс или аккаунт" style="flex:1;min-width:200px"><input class="inp" name="note" placeholder="Чем зацепило" style="flex:1;min-width:200px"><button class="btn pri sm" type="submit">Сохранить</button></form>`;
+    h += tr.length ? '<div class="list">' + tr.slice(0, 30).map(x => `<div class="lcard" style="--c:var(--violet);cursor:default"><i class="dot"></i><div><b>${x.link && /^https?:/.test(x.link) ? `<a href="${E(x.link)}" target="_blank" rel="noopener">${E(x.link.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60))}</a>` : E(x.link || 'без ссылки')}</b><p>${E(x.note || '')}${x.by ? ' · ' + E(x.by) : ''} · ${fmtT(x.createdAt)}</p></div><button class="lnk del" type="button" data-trdel="${E(x.id)}">Удалить</button></div>`).join('') + '</div>' : '';
+    return h;
+  }
+  async function runDept() {
+    const runs = of('run').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), last = runs[0];
+    if (last && last.status === 'done' && last.date === today() && !confirm('Отдел сегодня уже составил план. Запустить ещё раз? В календарь добавятся новые ролики.')) return;
+    state.deptBusy = true; state.runId = ''; render();
+    try {
+      const res = await fetch(API + '/api/department', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + await auth.currentUser.getIdToken() }, body: '{}' });
+      const j = await res.json().catch(() => ({}));
+      if (res.status === 404) throw new Error('Сервер ИИ старой версии: обновите код воркера в Cloudflare (файл marketing-worker/worker.js).');
+      if (!res.ok) throw new Error(j.error || 'Сервер ответил ' + res.status);
+      toast(`Готово: ${j.events} ${plural(j.events, 'ролик', 'ролика', 'роликов')} в календаре и ${j.ideas} идей`, 4000);
+    } catch (e) { toast(e.message || 'Не получилось', 6000); }
+    finally { state.deptBusy = false; render(); }
+  }
+
   function vAgents() {
     const R = ROLES[state.role], mine = state.threads.filter(t => t.role === state.role), th = state.chatBusy ? state.chatBusy.thread : state.threads.find(t => t.id === state.thread && t.role === state.role);
     let h = `<div class="row" style="margin-bottom:14px"><div><h1 class="h1">Агенты</h1><p class="sub">Спросите совета, а готовый план одной кнопкой разложите в календарь — каждое событие распишется подробно.</p></div></div>
@@ -799,6 +837,10 @@ caption — готовая подпись к посту с призывом и 5
     if (t === $('scrim') || g('[data-dclose]')) { closeDrawer(); return; }
     // календарь
     if ((el = g('[data-open]'))) { openDrawer(el.dataset.open); return; }
+    // отдел
+    if (g('[data-runnow]')) { runDept(); return; }
+    if ((el = g('[data-run]'))) { state.runId = el.dataset.run; render(); return; }
+    if ((el = g('[data-trdel]'))) { await col.doc(el.dataset.trdel).delete(); return; }
     if ((el = g('[data-new]'))) { newEventDialog(el.dataset.new); return; }
     if (g('[data-plan]')) { planDialog(); return; }
     if ((el = g('[data-cal]'))) {
@@ -926,6 +968,7 @@ caption — готовая подпись к посту с призывом и 5
     if (f.id === 'about-form') { const fd = new FormData(f), d = { updatedAt: Date.now(), by: me() }; ABOUT.forEach(([k]) => d[k] = String(fd.get(k) || '').trim()); try { await col.doc('about').set(d); toast('Сохранено — агенты теперь это учитывают'); document.activeElement.blur(); render(); } catch (_) { toast('Не сохранилось'); } }
     if (f.id === 'agents-form') { const fd = new FormData(f), d = {}; ['base', 'producer', 'planner', 'marketer', 'smm', 'analyst', 'designer'].forEach(k => { const v = String(fd.get(k) || '').trim(); d[k] = v && v !== PROMPTS[k] ? v : ''; }); try { await col.doc('agents').set({ ...d, updatedAt: Date.now() }); toast('Инструкции сохранены'); } catch (_) { toast('Не сохранилось'); } }
     if (f.id === 'idea-form') { const v = f.t.value.trim(); if (!v) return; f.t.value = ''; await col.doc().set({ kind: 'idea', title: v, status: 'new', notes: '', createdAt: Date.now(), updatedAt: Date.now(), by: me() }); }
+    if (f.id === 'trend-form') { const link = f.link.value.trim(), note = f.note.value.trim(); if (!link && !note) return; await col.doc().set({ kind: 'trend', link, note, createdAt: Date.now(), by: me() }); f.reset(); toast('Сохранили в копилку'); }
     if (f.id === 'crt-form') crtGenerate();
     if (f.id === 'crt-ed') { crtApply(); $('dlg').close(); paintPreviews(); render(); }
   });
