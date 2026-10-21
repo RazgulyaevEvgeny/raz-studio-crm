@@ -196,25 +196,25 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 /* сводка */
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 @media(max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
-/* плитки сводки — тёмные карточки как у виджетов-«плиток»: подпись капсом, крупная цифра, столбики за 14 дней (свежие — цветом плитки) */
-.stat{--sa:#7d8cff;--sc:var(--sa);position:relative;display:flex;flex-direction:column;gap:6px;min-height:176px;padding:18px 20px 16px;border-radius:26px;overflow:hidden;text-align:left;color:#fff;background:linear-gradient(180deg,#26272e,#1b1c21);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);transition:transform .18s,box-shadow .18s}
-@media(hover:hover){.stat:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1),0 16px 28px -18px rgba(10,11,20,.7)}}
+/* плитки сводки — светлые карточки как у виджетов-«плиток»: подпись капсом, крупная цифра, столбики за 14 дней (свежие — цветом плитки) */
+.stat{--sa:#7d8cff;--sc:var(--sa);position:relative;display:flex;flex-direction:column;gap:6px;min-height:176px;padding:18px 20px 16px;border-radius:26px;overflow:hidden;text-align:left;color:var(--ink);background:var(--tile);transition:transform .18s,box-shadow .18s,background .18s}
+@media(hover:hover){.stat:hover{transform:translateY(-2px);background:var(--tile-2)}}
 .stat:focus-visible{outline:2.5px solid var(--sa);outline-offset:3px}
-.stat.on{box-shadow:inset 0 0 0 2px var(--sa)}
-.st-blue{--sa:#7d8cff}.st-dark{--sa:#34d17a}.st-green{--sa:#ffb020}.st-violet{--sa:#b49bff}
+.stat.on{background:var(--paper);box-shadow:inset 0 0 0 2.5px var(--sa)}
+.st-blue{--sa:var(--blue)}.st-dark{--sa:var(--ok)}.st-green{--sa:var(--st-prod)}.st-violet{--sa:var(--st-design)}
 .st-h,.st-t{display:contents}
-.stat .lbl{order:0;font:700 12px/1.2 var(--f);letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .lbl{order:0;font:700 12px/1.2 var(--f);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat b{order:1;margin-top:4px;font:600 clamp(28px,2.7vw,38px)/1 var(--f);letter-spacing:-.03em;white-space:nowrap;font-variant-numeric:tabular-nums}
-.stat small{order:2;font:500 13px/1.3 var(--fb);color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat small{order:2;font:500 13px/1.3 var(--fb);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .stat .st-g,.stat small.net{order:3}
 .stat svg.spark{order:4;display:block;width:100%;height:46px;margin-top:auto;overflow:visible}
-.stat.alert b{color:#ff8f86}
+.stat.alert b{color:var(--danger)}
 /* «Рост продаж»: процент цветом роста, плашки студии и Kaspi как «AVG +10%» */
 .st-g{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
-.st-g span{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:0 9px;border-radius:8px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font:700 11.5px var(--f);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
-.st-g span:has(.up){background:#1f9d5a;color:#fff}.st-g span:has(.dn){background:#e5484d;color:#fff}
+.st-g span{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:0 9px;border-radius:8px;background:var(--paper);color:var(--muted);font:700 11.5px var(--f);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.st-g span:has(.up){background:var(--ok);color:#fff}.st-g span:has(.dn){background:var(--danger);color:#fff}
 .st-g em{font-style:normal}
-#s-growth.up{color:#34d17a}#s-growth.dn{color:#ff6b62}
+#s-growth.up{color:var(--ok)}#s-growth.dn{color:var(--danger)}
 
 /* виджеты главной */
 .home-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start}
@@ -850,7 +850,7 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .kbuy small{color:var(--muted);font-size:12.5px}
 .home-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:980px){.home-grid2{grid-template-columns:minmax(0,1fr)}}
-.stat .neg{color:#ff8f86}
+.stat .neg{color:var(--danger)}
 .stat small.net{max-width:none;margin-top:-6px;white-space:normal}
 .stat small.net:empty{display:none}
 .kpi small{white-space:normal}
@@ -2683,8 +2683,8 @@ function drawSpark(svg,vals,key){
   /* столбики: последние 7 — цветом плитки (--sa), раньше — приглушённые; тонкая базовая линия */
   if(!vals.length)vals=[0];
   const W=120,H=40,n=vals.length,gap=n>20?1.2:2.4,bw=Math.max(1.5,(W-gap*(n-1))/n),max=Math.max(...vals.map(v=>Math.abs(v)),0),cut=n-Math.min(7,Math.ceil(n/2));
-  svg.innerHTML=vals.map((v,i)=>{const h=max?Math.max(2,Math.abs(v)/max*(H-6)):2;return `<rect x="${(i*(bw+gap)).toFixed(2)}" y="${(H-h).toFixed(2)}" width="${bw.toFixed(2)}" height="${h.toFixed(2)}" rx="${Math.min(1.6,bw/2)}" style="fill:${i>=cut?'var(--sa)':'rgba(255,255,255,.2)'}"/>`}).join('')
-    +`<line x1="0" x2="${W}" y1="${H-.5}" y2="${H-.5}" stroke="rgba(255,255,255,.18)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  svg.innerHTML=vals.map((v,i)=>{const h=max?Math.max(2,Math.abs(v)/max*(H-6)):2;return `<rect x="${(i*(bw+gap)).toFixed(2)}" y="${(H-h).toFixed(2)}" width="${bw.toFixed(2)}" height="${h.toFixed(2)}" rx="${Math.min(1.6,bw/2)}" style="fill:${i>=cut?'var(--sa)':'color-mix(in srgb,var(--sa) 22%,var(--tile-2))'}"/>`}).join('')
+    +`<line x1="0" x2="${W}" y1="${H-.5}" y2="${H-.5}" style="stroke:var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
 }
 
 /* ---------- данные по дням ---------- */
