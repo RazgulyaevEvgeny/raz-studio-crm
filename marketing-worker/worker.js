@@ -314,7 +314,7 @@ async function instagram(env) {
    Без участия людей воркер входит в базу как отдельный сотрудник:
      AGENT_EMAIL, AGENT_PASSWORD — секреты: почта и пароль сотрудника с доступом в учёт (можно взять вход бота Ани);
      TELEGRAM_BOT_TOKEN — необязательно, секрет: тот же токен, что у бота Ани, тогда итог недели придёт в Telegram. */
-const DEPT_VER = 5; // версия отдела: сайт сверяет её и просит обновить код воркера
+const DEPT_VER = 6; // версия отдела: сайт сверяет её и просит обновить код воркера
 const FB_API_KEY = 'AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0'; // публичный ключ из firebase-config.js
 const SITE = 'https://razgulyaevevgeny.github.io/raz-studio-crm/marketing/';
 const kzNow = () => new Date(Date.now() + 5 * 3600e3);               // Казахстан, UTC+5
@@ -485,6 +485,15 @@ async function scoutTrends(env, system, task) {
     return ((c && c.content && c.content.parts) || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
   } catch (_) { return ''; }
 }
+// ИИ иногда отдаёт строку вместо списка или объект вместо строки — приводим ответ сценариста к ожидаемому виду
+const toArr = x => Array.isArray(x) ? x : x == null || x === '' ? [] : typeof x === 'string' ? x.split(/\n+|;\s*/).map(t => t.replace(/^\s*(?:[-—•*]|\d+[.)])\s*/, '').trim()).filter(Boolean) : typeof x === 'object' ? Object.values(x) : [x];
+const toStr = x => x == null ? '' : typeof x === 'string' ? x : typeof x === 'object' ? Object.values(x).map(toStr).filter(Boolean).join(' — ') : String(x);
+function normScript(s) {
+  s = s && typeof s === 'object' ? s : {};
+  const shot = x => x && typeof x === 'object' ? { frame: toStr(x.frame), angle: toStr(x.angle), sec: toStr(x.sec), onscreen: toStr(x.onscreen), voice: toStr(x.voice) } : { frame: toStr(x), angle: '', sec: '', onscreen: '', voice: '' };
+  const variant = v => v && typeof v === 'object' ? { name: toStr(v.name), how: toStr(v.how), time: toStr(v.time), shots: toArr(v.shots).map(shot), music: toStr(v.music), edit: toStr(v.edit) } : { name: toStr(v), how: '', time: '', shots: [], music: '', edit: '' };
+  return { goal: toStr(s.goal), hooks: toArr(s.hooks).map(toStr).filter(Boolean), variants: toArr(s.variants).map(variant), voice: toStr(s.voice), caption: toStr(s.caption), hashtags: toArr(s.hashtags).map(toStr).join(' '), prep: toArr(s.prep).map(toStr).filter(Boolean), steps: toArr(s.steps).map(toStr).filter(Boolean), notes: toStr(s.notes) };
+}
 function scriptNotes(s) {
   const shots = v => (v.shots || []).length ? '| Кадр | Что снимаем | Ракурс | Сек | Текст на экране |\n|---|---|---|---|---|\n' + v.shots.map((x, i) => `| ${i + 1} | ${String(x.frame || '').replace(/\|/g, '/')} | ${x.angle || ''} | ${x.sec || ''} | ${String(x.onscreen || '').replace(/\|/g, '/')} |`).join('\n') : '';
   const out = ['### 5 хуков на выбор\n' + (s.hooks || []).map((h, i) => `${i + 1}. ${h}`).join('\n')];
@@ -568,7 +577,7 @@ async function deptStep(env, db, runId, run) {
     if (!p) return save({ next: 'finish' });
     const idea = (run.ideas || [])[(+p.idx || 0) - 1];
     let s;
-    try { s = await askJ('Сценарист', 'writer', `Ролик: ${p.title}\nФормат: ${p.format || 'reels'}\nУслуга: ${p.service || ''}\nДата: ${p.date}\nИдея: ${p.idea || ''}${idea ? '\nИсходный хук: ' + idea.hook + '\nПочему: ' + (idea.why || '') : ''}`, { schema: SCH_SCRIPT, max: 20000, t: 0.8 }); }
+    try { s = await askJ('Сценарист', 'writer', `Ролик: ${p.title}\nФормат: ${p.format || 'reels'}\nУслуга: ${p.service || ''}\nДата: ${p.date}\nИдея: ${p.idea || ''}${idea ? '\nИсходный хук: ' + idea.hook + '\nПочему: ' + (idea.why || '') : ''}`, { schema: SCH_SCRIPT, max: 20000, t: 0.8 }).then(normScript); }
     catch (e) { s = { goal: '', hooks: [], variants: [], notes: 'Сценарист не успел расписать: ' + e.message + '\nОткройте карточку и нажмите «Расписать с ИИ».' }; }
     const v = (s.variants || [])[0] || {};
     const id = 'auto' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 8);
