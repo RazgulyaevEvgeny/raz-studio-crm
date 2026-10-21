@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   const API = 'https://raz-marketing.design-onegin.workers.dev';
-  const DEPT_NEED = 5; // версия отдела в marketing-worker/worker.js (DEPT_VER)
+  const DEPT_NEED = 6; // версия отдела в marketing-worker/worker.js (DEPT_VER)
 
   /* ================= справочники ================= */
   const TYPES = {
@@ -349,9 +349,10 @@ caption — готовая подпись к посту с призывом и 5
       e = evById(id) || e;
       const take = (k, v) => { if (mode === 'fill' && (Array.isArray(e[k]) ? e[k].length : e[k])) return; if (Array.isArray(v) ? v.length : v) e[k] = v; };
       ['goal', 'idea', 'time', 'voice', 'music', 'edit', 'caption', 'hashtags', 'notes'].forEach(k => take(k, String(j[k] || '').trim()));
-      take('prep', (j.prep || []).map(t => ({ t: String(t), done: false })).filter(s => s.t));
-      take('steps', (j.steps || []).map(t => ({ t: String(t), done: false })).filter(s => s.t));
-      take('shots', (j.shots || []).map(s => ({ frame: String(s.frame || ''), angle: String(s.angle || ''), sec: String(s.sec || ''), onscreen: String(s.onscreen || ''), voice: String(s.voice || '') })).filter(s => s.frame || s.onscreen || s.voice));
+      const arr = x => Array.isArray(x) ? x : typeof x === 'string' ? x.split(/\n+|;\s*/).map(t => t.replace(/^\s*(?:[-—•*]|\d+[.)])\s*/, '').trim()) : x && typeof x === 'object' ? Object.values(x) : [];
+      take('prep', arr(j.prep).map(t => ({ t: String(t), done: false })).filter(s => s.t));
+      take('steps', arr(j.steps).map(t => ({ t: String(t), done: false })).filter(s => s.t));
+      take('shots', arr(j.shots).filter(s => s && typeof s === 'object').map(s => ({ frame: String(s.frame || ''), angle: String(s.angle || ''), sec: String(s.sec || ''), onscreen: String(s.onscreen || ''), voice: String(s.voice || '') })).filter(s => s.frame || s.onscreen || s.voice));
       if (e.hashtags) e.hashtags = e.hashtags.replace(/\s*,\s*/g, ' ');
       e.aiState = ''; e.aiErr = '';
       await saveEv(e);
