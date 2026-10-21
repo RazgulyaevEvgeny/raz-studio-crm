@@ -1,13 +1,15 @@
 // Фоновые дела бота, которые не связаны с ответами в чате:
 //   - каждую ночь сохраняет копию всей базы учёта в папку backup рядом с ботом (хранит 30 последних дней);
-//   - дожим: если клиент обсуждал заказ и замолчал на сутки, Аня один раз мягко напоминает о себе (только в рабочее время);
-//   - через 2 дня после статуса «Выдан» просит оставить отзыв в 2ГИС (один раз на заказ, только в рабочее время);
+//   - «Кому можно написать»: если клиент спрашивал, замолчал на сутки и заказ не оформил, Аня НЕ пишет ему сама,
+//     а оставляет подсказку менеджеру (wa_chats.lead), учёт показывает её в виджете Ани;
+//   - просьба об отзыве в 2ГИС через 2 дня после «Выдан» — выключена (REVIEWS_ON): Аня первой клиентам не пишет;
 //   - раз в 6 часов проверяет цены конкурентов на Kaspi и пишет в Telegram, если у кого-то дешевле (учёт открывать не нужно);
 //   - сообщает в Telegram, если у Ани кончился бесплатный лимит Gemini и отвечает запасной ИИ.
 
 import { mkdir, writeFile, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { runAgent, appendChat, normPhone, isWorkTime, botToken } from './brain.js';
+import { appendChat, normPhone, isWorkTime, botToken } from './brain.js';
+import { leadHint } from './anna.js';
 
 const DAY = 24 * 3600e3;
 const kz = (t = Date.now()) => new Date(t + 5 * 3600e3);
@@ -18,9 +20,12 @@ const BACKUP_HOUR = 3;            // во сколько ночью (по Пав
 const BACKUP_COLS = ['orders', 'tasks', 'prices', 'projects', 'office', 'supplies', 'kaspi_orders', 'requests', 'marketing',
   'wa_chats', 'wa_anna', 'wa_anna_q', 'staff'];
 
-const FOLLOW_MIN = 20 * 3600e3;   // напоминаем, если клиент молчит от 20 часов…
-const FOLLOW_MAX = 72 * 3600e3;   // …до 3 суток
-const FOLLOW_PER_DAY = 10;        // не больше 10 напоминаний в день: WhatsApp не любит массовые сообщения
+// Правило Евгения (21.10): Аня не дожимает и сама первой клиентам не пишет. Вместо этого подсказывает менеджеру, кому можно написать.
+const LEAD_MIN = 20 * 3600e3;     // подсказываем, если клиент молчит от 20 часов…
+const LEAD_MAX = 7 * DAY;         // …до недели
+const LEAD_PER_DAY = 15;          // не больше 15 разборов в день, чтобы не тратить бесплатный лимит Gemini
+
+const REVIEWS_ON = false;         // просьба об отзыве — тоже сообщение первой, поэтому выключена
 
 const REVIEW_AFTER = 2 * DAY;     // просим отзыв через 2 дня после выдачи
 const REVIEW_LINK = 'https://2gis.kz/pavlodar/firm/70000001103891578/tab/reviews';
@@ -57,13 +62,14 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
     }
   }
 
-  /* ---------- дожим: клиент замолчал после разговора ---------- */
-  let followDay = '', followN = 0, followBusy = false;
-  async function followUps() {
-    if (!aiOn || followBusy || !online() || !isWorkTime()) return;
-    if (followDay !== today()) { followDay = today(); followN = 0; }
-    if (followN >= FOLLOW_PER_DAY) return;
-    followBusy = true;
+  /* ---------- «Кому можно написать»: клиент спрашивал, замолчал и не заказал ---------- */
+  // Клиенту ничего не отправляем: только записываем в чат подсказку lead {at, why, ask, text, lastAt}, менеджер решает сам
+  let leadDay = '', leadN = 0, leadBusy = false;
+  async function leads() {
+    if (!aiOn || leadBusy || !isWorkTime()) return;
+    if (leadDay !== today()) { leadDay = today(); leadN = 0; }
+    if (leadN >= LEAD_PER_DAY) return;
+    leadBusy = true;
     try {
       const chats = [];
       for (const role of ['bot', 'manager']) {
@@ -71,30 +77,34 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
           where: { fieldFilter: { field: { fieldPath: 'lastRole' }, op: 'EQUAL', value: { stringValue: role } } },
         }).catch(() => []));
       }
+      // заказы за последний месяц: у кого заказ уже есть, тому писать не нужно
+      const orders = await fs.query('orders', {
+        where: { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { integerValue: String(Date.now() - 30 * DAY) } } },
+      }).catch(() => []);
+      const ordered = new Set(orders.filter(o => !o.deletedAt && o.status !== 'cancel').map(o => normPhone(o.phone)).filter(Boolean));
       for (const chat of chats) {
-        if (followN >= FOLLOW_PER_DAY) break;
-        const quiet = Date.now() - (chat.lastAt || chat.updatedAt || 0);
+        if (leadN >= LEAD_PER_DAY) break;
+        const last = chat.lastAt || chat.updatedAt || 0, quiet = Date.now() - last;
         const clientMsgs = (chat.messages || []).filter(m => m.role === 'client').length;
-        if (quiet < FOLLOW_MIN || quiet > FOLLOW_MAX || chat.followUpAt || chat.needsManager || clientMsgs < 2) continue;
-        const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
-        if (!jid) continue;
-        await fs.patch('wa_chats/' + chat.id, { followUpAt: Date.now() }); // решаем один раз на разговор
-        const r = await runAgent(fs, env, chat.phone || '', chat, { followUp: true });
-        if (!r.text) { log('Дожим: Аня решила не напоминать', chat.phone || chat.id, r.silent ? '— ' + r.silent : ''); continue; }
-        const id = await send(jid, r.text, true);
-        await appendChat(fs, chat.id, { role: 'bot', text: r.text, at: Date.now(), ...(id ? { id } : {}) });
-        followN++;
-        log('Дожим: Аня напомнила о себе', chat.phone || chat.id);
+        // разбираем один раз на разговор: заново — только если клиент потом снова писал
+        if (quiet < LEAD_MIN || quiet > LEAD_MAX || (chat.leadAt || 0) >= last || chat.needsManager || !clientMsgs) continue;
+        if (chat.phone && ordered.has(normPhone(chat.phone))) continue;
+        await fs.patch('wa_chats/' + chat.id, { leadAt: Date.now() });
+        leadN++;
+        const hint = await leadHint(env, chat).catch(e => { log('Кому написать: ИИ не ответил', e?.message || e); return null; });
+        if (!hint) continue;
+        await fs.patch('wa_chats/' + chat.id, { leadOpen: true, lead: { ...hint, at: Date.now(), lastAt: last } });
+        log('Кому можно написать: подсказка менеджеру', chat.phone || chat.id, '—', hint.why);
       }
     } catch (e) {
-      log('ошибка дожима', e?.message || e);
-    } finally { followBusy = false; }
+      log('ошибка подсказок «Кому написать»', e?.message || e);
+    } finally { leadBusy = false; }
   }
 
   /* ---------- просьба об отзыве после выдачи заказа ---------- */
   let reviewBusy = false;
   async function reviews() {
-    if (reviewBusy || !online() || !isWorkTime()) return;
+    if (!REVIEWS_ON || reviewBusy || !online() || !isWorkTime()) return;
     reviewBusy = true;
     try {
       // Только заказы, выданные после включения этой функции (у них есть время статуса statusAt.done)
@@ -181,7 +191,7 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
   }
 
   setInterval(() => backup().catch(() => {}), 10 * 60e3);
-  setInterval(() => followUps().catch(() => {}), 10 * 60e3);
+  setInterval(() => leads().catch(() => {}), 10 * 60e3);
   setInterval(() => reviews().catch(() => {}), 15 * 60e3);
   setInterval(() => kaspiPrices().catch(() => {}), 30 * 60e3);
   setTimeout(() => { backup().catch(() => {}); kaspiPrices().catch(() => {}); }, 60e3);

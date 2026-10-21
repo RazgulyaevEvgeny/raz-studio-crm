@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261021120000">
+<meta name="app-build" content="20261021150000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1705,6 +1705,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
             <div class="an-col"><div class="an-say" id="w-anna-say">Загружаем сводку…</div><div id="w-anna-todo"></div><div class="an-stats" id="w-anna-stats"></div><div id="w-anna-ins"></div></div>
             <div class="an-col">
               <div id="w-anna-need"></div>
+              <div id="w-anna-lead"></div>
               <div class="an-sec" id="anna-chat"><button type="button" class="an-tg" id="anna-chat-tg" aria-expanded="false" aria-controls="anna-chat-b"><span id="anna-chat-l">Открыть чат</span><i class="ch" aria-hidden="true"></i></button>
                 <div class="an-sb" id="anna-chat-b" hidden>
                   <form class="an-ask" id="anna-ask" novalidate><input id="anna-q" placeholder="Спросить Аню" autocomplete="off" maxlength="500" aria-label="Вопрос Ане"><button class="btn primary sm" type="submit" id="anna-q-btn">Спросить</button></form>
@@ -5869,7 +5870,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadPrinte
      orderId — id заказа студии (открываем карточку), kaspiId — id или номер заказа Kaspi (открываем страницу Kaspi на нём); brief — что хочет клиент, словами Анны.
    wa_anna/request — просьба обновить сводку {refreshAt, by}; wa_anna_q — вопросы {q, at, by, status:'new'|'done', a}.
    Обёртка db не умеет doc.onSnapshot, add и orderBy, поэтому здесь Firestore напрямую. */
-let annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={},annaWait=null;
+let annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={},annaWait=null,annaLead=[];
 /* отмеченные дела из «Сегодня сделать»: wa_anna/done {items:{ключ:{text, at, by, orderId?, kaspiId?}}}.
    Видно всем, кто открыл учёт; дело скрыто сутки после отметки, Аня его в новую сводку не возвращает. */
 let annaDoneT={};const annaTick={},ANNA_DONE_TTL=24*3600e3;
@@ -5889,6 +5890,8 @@ function annaListen(){
   fs.doc('wa_anna/digest').onSnapshot(s=>{annaD=s.exists?s.data():null;annaLoaded=true;annaErr='';renderAnna()},fail);
   /* кто ждёт менеджера — прямо из чатов: менеджер ответил клиенту или сняли вручную — строка сразу уходит */
   fs.collection('wa_chats').where('needsManager','==',true).onSnapshot(s=>{annaWait=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaWait=null});
+  /* «Кому можно написать»: клиент спрашивал и пропал без заказа — Аня сама не пишет, только подсказывает (wa_chats.lead, extras.js) */
+  fs.collection('wa_chats').where('leadOpen','==',true).onSnapshot(s=>{annaLead=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaLead=[]});
   fs.doc('wa_anna/done').onSnapshot(s=>{annaDoneT=(s.exists&&s.data().items)||{};renderAnna()},()=>{});
   fs.doc('wa_anna/insights').onSnapshot(s=>{annaIns=s.exists?s.data():null;renderAnna()},()=>{});
   fs.collection('wa_anna_q').orderBy('at','desc').limit(30).onSnapshot(s=>{annaQ=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},fail);
@@ -5896,7 +5899,7 @@ function annaListen(){
 /* затяжка на аватаре: при первом показе сводки и при открытии блока */
 let annaPuffed=false,annaPuffT,annaNm=null;
 /* свёртки внутри блока: «Сегодня сделать» и чат закрыты, пока их не открыли (помним в браузере); история чата — только на сеанс */
-const ANNA_UI='raz.anna.ui';let annaUi={todo:false,chat:false,ins:false,per:'week'},annaHist=false;try{Object.assign(annaUi,JSON.parse(localStorage.getItem(ANNA_UI)||'{}'))}catch(_){}
+const ANNA_UI='raz.anna.ui';let annaUi={todo:false,chat:false,ins:false,lead:true,per:'week'},annaHist=false;try{Object.assign(annaUi,JSON.parse(localStorage.getItem(ANNA_UI)||'{}'))}catch(_){}
 function annaUiSet(k,v){annaUi[k]=v;try{localStorage.setItem(ANNA_UI,JSON.stringify(annaUi))}catch(_){}renderAnna()}
 /* в чате видно только свежее (5 минут с вопроса или ответа), остальное — под «Историей»; из базы ничего не удаляем */
 const ANNA_Q_FRESH=5*6e4;
@@ -5913,12 +5916,14 @@ function annaKaspi(id){
 $('w-anna').addEventListener('click',e=>{const t=e.target;
   if(t.closest('[data-antodo]')){annaUiSet('todo',!annaUi.todo);return}
   if(t.closest('[data-anins]')){annaUiSet('ins',!annaUi.ins);return}
+  if(t.closest('[data-anleadtg]')){annaUiSet('lead',!annaUi.lead);return}
+  const ld=t.closest('[data-anlead]');if(ld){annaLeadDone(ld.dataset.anlead);return}
   const pr=t.closest('[data-anper]');if(pr){annaUiSet('per',pr.dataset.anper);return}
   if(t.closest('[data-aninsgo]')){annaInsGo();return}
   if(t.closest('#anna-chat-tg')){annaUiSet('chat',!annaUi.chat);if(annaUi.chat&&!isPhone())$('anna-q').focus();return}
   if(t.closest('#anna-hist-tg')){annaHist=!annaHist;renderAnna();return}
   const nm=t.closest('[data-annm]');if(nm){annaNm=annaNm===nm.dataset.annm?null:nm.dataset.annm;
-    document.querySelectorAll('#w-anna-need .an-nm').forEach(r=>{const b=r.querySelector('[data-annm]'),o=b.dataset.annm===annaNm;r.classList.toggle('open',o);b.setAttribute('aria-expanded',o)});return}
+    document.querySelectorAll('#w-anna-need .an-nm,#w-anna-lead .an-nm').forEach(r=>{const b=r.querySelector('[data-annm]'),o=b.dataset.annm===annaNm;r.classList.toggle('open',o);b.setAttribute('aria-expanded',o)});return}
   const ck=t.closest('[data-anck]');if(ck){annaCheck(ck.dataset.anck);return}
   const dn=t.closest('[data-andone]');if(dn){annaDone(dn.dataset.andone);return}
   const od=t.closest('[data-anord]');if(od){annaOrder(od.dataset.anord);return}
@@ -5935,7 +5940,7 @@ function renderAnna(){
   const c=$('w-anna-c');
   c.textContent=annaErr?'нет доступа к базе':!annaLoaded?'подключаемся…':d.at?(need.length?need.length+' ждут · ':'')+'обновлено '+printWhen(d.at):'сводки пока нет';
   c.style.setProperty('--sc',annaErr?'var(--danger)':d.at&&Date.now()-d.at<3*3600e3?'var(--ok)':'var(--muted)');
-  if(annaErr){say.textContent='Нужно обновить правила базы Firestore: добавить строки wa_anna и wa_anna_q из firestore.rules.';$('w-anna-todo').innerHTML=$('w-anna-need').innerHTML=$('w-anna-stats').innerHTML='';}
+  if(annaErr){say.textContent='Нужно обновить правила базы Firestore: добавить строки wa_anna и wa_anna_q из firestore.rules.';$('w-anna-todo').innerHTML=$('w-anna-need').innerHTML=$('w-anna-lead').innerHTML=$('w-anna-stats').innerHTML='';}
   else if(!annaLoaded)say.textContent='Загружаем сводку…';
   else if(!annaD)say.textContent='Аня ещё не готовила сводку. Нажмите «Обновить» внизу, когда рабочий компьютер включён.';
   else say.textContent=String(d.summary||'').trim()||'Пока без новостей.';
@@ -5952,6 +5957,7 @@ function renderAnna(){
       const say=String(n.brief||n.reason||'').trim()||'Клиент просит менеджера, подробностей Аня не записала.';
       return `<div class="an-nm${op?' open':''}"><button type="button" class="mrow" data-annm="${esc(key)}" aria-expanded="${op}"><span class="an-w"><b>${who}</b><small>${esc(n.reason||'')}</small></span><span class="r">${n.since?`<small>${annaAgo(+n.since)}</small>`:''}<i class="ch" aria-hidden="true"></i></span></button>`
         +`<div class="an-nb"><div><p>${esc(say)}</p><div class="an-nba">${ph?`<a class="btn sm" href="https://wa.me/${ph}" target="_blank" rel="noopener">Перейти в чат WhatsApp ↗</a>`:''}${n.id&&canWrite?`<button type="button" class="an-hb" data-andone="${esc(n.id)}" title="Клиенту ответили: убрать из списка">Снять ✓</button>`:''}</div></div></div></div>`}).join('')}</div>`:'';
+    $('w-anna-lead').innerHTML=annaLeadHtml();
     const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Ани'],[st.needManager,'ждут ответа']].filter(x=>x[0]!=null&&x[0]!=='');
     $('w-anna-stats').innerHTML=S.map(([v,l])=>bwPStat(l,String(v))).join('');
     $('w-anna-ins').innerHTML=annaInsHtml();
@@ -6002,6 +6008,27 @@ async function annaDone(id){
   const fs=annaFs();if(!fs||!canWrite)return;
   try{await fs.doc('wa_chats/'+id).update({needsManager:false,managerDoneAt:Date.now(),managerDoneBy:annaWho()});toast('Сняла: клиенту ответили')}
   catch(e){toast('Не получилось снять, попробуйте ещё раз')}
+}
+/* «Кому можно написать»: прячем, если клиент снова написал или у него появился заказ; «Убрать» — менеджер решил не писать или уже написал */
+function annaLeads(){
+  const ph=x=>String(x||'').replace(/\D/g,'').replace(/^8(\d{10})$/,'7$1');
+  return annaLead.filter(c=>{const l=c.lead||{};if(!l.why||(+c.lastAt||0)>(+l.lastAt||0)+6e4)return false;
+    const p=ph(c.phone);return !(p&&orders.some(o=>!o.deletedAt&&o.status!=='cancel'&&ph(o.phone)===p&&(+o.createdAt||0)>=(+l.lastAt||0)-3*864e5))})
+    .sort((a,b)=>(+b.lead.lastAt||0)-(+a.lead.lastAt||0));
+}
+function annaLeadHtml(){
+  const list=annaLeads();if(!list.length)return '';const op=!!annaUi.lead;
+  const rows=list.slice(0,12).map(c=>{const l=c.lead,p=String(c.phone||'').replace(/\D/g,''),who=esc(c.clientName||c.name||(p?'+'+p:'Клиент')),key='l:'+c.id,o=annaNm===key;
+    return `<div class="an-nm${o?' open':''}"><button type="button" class="mrow" data-annm="${esc(key)}" aria-expanded="${o}"><span class="an-w"><b>${who}</b><small>${esc(l.ask||l.why)}</small></span><span class="r"><small>${annaAgo(+l.lastAt||+c.lastAt||0)}</small><i class="ch" aria-hidden="true"></i></span></button>`
+      +`<div class="an-nb"><div><p>${esc(l.why)}${l.text?`\n\nМожно написать: «${esc(l.text)}»`:''}</p><div class="an-nba">${p?`<a class="btn sm" href="${annaWa(p,l.text)}" target="_blank" rel="noopener">Написать в WhatsApp ↗</a>`:''}${canWrite?`<button type="button" class="an-hb" data-anlead="${esc(c.id)}" title="Убрать из списка: написали или решили не писать">Убрать ✓</button>`:''}</div></div></div></div>`}).join('');
+  return `<div class="an-sec"><button type="button" class="an-tg" data-anleadtg aria-expanded="${op}" aria-controls="anna-lead-l"><span>Кому можно написать · ${list.length}</span><i class="ch" aria-hidden="true"></i></button>`
+    +`<div class="an-sb" id="anna-lead-l"${op?'':' hidden'}><p class="an-qe">Спрашивали, но не заказали. Сама Аня им не пишет — решайте сами.</p><div class="mini">${rows}</div></div></div>`;
+}
+async function annaLeadDone(id){
+  const fs=annaFs();if(!fs||!canWrite)return;
+  annaLead=annaLead.filter(c=>c.id!==id);renderAnna();
+  try{await fs.doc('wa_chats/'+id).update({leadOpen:false,leadDoneAt:Date.now(),leadDoneBy:annaWho()});toast('Убрала из списка')}
+  catch(e){toast('Не получилось убрать, попробуйте ещё раз')}
 }
 async function annaInsGo(){
   const fs=annaFs(),per=annaUi.per==='month'?'month':'week';if(!fs||!canWrite)return;
