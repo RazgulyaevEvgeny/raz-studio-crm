@@ -1053,6 +1053,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 #w-req.mopen .mf-x::before{transform:translateY(2px) rotate(-135deg)}
 #w-req.mfold:not(.mopen)>:not(.w-h){display:none!important}
 #w-req>.rq-imp{align-self:flex-start}
+#pack #w-req .rt{font-size:18px}
 @container (min-width:1000px){#w-req-list,#req-done{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){#w-req .rdot{animation:none}#w-req .rcup{transition:none}}
 @media(max-width:600px){
@@ -3101,16 +3102,15 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 let packW=[];
 let packWide=[],packSide=[],packL=[],packAnna=null,packSasha=null;
 function initPack(){
-  packWide=[$('w-today').closest('.w'),$('boss-list').closest('.w')];packSide=[$('w-kaspi'),$('w-print')];
-  packL=[packWide[0],...packSide,packWide[1]];packAnna=$('w-anna');packSasha=$('w-sasha');packW=[$('w-req'),packAnna,packSasha,...packL];
+  packWide=[$('w-today').closest('.w'),$('boss-list').closest('.w')];packSide=[$('w-kaspi'),$('w-print'),$('w-req')];
+  packL=[packWide[0],...packSide,packWide[1]];packAnna=$('w-anna');packSasha=$('w-sasha');packW=[packAnna,packSasha,...packL];
   /* убранные с главной блоки остаются скрытыми: их данные считаются, просто не показываются */
   const hid=document.createElement('div');hid.id='home-hidden';hid.hidden=true;$('p-home').appendChild(hid);
   ['w-cal','w-projects','w-office','w-supplies'].forEach(id=>{const w=$(id);if(w)hid.appendChild(w)});
   $('w-today').closest('.w').id||=('w-today-box');$('boss-list').closest('.w').id||=('w-boss');
   packW.forEach(w=>{w.classList.add('mfold');const h=w.querySelector(':scope>.w-h');if(h)h.insertAdjacentHTML('beforeend','<span class="mf-x" aria-hidden="true"></span>')});mfApply();
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);[packAnna,packSasha,...packL].forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
-  /* заявки с сайта топперов — полоской в самом верху главной, под заголовком */
-  $('p-home').querySelector('.stats').before($('w-req'));
+  /* заявки с сайта топперов — колонкой под принтерами, как Kaspi и Bambu */
   [['w-req','w-req-list'],['w-anna','w-anna-body'],['w-sasha','w-sasha-body']].forEach(([id,ctl])=>{const rh=$(id).querySelector(':scope>.w-h');rh.tabIndex=0;rh.setAttribute('role','button');rh.setAttribute('aria-controls',ctl);
     rh.addEventListener('keydown',e=>{if(e.target===rh&&(e.key==='Enter'||e.key===' ')){e.preventDefault();mfToggle(id)}})});
   document.querySelectorAll('#p-home .home-grid,#p-home .home-grid2').forEach(el=>el.remove());
@@ -3134,7 +3134,7 @@ function packHome(){
   const duo=()=>{const d=mk('pduo');d.append(packAnna,packSasha);return d};
   if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,packSasha,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
   if(n===3){const L=mk('pleft'),Rt=mk('pcol');L.appendChild(duo());packWide.forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(L,Rt);return}
-  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo(),packWide[0]);a.appendChild(packSide[0]);b.appendChild(packSide[1]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(top,a,b,bot);
+  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo(),packWide[0]);a.appendChild(packSide[0]);b.append(packSide[1],packSide[2]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(top,a,b,bot);
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 
