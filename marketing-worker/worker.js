@@ -515,9 +515,12 @@ async function runDepartment(env, opts = {}) {
       for (let i = 0; i < 3; i++) {
         const r = await ask(role, text, { ...o, max: Math.round(o.max * (1 + i * 0.75)), t: i ? Math.min(o.t, 0.5) : o.t });
         last = r.text; eng = r.engine;
-        try { return parseJ(r.text); } catch (_) {}
-        const part = o.key && salvage(r.text, o.key);
-        if (part && part[o.key].length >= (o.min || 1)) return part;
+        let j = null;
+        try { j = parseJ(r.text); } catch (_) { j = o.key && salvage(r.text, o.key); }
+        if (!o.key) { if (j) return j; continue; }
+        // ИИ мог вернуть голый массив или назвать поле по-своему — берём первый массив в ответе
+        const list = Array.isArray(j) ? j : j && (Array.isArray(j[o.key]) ? j[o.key] : Object.values(j).find(Array.isArray));
+        if (list && list.length >= (o.min || 1)) return { [o.key]: list };
       }
       throw new Error(`${step}: ИИ (${eng || '?'}) ответил не в том формате. Начало ответа: ${String(last).replace(/\s+/g, ' ').slice(0, 160) || 'пусто'}`);
     };
@@ -527,11 +530,13 @@ async function runDepartment(env, opts = {}) {
     const trends = await scoutTrends(env, base + '\n\n' + DEPT.scout, `Сегодня ${today}. Найди тренды и инфоповоды.`);
     await save({ trends, stage: 'Генератор придумывает идеи' });
     const kopilka = S.items.filter(x => x.kind === 'trend' && (+x.createdAt || 0) > Date.now() - 45 * 864e5).slice(0, 20);
-    const ideasIn = `## Сводка аналитика\n${summary}\n\n## Разведка трендов\n${trends || 'нет данных'}\n\n## Копилка трендов от владельца\n${kopilka.length ? kopilka.map(k => `- ${k.link || ''} — ${k.note || ''}`).join('\n') : 'пусто'}\n\nПридумай 8 идей.`;
-    const ideas = ((await askJ('Генератор идей', 'ideas', ideasIn, { schema: SCH_IDEAS, max: 16000, t: 0.9, key: 'ideas', min: 4 })).ideas || []).slice(0, 10);
+    const ideasIn = `Ответ — JSON вида {"ideas":[{"title":"…","service":"…","format":"reels","hook":"…","why":"…","source":""}]}\n\n## Сводка аналитика\n${summary}\n\n## Разведка трендов\n${trends || 'нет данных'}\n\n## Копилка трендов от владельца\n${kopilka.length ? kopilka.map(k => `- ${k.link || ''} — ${k.note || ''}`).join('\n') : 'пусто'}\n\nПридумай 8 идей.`;
+    const ideas = ((await askJ('Генератор идей', 'ideas', ideasIn, { schema: SCH_IDEAS, max: 16000, t: 0.9, key: 'ideas', min: 4 })).ideas || [])
+      .map(x => typeof x === 'string' ? { title: x, hook: '' } : { ...x, title: x.title || x.name || x['название'] || Object.values(x).find(v => typeof v === 'string') || '', hook: x.hook || x['хук'] || '' })
+      .filter(x => x.title).slice(0, 10);
     if (!ideas.length) throw new Error('Генератор идей ничего не вернул');
     await save({ ideas, stage: 'SMM-менеджер собирает план' });
-    const planIn = `## Сводка аналитика\n${summary}\n\n## Идеи\n${ideas.map((x, i) => `${i + 1}. ${x.title} [${x.service || ''}, ${x.format || ''}] — хук: ${x.hook}. ${x.why || ''}`).join('\n')}\n\nСобери план публикаций на ${start} — ${end}.`;
+    const planIn = `Ответ — JSON вида {"events":[{"date":"ГГГГ-ММ-ДД","title":"…","format":"reels","service":"…","idea":"…","idx":1}]}\n\n## Сводка аналитика\n${summary}\n\n## Идеи\n${ideas.map((x, i) => `${i + 1}. ${x.title} [${x.service || ''}, ${x.format || ''}] — хук: ${x.hook}. ${x.why || ''}`).join('\n')}\n\nСобери план публикаций на ${start} — ${end}.`;
     const plan = ((await askJ('SMM-менеджер', 'smm', planIn, { schema: SCH_PLAN, max: 12000, t: 0.4, key: 'events', min: 2 })).events || [])
       .filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.date || '') && e.date >= start && e.date <= end && e.title).slice(0, 4);
     if (!plan.length) throw new Error('SMM-менеджер не собрал план');
