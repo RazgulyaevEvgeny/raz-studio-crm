@@ -1300,9 +1300,9 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .sa-pl li{grid-template-columns:44px minmax(0,1fr)}.sa-pl li::before{content:none}
 .sa-pl time{font:700 12px/1.35 var(--f);color:rgba(255,255,255,.78);text-transform:uppercase}
 .sa-pl a.an-lk{color:#fff}
-.sa-say{max-height:260px;overflow:auto}
+.pack #w-sasha .an-body,#w-sasha .an-body{display:flex}
 /* телефон: Аня и Саша без пояснительной подписи внизу, сводка Саши короче */
-@media(max-width:600px){#w-anna .an-ft .bw-note,#w-sasha .an-ft .bw-note{display:none}#w-anna .an-ft,#w-sasha .an-ft{justify-content:flex-end}.sa-say{max-height:170px}}
+@media(max-width:600px){#w-anna .an-ft .bw-note,#w-sasha .an-ft .bw-note{display:none}#w-anna .an-ft,#w-sasha .an-ft{justify-content:flex-end}}
 /* стикер Саши — как у Ани: фигура без фона выглядывает из круга, низ обрезан по кругу в самой картинке */
 #w-sasha>.w-h:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
 #w-sasha .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#d9d9e2 75%);box-shadow:0 8px 18px rgba(0,0,0,.45)}
@@ -1772,7 +1772,6 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         <div class="w" id="w-sasha">
           <div class="w-h"><h2><span class="an-av" id="sasha-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="sasha-avatar.webp?v=3" alt="" width="240" height="252"></span></span></span><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
           <div class="an-body" id="w-sasha-body">
-            <div class="an-col"><div class="an-say sa-say" id="w-sasha-say">Загружаем…</div><div class="an-stats" id="w-sasha-stats"></div></div>
             <div class="an-col">
               <div id="w-sasha-plan"></div>
               <div class="an-sec"><button type="button" class="an-tg" id="sasha-chat-tg" aria-expanded="false" aria-controls="sasha-chat-b"><span>Спросить Сашу</span><i class="ch" aria-hidden="true"></i></button>
@@ -1784,7 +1783,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
               </div>
             </div>
           </div>
-          <div class="an-ft"><small class="bw-note">Саша руководит ИИ-отделом маркетинга: сводка, идеи и сценарии каждый понедельник.</small><a class="an-ref" href="marketing/?view=dept" target="_blank" rel="noopener">Открыть отдел ↗</a></div>
+          <div class="an-ft"><small class="bw-note">Саша руководит ИИ-отделом маркетинга: план и сценарии каждый понедельник.</small><a class="an-ref" href="marketing/?view=dept" target="_blank" rel="noopener">Открыть отдел ↗</a></div>
         </div>
         <div class="w" id="w-req">
           <div class="w-h"><img class="rcup" src="topper-cup.svg?v=1" alt="" width="74" height="102"><h2><span class="rt">Заявки с сайта топперов</span><span class="c" id="w-req-c"></span></h2></div>
@@ -5947,7 +5946,6 @@ try{Object.assign(sashaUi,JSON.parse(localStorage.getItem(SASHA_UI)||'{}'))}catc
 try{sashaChat=JSON.parse(localStorage.getItem(SASHA_CHAT)||'[]').filter(x=>x&&x.q&&x.a)}catch(_){}
 function sashaSave(){try{localStorage.setItem(SASHA_UI,JSON.stringify(sashaUi));localStorage.setItem(SASHA_CHAT,JSON.stringify(sashaChat.filter(x=>x.a&&!x.err).slice(-20)))}catch(_){}}
 const sashaDay=()=>new Date(Date.now()+5*3600e3).toISOString().slice(0,10);
-const sashaMd=t=>String(t||'').replace(/^#{1,6}\s*(.*)$/gm,'\n$1').replace(/\*\*(.+?)\*\*/g,'$1').replace(/^\s*[-*]\s+/gm,'• ').replace(/\n{3,}/g,'\n\n').trim();
 const sashaLink=q=>'marketing/'+q;
 function sashaListen(){
   const fs=annaFs();if(!fs)return;
@@ -5956,22 +5954,16 @@ function sashaListen(){
   renderSasha();
 }
 function renderSasha(){
-  const say=$('w-sasha-say');if(!say)return;
+  const plan=$('w-sasha-plan');if(!plan)return;
   const of=k=>sashaItems.filter(x=>x.kind===k),today=sashaDay(),at=r=>+r.finishedAt||+r.updatedAt||+r.createdAt||0;
   const runs=of('run').sort((a,b)=>(+b.createdAt||0)-(+a.createdAt||0));
   const live=runs.find(r=>r.status==='working'&&Date.now()-(+r.updatedAt||+r.createdAt||0)<4*60e3),last=runs.find(r=>r.status==='done');
   const c=$('w-sasha-c');
   c.textContent=sashaErr?'нет доступа к базе':!sashaLoaded?'подключаемся…':live?'отдел работает · '+String(live.stage||'').toLowerCase():last?'план готов · '+printWhen(at(last)):'отдел ещё не запускался';
   c.style.setProperty('--sc',sashaErr?'var(--danger)':live?'#ffd166':last&&Date.now()-at(last)<8*864e5?'var(--ok)':'var(--muted)');
-  if(sashaErr)say.textContent='Нет доступа к разделу маркетинга в базе.';
-  else if(!sashaLoaded)say.textContent='Загружаем…';
-  else if(!last)say.textContent='Привет! Я Саша, главный маркетолог. Мой отдел ещё не готовил план: откройте отдел и нажмите «Запустить отдел сейчас». А пока можно спросить меня в чате.';
-  else say.textContent=sashaMd(last.summary)||'Сводка пустая.';
   const evs=of('event').filter(e=>e.date>=today&&e.status!=='done').sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.time||'').localeCompare(String(b.time||'')));
-  const mine=last?of('event').filter(e=>e.run===last.id):[];
-  $('w-sasha-stats').innerHTML=sashaLoaded&&!sashaErr?bwPStat('Роликов в плане',mine.length?mine.filter(e=>e.status==='done').length+' из '+mine.length:'—')+bwPStat('Новых идей',String(of('idea').filter(x=>x.status==='new').length))+bwPStat('Трендов в копилке',String(of('trend').length)):'';
   const dd=d=>{const x=new Date(d+'T00:00:00');return ['вс','пн','вт','ср','чт','пт','сб'][x.getDay()]+'<br>'+d.slice(8)+'.'+d.slice(5,7)};
-  $('w-sasha-plan').innerHTML=evs.length?`<p class="an-h">Ближайшее в контент-плане</p><ul class="an-todo sa-pl">${evs.slice(0,5).map(e=>`<li><time>${dd(e.date)}</time><a class="an-lk" href="${sashaLink('?open='+encodeURIComponent(e.id))}" target="_blank" rel="noopener">${esc(e.title||'Без названия')}<i aria-hidden="true">→</i></a></li>`).join('')}</ul>`:'';
+  plan.innerHTML=evs.length?`<p class="an-h">Ближайшее в контент-плане</p><ul class="an-todo sa-pl">${evs.slice(0,5).map(e=>`<li><time>${dd(e.date)}</time><a class="an-lk" href="${sashaLink('?open='+encodeURIComponent(e.id))}" target="_blank" rel="noopener">${esc(e.title||'Без названия')}<i aria-hidden="true">→</i></a></li>`).join('')}</ul>`:`<div class="an-say">${sashaErr?'Нет доступа к разделу маркетинга в базе.':!sashaLoaded?'Загружаем…':last?'В контент-плане пока нет ближайших роликов. Откройте отдел, чтобы составить новый план.':'Привет! Я Саша, главный маркетолог. Мой отдел ещё не готовил план: откройте отдел и нажмите «Запустить отдел сейчас». А пока можно спросить меня в чате.'}</div>`;
   const tg=$('sasha-chat-tg');tg.setAttribute('aria-expanded',sashaUi.chat);$('sasha-chat-b').hidden=!sashaUi.chat;
   $('sasha-q-btn').disabled=sashaBusy;$('sasha-clear').hidden=!sashaChat.length||sashaBusy;
   $('w-sasha-qs').innerHTML=sashaChat.slice(-6).reverse().map(x=>`<div class="an-q"><span class="q">${esc(x.q)}</span>${x.a?`<span class="a">${esc(x.a)}</span>`:'<span class="a wait">Саша думает…</span>'}</div>`).join('');
