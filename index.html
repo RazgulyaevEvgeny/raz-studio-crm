@@ -921,6 +921,8 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pcol>.w{flex:none}.pcol>.w.fill{flex:1 1 auto}
 .pack.m .pcol>.w{flex:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
+/* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
+.pduo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;min-width:0}
 .psub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;flex:1 1 auto;align-items:stretch;min-width:0}
 .psub:not(:has(.w)){display:none}
 /* широкий «Сегодня»: заказы и задачи в две колонки */
@@ -3128,10 +3130,11 @@ function packHome(){
   const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1100?3:w>=700?2:1;
   if(packN===n)return;packN=n;pack.innerHTML='';pack.style.setProperty('--cols',n);pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
-  /* Анна — первой, во всю ширину левой части */
+  /* Анна и Саша — первыми, рядом друг с другом, каждый шириной в колонку */
+  const duo=()=>{const d=mk('pduo');d.append(packAnna,packSasha);return d};
   if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,packSasha,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
-  if(n===3){const L=mk('pleft'),Rt=mk('pcol');[packAnna,packSasha,...packWide].forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(L,Rt);return}
-  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(packAnna,packSasha,packWide[0]);a.appendChild(packSide[0]);b.appendChild(packSide[1]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(top,a,b,bot);
+  if(n===3){const L=mk('pleft'),Rt=mk('pcol');L.appendChild(duo());packWide.forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(L,Rt);return}
+  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo(),packWide[0]);a.appendChild(packSide[0]);b.appendChild(packSide[1]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(top,a,b,bot);
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 
