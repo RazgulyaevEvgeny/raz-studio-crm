@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261020134000">
+<meta name="app-build" content="20261021100000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -875,6 +875,10 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .pmeta{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
 .pmeta b{color:var(--ink);font:700 13px var(--f)}
 .ed-panel.wide{width:min(640px,100%)}
+.xim-t{width:100%;border-collapse:collapse;font-size:14px;margin:4px 0 6px}.xim-t th,.xim-t td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}.xim-t th:first-child,.xim-t td:first-child{text-align:left}.xim-t th{font:600 12px "Inter Tight",Inter,system-ui,sans-serif;color:var(--muted)}.xim-t tfoot td{font-weight:700;border-bottom:0}
+.xim-n{margin:12px 0 4px;font:600 14px "Inter Tight",Inter,system-ui,sans-serif}.xim-l{margin:0;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.55}
+body:has(#xim:not([hidden])) .bnav{display:none}
+@media(max-width:560px){.xim-t{font-size:13px}.xim-t th,.xim-t td{padding:7px 3px}}
 .home-grid2.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:1180px){.home-grid2.three{grid-template-columns:1fr 1fr}.home-grid2.three>:last-child{grid-column:1/-1}}
 @media(max-width:760px){.home-grid2.three{grid-template-columns:minmax(0,1fr)}}
@@ -1828,7 +1832,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
     </div>
   </section>
   <section id="p-analytics" class="page" style="gap:16px" hidden>
-    <div class="ph"><div><h1>Аналитика</h1><p id="an-sub">Сколько заработали, что заказывают чаще и когда.</p></div></div>
+    <div class="ph"><div><h1>Аналитика</h1><p id="an-sub">Сколько заработали, что заказывают чаще и когда.</p></div><button class="btn outline" type="button" id="xim-btn" hidden>Загрузить из Excel</button></div>
     <div class="chips an-per" id="an-per" role="group" aria-label="Период"></div>
     <div class="an-kpis" id="an-kpis"></div>
     <div class="w an-wide"><div class="w-h"><h2 id="an-dyn-h">Выручка</h2><span class="c" id="an-dyn-c"></span></div><div class="cols" id="an-dyn"></div><p class="an-note" id="an-dyn-n"></p></div>
@@ -2130,6 +2134,19 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
       <div class="err" id="ri-err" hidden></div>
     </div>
     <div class="ed-foot"><div></div><div class="r"><button class="btn soft sm" type="button" id="ried-cancel">Отмена</button><button class="btn primary sm" type="submit" id="ri-save">Добавить заявку</button></div></div>
+  </form>
+</div>
+<div class="ed" id="xim" hidden>
+  <div class="ed-back" id="xim-back"></div>
+  <form class="ed-panel wide" id="xim-form" novalidate>
+    <div class="ed-head"><h2>Заказы из таблицы Excel</h2><button class="x" type="button" id="xim-close" aria-label="Закрыть">×</button></div>
+    <div class="ed-body">
+      <div class="fld"><label for="xim-file">Файл таблицы (.xlsx)</label><input type="file" id="xim-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+        <span class="hint">Каждый лист — месяц 2026 года. Заказы Kaspi из таблицы не загружаются: они уже есть в учёте. Повторная загрузка того же файла дублей не создаёт.</span></div>
+      <div id="xim-prev"></div>
+      <div class="err" id="xim-err" hidden></div>
+    </div>
+    <div class="ed-foot"><div><button class="btn danger sm" type="button" id="xim-undo" hidden></button></div><div class="r"><button class="btn soft sm" type="button" id="xim-cancel">Отмена</button><button class="btn primary sm" type="submit" id="xim-save" disabled>Загрузить</button></div></div>
   </form>
 </div>
 <div class="ed" id="xed" hidden>
@@ -2436,6 +2453,7 @@ const taskLate=t=>!t.done&&t.date&&dayDiff(t.date)<0;
 function waLink(p){let d=String(p||'').replace(/\D/g,'');if(d.length===11&&d[0]==='8')d='7'+d.slice(1);if(d.length===10)d='7'+d;return d.length>=11?'https://wa.me/'+d:''}
 function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2400)}
 function banner(msg){const b=$('banner');b.textContent=msg||'';b.hidden=!msg}
+const numTxt=o=>o.num?'№ '+String(o.num).padStart(3,'0'):o.imported?'из таблицы':'№ 000';
 function plural(n,a,b,c){const m=n%10,h=n%100;return m===1&&h!==11?a:(m>=2&&m<=4&&(h<10||h>=20)?b:c)}
 const svcLabel=(id,o)=>id==='other'&&o&&o.customService?o.customService:(SV[id]||SV.other).label;
 const kaspiFeeOf=o=>o.kaspiFee==null?KASPI_FEE*100:+o.kaspiFee;
@@ -2635,7 +2653,7 @@ function madeTxt(o){const r=madeOf(o);return r.q&&(r.m>0||o.source==='toppers')?
 function orderMini(o){
   const due=relDue(o);const s=ST[o.status]||ST.new;const mt=madeTxt(o);
   return `<button type="button" class="mrow" data-open="${esc(o.id)}">
-    <span style="min-width:0;display:flex;flex-direction:column"><b>${esc(o.client)}</b><small>№ ${String(o.num||0).padStart(3,'0')}, ${mt?`<span class="mt">${esc(mt)}</span>, `:''}${esc(svcLabel(o.service,o))}${itemsText(o)||o.desc?', '+esc(itemsText(o)||o.desc):''}</small></span>
+    <span style="min-width:0;display:flex;flex-direction:column"><b>${esc(o.client)}</b><small>${numTxt(o)}, ${mt?`<span class="mt">${esc(mt)}</span>, `:''}${esc(svcLabel(o.service,o))}${itemsText(o)||o.desc?', '+esc(itemsText(o)||o.desc):''}</small></span>
     <span class="r"><span class="dotlbl" style="--sc:var(${s.c})">${s.label}</span><small class="${due.cls}">${o.deadline?fmtRange(o.deadlineFrom,o.deadline)+', ':''}${due.txt}</small></span></button>`;
 }
 function bossParts(t){
@@ -2818,7 +2836,7 @@ function renderOrders(){
     const pay=!o.price?'<small>сумма не указана</small>':debt?`<small class="debt">долг ${money(debt)}</small>`:`<small class="paid">оплачен</small>`;
     const sub=[o.phone,o.owner?'ведёт '+o.owner:''].filter(Boolean).join(', ')||'—';
     return `<div class="row item${CLOSED.has(o.status)?' closed':''}" data-id="${esc(o.id)}" tabindex="0">
-      <div class="cell num">№ ${String(o.num||0).padStart(3,'0')}${receivedOf(o)?`<small>получен ${fmtDate(receivedOf(o))}</small>`:''}</div>
+      <div class="cell num">${numTxt(o)}${receivedOf(o)?`<small>получен ${fmtDate(receivedOf(o))}</small>`:''}</div>
       <div class="cell c-client"><span class="cc-h"><b>${esc(o.client)}</b>${canWrite&&waLink(o.phone)&&!isKaspiLedger(o)?sendLinkBtn(o.id):''}</span><small>${esc(sub)}</small></div>
       <div class="cell c-svc"><b>${esc(svcLabel(o.service,o))}${esc(qty)}</b><small>${esc(itemsText(o)||o.desc||'')}</small></div>
       <div class="cell due"><b class="${due.cls}">${o.deadline?fmtRange(o.deadlineFrom,o.deadline):'—'}</b><small class="${due.cls}">${due.txt}</small></div>
@@ -3301,7 +3319,7 @@ function openEditor(id,preset={}){
   const o=id==='new'?{status:'new',service:view.svc!=='all'?view.svc:'vinyl',deadline:preset.deadline||view.day||'',...(preset.o||{})}:orders.find(x=>x.id===id);
   $('ed-save').textContent='Сохранить';edReq=id==='new'&&preset.req?preset.req:null;reqAskReject=false;renderReqBox();
   if(!o)return;
-  $('ed-title').textContent=id==='new'?'Новый заказ':'Заказ № '+String(o.num||0).padStart(3,'0');
+  $('ed-title').textContent=id==='new'?'Новый заказ':o.num?'Заказ № '+String(o.num).padStart(3,'0'):'Заказ из таблицы';
   $('f-client').value=o.client||'';$('f-phone').value=o.phone||'';edSvc=SV[o.service]?o.service:'other';
   $('f-custom').value=o.customService||'';
   edExp=(o.expenses||[]).map(e=>({...e}));edFiles=(o.files||[]).map(f=>({...f}));edFilesOrig=edFiles.map(f=>f.id);askFile=null;
@@ -3879,6 +3897,7 @@ const kShort=n=>n>=1e6?(n/1e6).toFixed(n>=1e7?0:1).replace('.',',')+' млн':n>
 function topN(map,n){const a=[...map.entries()].map(([l,o])=>({l,...o})).sort((a,b)=>b.v-a.v);if(a.length<=n)return a;const rest=a.slice(n-1);return [...a.slice(0,n-1),{l:'Остальные ('+rest.length+')',v:rest.reduce((s,x)=>s+x.v,0),n:rest.reduce((s,x)=>s+(x.n||0),0),x:rest.reduce((s,x)=>s+(x.x||0),0),p:rest.reduce((s,x)=>s+(x.p||0),0)}]}
 function bump(map,k,v,extra){const o=map.get(k)||{v:0,n:0,x:0};o.v+=v;o.n++;if(extra)o.x+=extra;map.set(k,o);return o}
 function renderAnalytics(){
+  $('xim-btn').hidden=!canWrite||isMgr();
   $('an-per').innerHTML=AN_PER.map(([id,l])=>`<button type="button" class="chip${anPer===id?' on':''}" data-anper="${id}">${l}</button>`).join('');
   const [from,to]=anRange(),inR=d=>d&&d>=from&&d<=to;
   const os=[...orders,...kVirtualOrders()].filter(o=>o.status!=='cancel'&&inR(receivedOf(o)));
@@ -3923,7 +3942,7 @@ function renderAnalytics(){
   const itm=new Map();os.forEach(o=>(o.items||[]).forEach(i=>{const q=+i.qty||0,sum=(+i.price||0)*q;const e=bump(itm,(i.name||'').trim()||'Без названия',sum,q);e.u=i.unit||'шт'}));
   $('an-items').innerHTML=hbars(topN(itm,8).map(r=>({...r,s:r.x?fmtQty(r.x)+' '+(r.u||'шт'):'',tip:`${r.l}: ${money(r.v)}${r.x?', '+fmtQty(r.x)+' '+(r.u||'шт'):''}`})));
   /* источники */
-  const src=new Map();os.forEach(o=>bump(src,o.source==='toppers'?'Сайт топперов':(o.kaspi||[]).length||o.service==='kaspi'?'Kaspi':'Студия, вручную',+o.price||0));
+  const src=new Map();os.forEach(o=>bump(src,o.imported?'Таблица Excel (до учёта)':o.source==='toppers'?'Сайт топперов':(o.kaspi||[]).length||o.service==='kaspi'?'Kaspi':'Студия, вручную',+o.price||0));
   $('an-src').innerHTML=hbars(topN(src,5).map(r=>({...r,s:r.n+' '+plural(r.n,'заказ','заказа','заказов')})));
   /* топперы из заявок */
   const rq=requests.filter(r=>r.status!=='rejected'&&inR(tsDay(r.createdAt)));
@@ -3946,7 +3965,7 @@ function renderAnalytics(){
   $('an-wd').innerHTML=cols(wd.map((v,i)=>({l:WD[i],v,tip:`${WDF[i][0].toUpperCase()+WDF[i].slice(1)}: ${v} ${plural(v,'заказ','заказа','заказов')} и заявок`+(wTot?' ('+Math.round(v/wTot*100)+'%)':'')})));
   const wMax=wd.indexOf(Math.max(...wd));$('an-wd-n').textContent=wTot?'Самый активный день: '+WDF[wMax]+'.':'';
   /* часы: когда заводят заказы и приходят заявки */
-  const hr=Array(24).fill(0);os.forEach(o=>{if(o.createdAt)hr[new Date(+o.createdAt).getHours()]++});rq.forEach(r=>{if(r.createdAt)hr[new Date(+r.createdAt).getHours()]++});
+  const hr=Array(24).fill(0);os.forEach(o=>{if(o.createdAt&&!o.imported)hr[new Date(+o.createdAt).getHours()]++});rq.forEach(r=>{if(r.createdAt)hr[new Date(+r.createdAt).getHours()]++});
   const hTot=hr.reduce((a,b)=>a+b,0);
   $('an-hr').innerHTML=cols(hr.map((v,i)=>({l:String(i),v,tip:`${String(i).padStart(2,'0')}:00–${String(i).padStart(2,'0')}:59: ${v}`})),{label:false});
   if(hTot){let bi=0,bs=-1;for(let i=0;i<24;i++){const s3=hr[i]+hr[(i+1)%24]+hr[(i+2)%24];if(s3>bs){bs=s3;bi=i}}$('an-hr-n').textContent='Чаще всего с '+String(bi).padStart(2,'0')+':00 до '+String((bi+3)%24).padStart(2,'0')+':00.'}else $('an-hr-n').textContent='';
@@ -4104,6 +4123,132 @@ async function importPendingReq(){
     const doc={source:'toppers',code,status:'new',createdAt:Date.now(),name:r.name,cafe:r.cafe,note:r.note,customDesc:r.customDesc,items:r.items,total:Math.round(r.total),qty:r.qty,hasCustom:r.hasCustom,text};
     try{await db.doc('requests/'+code).set(doc)}catch(e){try{console.warn('pending request',code,e)}catch(_){}}
   }
+}
+/* ---------- загрузка заказов из таблицы Excel («получка 2026») ----------
+   Лист = месяц (ЯНВАРЬ2026, ФЕВРАЛЬ, …). Читаются только колонки A–E: дата, заказ, сколько заплатили,
+   расходы, сколько получили чистыми. Блок «КАСПИ ЗАКАЗЫ» справа и строки «каспи …» пропускаются:
+   Kaspi уже есть в учёте. Расход заказа = заплатили − чистыми, так прибыль в учёте совпадает с таблицей. */
+const XIM_MONTHS=['январ','феврал','март','апрел','май','июн','июл','август','сентябр','октябр','ноябр','декабр'];
+const ximNum=s=>{const m=String(s).replace(/\s+/g,'').match(/\d+(?:[.,]\d+)?/);return m?Math.round(+m[0].replace(',','.')):null};
+/* «4500+800(дост)=5300» → 5300; «166800(16800 не доплатил)» → 166800, долг 16800; «2400 футболка+1500» → 3900 */
+function ximAmount(v){
+  if(v==null||v==='')return null;
+  if(typeof v==='number')return {sum:Math.round(v),debt:0};
+  const s=String(v).replace(/тг\.?/gi,'').trim();if(!/\d/.test(s))return null;
+  let debt=0;const dm=s.match(/\(([^)]*?(?:не\s*доплат|должен|долг)[^)]*)\)/i);if(dm)debt=ximNum(dm[1])||0;
+  const plain=s.replace(/\([^)]*\)/g,' ');
+  if(plain.includes('=')){const n=ximNum(plain.slice(plain.lastIndexOf('=')+1));if(n!=null)return {sum:n,debt}}
+  const parts=plain.split('+').map(ximNum).filter(n=>n!=null);
+  return parts.length?{sum:parts.reduce((a,b)=>a+b,0),debt}:null;
+}
+function ximSvc(t){
+  t=t.toLowerCase();
+  if(/каспи|kaspi/.test(t))return ['kaspi',''];
+  if(/3\s*д|3d/.test(t))return ['print3d',''];
+  if(/вышивк/.test(t))return ['embroidery',''];
+  if(/^\s*печать\s*$|распечат/.test(t))return ['printing',''];
+  if(/винил|наклейк/.test(t))return ['vinyl',''];
+  if(/павлодарск|павлодавск/.test(t))return ['other','Одежда «Павлодарский»'];
+  if(/футб|худи|свитшот|принт|дтф|dtf|халат|кепк|шарф|поло|спецодежд|шоппер/.test(t))return ['dtf',''];
+  return ['other','Услуга не указана'];
+}
+function ximParse(XL,wb,year){
+  const rows=[],skipped=[];
+  for(const name of wb.SheetNames){
+    const low=name.toLowerCase(),mi=XIM_MONTHS.findIndex(m=>low.includes(m));
+    if(mi<0){skipped.push({sheet:name,why:'не месяц'});continue}
+    const y=+(name.match(/20\d\d/)||[])[0]||year;if(y!==year){skipped.push({sheet:name,why:'другой год'});continue}
+    const ym=year+'-'+String(mi+1).padStart(2,'0'),dim=new Date(year,mi+1,0).getDate();
+    const grid=XL.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:null});
+    const list=[];let last='';
+    grid.forEach((r,i)=>{
+      if(!i)return; // заголовок
+      const [dv,nv,pv,ev,netv]=r;const title=String(nv??'').replace(/\s+/g,' ').trim();
+      const pay=ximAmount(pv);if(!pay||!pay.sum)return;
+      let day='';
+      if(typeof dv==='number'&&dv>20000){const d=new Date(Date.UTC(1899,11,30)+Math.round(dv)*864e5);day=ym+'-'+String(Math.min(d.getUTCDate(),dim)).padStart(2,'0')}
+      list.push({row:i+1,title,pay,ev,netv,day,ym});
+    });
+    list.forEach((x,k)=>{
+      /* дата: пустая — как у строки выше; чужой месяц (опечатка) — тот же день, но месяц листа */
+      if(x.day)last=x.day;else{x.day=last||ym+'-01';x.dayGuess=true}
+      /* строка без названия среди строк «каспи» — тоже Kaspi */
+      const isK=t=>/^\s*(каспи|kaspi)/i.test(t||''),near=d=>{for(let j=k+d;j>=0&&j<list.length;j+=d)if(list[j].title)return list[j].title;return ''};
+      const kaspi=isK(x.title)||(!x.title&&isK(near(-1))&&isK(near(1)));
+      const price=x.pay.sum,debt=Math.min(x.pay.debt,price);
+      const expA=typeof x.ev==='number'?Math.round(x.ev):(x.ev?(ximAmount(x.ev)||{}).sum:null);
+      let net=typeof x.netv==='number'?Math.round(x.netv):(x.netv?(ximAmount(x.netv)||{}).sum:null);
+      const noNet=net==null;if(noNet)net=price-(expA&&expA<price?expA:0);
+      const [svc,custom]=ximSvc(x.title);
+      const rec={id:'x'+year+'-'+String(mi+1).padStart(2,'0')+'-'+String(x.row).padStart(3,'0'),sheet:name,row:x.row,day:x.day,dayGuess:!!x.dayGuess,
+        client:x.title||'Без названия',noNet,price,paid:price-debt,debt,net,cost:Math.max(0,price-net),costNote:typeof x.ev==='string'?x.ev.replace(/\s+/g,' ').trim():'',
+        svc,custom,payRaw:typeof (grid[x.row-1]||[])[2]==='string'?grid[x.row-1][2].replace(/\s+/g,' ').trim():''};
+      if(kaspi)skipped.push({...rec,why:'kaspi'});else rows.push(rec);
+    });
+  }
+  return {rows,skipped};
+}
+let ximData=null,ximBusy=false;
+const XIM_TAG='xlsx-2026';
+function openXim(){ximData=null;$('xim-file').value='';$('xim-prev').innerHTML='';$('xim-err').hidden=true;$('xim-save').disabled=true;$('xim-save').textContent='Загрузить';ximUndoBtn();$('xim').hidden=false}
+function closeXim(){if(!ximBusy)$('xim').hidden=true}
+function ximUndoBtn(ask){const n=ordersAll.filter(o=>o.imported===XIM_TAG).length,b=$('xim-undo');b.hidden=!n;b.dataset.ask=ask?'1':'';b.textContent=ask?'Точно убрать '+n+' '+plural(n,'заказ','заказа','заказов')+'?':'Убрать загруженные ('+n+')'}
+async function ximRead(f){
+  $('xim-err').hidden=true;$('xim-prev').innerHTML='<p class="hint">Читаю таблицу…</p>';$('xim-save').disabled=true;
+  try{
+    await kpLoadXlsx();
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
+    const r=ximParse(XLSX,wb,2026);r.file=f.name;
+    /* дубли: эта строка уже загружена, или в учёте есть заказ того же дня на ту же сумму */
+    const live=ordersAll.filter(o=>!o.deletedAt);
+    r.rows.forEach(x=>{const same=live.find(o=>o.id===x.id||(!o.imported&&!isKaspiLedger(o)&&receivedOf(o)===x.day&&+o.price===x.price));if(same)x.dup=same.id===x.id?'loaded':'same:'+(same.client||'')});
+    ximData=r;ximRender();
+  }catch(e){$('xim-prev').innerHTML='';showErr('xim-err',(e&&e.message)||'Не получилось прочитать файл. Проверьте, что это таблица Excel (.xlsx).')}
+}
+function ximRender(){
+  const r=ximData,add=r.rows.filter(x=>!x.dup),by=new Map();
+  add.forEach(x=>{const m=x.day.slice(0,7),o=by.get(m)||{n:0,p:0,net:0};o.n++;o.p+=x.price;o.net+=x.price-x.cost;by.set(m,o)});
+  const mName=m=>MONTHS_FULL[+m.slice(5)-1];
+  const tot=add.reduce((a,x)=>({n:a.n+1,p:a.p+x.price,net:a.net+x.price-x.cost}),{n:0,p:0,net:0});
+  const ks=r.skipped.filter(x=>x.why==='kaspi'),ksum=ks.reduce((s,x)=>s+x.price,0);
+  const li=(t,list)=>list.length?`<p class="xim-n">${t}</p><ul class="xim-l">${list.map(x=>`<li>${x}</li>`).join('')}</ul>`:'';
+  const who=x=>esc(x.client)+', '+fmtDate(x.day)+', '+money(x.price);
+  $('xim-prev').innerHTML=(add.length?`<table class="xim-t"><thead><tr><th>Месяц</th><th>Заказов</th><th>Выручка</th><th>Чистыми</th></tr></thead><tbody>${[...by.entries()].sort().map(([m,o])=>`<tr><td>${mName(m)}</td><td>${o.n}</td><td>${money(o.p)}</td><td>${money(o.net)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Всего</td><td>${tot.n}</td><td>${money(tot.p)}</td><td>${money(tot.net)}</td></tr></tfoot></table>`
+      :'<p class="xim-n">Новых заказов в файле нет: всё уже загружено.</p>')
+    +li('Не загружаю: Kaspi',ks.length?[ks.length+' '+plural(ks.length,'продажа','продажи','продаж')+' на '+money(ksum)+' (строки «каспи …» и блок «КАСПИ ЗАКАЗЫ» справа)']:[])
+    +li('Не загружаю: уже есть в учёте',r.rows.filter(x=>x.dup).map(x=>who(x)+(x.dup.startsWith('same:')?' — похож на заказ «'+esc(x.dup.slice(5))+'»':' — загружен раньше')))
+    +li('Даты нет в таблице, поставил как у строки выше',add.filter(x=>x.dayGuess).map(who))
+    +li('Не заполнено «сколько получили», прибыль посчитана без расходов',add.filter(x=>x.noNet).map(who))
+    +li('Оплачено не полностью',add.filter(x=>x.debt).map(x=>who(x)+', долг '+money(x.debt)))
+    +(r.skipped.some(x=>x.why==='другой год')?li('Листы другого года не трогаю',r.skipped.filter(x=>x.why==='другой год').map(x=>esc(x.sheet))):'');
+  $('xim-save').disabled=!add.length;$('xim-save').textContent=add.length?'Загрузить '+add.length+' '+plural(add.length,'заказ','заказа','заказов'):'Загрузить';
+}
+async function saveXim(e){
+  e.preventDefault();if(!ximData||ximBusy||!db||!canWrite)return;
+  const add=ximData.rows.filter(x=>!x.dup);if(!add.length)return;
+  ximBusy=true;const b=$('xim-save');b.disabled=true;const now=Date.now(),by=ROLE().name||'';let n=0,fail=0;
+  try{
+    for(let i=0;i<add.length;i+=15){
+      await Promise.all(add.slice(i,i+15).map(x=>{const at=new Date(x.day+'T12:00').getTime();
+        return ordersCol.doc(x.id).set({client:x.client.slice(0,200),phone:'',service:x.svc,customService:x.custom,items:[],unit:'шт',
+          expenses:x.cost?[{id:'xc',title:(x.costNote||'Расходы по таблице').slice(0,200),amount:x.cost}]:[],files:[],kaspi:[],qty:null,desc:'',
+          status:'done',price:x.price,paid:x.paid,owner:'',notes:('Из таблицы «'+ximData.file+'», лист '+x.sheet+', строка '+x.row+(x.payRaw?'. Оплата: '+x.payRaw:'')).slice(0,2000),
+          receivedAt:x.day,deadlineFrom:'',deadline:x.day,imported:XIM_TAG,createdAt:at,updatedAt:now,createdBy:by,statusAt:{done:at},
+          history:[{at:now,by,t:'Загружен из таблицы Excel'}]}).then(()=>n++,()=>fail++)}));
+      b.textContent='Загружено '+n+' из '+add.length;
+    }
+    if(fail)showErr('xim-err','Не записались '+fail+' '+plural(fail,'заказ','заказа','заказов')+'. Проверьте интернет и загрузите файл ещё раз: уже загруженные не задвоятся.');
+    else{ximBusy=false;closeXim();toast('Загружено '+n+' '+plural(n,'заказ','заказа','заказов')+' из таблицы');go('analytics')}
+  }finally{ximBusy=false;b.disabled=false}
+}
+async function ximUndo(){
+  const b=$('xim-undo');if(ximBusy)return;
+  if(!b.dataset.ask){ximUndoBtn(true);return}
+  const list=ordersAll.filter(o=>o.imported===XIM_TAG);ximBusy=true;b.disabled=true;let n=0;
+  try{for(let i=0;i<list.length;i+=15){await Promise.all(list.slice(i,i+15).map(o=>ordersCol.doc(o.id).delete().then(()=>n++).catch(()=>{})))}}
+  finally{ximBusy=false;b.disabled=false}
+  toast('Убрано '+n+' '+plural(n,'заказ','заказа','заказов')+' из таблицы');ximUndoBtn();if(ximData)ximRead($('xim-file').files[0]).catch(()=>{});
 }
 /* прайс DTF (13.10): добавляется один раз, при входе руководителя */
 const PRICE_COSTS_3={"dtf-a3": 1500, "dtf-a4": 850, "dtf-a5": 470, "dtf-a6": 210, "dtf-transfer": 0, "dtf-prep": 0, "dtf-fix": 0, "dtf-logo": 0};
@@ -4779,6 +4924,11 @@ document.addEventListener('click',e=>{const r=e.target.closest('[data-req]');if(
 $('req-imp-btn').addEventListener('click',()=>{if(canWrite)openReqImport()});
 $('ri-text').addEventListener('input',riPreview);
 $('ried-form').addEventListener('submit',saveReqImport);
+$('xim-btn').addEventListener('click',()=>{if(canWrite&&!isMgr())openXim()});
+$('xim-form').addEventListener('submit',saveXim);
+$('xim-file').addEventListener('change',e=>{const f=e.target.files[0];if(f)ximRead(f)});
+$('xim-undo').addEventListener('click',ximUndo);
+$('xim-close').onclick=$('xim-cancel').onclick=$('xim-back').onclick=closeXim;
 $('ried-close').onclick=$('ried-cancel').onclick=$('ried-back').onclick=closeReqImport;
 $('req-done-tog').addEventListener('click',()=>{showReqDone=!showReqDone;renderReqWidget();packHome()});
 /* короткие подсказки в полях поиска на телефоне */
