@@ -307,6 +307,245 @@ async function instagram(env) {
   };
 }
 
+/* ================= Отдел маркетинга на автопилоте =================
+   Раз в неделю (Cron Trigger: пн 08:00 по Павлодару = 03:00 UTC) или кнопкой «Запустить отдел» на сайте
+   агенты работают по очереди: аналитик → разведка трендов → генератор идей → SMM-план → сценарист.
+   Результат пишется в коллекцию marketing: отчёт (kind:'run'), ролики в календарь (kind:'event'), идеи (kind:'idea').
+   Без участия людей воркер входит в базу как отдельный сотрудник:
+     AGENT_EMAIL, AGENT_PASSWORD — секреты: почта и пароль сотрудника с доступом в учёт (можно взять вход бота Ани);
+     TELEGRAM_BOT_TOKEN — необязательно, секрет: тот же токен, что у бота Ани, тогда итог недели придёт в Telegram. */
+const FB_API_KEY = 'AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0'; // публичный ключ из firebase-config.js
+const SITE = 'https://razgulyaevevgeny.github.io/raz-studio-crm/marketing/';
+const kzNow = () => new Date(Date.now() + 5 * 3600e3);               // Казахстан, UTC+5
+const kzDay = () => kzNow().toISOString().slice(0, 10);
+const addD = (s, n) => new Date(Date.parse(s) + n * 864e5).toISOString().slice(0, 10);
+const wdOf = s => new Date(Date.parse(s)).getUTCDay();
+const WDN = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+const tg = n => Math.round(n || 0).toLocaleString('ru-RU') + ' ₸';
+const SVC_NAME = { vinyl: 'Винил на авто', dtf: 'DTF-печать', print3d: '3D-печать', sign3d: '3D-вывеска', embroidery: 'Вышивка', printing: 'Распечатка', kaspi: 'Kaspi', other: 'Другое' };
+const SVC_RX = { 'Винил на авто': /винил|наклейк|оклейк|авто|машин|стекл|плот/i, 'DTF-печать': /dtf|дтф|футболк|худи|свитшот|принт|мерч|одежд/i, '3D-вывески и таблички': /табличк|вывеск|навигац|qr|кофе|кафе|барбер|салон/i, '3D-печать': /3d|3д|принтер|печат.*3|фигурк|bambu/i };
+const ABOUT_L = { city: 'Город и адрес', contacts: 'Контакты', hours: 'График', usp: 'Чем мы лучше', services: 'Услуги и условия', audience: 'Клиенты', tone: 'Как общаемся', brand: 'Фирменный стиль', shooting: 'Чем и где снимаем', cases: 'Кейсы', goals: 'Цели на 3 месяца', tried: 'Что не сработало', notes: 'Дополнительно' };
+
+/* ---------- Firestore REST: вход сотрудника и чтение/запись ---------- */
+async function agentToken(env) {
+  if (!env.AGENT_EMAIL || !env.AGENT_PASSWORD) throw new Error('Для запуска по расписанию задайте секреты AGENT_EMAIL и AGENT_PASSWORD.');
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + (env.FIREBASE_API_KEY || FB_API_KEY), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: env.AGENT_EMAIL, password: env.AGENT_PASSWORD, returnSecureToken: true })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!j.idToken) throw new Error('Отдел не смог войти в базу: ' + ((j.error && j.error.message) || r.status));
+  return j.idToken;
+}
+const decV = v => 'stringValue' in v ? v.stringValue : 'integerValue' in v ? +v.integerValue : 'doubleValue' in v ? v.doubleValue : 'booleanValue' in v ? v.booleanValue
+  : 'timestampValue' in v ? v.timestampValue : 'arrayValue' in v ? (v.arrayValue.values || []).map(decV) : 'mapValue' in v ? decF(v.mapValue.fields) : null;
+const decF = f => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, decV(v)]));
+const decD = d => ({ id: d.name.split('/').pop(), ...decF(d.fields) });
+const encV = x => x == null ? { nullValue: null } : typeof x === 'string' ? { stringValue: x } : typeof x === 'boolean' ? { booleanValue: x }
+  : typeof x === 'number' ? (Number.isInteger(x) ? { integerValue: String(x) } : { doubleValue: x }) : Array.isArray(x) ? { arrayValue: { values: x.map(encV) } } : { mapValue: { fields: encF(x) } };
+const encF = o => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined).map(([k, v]) => [k, encV(v)]));
+function firestore(env, token) {
+  const name = `projects/${env.FIREBASE_PROJECT || 'raz-studio-5a486'}/databases/(default)/documents`, root = 'https://firestore.googleapis.com/v1/' + name;
+  const call = async (url, init) => {
+    const r = await fetch(url, { ...init, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' } });
+    if (r.status === 404) return null;
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error('База: ' + ((j.error && j.error.message) || r.status));
+    return j;
+  };
+  return {
+    async get(path) { const j = await call(root + '/' + path); return j ? decD(j) : null; },
+    async query(coll, select, where) {
+      const q = { from: [{ collectionId: coll }] };
+      if (select) q.select = { fields: select.map(f => ({ fieldPath: f })) };
+      if (where) q.where = where;
+      const j = await call(root + ':runQuery', { method: 'POST', body: JSON.stringify({ structuredQuery: q }) });
+      return (j || []).filter(x => x.document).map(x => decD(x.document));
+    },
+    async write(docs) { // [{ path, data, merge }]
+      for (let i = 0; i < docs.length; i += 400) await call(root + ':commit', { method: 'POST', body: JSON.stringify({ writes: docs.slice(i, i + 400).map(d => ({ update: { name: name + '/' + d.path, fields: encF(d.data) }, ...(d.merge ? { updateMask: { fieldPaths: Object.keys(d.data) } } : {}) })) }) });
+    }
+  };
+}
+
+/* ---------- данные студии для агентов (без имён и телефонов клиентов) ---------- */
+async function loadStudio(db) {
+  const kinds = ['offer', 'competitor', 'idea', 'event', 'igpost', 'trend', 'run'];
+  const [orders, prices, items, about, agents, ig] = await Promise.all([
+    db.query('orders', ['price', 'service', 'customService', 'status', 'receivedAt', 'createdAt']),
+    db.query('prices', ['svc', 'name', 'unit', 'price', 'from', 'calc', 'cost', 'mat', 'work', 'extra', 'hidden']),
+    db.query('marketing', ['kind', 'title', 'status', 'date', 'type', 'format', 'price', 'audience', 'includes', 'until', 'name', 'services', 'prices', 'strong', 'weak', 'caption', 'likes', 'link', 'note', 'createdAt'],
+      { fieldFilter: { field: { fieldPath: 'kind' }, op: 'IN', value: encV(kinds) } }),
+    db.get('marketing/about'), db.get('marketing/agents'), db.get('marketing/ig')
+  ]);
+  return { orders, prices, items, about: about || {}, agents: agents || {}, ig: ig || {} };
+}
+function salesFacts(orders, today) {
+  const day = o => o.receivedAt || (o.createdAt ? new Date(+o.createdAt + 5 * 3600e3).toISOString().slice(0, 10) : '');
+  const L = orders.filter(o => o.status !== 'cancel').map(o => [day(o), SVC_NAME[o.service] || o.customService || 'Другое', +o.price || 0]).filter(([d]) => d);
+  const sum = (a, b) => { const m = new Map(); L.forEach(([d, k, p]) => { if (d >= a && d <= b) { const e = m.get(k) || { n: 0, r: 0 }; e.n++; e.r += p; m.set(k, e); } }); return m; };
+  const w = sum(addD(today, -6), today), w4 = sum(addD(today, -34), addD(today, -7)), m1 = sum(addD(today, -29), today), m0 = sum(addD(today, -59), addD(today, -30)), q1 = sum(addD(today, -89), today), q0 = sum(addD(today, -179), addD(today, -90));
+  const keys = [...new Set([...q1.keys(), ...q0.keys()])], g = (m, k) => m.get(k) || { n: 0, r: 0 };
+  const pct = (a, b) => b ? Math.round((a - b) / b * 100) + '%' : a ? 'новое' : '—';
+  const rows = keys.map(k => `| ${k} | ${g(w, k).n} / ${tg(g(w, k).r)} | ${(g(w4, k).n / 4).toFixed(1)} / ${tg(g(w4, k).r / 4)} | ${g(m1, k).n} / ${tg(g(m1, k).r)} | ${g(m0, k).n} / ${tg(g(m0, k).r)} | ${pct(g(m1, k).r, g(m0, k).r)} | ${pct(g(q1, k).r, g(q0, k).r)} |`);
+  return keys.length ? '| Услуга | 7 дней (заказы / выручка) | в среднем за неделю до этого | 30 дней | предыдущие 30 | Выручка 30 д к прошлым 30 | 90 д к прошлым 90 |\n|---|---|---|---|---|---|---|\n' + rows.join('\n') : 'Заказов в учёте за полгода нет.';
+}
+function studioContext(S, today) {
+  const of = k => S.items.filter(x => x.kind === k), out = [];
+  const about = Object.entries(ABOUT_L).filter(([k]) => String(S.about[k] || '').trim()).map(([k, l]) => `- **${l}:** ${String(S.about[k]).trim()}`);
+  out.push('## О студии\n' + (about.join('\n') || 'Раздел «О студии» не заполнен.'));
+  const unit = x => x.cost != null && x.cost !== '' ? +x.cost : (+x.mat || 0) + (+x.work || 0) + (+x.extra || 0);
+  const pr = S.prices.filter(x => !x.hidden).slice(0, 90).map(x => `| ${SVC_NAME[x.svc] || x.svc || ''} | ${x.name || ''} | ${x.unit || 'шт'} | ${x.calc ? 'по расчёту' : (x.from ? 'от ' : '') + tg(x.price)} | ${!x.calc && unit(x) ? tg(unit(x)) : '—'} |`);
+  out.push('## Прайс\n' + (pr.length ? '| Услуга | Позиция | За что | Цена | Себестоимость |\n|---|---|---|---|---|\n' + pr.join('\n') : 'нет данных'));
+  out.push('## Продажи по услугам (посчитано точно из учёта, Kaspi не входит)\n' + salesFacts(S.orders, today));
+  const offs = of('offer').filter(o => o.status !== 'archive');
+  out.push('## Офферы\n' + (offs.length ? offs.map(o => `- ${o.title}${o.price ? ' — ' + o.price : ''}${o.audience ? ', для: ' + o.audience : ''}${o.until ? ', до ' + o.until : ''}`).join('\n') : 'нет'));
+  const comp = of('competitor');
+  if (comp.length) out.push('## Конкуренты\n' + comp.slice(0, 15).map(c => `- ${c.name}${c.services ? ' — ' + c.services : ''}${c.strong ? '. Сильные: ' + String(c.strong).replace(/\s+/g, ' ') : ''}${c.weak ? '. Слабые: ' + String(c.weak).replace(/\s+/g, ' ') : ''}`).join('\n'));
+  const posts = [...((S.ig.posts || []).map(p => ({ date: String(p.ts || '').slice(0, 10), type: p.type, caption: p.caption, likes: p.likes }))), ...of('igpost').map(p => ({ date: p.date, type: p.type, caption: p.caption, likes: p.likes }))].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const cov = Object.entries(SVC_RX).map(([l, rx]) => { const P = posts.filter(p => rx.test(p.caption || '')); return `${l} — ${P.length}${P[0] ? ' (последний ' + P[0].date + ')' : ''}`; }).join('; ');
+  out.push('## Instagram @raz.brandstudio\n' + (posts.length ? `Публикаций за 30 дней: ${posts.filter(p => p.date >= addD(today, -30)).length}. По услугам: ${cov}.\nПоследние:\n` + posts.slice(0, 15).map(p => `- ${p.date} ${p.type || ''}${p.likes != null ? ' ❤' + p.likes : ''}: ${String(p.caption || '').replace(/\s+/g, ' ').slice(0, 120)}`).join('\n') : 'данных нет'));
+  const evs = of('event').filter(e => e.date >= addD(today, -7) && e.date <= addD(today, 30)).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  out.push('## Календарь маркетинга (−7…+30 дней)\n' + (evs.length ? evs.slice(0, 50).map(e => `- ${e.date} [${e.type || ''}${e.format && e.format !== 'none' ? ', ' + e.format : ''}] ${e.title}`).join('\n') : 'пусто'));
+  const ideas = of('idea').filter(x => x.status === 'new' || x.status === 'work');
+  if (ideas.length) out.push('## Идеи, которые уже есть\n' + ideas.slice(0, 30).map(x => '- ' + x.title).join('\n'));
+  return out.join('\n\n');
+}
+
+/* ---------- инструкции агентов отдела (можно переписать в «Справочник → Агенты») ---------- */
+const DEPT = {
+  analyst: `Ты — АНАЛИТИК отдела. Каждый понедельник делаешь «Сводку недели» для владельца.
+Цифры продаж в данных уже посчитаны точно — не пересчитывай и не выдумывай другие.
+Формат (до 250 слов, markdown):
+## Что происходит — 3–5 пунктов с цифрами из таблицы продаж.
+## Что просело — какие услуги упали и возможные причины (помечай «гипотеза»). Если данных мало — так и скажи.
+## 3 приоритета на неделю — какие услуги толкаем контентом и каким углом подачи. Приоритет по умолчанию: винил на авто, DTF на футболках, 3D-вывески — но если цифры говорят другое, скажи.`,
+  scout: `Ты — РАЗВЕДЧИК ТРЕНДОВ. Найди в интернете свежие (за последние 1–2 месяца) форматы и тренды Instagram Reels и TikTok, которые подходят мастерской брендирования: оклейка авто винилом, печать на одежде DTF, 3D-печать, вывески для кафе и барбершопов. Добавь инфоповоды и праздники в Казахстане на ближайшие 3 недели.
+Выдай 5–7 пунктов: **тренд** — что это — как адаптировать для RAZ одной фразой — источник (ссылка). Только то, что реально нашёл; без воды.`,
+  ideas: `Ты — ГЕНЕРАТОР ИДЕЙ для роликов. Придумай 8 идей Reels/сторис, которые закрывают просадки и приоритеты из сводки аналитика.
+Опирайся на тренды из разведки и копилку трендов (ссылки, которые владелец сохранил). Не повторяй темы последних публикаций и уже существующие идеи.
+Каждая идея снимается одним человеком на телефон за 15–40 минут в мастерской или у клиента.
+Поля: title — название до 70 символов; service — услуга; format — reels, stories, carousel или post; hook — первые 2 секунды (текст на экране + что в кадре); why — какую просадку или приоритет закрывает и на какой тренд опирается, 1–2 предложения; source — ссылка на тренд или пусто.`,
+  smm: `Ты — SMM-МЕНЕДЖЕР. Собери контент-план на неделю из идей генератора: 3–4 публикации (не больше 1 в день, только будни, даты строго внутри периода).
+Не ставь на даты, где в календаре уже есть съёмка или публикация. Минимум 2 из них — Reels по приоритетным услугам.
+Поля: date — ГГГГ-ММ-ДД; title — конкретно до 70 символов; format — reels, stories, carousel или post; service — услуга; idea — 2–3 предложения: что снимаем, для кого, чем цепляем и во сколько публикуем (лучшее время: будни 10:00–12:00 или 17:00–18:00); idx — номер идеи из списка (с 1).`,
+  writer: `Ты — СЦЕНАРИСТ Reels. Распиши ОДИН ролик так, чтобы его можно было снять без вопросов.
+- hooks — 5 разных хуков на первые 2 секунды: «текст на экране» + что в кадре. Разные углы: результат, процесс, боль клиента, цифра или цена, интрига.
+- variants — РОВНО 3 варианта съёмки одного и того же ролика:
+  1) «Быстро на телефон» — один человек, 10–15 минут, можно без лица;
+  2) «Процесс и звук» — крупные планы, ASMR-звук работы (плоттер, ракель, принтер), без слов;
+  3) «С человеком» — владелец говорит в кадр или реакция клиента на результат.
+  Для каждого: name, how (1–2 предложения: в чём суть варианта), time (сколько займёт съёмка и монтаж), shots — 4–8 кадров (frame — что в кадре; angle — план и ракурс; sec — секунды, всего 15–30; onscreen — текст на экране; voice — что говорим или пусто), music — настроение и что вбить в поиск аудиотеки Instagram, edit — монтаж и обложка.
+- voice — закадровый текст для варианта 1 (или пусто, если без слов);
+- caption — подпись к публикации, 3–5 коротких абзацев, призыв написать в Direct или WhatsApp, без хештегов;
+- hashtags — 6–10 хештегов одной строкой;
+- goal — зачем этот ролик и какой результат ждём;
+- prep — что подготовить до съёмки (реквизит, образцы, свет, чистый объектив);
+- steps — 5–8 шагов по порядку.
+Цены — только из прайса. Не выдумывай факты о студии.`
+};
+const S_ = { type: 'STRING' }, A_ = it => ({ type: 'ARRAY', items: it });
+const SCH_IDEAS = { type: 'OBJECT', properties: { ideas: A_({ type: 'OBJECT', properties: { title: S_, service: S_, format: S_, hook: S_, why: S_, source: S_ }, required: ['title', 'hook'] }) }, required: ['ideas'] };
+const SCH_PLAN = { type: 'OBJECT', properties: { events: A_({ type: 'OBJECT', properties: { date: S_, title: S_, format: S_, service: S_, idea: S_, idx: { type: 'INTEGER' } }, required: ['date', 'title'] }) }, required: ['events'] };
+const SHOT = { type: 'OBJECT', properties: { frame: S_, angle: S_, sec: S_, onscreen: S_, voice: S_ }, required: ['frame'] };
+const SCH_SCRIPT = { type: 'OBJECT', properties: { goal: S_, hooks: A_(S_), variants: A_({ type: 'OBJECT', properties: { name: S_, how: S_, time: S_, shots: A_(SHOT), music: S_, edit: S_ }, required: ['name', 'shots'] }), voice: S_, caption: S_, hashtags: S_, prep: A_(S_), steps: A_(S_) }, required: ['hooks', 'variants'] };
+function parseJ(t) {
+  t = String(t || '').replace(/^\s*```(?:json)?/i, '').replace(/```\s*$/, '').trim();
+  try { return JSON.parse(t); } catch (_) {}
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+  throw new Error('ИИ ответил не в том формате');
+}
+// разведка с поиском Google (бесплатный тариф Gemini); если поиск недоступен — отдел работает без неё
+async function scoutTrends(env, system, task) {
+  if (!env.GEMINI_API_KEY) return '';
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL || GEMINI_DEFAULT}:generateContent`, {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: task }] }], tools: [{ google_search: {} }], generationConfig: { maxOutputTokens: 8192, temperature: 0.6 } })
+    });
+    const j = await r.json().catch(() => ({}));
+    const c = (j.candidates || [])[0];
+    return ((c && c.content && c.content.parts) || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
+  } catch (_) { return ''; }
+}
+function scriptNotes(s) {
+  const shots = v => (v.shots || []).length ? '| Кадр | Что снимаем | Ракурс | Сек | Текст на экране |\n|---|---|---|---|---|\n' + v.shots.map((x, i) => `| ${i + 1} | ${String(x.frame || '').replace(/\|/g, '/')} | ${x.angle || ''} | ${x.sec || ''} | ${String(x.onscreen || '').replace(/\|/g, '/')} |`).join('\n') : '';
+  const out = ['### 5 хуков на выбор\n' + (s.hooks || []).map((h, i) => `${i + 1}. ${h}`).join('\n')];
+  (s.variants || []).forEach((v, i) => out.push(`### Вариант ${i + 1}: ${v.name || ''}${i === 0 ? ' (расписан в карточке выше)' : ''}\n${v.how || ''}${v.time ? '\n\n**Время:** ' + v.time : ''}${i ? '\n\n' + shots(v) + (v.music ? '\n\n**Музыка:** ' + v.music : '') + (v.edit ? '\n\n**Монтаж:** ' + v.edit : '') : ''}`));
+  return out.join('\n\n');
+}
+
+async function runDepartment(env, opts = {}) {
+  const today = kzDay(), cron = !!opts.cron;
+  const db = firestore(env, opts.token || await agentToken(env));
+  const runId = cron ? 'run_' + today : 'run_' + today + '_' + kzNow().toISOString().slice(11, 16).replace(':', '');
+  const S = await loadStudio(db);
+  const runs = S.items.filter(x => x.kind === 'run');
+  if (cron && runs.some(r => r.id === runId)) return { skipped: true, runId };
+  const busy = runs.find(r => r.status === 'working' && Date.now() - (+r.createdAt || 0) < 15 * 60e3);
+  if (busy) throw new Error('Отдел уже работает, подождите несколько минут.');
+  const start = wdOf(today) === 1 ? today : addD(today, 1), end = addD(start, 6);
+  const run = { kind: 'run', status: 'working', stage: 'Аналитик смотрит продажи', date: today, period: start + '…' + end, createdAt: Date.now(), by: opts.by || 'Отдел (по расписанию)' };
+  const save = patch => { Object.assign(run, patch); return db.write([{ path: 'marketing/' + runId, data: run }]); };
+  await save({});
+  try {
+    const base = (S.agents.base && String(S.agents.base).trim()) || STUDIO;
+    const ctx = studioContext(S, today);
+    const sys = role => base + '\n\n' + ((S.agents['d_' + role] && String(S.agents['d_' + role]).trim()) || DEPT[role]) + '\n\n# Данные студии\n' + ctx + `\n\nСегодня: ${today} (${WDN[wdOf(today)]}). Планируем период ${start} — ${end}.`;
+    const ask = (role, text, o = {}) => generate(env, sys(role), [{ role: 'user', content: text }], { json: !!o.schema, schema: o.schema || null, maxTokens: o.max || 8192, temperature: o.t ?? 0.7 });
+
+    const summary = (await ask('analyst', 'Сделай сводку недели.', { t: 0.3 })).text.trim();
+    await save({ summary, stage: 'Разведчик ищет тренды' });
+    const trends = await scoutTrends(env, base + '\n\n' + DEPT.scout, `Сегодня ${today}. Найди тренды и инфоповоды.`);
+    await save({ trends, stage: 'Генератор придумывает идеи' });
+    const kopilka = S.items.filter(x => x.kind === 'trend' && (+x.createdAt || 0) > Date.now() - 45 * 864e5).slice(0, 20);
+    const ideasIn = `## Сводка аналитика\n${summary}\n\n## Разведка трендов\n${trends || 'нет данных'}\n\n## Копилка трендов от владельца\n${kopilka.length ? kopilka.map(k => `- ${k.link || ''} — ${k.note || ''}`).join('\n') : 'пусто'}\n\nПридумай 8 идей.`;
+    const ideas = (parseJ((await ask('ideas', ideasIn, { schema: SCH_IDEAS, max: 12000, t: 0.9 })).text).ideas || []).slice(0, 10);
+    if (!ideas.length) throw new Error('Генератор идей ничего не вернул');
+    await save({ ideas, stage: 'SMM-менеджер собирает план' });
+    const planIn = `## Сводка аналитика\n${summary}\n\n## Идеи\n${ideas.map((x, i) => `${i + 1}. ${x.title} [${x.service || ''}, ${x.format || ''}] — хук: ${x.hook}. ${x.why || ''}`).join('\n')}\n\nСобери план публикаций на ${start} — ${end}.`;
+    const plan = (parseJ((await ask('smm', planIn, { schema: SCH_PLAN, max: 8192, t: 0.4 })).text).events || [])
+      .filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.date || '') && e.date >= start && e.date <= end && e.title).slice(0, 4);
+    if (!plan.length) throw new Error('SMM-менеджер не собрал план');
+    const writes = [], eventIds = [];
+    for (let i = 0; i < plan.length; i++) {
+      const p = plan[i], idea = ideas[(+p.idx || 0) - 1];
+      await save({ stage: `Сценарист пишет ролик ${i + 1} из ${plan.length}` });
+      let s = {};
+      try { s = parseJ((await ask('writer', `Ролик: ${p.title}\nФормат: ${p.format || 'reels'}\nУслуга: ${p.service || ''}\nДата: ${p.date}\nИдея: ${p.idea || ''}${idea ? '\nИсходный хук: ' + idea.hook + '\nПочему: ' + (idea.why || '') : ''}`, { schema: SCH_SCRIPT, max: 16000, t: 0.8 })).text); }
+      catch (e) { s = { goal: '', hooks: [], variants: [], notes: 'Сценарист не успел расписать: ' + e.message }; }
+      const v = (s.variants || [])[0] || {};
+      const id = 'auto' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 8);
+      eventIds.push(id);
+      writes.push({ path: 'marketing/' + id, data: {
+        kind: 'event', title: String(p.title).slice(0, 120), date: p.date, time: v.time || '', type: 'content', format: ['reels', 'post', 'carousel', 'stories'].includes(p.format) ? p.format : 'reels', status: 'plan', done: false,
+        goal: s.goal || '', idea: (p.idea || '') + ((s.hooks || [])[0] ? '\n\nХук: ' + s.hooks[0] : ''),
+        prep: (s.prep || []).map(t => ({ t: String(t), done: false })), steps: (s.steps || []).map(t => ({ t: String(t), done: false })),
+        shots: (v.shots || []).map(x => ({ frame: x.frame || '', angle: x.angle || '', sec: String(x.sec || ''), onscreen: x.onscreen || '', voice: x.voice || '' })),
+        voice: s.voice || '', music: v.music || '', edit: v.edit || '', caption: s.caption || '', hashtags: s.hashtags || '',
+        notes: s.notes || scriptNotes(s), src: 'Отдел маркетинга, запуск ' + today, aiState: '', aiErr: '', run: runId,
+        createdAt: Date.now(), updatedAt: Date.now(), by: 'Отдел маркетинга'
+      } });
+    }
+    const used = new Set(plan.map(p => +p.idx));
+    ideas.forEach((x, i) => { if (!used.has(i + 1)) writes.push({ path: 'marketing/idea' + Date.now().toString(36) + i, data: { kind: 'idea', title: String(x.title).slice(0, 200), status: 'new', notes: [x.service, x.format, 'Хук: ' + x.hook, x.why, x.source].filter(Boolean).join(' · '), run: runId, createdAt: Date.now(), updatedAt: Date.now(), by: 'Отдел маркетинга' } }); });
+    await db.write(writes);
+    await save({ status: 'done', stage: '', eventIds, finishedAt: Date.now() });
+    if (opts.notify !== false) await notifyTeam(env, db, `Отдел маркетинга: план на ${start.slice(8)}.${start.slice(5, 7)}–${end.slice(8)}.${end.slice(5, 7)} готов.\n\n${plan.map(p => `• ${p.date.slice(8)}.${p.date.slice(5, 7)} — ${p.title}`).join('\n')}\n\nСводка, сценарии и 3 варианта съёмки: ${SITE}`).catch(() => {});
+    return { ok: true, runId, events: eventIds.length, ideas: ideas.length };
+  } catch (e) {
+    await save({ status: 'error', stage: '', error: String(e.message || e) }).catch(() => {});
+    throw e;
+  }
+}
+async function notifyTeam(env, db, text) {
+  const tok = String(env.TELEGRAM_BOT_TOKEN || '').trim();
+  if (!tok) return;
+  const chats = ((await db.get('wa_anna/telegram')) || {}).chats || [];
+  for (const c of chats) if (c && c.chat) await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: c.chat, text, disable_web_page_preview: true }) });
+}
+
 /* ---------- обработчик ---------- */
 export default {
   async fetch(req, env) {
@@ -315,8 +554,8 @@ export default {
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json; charset=utf-8' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
-    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN, gen: 2 });
-    if (!['/api/ask', '/api/gen', '/api/image', '/api/instagram'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
+    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN, gen: 2, dept: true, deptAuto: !!(env.AGENT_EMAIL && env.AGENT_PASSWORD), deptTelegram: !!env.TELEGRAM_BOT_TOKEN });
+    if (!['/api/ask', '/api/gen', '/api/image', '/api/instagram', '/api/department'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
 
     let user;
     try { user = await verifyFirebase((req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), env.FIREBASE_PROJECT || 'raz-studio-5a486'); }
@@ -326,6 +565,11 @@ export default {
 
     let b;
     try { b = await req.json(); } catch (_) { return json({ error: 'bad json' }, 400); }
+    if (url.pathname === '/api/department') {
+      // запуск отдела кнопкой: работаем с правами вошедшего сотрудника
+      try { return json(await runDepartment(env, { token: (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), by: user.email || 'сотрудник', notify: !!b.notify })); }
+      catch (e) { return json({ error: e.message || 'Отдел не смог отработать' }, 502); }
+    }
     if (url.pathname === '/api/image') {
       try { return json({ image: await makeImage(env, b.prompt || 'branding studio workshop') }); }
       catch (e) { return json({ error: e.message || 'Не удалось нарисовать фон' }, 502); }
@@ -358,5 +602,9 @@ export default {
 
     try { return json(await answer(env, b.role, merged, String(b.context || '').slice(0, 24000), String(b.brief || '').slice(0, 6000))); }
     catch (e) { return json({ error: e.message || 'Не удалось получить ответ' }, 502); }
+  },
+  // по расписанию (Cron Trigger): отдел сам готовит план на неделю
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(runDepartment(env, { cron: true }).catch(e => console.log('Отдел маркетинга:', e.message || e)));
   }
 };
