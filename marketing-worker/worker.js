@@ -456,6 +456,21 @@ function parseJ(t) {
   if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
   throw new Error('ИИ ответил не в том формате');
 }
+// из обрезанного ответа (ИИ упёрся в лимит длины) достаём все целые объекты массива key
+function salvage(t, key) {
+  t = String(t || ''); const i = t.indexOf('"' + key + '"'), a = i < 0 ? -1 : t.indexOf('[', i);
+  if (a < 0) return null;
+  const out = []; let depth = 0, st = -1, str = false, esc = false;
+  for (let k = a + 1; k < t.length; k++) {
+    const c = t[k];
+    if (str) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') str = false; continue; }
+    if (c === '"') str = true;
+    else if (c === '{') { if (!depth) st = k; depth++; }
+    else if (c === '}') { depth--; if (!depth && st >= 0) { try { out.push(JSON.parse(t.slice(st, k + 1))); } catch (_) {} st = -1; } }
+    else if (c === ']' && !depth) break;
+  }
+  return out.length ? { [key]: out } : null;
+}
 // разведка с поиском Google (бесплатный тариф Gemini); если поиск недоступен — отдел работает без неё
 async function scoutTrends(env, system, task) {
   if (!env.GEMINI_API_KEY) return '';
@@ -494,6 +509,18 @@ async function runDepartment(env, opts = {}) {
     const ctx = studioContext(S, today);
     const sys = role => base + '\n\n' + ((S.agents['d_' + role] && String(S.agents['d_' + role]).trim()) || DEPT[role]) + '\n\n# Данные студии\n' + ctx + `\n\nСегодня: ${today} (${WDN[wdOf(today)]}). Планируем период ${start} — ${end}.`;
     const ask = (role, text, o = {}) => generate(env, sys(role), [{ role: 'user', content: text }], { json: !!o.schema, schema: o.schema || null, maxTokens: o.max || 8192, temperature: o.t ?? 0.7 });
+    // JSON-ответ: до 3 попыток с запасом длины; если ответ обрезан — берём целые пункты
+    const askJ = async (step, role, text, o) => {
+      let last = '', eng = '';
+      for (let i = 0; i < 3; i++) {
+        const r = await ask(role, text, { ...o, max: Math.round(o.max * (1 + i * 0.75)), t: i ? Math.min(o.t, 0.5) : o.t });
+        last = r.text; eng = r.engine;
+        try { return parseJ(r.text); } catch (_) {}
+        const part = o.key && salvage(r.text, o.key);
+        if (part && part[o.key].length >= (o.min || 1)) return part;
+      }
+      throw new Error(`${step}: ИИ (${eng || '?'}) ответил не в том формате. Начало ответа: ${String(last).replace(/\s+/g, ' ').slice(0, 160) || 'пусто'}`);
+    };
 
     const summary = (await ask('analyst', 'Сделай сводку недели.', { t: 0.3 })).text.trim();
     await save({ summary, stage: 'Разведчик ищет тренды' });
@@ -501,11 +528,11 @@ async function runDepartment(env, opts = {}) {
     await save({ trends, stage: 'Генератор придумывает идеи' });
     const kopilka = S.items.filter(x => x.kind === 'trend' && (+x.createdAt || 0) > Date.now() - 45 * 864e5).slice(0, 20);
     const ideasIn = `## Сводка аналитика\n${summary}\n\n## Разведка трендов\n${trends || 'нет данных'}\n\n## Копилка трендов от владельца\n${kopilka.length ? kopilka.map(k => `- ${k.link || ''} — ${k.note || ''}`).join('\n') : 'пусто'}\n\nПридумай 8 идей.`;
-    const ideas = (parseJ((await ask('ideas', ideasIn, { schema: SCH_IDEAS, max: 12000, t: 0.9 })).text).ideas || []).slice(0, 10);
+    const ideas = ((await askJ('Генератор идей', 'ideas', ideasIn, { schema: SCH_IDEAS, max: 16000, t: 0.9, key: 'ideas', min: 4 })).ideas || []).slice(0, 10);
     if (!ideas.length) throw new Error('Генератор идей ничего не вернул');
     await save({ ideas, stage: 'SMM-менеджер собирает план' });
     const planIn = `## Сводка аналитика\n${summary}\n\n## Идеи\n${ideas.map((x, i) => `${i + 1}. ${x.title} [${x.service || ''}, ${x.format || ''}] — хук: ${x.hook}. ${x.why || ''}`).join('\n')}\n\nСобери план публикаций на ${start} — ${end}.`;
-    const plan = (parseJ((await ask('smm', planIn, { schema: SCH_PLAN, max: 8192, t: 0.4 })).text).events || [])
+    const plan = ((await askJ('SMM-менеджер', 'smm', planIn, { schema: SCH_PLAN, max: 12000, t: 0.4, key: 'events', min: 2 })).events || [])
       .filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.date || '') && e.date >= start && e.date <= end && e.title).slice(0, 4);
     if (!plan.length) throw new Error('SMM-менеджер не собрал план');
     const writes = [], eventIds = [];
@@ -513,7 +540,7 @@ async function runDepartment(env, opts = {}) {
       const p = plan[i], idea = ideas[(+p.idx || 0) - 1];
       await save({ stage: `Сценарист пишет ролик ${i + 1} из ${plan.length}` });
       let s = {};
-      try { s = parseJ((await ask('writer', `Ролик: ${p.title}\nФормат: ${p.format || 'reels'}\nУслуга: ${p.service || ''}\nДата: ${p.date}\nИдея: ${p.idea || ''}${idea ? '\nИсходный хук: ' + idea.hook + '\nПочему: ' + (idea.why || '') : ''}`, { schema: SCH_SCRIPT, max: 16000, t: 0.8 })).text); }
+      try { s = await askJ('Сценарист', 'writer', `Ролик: ${p.title}\nФормат: ${p.format || 'reels'}\nУслуга: ${p.service || ''}\nДата: ${p.date}\nИдея: ${p.idea || ''}${idea ? '\nИсходный хук: ' + idea.hook + '\nПочему: ' + (idea.why || '') : ''}`, { schema: SCH_SCRIPT, max: 20000, t: 0.8 }); }
       catch (e) { s = { goal: '', hooks: [], variants: [], notes: 'Сценарист не успел расписать: ' + e.message }; }
       const v = (s.variants || [])[0] || {};
       const id = 'auto' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 8);
