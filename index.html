@@ -921,6 +921,10 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pcol>.w{flex:none}.pcol>.w.fill{flex:1 1 auto}
 .pack.m .pcol>.w{flex:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
+/* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
+#pack:not([data-n="1"])>.pcol>.w:first-child{margin-top:12px}
+.pfull{grid-column:1/-1;display:flex;flex-direction:column;min-width:0}
+.pduo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;min-width:0}
 .psub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;flex:1 1 auto;align-items:stretch;min-width:0}
 .psub:not(:has(.w)){display:none}
 /* широкий «Сегодня»: заказы и задачи в две колонки */
@@ -1051,6 +1055,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 #w-req.mopen .mf-x::before{transform:translateY(2px) rotate(-135deg)}
 #w-req.mfold:not(.mopen)>:not(.w-h){display:none!important}
 #w-req>.rq-imp{align-self:flex-start}
+#pack #w-req .rt{font-size:18px}
 @container (min-width:1000px){#w-req-list,#req-done{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){#w-req .rdot{animation:none}#w-req .rcup{transition:none}}
 @media(max-width:600px){
@@ -1293,16 +1298,25 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 #w-sasha .bw-note{margin:0;color:#fff;opacity:.85}
 #w-sasha{--ab:#26262c;background:linear-gradient(155deg,#43434c,#26262c 42%,#121215)}
 #w-sasha .an-ask .btn:hover,#w-sasha .an-card .btn:hover{background:#e6e6ec}
-.sa-av{position:absolute;left:16px;top:-18px;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;pointer-events:none;background:#fff;box-shadow:0 0 0 3px #fff,0 8px 18px rgba(0,0,0,.45);color:var(--ab);font:800 44px/1 var(--f);letter-spacing:-.04em;transition:transform .25s}
-.sa-av img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
-.sa-av i{position:absolute;right:-2px;bottom:4px;width:30px;height:30px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.35)}
-.sa-av svg{width:17px;height:17px}
-#w-sasha>.w-h:hover .sa-av{transform:translateY(-3px) rotate(-3deg)}
 .sa-pl li{grid-template-columns:44px minmax(0,1fr)}.sa-pl li::before{content:none}
 .sa-pl time{font:700 12px/1.35 var(--f);color:rgba(255,255,255,.78);text-transform:uppercase}
 .sa-pl a.an-lk{color:#fff}
-.sa-say{max-height:260px;overflow:auto}
-@media(prefers-reduced-motion:reduce){.sa-av{transition:none}}
+.pack #w-sasha .an-body,#w-sasha .an-body{display:flex}
+#w-sasha #w-sasha-plan .an-h{margin-top:6px}
+/* телефон: Аня и Саша без пояснительной подписи внизу, сводка Саши короче */
+@media(max-width:600px){#w-anna .an-ft .bw-note,#w-sasha .an-ft .bw-note{display:none}#w-anna .an-ft,#w-sasha .an-ft{justify-content:flex-end}}
+/* стикер Саши — как у Ани: фигура без фона выглядывает из круга, низ обрезан по кругу в самой картинке */
+#w-sasha>.w-h:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
+#w-sasha .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#d9d9e2 75%);box-shadow:0 8px 18px rgba(0,0,0,.45)}
+#w-sasha .an-av .fg{clip-path:none}
+/* нажали на Сашу — из его телефона вылетает плашка TikTok в цветах логотипа */
+#w-sasha .an-av .tt{position:absolute;left:78%;top:52%;display:flex;align-items:center;gap:4px;padding:5px 10px 5px 7px;border-radius:999px;background:#111;color:#fff;font:800 14px/1 var(--f);letter-spacing:-.02em;white-space:nowrap;
+  text-shadow:-1.5px -1px 0 #25f4ee,1.5px 1px 0 #fe2c55;box-shadow:0 6px 16px rgba(0,0,0,.45);transform-origin:0 100%;opacity:0;transform:translate(-6px,6px) scale(.2) rotate(-12deg);z-index:2}
+#w-sasha .an-av .tt svg{width:18px;height:18px;flex:none}
+#w-sasha .an-av.tok .tt{animation:satok 1.7s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes satok{0%{opacity:0;transform:translate(-6px,6px) scale(.2) rotate(-12deg)}18%{opacity:1;transform:translate(14px,-30px) scale(1.12) rotate(-6deg)}30%{transform:translate(18px,-36px) scale(1) rotate(-4deg)}75%{opacity:1;transform:translate(24px,-44px) scale(1) rotate(-3deg)}100%{opacity:0;transform:translate(34px,-62px) scale(.9) rotate(-2deg)}}
+@media(prefers-reduced-motion:reduce){#w-sasha .an-av.tok .tt{animation:none}}
+#w-sasha .an-av .fs{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(0,0,0,.45))}
 @media(max-width:600px){
   #pack #w-sasha{margin-top:14px;padding:10px 12px 12px;border-radius:18px;gap:10px}
   #pack #w-sasha>.w-h{min-height:46px;padding-left:90px}
@@ -1310,7 +1324,6 @@ body:has(#xim:not([hidden])) .bnav{display:none}
   #w-sasha .w-h h2{font-size:16.5px}
   #w-sasha .at{gap:2px}
   #w-sasha .at .c{font-size:12px}
-  .sa-av{left:10px;top:-12px;width:70px;height:70px;font-size:34px}.sa-av i{width:24px;height:24px}.sa-av svg{width:14px;height:14px}
 }
 .kq:hover{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--kr)}
 .kq-t{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -1766,9 +1779,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="an-ft"><small class="bw-note">Аня отвечает, когда включён рабочий компьютер.</small><button class="an-ref" type="button" id="anna-ref-btn" aria-label="Обновить сводку Ани"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить</button></div>
         </div>
         <div class="w" id="w-sasha">
-          <div class="w-h"><h2><span class="sa-av" id="sasha-av" aria-hidden="true"><img src="sasha-avatar.webp?v=1" alt="" width="240" height="240"><i><svg viewBox="0 0 24 24" fill="none" stroke="#26262c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></i></span><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
+          <div class="w-h"><h2><span class="an-av" id="sasha-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="sasha-avatar.webp?v=3" alt="" width="240" height="252"></span></span><i class="tt"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path stroke="#25f4ee" transform="translate(-1 -1)" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/><path stroke="#fe2c55" transform="translate(1 1)" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/><path stroke="#fff" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/></g></svg>TikTok</i></span><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
           <div class="an-body" id="w-sasha-body">
-            <div class="an-col"><div class="an-say sa-say" id="w-sasha-say">Загружаем…</div><div class="an-stats" id="w-sasha-stats"></div></div>
             <div class="an-col">
               <div id="w-sasha-plan"></div>
               <div class="an-sec"><button type="button" class="an-tg" id="sasha-chat-tg" aria-expanded="false" aria-controls="sasha-chat-b"><span>Спросить Сашу</span><i class="ch" aria-hidden="true"></i></button>
@@ -1780,7 +1792,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
               </div>
             </div>
           </div>
-          <div class="an-ft"><small class="bw-note">Саша руководит ИИ-отделом маркетинга: сводка, идеи и сценарии каждый понедельник.</small><a class="an-ref" href="marketing/?view=dept" target="_blank" rel="noopener">Открыть отдел ↗</a></div>
+          <div class="an-ft"><small class="bw-note">Саша руководит ИИ-отделом маркетинга: план и сценарии каждый понедельник.</small><a class="an-ref" href="marketing/?view=dept" target="_blank" rel="noopener">Открыть отдел ↗</a></div>
         </div>
         <div class="w" id="w-req">
           <div class="w-h"><img class="rcup" src="topper-cup.svg?v=1" alt="" width="74" height="102"><h2><span class="rt">Заявки с сайта топперов</span><span class="c" id="w-req-c"></span></h2></div>
@@ -3099,16 +3111,15 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 let packW=[];
 let packWide=[],packSide=[],packL=[],packAnna=null,packSasha=null;
 function initPack(){
-  packWide=[$('w-today').closest('.w'),$('boss-list').closest('.w')];packSide=[$('w-kaspi'),$('w-print')];
-  packL=[packWide[0],...packSide,packWide[1]];packAnna=$('w-anna');packSasha=$('w-sasha');packW=[$('w-req'),packAnna,packSasha,...packL];
+  packWide=[$('w-today').closest('.w'),$('boss-list').closest('.w')];packSide=[$('w-kaspi'),$('w-print'),$('w-req')];
+  packL=[packWide[0],...packSide,packWide[1]];packAnna=$('w-anna');packSasha=$('w-sasha');packW=[packAnna,packSasha,...packL];
   /* убранные с главной блоки остаются скрытыми: их данные считаются, просто не показываются */
   const hid=document.createElement('div');hid.id='home-hidden';hid.hidden=true;$('p-home').appendChild(hid);
   ['w-cal','w-projects','w-office','w-supplies'].forEach(id=>{const w=$(id);if(w)hid.appendChild(w)});
   $('w-today').closest('.w').id||=('w-today-box');$('boss-list').closest('.w').id||=('w-boss');
   packW.forEach(w=>{w.classList.add('mfold');const h=w.querySelector(':scope>.w-h');if(h)h.insertAdjacentHTML('beforeend','<span class="mf-x" aria-hidden="true"></span>')});mfApply();
   const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);[packAnna,packSasha,...packL].forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
-  /* заявки с сайта топперов — полоской в самом верху главной, под заголовком */
-  $('p-home').querySelector('.stats').before($('w-req'));
+  /* заявки с сайта топперов — колонкой под принтерами, как Kaspi и Bambu */
   [['w-req','w-req-list'],['w-anna','w-anna-body'],['w-sasha','w-sasha-body']].forEach(([id,ctl])=>{const rh=$(id).querySelector(':scope>.w-h');rh.tabIndex=0;rh.setAttribute('role','button');rh.setAttribute('aria-controls',ctl);
     rh.addEventListener('keydown',e=>{if(e.target===rh&&(e.key==='Enter'||e.key===' ')){e.preventDefault();mfToggle(id)}})});
   document.querySelectorAll('#p-home .home-grid,#p-home .home-grid2').forEach(el=>el.remove());
@@ -3120,7 +3131,7 @@ const MF_KEY='raz.home.open',MF_ALL=['w-req','w-anna','w-sasha'];let mOpen=new S
 const isPhone=()=>matchMedia('(max-width:600px)').matches;
 if(!isPhone()&&!mOpen.has('-w-anna'))mOpen.add('w-anna');
 function mfApply(){packW.forEach(w=>{const o=mOpen.has(w.id);w.classList.toggle('mopen',o);const h=w.querySelector(':scope>.w-h');if(h){h.setAttribute('aria-expanded',isPhone()||MF_ALL.includes(w.id)?String(o):'true')}})}
-function mfToggle(id,force){const o=force!=null?force:!mOpen.has(id);o?(mOpen.add(id),mOpen.delete('-'+id)):(mOpen.delete(id),mOpen.add('-'+id));try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff()}
+function mfToggle(id,force){const o=force!=null?force:!mOpen.has(id);o?(mOpen.add(id),mOpen.delete('-'+id)):(mOpen.delete(id),mOpen.add('-'+id));try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff();if(id==='w-sasha')sashaTok()}
 document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h,#w-req>.w-h');if(!h||(!isPhone()&&!MF_ALL.includes(h.parentElement.id))||e.target.closest('a,button,select,input,.go'))return;
   e.preventDefault();e.stopPropagation();mfToggle(h.parentElement.id)},true);
 function packHome(){
@@ -3128,10 +3139,13 @@ function packHome(){
   const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1100?3:w>=700?2:1;
   if(packN===n)return;packN=n;pack.innerHTML='';pack.style.setProperty('--cols',n);pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
-  /* Анна — первой, во всю ширину левой части */
+  /* Анна и Саша — первыми, рядом друг с другом, каждый шириной в колонку */
+  const duo=()=>{const d=mk('pduo');d.append(packAnna,packSasha);return d};
   if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,packSasha,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
-  if(n===3){const L=mk('pleft'),Rt=mk('pcol');[packAnna,packSasha,...packWide].forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(L,Rt);return}
-  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(packAnna,packSasha,packWide[0]);a.appendChild(packSide[0]);b.appendChild(packSide[1]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(top,a,b,bot);
+  /* «Сегодня» — во всю ширину сразу под плитками сводки, выше всех виджетов */
+  const today=()=>{const d=mk('pfull');d.appendChild(packWide[0]);return d};
+  if(n===3){const L=mk('pleft'),Rt=mk('pcol');L.appendChild(duo());packWide.slice(1).forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(today(),L,Rt);return}
+  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.appendChild(packSide[0]);b.append(packSide[1],packSide[2]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 
@@ -5943,7 +5957,6 @@ try{Object.assign(sashaUi,JSON.parse(localStorage.getItem(SASHA_UI)||'{}'))}catc
 try{sashaChat=JSON.parse(localStorage.getItem(SASHA_CHAT)||'[]').filter(x=>x&&x.q&&x.a)}catch(_){}
 function sashaSave(){try{localStorage.setItem(SASHA_UI,JSON.stringify(sashaUi));localStorage.setItem(SASHA_CHAT,JSON.stringify(sashaChat.filter(x=>x.a&&!x.err).slice(-20)))}catch(_){}}
 const sashaDay=()=>new Date(Date.now()+5*3600e3).toISOString().slice(0,10);
-const sashaMd=t=>String(t||'').replace(/^#{1,6}\s*(.*)$/gm,'\n$1').replace(/\*\*(.+?)\*\*/g,'$1').replace(/^\s*[-*]\s+/gm,'• ').replace(/\n{3,}/g,'\n\n').trim();
 const sashaLink=q=>'marketing/'+q;
 function sashaListen(){
   const fs=annaFs();if(!fs)return;
@@ -5951,23 +5964,19 @@ function sashaListen(){
     e=>{sashaLoaded=true;sashaErr='rules';try{console.warn('marketing',e)}catch(_){}renderSasha()});
   renderSasha();
 }
+let sashaTokT;
+function sashaTok(){const a=$('sasha-av');if(!a)return;a.classList.remove('tok');void a.offsetWidth;a.classList.add('tok');clearTimeout(sashaTokT);sashaTokT=setTimeout(()=>a.classList.remove('tok'),1800)}
 function renderSasha(){
-  const say=$('w-sasha-say');if(!say)return;
+  const plan=$('w-sasha-plan');if(!plan)return;
   const of=k=>sashaItems.filter(x=>x.kind===k),today=sashaDay(),at=r=>+r.finishedAt||+r.updatedAt||+r.createdAt||0;
   const runs=of('run').sort((a,b)=>(+b.createdAt||0)-(+a.createdAt||0));
   const live=runs.find(r=>r.status==='working'&&Date.now()-(+r.updatedAt||+r.createdAt||0)<4*60e3),last=runs.find(r=>r.status==='done');
   const c=$('w-sasha-c');
   c.textContent=sashaErr?'нет доступа к базе':!sashaLoaded?'подключаемся…':live?'отдел работает · '+String(live.stage||'').toLowerCase():last?'план готов · '+printWhen(at(last)):'отдел ещё не запускался';
   c.style.setProperty('--sc',sashaErr?'var(--danger)':live?'#ffd166':last&&Date.now()-at(last)<8*864e5?'var(--ok)':'var(--muted)');
-  if(sashaErr)say.textContent='Нет доступа к разделу маркетинга в базе.';
-  else if(!sashaLoaded)say.textContent='Загружаем…';
-  else if(!last)say.textContent='Привет! Я Саша, главный маркетолог. Мой отдел ещё не готовил план: откройте отдел и нажмите «Запустить отдел сейчас». А пока можно спросить меня в чате.';
-  else say.textContent=sashaMd(last.summary)||'Сводка пустая.';
   const evs=of('event').filter(e=>e.date>=today&&e.status!=='done').sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.time||'').localeCompare(String(b.time||'')));
-  const mine=last?of('event').filter(e=>e.run===last.id):[];
-  $('w-sasha-stats').innerHTML=sashaLoaded&&!sashaErr?bwPStat('Роликов в плане',mine.length?mine.filter(e=>e.status==='done').length+' из '+mine.length:'—')+bwPStat('Новых идей',String(of('idea').filter(x=>x.status==='new').length))+bwPStat('Трендов в копилке',String(of('trend').length)):'';
   const dd=d=>{const x=new Date(d+'T00:00:00');return ['вс','пн','вт','ср','чт','пт','сб'][x.getDay()]+'<br>'+d.slice(8)+'.'+d.slice(5,7)};
-  $('w-sasha-plan').innerHTML=evs.length?`<p class="an-h">Ближайшее в контент-плане</p><ul class="an-todo sa-pl">${evs.slice(0,5).map(e=>`<li><time>${dd(e.date)}</time><a class="an-lk" href="${sashaLink('?open='+encodeURIComponent(e.id))}" target="_blank" rel="noopener">${esc(e.title||'Без названия')}<i aria-hidden="true">→</i></a></li>`).join('')}</ul>`:'';
+  plan.innerHTML=evs.length?`<p class="an-h">Ближайшее в контент-плане</p><ul class="an-todo sa-pl">${evs.slice(0,5).map(e=>`<li><time>${dd(e.date)}</time><a class="an-lk" href="${sashaLink('?open='+encodeURIComponent(e.id))}" target="_blank" rel="noopener">${esc(e.title||'Без названия')}<i aria-hidden="true">→</i></a></li>`).join('')}</ul>`:`<div class="an-say">${sashaErr?'Нет доступа к разделу маркетинга в базе.':!sashaLoaded?'Загружаем…':last?'В контент-плане пока нет ближайших роликов. Откройте отдел, чтобы составить новый план.':'Привет! Я Саша, главный маркетолог. Мой отдел ещё не готовил план: откройте отдел и нажмите «Запустить отдел сейчас». А пока можно спросить меня в чате.'}</div>`;
   const tg=$('sasha-chat-tg');tg.setAttribute('aria-expanded',sashaUi.chat);$('sasha-chat-b').hidden=!sashaUi.chat;
   $('sasha-q-btn').disabled=sashaBusy;$('sasha-clear').hidden=!sashaChat.length||sashaBusy;
   $('w-sasha-qs').innerHTML=sashaChat.slice(-6).reverse().map(x=>`<div class="an-q"><span class="q">${esc(x.q)}</span>${x.a?`<span class="a">${esc(x.a)}</span>`:'<span class="a wait">Саша думает…</span>'}</div>`).join('');
