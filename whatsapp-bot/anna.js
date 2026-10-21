@@ -399,6 +399,34 @@ ${dialogs || 'Диалогов нет.'}`, {
   return res;
 }
 
+/* ---------- «Кому можно написать»: подсказка менеджеру вместо дожима ---------- */
+// Аня сама клиентам первой не пишет (правило Евгения 21.10). Если клиент спрашивал и пропал без заказа,
+// она только решает, стоит ли менеджеру ему написать, и коротко объясняет повод. Учёт показывает это в виджете Ани.
+// Возвращает {why, ask, text} или null, если писать не стоит.
+export async function leadHint(env, chat) {
+  const who = { client: 'клиент', bot: 'Аня', manager: 'менеджер', notice: 'уведомление' };
+  const msgs = (chat.messages || []).filter(m => m.role !== 'notice').slice(-16)
+    .map(m => `${who[m.role] || m.role}: ${String(m.text || '').slice(0, 300)}`).join('\n');
+  if (!msgs) return null;
+  const raw = await gemini(env, PERSONA + `
+Клиент спрашивал в WhatsApp и замолчал, заказ не оформлен. Ты НЕ пишешь клиенту сама. Реши, стоит ли МЕНЕДЖЕРУ написать ему.
+- write: true, только если клиент интересовался услугой, ценой или заказом, не отказался и не договорился о чём-то с менеджером.
+  false — если клиент отказался, всё уже решено, это не клиент (поставщик, знакомый, спам), разговор не о заказе или писать неуместно.
+- why: повод в одну короткую строку для менеджера, например «Спрашивал цену DTF на 20 футболок, ушёл после цены».
+- ask: что именно хотел клиент, 2–6 слов («DTF на футболки, 20 шт»).
+- text: короткое дружелюбное сообщение, которое менеджер может отправить клиенту (1–2 предложения, без давления и уговоров).`, `Клиент: ${chat.clientName || chat.name || 'без имени'}
+Переписка:
+${msgs}`, {
+    type: 'OBJECT',
+    properties: { write: { type: 'BOOLEAN' }, why: { type: 'STRING' }, ask: { type: 'STRING' }, text: { type: 'STRING' } },
+    required: ['write'],
+  });
+  let out;
+  try { out = JSON.parse(raw); } catch (_) { return null; }
+  if (!out?.write || !out.why) return null;
+  return { why: String(out.why).slice(0, 200), ask: String(out.ask || '').slice(0, 80), text: String(out.text || '').slice(0, 400) };
+}
+
 // Текст аналитики для Telegram
 export function insightsText(r, period) {
   const L = [`📊 Аналитика переписок за ${period === 'month' ? 'месяц' : 'неделю'}`, r.summary];
