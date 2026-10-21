@@ -923,6 +923,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
 #pack:not([data-n="1"])>.pcol>.w:first-child{margin-top:12px}
+.pfull{grid-column:1/-1;display:flex;flex-direction:column;min-width:0}
 .pduo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;min-width:0}
 .psub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;flex:1 1 auto;align-items:stretch;min-width:0}
 .psub:not(:has(.w)){display:none}
@@ -1301,6 +1302,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .sa-pl time{font:700 12px/1.35 var(--f);color:rgba(255,255,255,.78);text-transform:uppercase}
 .sa-pl a.an-lk{color:#fff}
 .pack #w-sasha .an-body,#w-sasha .an-body{display:flex}
+#w-sasha #w-sasha-plan .an-h{margin-top:6px}
 /* телефон: Аня и Саша без пояснительной подписи внизу, сводка Саши короче */
 @media(max-width:600px){#w-anna .an-ft .bw-note,#w-sasha .an-ft .bw-note{display:none}#w-anna .an-ft,#w-sasha .an-ft{justify-content:flex-end}}
 /* стикер Саши — как у Ани: фигура без фона выглядывает из круга, низ обрезан по кругу в самой картинке */
@@ -3140,8 +3142,10 @@ function packHome(){
   /* Анна и Саша — первыми, рядом друг с другом, каждый шириной в колонку */
   const duo=()=>{const d=mk('pduo');d.append(packAnna,packSasha);return d};
   if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,packSasha,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
-  if(n===3){const L=mk('pleft'),Rt=mk('pcol');L.appendChild(duo());packWide.forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(L,Rt);return}
-  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo(),packWide[0]);a.appendChild(packSide[0]);b.append(packSide[1],packSide[2]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(top,a,b,bot);
+  /* «Сегодня» — во всю ширину сразу под плитками сводки, выше всех виджетов */
+  const today=()=>{const d=mk('pfull');d.appendChild(packWide[0]);return d};
+  if(n===3){const L=mk('pleft'),Rt=mk('pcol');L.appendChild(duo());packWide.slice(1).forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(today(),L,Rt);return}
+  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.appendChild(packSide[0]);b.append(packSide[1],packSide[2]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 
