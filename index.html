@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261021100000">
+<meta name="app-build" content="20261021120000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1203,6 +1203,8 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .an-nb .btn:hover{background:#e6e9ff}
 .an-nb>div>:last-child:not(.btn):not(.an-nba){margin-bottom:14px}
 .an-per{display:flex;gap:6px;flex-wrap:wrap}
+.an-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.an-bar .an-mon{min-width:150px}
+@media(max-width:560px){.an-bar .an-per{flex:1 1 100%}.an-bar .an-mon{flex:1 1 100%;justify-content:center}}
 .an-chip{all:unset;box-sizing:border-box;cursor:pointer;min-height:30px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font:600 12.5px var(--f);transition:background .15s}
 .an-chip:hover{background:rgba(255,255,255,.22)}.an-chip.on{background:#fff;color:var(--ab)}
 .an-chip:focus-visible{outline:2px solid #fff;outline-offset:2px}
@@ -1833,9 +1835,10 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   </section>
   <section id="p-analytics" class="page" style="gap:16px" hidden>
     <div class="ph"><div><h1>Аналитика</h1><p id="an-sub">Сколько заработали, что заказывают чаще и когда.</p></div><button class="btn outline" type="button" id="xim-btn" hidden>Загрузить из Excel</button></div>
-    <div class="chips an-per" id="an-per" role="group" aria-label="Период"></div>
+    <div class="an-bar"><div class="chips an-per" id="an-per" role="group" aria-label="Период"></div><select id="an-month" class="chip an-mon" aria-label="Выбрать месяц"></select></div>
     <div class="an-kpis" id="an-kpis"></div>
     <div class="w an-wide"><div class="w-h"><h2 id="an-dyn-h">Выручка</h2><span class="c" id="an-dyn-c"></span></div><div class="cols" id="an-dyn"></div><p class="an-note" id="an-dyn-n"></p></div>
+    <div class="w an-wide" id="an-wk-w" hidden><div class="w-h"><h2>Продажи по неделям</h2><span class="c" id="an-wk-c"></span></div><div class="hbars" id="an-wk"></div><p class="an-note" id="an-wk-n"></p></div>
     <div class="agrid">
       <div class="w"><div class="w-h"><h2>Услуги</h2><span class="c">по выручке</span></div><div class="hbars" id="an-svc"></div></div>
       <div class="w"><div class="w-h"><h2>Позиции заказов</h2><span class="c">по выручке</span></div><div class="hbars" id="an-items"></div></div>
@@ -2142,7 +2145,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
     <div class="ed-head"><h2>Заказы из таблицы Excel</h2><button class="x" type="button" id="xim-close" aria-label="Закрыть">×</button></div>
     <div class="ed-body">
       <div class="fld"><label for="xim-file">Файл таблицы (.xlsx)</label><input type="file" id="xim-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-        <span class="hint">Каждый лист — месяц 2026 года. Заказы Kaspi из таблицы не загружаются: они уже есть в учёте. Повторная загрузка того же файла дублей не создаёт.</span></div>
+        <span class="hint">Каждый лист — месяц (например, «НОЯБРЬ2025», «ФЕВРАЛЬ»; без года — 2026). Заказы Kaspi из таблицы не загружаются: они уже есть в учёте. Повторная загрузка того же файла дублей не создаёт.</span></div>
       <div id="xim-prev"></div>
       <div class="err" id="xim-err" hidden></div>
     </div>
@@ -3875,12 +3878,15 @@ $('inv-close').addEventListener('click',()=>{$('inv').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('inv').hidden){e.stopPropagation();$('inv').hidden=true}else if(!$('ived').hidden){e.stopPropagation();closeIv()}else if(!$('bh').hidden){e.stopPropagation();$('bh').hidden=true}},true);
 /* ---------- аналитика ---------- */
 let anPer='3m';
+/* выбранный месяц: «Этот месяц» или любой из списка «Выбрать месяц» */
+const anYM=()=>anPer==='month'?curMonth():anPer.startsWith('m:')?anPer.slice(2):'';
 const AN_PER=[['month','Этот месяц'],['3m','3 месяца'],['year','12 месяцев'],['all','Всё время']];
 function anRange(){
   const t=new Date(),y=t.getFullYear(),m=t.getMonth();
   if(anPer==='month')return [ds(new Date(y,m,1)),todayStr()];
   if(anPer==='3m')return [ds(new Date(y,m-2,1)),todayStr()];
   if(anPer==='year')return [ds(new Date(y,m-11,1)),todayStr()];
+  if(anPer.startsWith('m:')){const ym=anPer.slice(2),[yy,mm]=ym.split('-').map(Number);return [ym+'-01',ds(new Date(yy,mm,0))]}
   return ['0000-00-00','9999-99-99'];
 }
 const tsDay=t=>t?ds(new Date(+t)):'';
@@ -3899,13 +3905,18 @@ function bump(map,k,v,extra){const o=map.get(k)||{v:0,n:0,x:0};o.v+=v;o.n++;if(e
 function renderAnalytics(){
   $('xim-btn').hidden=!canWrite||isMgr();
   $('an-per').innerHTML=AN_PER.map(([id,l])=>`<button type="button" class="chip${anPer===id?' on':''}" data-anper="${id}">${l}</button>`).join('');
-  const [from,to]=anRange(),inR=d=>d&&d>=from&&d<=to;
+  const [from,to]=anRange(),inR=d=>d&&d>=from&&d<=to,ym0=anYM();
+  {const ms=[...new Set([...orders,...kVirtualOrders()].filter(o=>o.status!=='cancel').map(o=>receivedOf(o).slice(0,7)).filter(Boolean))].sort().reverse();
+   if(ym0&&!ms.includes(ym0))ms.unshift(ym0);
+   const sel=$('an-month'),pick=anPer.startsWith('m:');
+   sel.innerHTML='<option value="">Выбрать месяц</option>'+ms.map(m=>{const [y,mm]=m.split('-').map(Number);return `<option value="${m}">${MONTHS_FULL[mm-1]} ${y}</option>`}).join('');
+   sel.value=pick?ym0:'';sel.classList.toggle('on',pick);if(sel._btn)syncCs(sel)}
   const os=[...orders,...kVirtualOrders()].filter(o=>o.status!=='cancel'&&inR(receivedOf(o)));
   const rev=os.reduce((s,o)=>s+(+o.price||0),0),prof=os.reduce((s,o)=>s+profitOf(o),0);
   const expL=['office','supplies'].flatMap(k=>ledger[k].filter(x=>!isKBuy(k,x)&&inR(x.date)).map(x=>({...x,k})));
   const kbL=ledger.supplies.filter(x=>x.cat==='kaspi'&&inR(x.date)),kbT=kbL.reduce((s,x)=>s+(+x.amount||0),0);
   const exp=expL.reduce((s,x)=>s+(+x.amount||0),0),net=prof-exp;
-  const perTxt=anPer==='all'?'за всё время':anPer==='month'?'за '+monthName(curMonth()):anPer==='3m'?'за 3 месяца':'за 12 месяцев';
+  const perTxt=anPer==='all'?'за всё время':ym0?'за '+monthName(ym0):anPer==='3m'?'за 3 месяца':'за 12 месяцев';
   $('an-sub').textContent='Данные '+perTxt+' по дате получения заказа. Отменённые заказы не считаются.';
   const k=(t,v,sm,cls='')=>`<div class="kpi"><span>${t}</span><b class="${cls}">${v}</b><small>${sm}</small></div>`;
   /* чистыми с заказов: выручка минус себестоимость (расходы и товары заказа) и комиссия Kaspi; офис и закупки не вычитаем */
@@ -3917,8 +3928,8 @@ function renderAnalytics(){
     +k('Средний чек',money(os.length?rev/os.length:0),'на один заказ');
   /* динамика */
   let dyn=[],cur=-1;
-  if(anPer==='month'){
-    const t=new Date(),y=t.getFullYear(),m=t.getMonth(),n=new Date(y,m+1,0).getDate();
+  if(ym0){
+    const [y,m1]=ym0.split('-').map(Number),m=m1-1,n=new Date(y,m+1,0).getDate();
     for(let d=1;d<=n;d++){const key=ds(new Date(y,m,d)),L=os.filter(o=>receivedOf(o)===key),v=L.reduce((s,o)=>s+(+o.price||0),0);
       dyn.push({l:d%5===1||d===n?String(d):'',v,short:'',tip:`${d} ${MONTHS_GEN[m]}: ${money(v)}, ${L.length} ${plural(L.length,'заказ','заказа','заказов')}`});if(key===todayStr())cur=d-1}
     $('an-dyn-h').textContent='Выручка по дням';
@@ -3934,7 +3945,19 @@ function renderAnalytics(){
   $('an-dyn').innerHTML=cols(dyn,{fmt:money,cur});
   const best=[...dyn].sort((a,b)=>b.v-a.v)[0];
   $('an-dyn-c').textContent=perTxt;
-  $('an-dyn-n').textContent=best&&best.v?'Лучший '+(anPer==='month'?'день':'месяц')+': '+best.tip.split('\n')[0].replace(/:.*$/,'')+', '+money(best.v)+'. Наведите или нажмите на столбик, чтобы увидеть детали.':'';
+  $('an-dyn-n').textContent=best&&best.v?'Лучший '+(ym0?'день':'месяц')+': '+best.tip.split('\n')[0].replace(/:.*$/,'')+', '+money(best.v)+'. Наведите или нажмите на столбик, чтобы увидеть детали.':'';
+  /* по неделям (пн–вс) внутри выбранного месяца */
+  $('an-wk-w').hidden=!ym0;
+  if(ym0){
+    const [y,m1]=ym0.split('-').map(Number),m=m1-1,n=new Date(y,m+1,0).getDate(),wk=[];
+    for(let d=1;d<=n;d++){const wd=(new Date(y,m,d).getDay()+6)%7;if(d===1||wd===0)wk.push({a:d,b:d});else wk[wk.length-1].b=d}
+    const rows=wk.map(w=>{const A=ds(new Date(y,m,w.a)),B=ds(new Date(y,m,w.b)),L=os.filter(o=>{const r=receivedOf(o);return r>=A&&r<=B});
+      const v=L.reduce((s,o)=>s+(+o.price||0),0),pr=L.reduce((s,o)=>s+profitOf(o),0),per=(w.a===w.b?w.a:w.a+'–'+w.b)+' '+MONTHS_GEN[m];
+      return {l:per,v,s:L.length+' '+plural(L.length,'заказ','заказа','заказов')+(L.length?' · чистыми '+money(pr):''),tip:`${per}\nВыручка: ${money(v)}\nЧистыми: ${money(pr)}\nЗаказов: ${L.length}`}});
+    $('an-wk').innerHTML=rows.some(r=>r.v)?hbars(rows):'<div class="an-empty">В этом месяце продаж нет.</div>';
+    $('an-wk-c').textContent=MONTHS_FULL[m]+' '+y;
+    const bw=[...rows].sort((a,b)=>b.v-a.v)[0];$('an-wk-n').textContent=bw&&bw.v?'Лучшая неделя: '+bw.l+', '+money(bw.v)+'.':'';
+  }
   /* услуги */
   const svc=new Map();os.forEach(o=>bump(svc,svcLabel(o.service,o),+o.price||0));
   $('an-svc').innerHTML=hbars(topN(svc,8).map(r=>({...r,s:r.n?r.n+' '+plural(r.n,'заказ','заказа','заказов'):'',tip:`${r.l}: ${money(r.v)}${r.n?', '+r.n+' '+plural(r.n,'заказ','заказа','заказов'):''}`})));
@@ -3987,7 +4010,8 @@ function renderAnalytics(){
   document.addEventListener('pointerdown',e=>{const el=e.target.closest&&e.target.closest('#p-analytics [data-tip]');if(el){const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top)}else tip.hidden=true});
   document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('#p-analytics [data-tip]');if(el){const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top)}});
   document.addEventListener('scroll',()=>{tip.hidden=true},{passive:true});
-  document.addEventListener('click',e=>{const b=e.target.closest('[data-anper]');if(b){anPer=b.dataset.anper;renderAnalytics()}});}
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-anper]');if(b){anPer=b.dataset.anper;renderAnalytics()}});
+  document.addEventListener('change',e=>{if(e.target.id==='an-month'){anPer=e.target.value?'m:'+e.target.value:'3m';renderAnalytics()}});}
 
 /* ---------- заявки с сайта топперов ---------- */
 const REQ_ST={new:{l:'Новая',c:'--danger'},accepted:{l:'Подтверждена',c:'--ok'},rejected:{l:'Отклонена',c:'--muted'}};
@@ -4138,7 +4162,9 @@ function ximAmount(v){
   let debt=0;const dm=s.match(/\(([^)]*?(?:не\s*доплат|должен|долг)[^)]*)\)/i);if(dm)debt=ximNum(dm[1])||0;
   const plain=s.replace(/\([^)]*\)/g,' ');
   if(plain.includes('=')){const n=ximNum(plain.slice(plain.lastIndexOf('=')+1));if(n!=null)return {sum:n,debt}}
-  const parts=plain.split('+').map(ximNum).filter(n=>n!=null);
+  /* «3 листа 8500» — без плюсов берём наибольшее число */
+  const big=t=>{const a=(t.replace(/\s+(?=\d{3}\b)/g,'').match(/\d+/g)||[]).map(Number);return a.length?Math.max(...a):null};
+  const parts=plain.split('+').map(big).filter(n=>n!=null);
   return parts.length?{sum:parts.reduce((a,b)=>a+b,0),debt}:null;
 }
 function ximSvc(t){
@@ -4148,16 +4174,16 @@ function ximSvc(t){
   if(/вышивк/.test(t))return ['embroidery',''];
   if(/^\s*печать\s*$|распечат/.test(t))return ['printing',''];
   if(/винил|наклейк/.test(t))return ['vinyl',''];
-  if(/павлодарск|павлодавск/.test(t))return ['other','Одежда «Павлодарский»'];
+  if(/павлодарск|павлодавск|павло(?![а-я])/.test(t))return ['other','Одежда «Павлодарский»'];
   if(/футб|худи|свитшот|принт|дтф|dtf|халат|кепк|шарф|поло|спецодежд|шоппер/.test(t))return ['dtf',''];
   return ['other','Услуга не указана'];
 }
-function ximParse(XL,wb,year){
+function ximParse(XL,wb,defYear){
   const rows=[],skipped=[];
   for(const name of wb.SheetNames){
     const low=name.toLowerCase(),mi=XIM_MONTHS.findIndex(m=>low.includes(m));
     if(mi<0){skipped.push({sheet:name,why:'не месяц'});continue}
-    const y=+(name.match(/20\d\d/)||[])[0]||year;if(y!==year){skipped.push({sheet:name,why:'другой год'});continue}
+    const year=+(name.match(/20\d\d/)||[])[0]||defYear;
     const ym=year+'-'+String(mi+1).padStart(2,'0'),dim=new Date(year,mi+1,0).getDate();
     const grid=XL.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:null});
     const list=[];let last='';
@@ -4179,7 +4205,9 @@ function ximParse(XL,wb,year){
       const expA=typeof x.ev==='number'?Math.round(x.ev):(x.ev?(ximAmount(x.ev)||{}).sum:null);
       let net=typeof x.netv==='number'?Math.round(x.netv):(x.netv?(ximAmount(x.netv)||{}).sum:null);
       const noNet=net==null;if(noNet)net=price-(expA&&expA<price?expA:0);
-      const [svc,custom]=ximSvc(x.title);
+      let [svc,custom]=ximSvc(x.title);
+      const payTxt=String((grid[x.row-1]||[])[2]??'');
+      if(custom==='Услуга не указана'&&/футб|худи|свитшот|принт|дтф|dtf/i.test(payTxt))[svc,custom]=['dtf',''];
       const rec={id:'x'+year+'-'+String(mi+1).padStart(2,'0')+'-'+String(x.row).padStart(3,'0'),sheet:name,row:x.row,day:x.day,dayGuess:!!x.dayGuess,
         client:x.title||'Без названия',noNet,price,paid:price-debt,debt,net,cost:Math.max(0,price-net),costNote:typeof x.ev==='string'?x.ev.replace(/\s+/g,' ').trim():'',
         svc,custom,payRaw:typeof (grid[x.row-1]||[])[2]==='string'?grid[x.row-1][2].replace(/\s+/g,' ').trim():''};
@@ -4198,7 +4226,7 @@ async function ximRead(f){
   try{
     await kpLoadXlsx();
     const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});
-    const r=ximParse(XLSX,wb,2026);r.file=f.name;
+    const r=ximParse(XLSX,wb,2026); // лист без года в названии — 2026r.file=f.name;
     /* дубли: эта строка уже загружена, или в учёте есть заказ того же дня на ту же сумму */
     const live=ordersAll.filter(o=>!o.deletedAt);
     r.rows.forEach(x=>{const same=live.find(o=>o.id===x.id||(!o.imported&&!isKaspiLedger(o)&&receivedOf(o)===x.day&&+o.price===x.price));if(same)x.dup=same.id===x.id?'loaded':'same:'+(same.client||'')});
@@ -4208,7 +4236,7 @@ async function ximRead(f){
 function ximRender(){
   const r=ximData,add=r.rows.filter(x=>!x.dup),by=new Map();
   add.forEach(x=>{const m=x.day.slice(0,7),o=by.get(m)||{n:0,p:0,net:0};o.n++;o.p+=x.price;o.net+=x.price-x.cost;by.set(m,o)});
-  const mName=m=>MONTHS_FULL[+m.slice(5)-1];
+  const mName=m=>MONTHS_FULL[+m.slice(5)-1]+' '+m.slice(0,4);
   const tot=add.reduce((a,x)=>({n:a.n+1,p:a.p+x.price,net:a.net+x.price-x.cost}),{n:0,p:0,net:0});
   const ks=r.skipped.filter(x=>x.why==='kaspi'),ksum=ks.reduce((s,x)=>s+x.price,0);
   const li=(t,list)=>list.length?`<p class="xim-n">${t}</p><ul class="xim-l">${list.map(x=>`<li>${x}</li>`).join('')}</ul>`:'';
@@ -4221,7 +4249,7 @@ function ximRender(){
     +li('Даты нет в таблице, поставил как у строки выше',add.filter(x=>x.dayGuess).map(who))
     +li('Не заполнено «сколько получили», прибыль посчитана без расходов',add.filter(x=>x.noNet).map(who))
     +li('Оплачено не полностью',add.filter(x=>x.debt).map(x=>who(x)+', долг '+money(x.debt)))
-    +(r.skipped.some(x=>x.why==='другой год')?li('Листы другого года не трогаю',r.skipped.filter(x=>x.why==='другой год').map(x=>esc(x.sheet))):'');
+    +li('Листы не по месяцам, не трогаю',r.skipped.filter(x=>x.why==='не месяц').map(x=>esc(x.sheet)));
   $('xim-save').disabled=!add.length;$('xim-save').textContent=add.length?'Загрузить '+add.length+' '+plural(add.length,'заказ','заказа','заказов'):'Загрузить';
 }
 async function saveXim(e){
