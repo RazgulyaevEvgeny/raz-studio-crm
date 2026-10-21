@@ -4,6 +4,7 @@
 (function () {
   'use strict';
   const API = 'https://raz-marketing.design-onegin.workers.dev';
+  const DEPT_NEED = 4; // версия отдела в marketing-worker/worker.js (DEPT_VER)
 
   /* ================= справочники ================= */
   const TYPES = {
@@ -602,8 +603,8 @@ caption — готовая подпись к посту с призывом и 5
   function vDept() {
     const runs = of('run').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), r = runs.find(x => x.id === state.runId) || runs[0];
     const st = state.status || {}, working = state.deptBusy || (r && r.status === 'working' && Date.now() - (r.createdAt || 0) < 15 * 60e3);
-    let h = `<div class="row" style="margin-bottom:14px"><div><h1 class="h1">Отдел маркетинга</h1><p class="sub">Каждый понедельник в 08:00 агенты сами смотрят продажи и тренды, собирают план на неделю и расписывают ролики: 5 хуков и 3 варианта съёмки. Можно запустить и вручную.</p></div><span class="sp"></span><button class="btn pri" type="button" data-runnow ${working ? 'disabled' : ''}>${working ? 'Агенты работают…' : 'Запустить отдел сейчас'}</button></div>`;
-    if (st.ok && !st.dept) h += '<div class="note" style="margin-bottom:14px"><b>Нужно обновить сервер ИИ.</b> Cloudflare → воркер raz-marketing → Edit code: вставьте новый код из файла marketing-worker/worker.js.</div>';
+    let h = `<div class="row" style="margin-bottom:14px"><div><h1 class="h1">Отдел маркетинга</h1><p class="sub">${st.deptVer ? `Сервер отдела: версия ${st.deptVer}. ` : ''}Каждый понедельник в 08:00 агенты сами смотрят продажи и тренды, собирают план на неделю и расписывают ролики: 5 хуков и 3 варианта съёмки. Можно запустить и вручную.</p></div><span class="sp"></span><button class="btn pri" type="button" data-runnow ${working ? 'disabled' : ''}>${working ? 'Агенты работают…' : 'Запустить отдел сейчас'}</button></div>`;
+    if (st.ok && (st.deptVer || 0) < DEPT_NEED) h += `<div class="note" style="margin-bottom:14px"><b>В Cloudflare старый код отдела</b> (версия ${st.deptVer || 1}, нужна ${DEPT_NEED}). Cloudflare → воркер raz-marketing → Edit code: выделите всё, вставьте код из файла marketing-worker/worker.js и нажмите Deploy, затем обновите эту страницу.</div>`;
     else if (st.dept && !st.deptAuto) h += '<div class="note" style="margin-bottom:14px"><b>Автозапуск по понедельникам пока выключен.</b> Кнопка работает уже сейчас. Чтобы отдел работал сам, в Cloudflare у воркера raz-marketing задайте секреты AGENT_EMAIL и AGENT_PASSWORD и расписание (см. README).</div>';
     if (!r) h += '<div class="empty"><b>Отдел ещё не запускался</b>Нажмите «Запустить отдел сейчас» — через 3–6 минут здесь появятся сводка недели, идеи и ролики в календаре.</div>';
     else {

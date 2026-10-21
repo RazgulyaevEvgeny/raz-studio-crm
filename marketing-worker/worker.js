@@ -314,6 +314,7 @@ async function instagram(env) {
    Без участия людей воркер входит в базу как отдельный сотрудник:
      AGENT_EMAIL, AGENT_PASSWORD — секреты: почта и пароль сотрудника с доступом в учёт (можно взять вход бота Ани);
      TELEGRAM_BOT_TOKEN — необязательно, секрет: тот же токен, что у бота Ани, тогда итог недели придёт в Telegram. */
+const DEPT_VER = 4; // версия отдела: сайт сверяет её и просит обновить код воркера
 const FB_API_KEY = 'AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0'; // публичный ключ из firebase-config.js
 const SITE = 'https://razgulyaevevgeny.github.io/raz-studio-crm/marketing/';
 const kzNow = () => new Date(Date.now() + 5 * 3600e3);               // Казахстан, UTC+5
@@ -534,7 +535,7 @@ async function runDepartment(env, opts = {}) {
     const ideas = ((await askJ('Генератор идей', 'ideas', ideasIn, { schema: SCH_IDEAS, max: 16000, t: 0.9, key: 'ideas', min: 4 })).ideas || [])
       .map(x => typeof x === 'string' ? { title: x, hook: '' } : { ...x, title: x.title || x.name || x['название'] || Object.values(x).find(v => typeof v === 'string') || '', hook: x.hook || x['хук'] || '' })
       .filter(x => x.title).slice(0, 10);
-    if (!ideas.length) throw new Error('Генератор идей ничего не вернул');
+    if (!ideas.length) throw new Error('Генератор идей вернул пустой список, попробуйте ещё раз через минуту');
     await save({ ideas, stage: 'SMM-менеджер собирает план' });
     const planIn = `Ответ — JSON вида {"events":[{"date":"ГГГГ-ММ-ДД","title":"…","format":"reels","service":"…","idea":"…","idx":1}]}\n\n## Сводка аналитика\n${summary}\n\n## Идеи\n${ideas.map((x, i) => `${i + 1}. ${x.title} [${x.service || ''}, ${x.format || ''}] — хук: ${x.hook}. ${x.why || ''}`).join('\n')}\n\nСобери план публикаций на ${start} — ${end}.`;
     const plan = ((await askJ('SMM-менеджер', 'smm', planIn, { schema: SCH_PLAN, max: 12000, t: 0.4, key: 'events', min: 2 })).events || [])
@@ -586,7 +587,7 @@ export default {
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json; charset=utf-8' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
-    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN, gen: 2, dept: true, deptAuto: !!(env.AGENT_EMAIL && env.AGENT_PASSWORD), deptTelegram: !!env.TELEGRAM_BOT_TOKEN });
+    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN, gen: 2, dept: true, deptVer: DEPT_VER, deptAuto: !!(env.AGENT_EMAIL && env.AGENT_PASSWORD), deptTelegram: !!env.TELEGRAM_BOT_TOKEN });
     if (!['/api/ask', '/api/gen', '/api/image', '/api/instagram', '/api/department'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
 
     let user;
