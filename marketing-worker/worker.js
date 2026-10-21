@@ -637,6 +637,26 @@ async function notifyTeam(env, db, text) {
   for (const c of chats) if (c && c.chat) await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: c.chat, text, disable_web_page_preview: true }) });
 }
 
+/* ---------- Саша — главный маркетолог: чат в виджете на главной CRM ---------- */
+const SASHA = `Тебя зовут Саша, ты главный маркетолог студии и руководитель ИИ-отдела маркетинга: под тобой аналитик, разведчик трендов, генератор идей, SMM-менеджер и сценарист. Каждый понедельник отдел готовит сводку, идеи и сценарии на неделю — их результаты ниже.
+С тобой в CRM переписывается команда студии (2 человека, бюджета на рекламу нет — только органика, контент и акции).
+Как отвечать:
+- коротко и по делу, до 150 слов, если не просят подробно; на «ты», живо, без канцелярита;
+- конкретные шаги: что снять, что выложить, какую акцию запустить, кому написать;
+- цифры продаж бери только из данных, не выдумывай; если данных нет — так и скажи;
+- без markdown-таблиц и заголовков, можно короткие списки.`;
+async function sashaChat(env, token, messages) {
+  const db = firestore(env, token), today = kzDay();
+  const S = await loadStudio(db);
+  const last = S.items.filter(x => x.kind === 'run' && x.status === 'done').sort((a, b) => (+b.createdAt || 0) - (+a.createdAt || 0))[0];
+  const run = last ? await db.get('marketing/' + last.id).catch(() => null) : null;
+  const dept = run ? `## Последний запуск отдела (${run.date || ''}, план на ${run.period || ''})\n### Сводка аналитика\n${run.summary || '—'}\n### Тренды\n${String(run.trends || '—').slice(0, 4000)}\n### План публикаций\n${(run.plan || []).map(p => `- ${p.date} ${p.title} (${p.service || ''})`).join('\n') || '—'}` : '## Отдел ещё ни разу не запускался';
+  const base = (S.agents.base && String(S.agents.base).trim()) || STUDIO;
+  const system = base + '\n\n' + SASHA + '\n\n# Данные студии\n' + studioContext(S, today) + '\n\n' + dept + `\n\nСегодня: ${today} (${WDN[wdOf(today)]}).`;
+  const r = await generate(env, system, messages, { maxTokens: 4096, temperature: 0.6 });
+  return { text: String(r.text || '').trim(), engine: r.engine };
+}
+
 /* ---------- обработчик ---------- */
 export default {
   async fetch(req, env) {
@@ -645,8 +665,8 @@ export default {
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, 'content-type': 'application/json; charset=utf-8' } });
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
-    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN, gen: 2, dept: true, deptVer: DEPT_VER, deptAuto: !!(env.AGENT_EMAIL && env.AGENT_PASSWORD), deptTelegram: !!env.TELEGRAM_BOT_TOKEN });
-    if (!['/api/ask', '/api/gen', '/api/image', '/api/instagram', '/api/department'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
+    if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN, gen: 2, dept: true, deptVer: DEPT_VER, deptAuto: !!(env.AGENT_EMAIL && env.AGENT_PASSWORD), deptTelegram: !!env.TELEGRAM_BOT_TOKEN, sasha: 1 });
+    if (!['/api/ask', '/api/gen', '/api/image', '/api/instagram', '/api/department', '/api/sasha'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
 
     let user;
     try { user = await verifyFirebase((req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), env.FIREBASE_PROJECT || 'raz-studio-5a486'); }
@@ -660,6 +680,17 @@ export default {
       // запуск отдела кнопкой: работаем с правами вошедшего сотрудника
       try { return json(await departmentApi(env, (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), user.email || 'сотрудник', b)); }
       catch (e) { return json({ error: e.message || 'Отдел не смог отработать' }, 502); }
+    }
+    if (url.pathname === '/api/sasha') {
+      const msgs = (Array.isArray(b.messages) ? b.messages : [])
+        .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.text === 'string' && m.text.trim())
+        .slice(-12).map(m => ({ role: m.role, content: m.text.slice(0, 4000) }));
+      const merged = [];
+      for (const m of msgs) { const l = merged.at(-1); if (l && l.role === m.role) l.content += '\n\n' + m.content; else merged.push({ ...m }); }
+      while (merged.length && merged[0].role !== 'user') merged.shift();
+      if (!merged.length || merged.at(-1).role !== 'user') return json({ error: 'Пустой вопрос' }, 400);
+      try { return json(await sashaChat(env, (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), merged)); }
+      catch (e) { return json({ error: e.message || 'Саша не смог ответить' }, 502); }
     }
     if (url.pathname === '/api/image') {
       try { return json({ image: await makeImage(env, b.prompt || 'branding studio workshop') }); }

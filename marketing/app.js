@@ -176,6 +176,11 @@ caption — готовая подпись к посту с призывом и 5
     igSyncing: false, crt: { topic: '', svc: 'vinyl', format: 'post', photo: null, photoUrl: '', useAI: true, busy: '', caption: '', variants: [], previews: [], bg: null, err: '' }
   };
   try { const v = localStorage.getItem('mkt-view'); if (v) state.view = v; const c = localStorage.getItem('mkt-cal'); if (c) state.calMode = c; const r = localStorage.getItem('mkt-role'); if (ROLES[r]) state.role = r; } catch (_) {}
+  // ссылки из виджета Саши в CRM: ?view=dept — вкладка «Отдел», ?open=<id> — карточка ролика
+  const deep = new URLSearchParams(location.search);
+  if (['cal', 'dept'].includes(deep.get('view'))) state.view = deep.get('view');
+  let deepOpen = deep.get('open') || '';
+  if (deep.has('view') || deepOpen) history.replaceState(null, '', location.pathname);
   const remember = () => { try { localStorage.setItem('mkt-view', state.view); localStorage.setItem('mkt-cal', state.calMode); localStorage.setItem('mkt-role', state.role); } catch (_) {} };
   const of = k => state.items.filter(x => x.kind === k);
   const prompt = k => (state.agents[k] && String(state.agents[k]).trim()) || PROMPTS[k];
@@ -383,6 +388,7 @@ caption — готовая подпись к посту с призывом и 5
   }
   function onData() {
     render();
+    if (deepOpen && evById(deepOpen)) { const id = deepOpen; deepOpen = ''; openDrawer(id); }
     if (D) { const x = evById(D.id); if (x && (D.e.aiState === 'pending' || x.aiState === 'pending' ? x.aiState !== D.e.aiState || (x.updatedAt || 0) > (D.e.updatedAt || 0) : !D.dirty && !$('drawer').contains(document.activeElement) && (x.updatedAt || 0) > (D.e.updatedAt || 0))) { D.dirty = false; clearTimeout(D.t); D.e = x; drawDrawer(); } }
     if (D && !evById(D.id)) closeDrawer();
   }
