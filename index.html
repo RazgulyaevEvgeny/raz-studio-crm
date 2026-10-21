@@ -922,6 +922,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pack.m .pcol>.w{flex:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
+#pack:not([data-n="1"])>.pcol>.w:first-child{margin-top:12px}
 .pduo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;min-width:0}
 .psub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;flex:1 1 auto;align-items:stretch;min-width:0}
 .psub:not(:has(.w)){display:none}
@@ -1296,16 +1297,17 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 #w-sasha .bw-note{margin:0;color:#fff;opacity:.85}
 #w-sasha{--ab:#26262c;background:linear-gradient(155deg,#43434c,#26262c 42%,#121215)}
 #w-sasha .an-ask .btn:hover,#w-sasha .an-card .btn:hover{background:#e6e6ec}
-.sa-av{position:absolute;left:16px;top:-18px;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;pointer-events:none;background:#fff;box-shadow:0 0 0 3px #fff,0 8px 18px rgba(0,0,0,.45);color:var(--ab);font:800 44px/1 var(--f);letter-spacing:-.04em;transition:transform .25s}
-.sa-av img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
-.sa-av i{position:absolute;right:-2px;bottom:4px;width:30px;height:30px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.35)}
-.sa-av svg{width:17px;height:17px}
-#w-sasha>.w-h:hover .sa-av{transform:translateY(-3px) rotate(-3deg)}
 .sa-pl li{grid-template-columns:44px minmax(0,1fr)}.sa-pl li::before{content:none}
 .sa-pl time{font:700 12px/1.35 var(--f);color:rgba(255,255,255,.78);text-transform:uppercase}
 .sa-pl a.an-lk{color:#fff}
 .sa-say{max-height:260px;overflow:auto}
-@media(prefers-reduced-motion:reduce){.sa-av{transition:none}}
+/* телефон: Аня и Саша без пояснительной подписи внизу, сводка Саши короче */
+@media(max-width:600px){#w-anna .an-ft .bw-note,#w-sasha .an-ft .bw-note{display:none}#w-anna .an-ft,#w-sasha .an-ft{justify-content:flex-end}.sa-say{max-height:170px}}
+/* стикер Саши — как у Ани: фигура без фона выглядывает из круга, низ обрезан по кругу в самой картинке */
+#w-sasha>.w-h:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
+#w-sasha .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#d9d9e2 75%);box-shadow:0 8px 18px rgba(0,0,0,.45)}
+#w-sasha .an-av .fg{clip-path:none}
+#w-sasha .an-av .fs{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(0,0,0,.45))}
 @media(max-width:600px){
   #pack #w-sasha{margin-top:14px;padding:10px 12px 12px;border-radius:18px;gap:10px}
   #pack #w-sasha>.w-h{min-height:46px;padding-left:90px}
@@ -1313,7 +1315,6 @@ body:has(#xim:not([hidden])) .bnav{display:none}
   #w-sasha .w-h h2{font-size:16.5px}
   #w-sasha .at{gap:2px}
   #w-sasha .at .c{font-size:12px}
-  .sa-av{left:10px;top:-12px;width:70px;height:70px;font-size:34px}.sa-av i{width:24px;height:24px}.sa-av svg{width:14px;height:14px}
 }
 .kq:hover{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--kr)}
 .kq-t{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -1769,7 +1770,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="an-ft"><small class="bw-note">Аня отвечает, когда включён рабочий компьютер.</small><button class="an-ref" type="button" id="anna-ref-btn" aria-label="Обновить сводку Ани"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить</button></div>
         </div>
         <div class="w" id="w-sasha">
-          <div class="w-h"><h2><span class="sa-av" id="sasha-av" aria-hidden="true"><img src="sasha-avatar.webp?v=1" alt="" width="240" height="240"><i><svg viewBox="0 0 24 24" fill="none" stroke="#26262c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></i></span><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
+          <div class="w-h"><h2><span class="an-av" id="sasha-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="sasha-avatar.webp?v=3" alt="" width="240" height="252"></span></span></span><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
           <div class="an-body" id="w-sasha-body">
             <div class="an-col"><div class="an-say sa-say" id="w-sasha-say">Загружаем…</div><div class="an-stats" id="w-sasha-stats"></div></div>
             <div class="an-col">
