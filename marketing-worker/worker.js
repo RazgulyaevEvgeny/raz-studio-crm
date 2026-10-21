@@ -314,7 +314,7 @@ async function instagram(env) {
    Без участия людей воркер входит в базу как отдельный сотрудник:
      AGENT_EMAIL, AGENT_PASSWORD — секреты: почта и пароль сотрудника с доступом в учёт (можно взять вход бота Ани);
      TELEGRAM_BOT_TOKEN — необязательно, секрет: тот же токен, что у бота Ани, тогда итог недели придёт в Telegram. */
-const DEPT_VER = 4; // версия отдела: сайт сверяет её и просит обновить код воркера
+const DEPT_VER = 5; // версия отдела: сайт сверяет её и просит обновить код воркера
 const FB_API_KEY = 'AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0'; // публичный ключ из firebase-config.js
 const SITE = 'https://razgulyaevevgeny.github.io/raz-studio-crm/marketing/';
 const kzNow = () => new Date(Date.now() + 5 * 3600e3);               // Казахстан, UTC+5
@@ -492,85 +492,134 @@ function scriptNotes(s) {
   return out.join('\n\n');
 }
 
-async function runDepartment(env, opts = {}) {
+/* Отдел работает короткими шагами: каждый шаг — один-два запроса к ИИ, состояние хранится в документе запуска.
+   Так один оборвавшийся запрос не губит весь запуск: сайт или расписание просто продолжают со следующего шага. */
+const STAGES = { analyst: 'Аналитик смотрит продажи', scout: 'Разведчик ищет тренды', ideas: 'Генератор придумывает идеи', smm: 'SMM-менеджер собирает план', writer: 'Сценарист пишет ролики', finish: 'Сохраняем результат' };
+const STALE = 4 * 60e3; // запуск без движения дольше 4 минут считаем оборвавшимся
+async function deptStart(env, db, opts) {
   const today = kzDay(), cron = !!opts.cron;
-  const db = firestore(env, opts.token || await agentToken(env));
   const runId = cron ? 'run_' + today : 'run_' + today + '_' + kzNow().toISOString().slice(11, 16).replace(':', '');
   const S = await loadStudio(db);
   const runs = S.items.filter(x => x.kind === 'run');
   if (cron && runs.some(r => r.id === runId)) return { skipped: true, runId };
-  const busy = runs.find(r => r.status === 'working' && Date.now() - (+r.createdAt || 0) < 15 * 60e3);
-  if (busy) throw new Error('Отдел уже работает, подождите несколько минут.');
+  if (runs.some(r => r.status === 'working' && Date.now() - (+r.updatedAt || +r.createdAt || 0) < STALE)) throw new Error('Отдел уже работает, подождите несколько минут.');
   const start = wdOf(today) === 1 ? today : addD(today, 1), end = addD(start, 6);
-  const run = { kind: 'run', status: 'working', stage: 'Аналитик смотрит продажи', date: today, period: start + '…' + end, createdAt: Date.now(), by: opts.by || 'Отдел (по расписанию)' };
-  const save = patch => { Object.assign(run, patch); return db.write([{ path: 'marketing/' + runId, data: run }]); };
-  await save({});
-  try {
-    const base = (S.agents.base && String(S.agents.base).trim()) || STUDIO;
-    const ctx = studioContext(S, today);
-    const sys = role => base + '\n\n' + ((S.agents['d_' + role] && String(S.agents['d_' + role]).trim()) || DEPT[role]) + '\n\n# Данные студии\n' + ctx + `\n\nСегодня: ${today} (${WDN[wdOf(today)]}). Планируем период ${start} — ${end}.`;
-    const ask = (role, text, o = {}) => generate(env, sys(role), [{ role: 'user', content: text }], { json: !!o.schema, schema: o.schema || null, maxTokens: o.max || 8192, temperature: o.t ?? 0.7 });
-    // JSON-ответ: до 3 попыток с запасом длины; если ответ обрезан — берём целые пункты
-    const askJ = async (step, role, text, o) => {
-      let last = '', eng = '';
-      for (let i = 0; i < 3; i++) {
-        const r = await ask(role, text, { ...o, max: Math.round(o.max * (1 + i * 0.75)), t: i ? Math.min(o.t, 0.5) : o.t });
-        last = r.text; eng = r.engine;
-        let j = null;
-        try { j = parseJ(r.text); } catch (_) { j = o.key && salvage(r.text, o.key); }
-        if (!o.key) { if (j) return j; continue; }
-        // ИИ мог вернуть голый массив или назвать поле по-своему — берём первый массив в ответе
-        const list = Array.isArray(j) ? j : j && (Array.isArray(j[o.key]) ? j[o.key] : Object.values(j).find(Array.isArray));
-        if (list && list.length >= (o.min || 1)) return { [o.key]: list };
-      }
-      throw new Error(`${step}: ИИ (${eng || '?'}) ответил не в том формате. Начало ответа: ${String(last).replace(/\s+/g, ' ').slice(0, 160) || 'пусто'}`);
-    };
+  const prompts = {};
+  Object.keys(DEPT).forEach(k => { const v = S.agents['d_' + k] && String(S.agents['d_' + k]).trim(); if (v) prompts[k] = v; });
+  const kopilka = S.items.filter(x => x.kind === 'trend' && (+x.createdAt || 0) > Date.now() - 45 * 864e5).slice(0, 20);
+  const run = {
+    kind: 'run', status: 'working', next: 'analyst', stage: STAGES.analyst, date: today, start, end, period: start + '…' + end,
+    base: (S.agents.base && String(S.agents.base).trim()) || STUDIO, prompts, ctx: studioContext(S, today),
+    kopilka: kopilka.map(k => `- ${k.link || ''} — ${k.note || ''}`).join('\n'), eventIds: [], wi: 0, notify: opts.notify !== false,
+    createdAt: Date.now(), updatedAt: Date.now(), by: opts.by || 'Отдел (по расписанию)'
+  };
+  await db.write([{ path: 'marketing/' + runId, data: run }]);
+  return { runId, run };
+}
+async function deptStep(env, db, runId, run) {
+  const save = patch => { Object.assign(run, patch, { updatedAt: Date.now() }); return db.write([{ path: 'marketing/' + runId, data: run }]); };
+  const { start, end, date: today } = run;
+  const sys = role => run.base + '\n\n' + ((run.prompts || {})[role] || DEPT[role]) + '\n\n# Данные студии\n' + run.ctx + `\n\nСегодня: ${today} (${WDN[wdOf(today)]}). Планируем период ${start} — ${end}.`;
+  const ask = (role, text, o = {}) => generate(env, sys(role), [{ role: 'user', content: text }], { json: !!o.schema, schema: o.schema || null, maxTokens: o.max || 8192, temperature: o.t ?? 0.7 });
+  // JSON-ответ: до 3 попыток с запасом длины; если ответ обрезан — берём целые пункты
+  const askJ = async (step, role, text, o) => {
+    let last = '', eng = '';
+    for (let i = 0; i < 3; i++) {
+      const r = await ask(role, text, { ...o, max: Math.round(o.max * (1 + i * 0.75)), t: i ? Math.min(o.t, 0.5) : o.t });
+      last = r.text; eng = r.engine;
+      let j = null;
+      try { j = parseJ(r.text); } catch (_) { j = o.key && salvage(r.text, o.key); }
+      if (!o.key) { if (j) return j; continue; }
+      // ИИ мог вернуть голый массив или назвать поле по-своему — берём первый массив в ответе
+      const list = Array.isArray(j) ? j : j && (Array.isArray(j[o.key]) ? j[o.key] : Object.values(j).find(Array.isArray));
+      if (list && list.length >= (o.min || 1)) return { [o.key]: list };
+    }
+    throw new Error(`${step}: ИИ (${eng || '?'}) ответил не в том формате. Начало ответа: ${String(last).replace(/\s+/g, ' ').slice(0, 160) || 'пусто'}`);
+  };
+  await save({ stage: run.next === 'writer' ? `Сценарист пишет ролик ${(run.wi || 0) + 1} из ${(run.plan || []).length}` : STAGES[run.next], lastError: '' });
 
+  if (run.next === 'analyst') {
     const summary = (await ask('analyst', 'Сделай сводку недели.', { t: 0.3 })).text.trim();
-    await save({ summary, stage: 'Разведчик ищет тренды' });
-    const trends = await scoutTrends(env, base + '\n\n' + DEPT.scout, `Сегодня ${today}. Найди тренды и инфоповоды.`);
-    await save({ trends, stage: 'Генератор придумывает идеи' });
-    const kopilka = S.items.filter(x => x.kind === 'trend' && (+x.createdAt || 0) > Date.now() - 45 * 864e5).slice(0, 20);
-    const ideasIn = `Ответ — JSON вида {"ideas":[{"title":"…","service":"…","format":"reels","hook":"…","why":"…","source":""}]}\n\n## Сводка аналитика\n${summary}\n\n## Разведка трендов\n${trends || 'нет данных'}\n\n## Копилка трендов от владельца\n${kopilka.length ? kopilka.map(k => `- ${k.link || ''} — ${k.note || ''}`).join('\n') : 'пусто'}\n\nПридумай 8 идей.`;
+    return save({ summary, next: 'scout' });
+  }
+  if (run.next === 'scout') {
+    const trends = await scoutTrends(env, run.base + '\n\n' + ((run.prompts || {}).scout || DEPT.scout), `Сегодня ${today}. Найди тренды и инфоповоды.`);
+    return save({ trends, next: 'ideas' });
+  }
+  if (run.next === 'ideas') {
+    const ideasIn = `Ответ — JSON вида {"ideas":[{"title":"…","service":"…","format":"reels","hook":"…","why":"…","source":""}]}\n\n## Сводка аналитика\n${run.summary}\n\n## Разведка трендов\n${run.trends || 'нет данных'}\n\n## Копилка трендов от владельца\n${run.kopilka || 'пусто'}\n\nПридумай 8 идей.`;
     const ideas = ((await askJ('Генератор идей', 'ideas', ideasIn, { schema: SCH_IDEAS, max: 16000, t: 0.9, key: 'ideas', min: 4 })).ideas || [])
       .map(x => typeof x === 'string' ? { title: x, hook: '' } : { ...x, title: x.title || x.name || x['название'] || Object.values(x).find(v => typeof v === 'string') || '', hook: x.hook || x['хук'] || '' })
-      .filter(x => x.title).slice(0, 10);
-    if (!ideas.length) throw new Error('Генератор идей вернул пустой список, попробуйте ещё раз через минуту');
-    await save({ ideas, stage: 'SMM-менеджер собирает план' });
-    const planIn = `Ответ — JSON вида {"events":[{"date":"ГГГГ-ММ-ДД","title":"…","format":"reels","service":"…","idea":"…","idx":1}]}\n\n## Сводка аналитика\n${summary}\n\n## Идеи\n${ideas.map((x, i) => `${i + 1}. ${x.title} [${x.service || ''}, ${x.format || ''}] — хук: ${x.hook}. ${x.why || ''}`).join('\n')}\n\nСобери план публикаций на ${start} — ${end}.`;
-    const plan = ((await askJ('SMM-менеджер', 'smm', planIn, { schema: SCH_PLAN, max: 12000, t: 0.4, key: 'events', min: 2 })).events || [])
-      .filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e.date || '') && e.date >= start && e.date <= end && e.title).slice(0, 4);
-    if (!plan.length) throw new Error('SMM-менеджер не собрал план');
-    const writes = [], eventIds = [];
-    for (let i = 0; i < plan.length; i++) {
-      const p = plan[i], idea = ideas[(+p.idx || 0) - 1];
-      await save({ stage: `Сценарист пишет ролик ${i + 1} из ${plan.length}` });
-      let s = {};
-      try { s = await askJ('Сценарист', 'writer', `Ролик: ${p.title}\nФормат: ${p.format || 'reels'}\nУслуга: ${p.service || ''}\nДата: ${p.date}\nИдея: ${p.idea || ''}${idea ? '\nИсходный хук: ' + idea.hook + '\nПочему: ' + (idea.why || '') : ''}`, { schema: SCH_SCRIPT, max: 20000, t: 0.8 }); }
-      catch (e) { s = { goal: '', hooks: [], variants: [], notes: 'Сценарист не успел расписать: ' + e.message }; }
-      const v = (s.variants || [])[0] || {};
-      const id = 'auto' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 8);
-      eventIds.push(id);
-      writes.push({ path: 'marketing/' + id, data: {
-        kind: 'event', title: String(p.title).slice(0, 120), date: p.date, time: v.time || '', type: 'content', format: ['reels', 'post', 'carousel', 'stories'].includes(p.format) ? p.format : 'reels', status: 'plan', done: false,
-        goal: s.goal || '', idea: (p.idea || '') + ((s.hooks || [])[0] ? '\n\nХук: ' + s.hooks[0] : ''),
-        prep: (s.prep || []).map(t => ({ t: String(t), done: false })), steps: (s.steps || []).map(t => ({ t: String(t), done: false })),
-        shots: (v.shots || []).map(x => ({ frame: x.frame || '', angle: x.angle || '', sec: String(x.sec || ''), onscreen: x.onscreen || '', voice: x.voice || '' })),
-        voice: s.voice || '', music: v.music || '', edit: v.edit || '', caption: s.caption || '', hashtags: s.hashtags || '',
-        notes: s.notes || scriptNotes(s), src: 'Отдел маркетинга, запуск ' + today, aiState: '', aiErr: '', run: runId,
-        createdAt: Date.now(), updatedAt: Date.now(), by: 'Отдел маркетинга'
-      } });
-    }
-    const used = new Set(plan.map(p => +p.idx));
-    ideas.forEach((x, i) => { if (!used.has(i + 1)) writes.push({ path: 'marketing/idea' + Date.now().toString(36) + i, data: { kind: 'idea', title: String(x.title).slice(0, 200), status: 'new', notes: [x.service, x.format, 'Хук: ' + x.hook, x.why, x.source].filter(Boolean).join(' · '), run: runId, createdAt: Date.now(), updatedAt: Date.now(), by: 'Отдел маркетинга' } }); });
-    await db.write(writes);
-    await save({ status: 'done', stage: '', eventIds, finishedAt: Date.now() });
-    if (opts.notify !== false) await notifyTeam(env, db, `Отдел маркетинга: план на ${start.slice(8)}.${start.slice(5, 7)}–${end.slice(8)}.${end.slice(5, 7)} готов.\n\n${plan.map(p => `• ${p.date.slice(8)}.${p.date.slice(5, 7)} — ${p.title}`).join('\n')}\n\nСводка, сценарии и 3 варианта съёмки: ${SITE}`).catch(() => {});
-    return { ok: true, runId, events: eventIds.length, ideas: ideas.length };
-  } catch (e) {
-    await save({ status: 'error', stage: '', error: String(e.message || e) }).catch(() => {});
-    throw e;
+      .filter(x => x.title).slice(0, 10).map(x => ({ title: String(x.title), service: String(x.service || ''), format: String(x.format || ''), hook: String(x.hook || ''), why: String(x.why || ''), source: String(x.source || '') }));
+    if (!ideas.length) throw new Error('Генератор идей вернул пустой список');
+    return save({ ideas, next: 'smm' });
   }
+  if (run.next === 'smm') {
+    const ideas = run.ideas || [];
+    const planIn = `Ответ — JSON вида {"events":[{"date":"ГГГГ-ММ-ДД","title":"…","format":"reels","service":"…","idea":"…","idx":1}]}\n\n## Сводка аналитика\n${run.summary}\n\n## Идеи\n${ideas.map((x, i) => `${i + 1}. ${x.title} [${x.service || ''}, ${x.format || ''}] — хук: ${x.hook}. ${x.why || ''}`).join('\n')}\n\nСобери план публикаций на ${start} — ${end}.`;
+    const plan = ((await askJ('SMM-менеджер', 'smm', planIn, { schema: SCH_PLAN, max: 12000, t: 0.4, key: 'events', min: 2 })).events || [])
+      .filter(e => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date || '') && e.date >= start && e.date <= end && e.title).slice(0, 4)
+      .map(e => ({ date: e.date, title: String(e.title), format: String(e.format || 'reels'), service: String(e.service || ''), idea: String(e.idea || ''), idx: +e.idx || 0 }));
+    if (!plan.length) throw new Error('SMM-менеджер не собрал план');
+    return save({ plan, wi: 0, next: 'writer' });
+  }
+  if (run.next === 'writer') {
+    const plan = run.plan || [], i = run.wi || 0, p = plan[i];
+    if (!p) return save({ next: 'finish' });
+    const idea = (run.ideas || [])[(+p.idx || 0) - 1];
+    let s;
+    try { s = await askJ('Сценарист', 'writer', `Ролик: ${p.title}\nФормат: ${p.format || 'reels'}\nУслуга: ${p.service || ''}\nДата: ${p.date}\nИдея: ${p.idea || ''}${idea ? '\nИсходный хук: ' + idea.hook + '\nПочему: ' + (idea.why || '') : ''}`, { schema: SCH_SCRIPT, max: 20000, t: 0.8 }); }
+    catch (e) { s = { goal: '', hooks: [], variants: [], notes: 'Сценарист не успел расписать: ' + e.message + '\nОткройте карточку и нажмите «Расписать с ИИ».' }; }
+    const v = (s.variants || [])[0] || {};
+    const id = 'auto' + Date.now().toString(36) + i + Math.random().toString(36).slice(2, 8);
+    await db.write([{ path: 'marketing/' + id, data: {
+      kind: 'event', title: String(p.title).slice(0, 120), date: p.date, time: v.time || '', type: 'content', format: ['reels', 'post', 'carousel', 'stories'].includes(p.format) ? p.format : 'reels', status: 'plan', done: false,
+      goal: s.goal || '', idea: (p.idea || '') + ((s.hooks || [])[0] ? '\n\nХук: ' + s.hooks[0] : ''),
+      prep: (s.prep || []).map(t => ({ t: String(t), done: false })), steps: (s.steps || []).map(t => ({ t: String(t), done: false })),
+      shots: (v.shots || []).map(x => ({ frame: x.frame || '', angle: x.angle || '', sec: String(x.sec || ''), onscreen: x.onscreen || '', voice: x.voice || '' })),
+      voice: s.voice || '', music: v.music || '', edit: v.edit || '', caption: s.caption || '', hashtags: s.hashtags || '',
+      notes: s.notes || scriptNotes(s), src: 'Отдел маркетинга, запуск ' + today, aiState: '', aiErr: '', run: runId,
+      createdAt: Date.now(), updatedAt: Date.now(), by: 'Отдел маркетинга'
+    } }]);
+    return save({ eventIds: [...(run.eventIds || []), id], wi: i + 1, next: i + 1 < plan.length ? 'writer' : 'finish' });
+  }
+  if (run.next === 'finish') {
+    const used = new Set((run.plan || []).map(p => +p.idx));
+    const writes = [];
+    (run.ideas || []).forEach((x, i) => { if (!used.has(i + 1)) writes.push({ path: 'marketing/idea' + Date.now().toString(36) + i, data: { kind: 'idea', title: String(x.title).slice(0, 200), status: 'new', notes: [x.service, x.format, 'Хук: ' + x.hook, x.why, x.source].filter(Boolean).join(' · '), run: runId, createdAt: Date.now(), updatedAt: Date.now(), by: 'Отдел маркетинга' } }); });
+    if (writes.length) await db.write(writes);
+    await save({ status: 'done', stage: '', next: '', ctx: '', finishedAt: Date.now() });
+    if (run.notify) await notifyTeam(env, db, `Отдел маркетинга: план на ${start.slice(8)}.${start.slice(5, 7)}–${end.slice(8)}.${end.slice(5, 7)} готов.\n\n${(run.plan || []).map(p => `• ${p.date.slice(8)}.${p.date.slice(5, 7)} — ${p.title}`).join('\n')}\n\nСводка, сценарии и 3 варианта съёмки: ${SITE}`).catch(() => {});
+  }
+}
+const deptResult = (runId, run) => ({ runId, done: run.status !== 'working', status: run.status, stage: run.stage || '', events: (run.eventIds || []).length, ideas: (run.ideas || []).length, error: run.error || '' });
+// по расписанию: все шаги подряд, каждый шаг до 3 попыток
+async function runDepartment(env, opts = {}) {
+  const db = firestore(env, opts.token || await agentToken(env));
+  const st = await deptStart(env, db, opts);
+  if (st.skipped) return st;
+  const { runId, run } = st;
+  for (let n = 0; n < 20 && run.status === 'working'; n++) {
+    let err;
+    for (let a = 0; a < 3; a++) { try { await deptStep(env, db, runId, run); err = null; break; } catch (e) { err = e; await sleep(20000); } }
+    if (err) { await db.write([{ path: 'marketing/' + runId, data: Object.assign(run, { status: 'error', stage: '', error: String(err.message || err), updatedAt: Date.now() }) }]).catch(() => {}); throw err; }
+  }
+  return deptResult(runId, run);
+}
+// кнопка на сайте: {} — начать, {runId} — следующий шаг, {runId, abort} — остановить
+async function departmentApi(env, token, by, b) {
+  const db = firestore(env, token);
+  if (!b.runId) { const st = await deptStart(env, db, { by, notify: false }); return deptResult(st.runId, st.run); }
+  const runId = String(b.runId).replace(/[^\w-]/g, '');
+  const run = await db.get('marketing/' + runId);
+  if (!run || run.kind !== 'run') throw new Error('Запуск не найден');
+  delete run.id;
+  if (run.status !== 'working') return deptResult(runId, run);
+  if (!STAGES[run.next] || !run.ctx) b.abort = 'Запуск старой версии нельзя продолжить, начните заново';
+  if (b.abort) { await db.write([{ path: 'marketing/' + runId, data: Object.assign(run, { status: 'error', stage: '', error: String(b.abort).slice(0, 500), updatedAt: Date.now() }) }]); return deptResult(runId, run); }
+  try { await deptStep(env, db, runId, run); }
+  catch (e) { await db.write([{ path: 'marketing/' + runId, data: Object.assign(run, { lastError: String(e.message || e), updatedAt: Date.now() }) }]).catch(() => {}); throw e; }
+  return deptResult(runId, run);
 }
 async function notifyTeam(env, db, text) {
   const tok = String(env.TELEGRAM_BOT_TOKEN || '').trim();
@@ -600,7 +649,7 @@ export default {
     try { b = await req.json(); } catch (_) { return json({ error: 'bad json' }, 400); }
     if (url.pathname === '/api/department') {
       // запуск отдела кнопкой: работаем с правами вошедшего сотрудника
-      try { return json(await runDepartment(env, { token: (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), by: user.email || 'сотрудник', notify: !!b.notify })); }
+      try { return json(await departmentApi(env, (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), user.email || 'сотрудник', b)); }
       catch (e) { return json({ error: e.message || 'Отдел не смог отработать' }, 502); }
     }
     if (url.pathname === '/api/image') {

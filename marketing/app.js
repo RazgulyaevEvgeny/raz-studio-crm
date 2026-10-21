@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   const API = 'https://raz-marketing.design-onegin.workers.dev';
-  const DEPT_NEED = 4; // версия отдела в marketing-worker/worker.js (DEPT_VER)
+  const DEPT_NEED = 5; // версия отдела в marketing-worker/worker.js (DEPT_VER)
 
   /* ================= справочники ================= */
   const TYPES = {
@@ -602,14 +602,15 @@ caption — готовая подпись к посту с призывом и 5
   /* ---------- отдел маркетинга на автопилоте ---------- */
   function vDept() {
     const runs = of('run').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), r = runs.find(x => x.id === state.runId) || runs[0];
-    const st = state.status || {}, working = state.deptBusy || (r && r.status === 'working' && Date.now() - (r.createdAt || 0) < 15 * 60e3);
+    const st = state.status || {}, fresh = r && r.status === 'working' && Date.now() - (r.updatedAt || r.createdAt || 0) < 4 * 60e3, working = state.deptBusy || fresh;
     let h = `<div class="row" style="margin-bottom:14px"><div><h1 class="h1">Отдел маркетинга</h1><p class="sub">${st.deptVer ? `Сервер отдела: версия ${st.deptVer}. ` : ''}Каждый понедельник в 08:00 агенты сами смотрят продажи и тренды, собирают план на неделю и расписывают ролики: 5 хуков и 3 варианта съёмки. Можно запустить и вручную.</p></div><span class="sp"></span><button class="btn pri" type="button" data-runnow ${working ? 'disabled' : ''}>${working ? 'Агенты работают…' : 'Запустить отдел сейчас'}</button></div>`;
     if (st.ok && (st.deptVer || 0) < DEPT_NEED) h += `<div class="note" style="margin-bottom:14px"><b>В Cloudflare старый код отдела</b> (версия ${st.deptVer || 1}, нужна ${DEPT_NEED}). Cloudflare → воркер raz-marketing → Edit code: выделите всё, вставьте код из файла marketing-worker/worker.js и нажмите Deploy, затем обновите эту страницу.</div>`;
     else if (st.dept && !st.deptAuto) h += '<div class="note" style="margin-bottom:14px"><b>Автозапуск по понедельникам пока выключен.</b> Кнопка работает уже сейчас. Чтобы отдел работал сам, в Cloudflare у воркера raz-marketing задайте секреты AGENT_EMAIL и AGENT_PASSWORD и расписание (см. README).</div>';
     if (!r) h += '<div class="empty"><b>Отдел ещё не запускался</b>Нажмите «Запустить отдел сейчас» — через 3–6 минут здесь появятся сводка недели, идеи и ролики в календаре.</div>';
     else {
       if (runs.length > 1) h += '<div class="row" style="margin-bottom:12px">' + runs.slice(0, 8).map(x => `<button type="button" class="chip" data-run="${E(x.id)}" style="${x === r ? 'background:var(--ink);color:#fff' : ''}">${fmtD(x.date)}${x.status === 'error' ? ' · ошибка' : ''}</button>`).join('') + '</div>';
-      if (r.status === 'working') h += `<div class="note" style="margin-bottom:14px"><b>Работаем:</b> ${E(r.stage || '')}. Обычно это 3–6 минут, страницу можно не держать открытой.</div>`;
+      if (r.status === 'working' && working) h += `<div class="note" style="margin-bottom:14px"><b>Работаем:</b> ${E(r.stage || '')}. Обычно это 3–6 минут. Не закрывайте страницу: если закроете, запуск можно будет продолжить.${r.lastError ? '<br><small>Последний сбой, повторяем: ' + E(r.lastError) + '</small>' : ''}</div>`;
+      else if (r.status === 'working') h += `<div class="note" style="margin-bottom:14px"><b>Запуск прервался</b> на шаге «${E(r.stage || '')}».${r.lastError ? ' ' + E(r.lastError) : ''}<div class="row" style="margin-top:8px"><button class="btn pri sm" type="button" data-runresume="${E(r.id)}">Продолжить с этого шага</button><button class="btn soft sm" type="button" data-runabort="${E(r.id)}">Отменить запуск</button></div></div>`;
       if (r.status === 'error') h += `<div class="note" style="margin-bottom:14px"><b>Отдел остановился:</b> ${E(r.error || '')}</div>`;
       const evL = (r.eventIds || []).map(evById).filter(Boolean);
       if (evL.length) h += `<h2 class="h2" style="margin:6px 0 10px">Ролики на неделю</h2><div class="list" style="margin-bottom:18px">${evL.map(e => `<button type="button" class="lcard" style="--c:var(${TYPES[e.type].c})" data-open="${E(e.id)}"><i class="dot"></i><div><b>${E(e.title)}</b><p>${fmtDW(e.date)} · ${FORMATS[e.format] || ''} · ${E(stOf(e)[e.status])} — внутри сценарий, 5 хуков и 3 варианта съёмки</p></div><span class="lnk">Открыть</span></button>`).join('')}</div>`;
@@ -623,15 +624,31 @@ caption — готовая подпись к посту с призывом и 5
     h += tr.length ? '<div class="list">' + tr.slice(0, 30).map(x => `<div class="lcard" style="--c:var(--violet);cursor:default"><i class="dot"></i><div><b>${x.link && /^https?:/.test(x.link) ? `<a href="${E(x.link)}" target="_blank" rel="noopener">${E(x.link.replace(/^https?:\/\/(www\.)?/, '').slice(0, 60))}</a>` : E(x.link || 'без ссылки')}</b><p>${E(x.note || '')}${x.by ? ' · ' + E(x.by) : ''} · ${fmtT(x.createdAt)}</p></div><button class="lnk del" type="button" data-trdel="${E(x.id)}">Удалить</button></div>`).join('') + '</div>' : '';
     return h;
   }
-  async function runDept() {
+  async function deptCall(body) {
+    let res;
+    try { res = await fetch(API + '/api/department', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + await auth.currentUser.getIdToken() }, body: JSON.stringify(body) }); }
+    catch (_) { throw new Error('Нет связи с сервером ИИ'); }
+    const j = await res.json().catch(() => ({}));
+    if (res.status === 404) throw new Error('Сервер ИИ старой версии: обновите код воркера в Cloudflare (файл marketing-worker/worker.js).');
+    if (!res.ok) throw new Error(j.error || 'Сервер ответил ' + res.status);
+    return j;
+  }
+  // отдел работает по шагам: сайт вызывает следующий шаг, пока запуск не закончится; сбойный шаг повторяется
+  async function runDept(resumeId) {
     const runs = of('run').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), last = runs[0];
-    if (last && last.status === 'done' && last.date === today() && !confirm('Отдел сегодня уже составил план. Запустить ещё раз? В календарь добавятся новые ролики.')) return;
-    state.deptBusy = true; state.runId = ''; render();
+    if (!resumeId && last && last.status === 'done' && last.date === today() && !confirm('Отдел сегодня уже составил план. Запустить ещё раз? В календарь добавятся новые ролики.')) return;
+    state.deptBusy = true; state.runId = resumeId || ''; render();
     try {
-      const res = await fetch(API + '/api/department', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + await auth.currentUser.getIdToken() }, body: '{}' });
-      const j = await res.json().catch(() => ({}));
-      if (res.status === 404) throw new Error('Сервер ИИ старой версии: обновите код воркера в Cloudflare (файл marketing-worker/worker.js).');
-      if (!res.ok) throw new Error(j.error || 'Сервер ответил ' + res.status);
+      let j = resumeId ? { runId: resumeId, done: false } : await deptCall({});
+      const runId = j.runId; let fails = 0;
+      while (!j.done) {
+        try { j = await deptCall({ runId }); fails = 0; }
+        catch (e) {
+          if (/старой версии/.test(e.message) || ++fails > 2) { await deptCall({ runId, abort: e.message }).catch(() => {}); throw e; }
+          toast('Сбой, повторяем шаг через 20 секунд: ' + e.message, 5000); await sleep(20000);
+        }
+      }
+      if (j.status === 'error') throw new Error(j.error || 'Отдел остановился');
       toast(`Готово: ${j.events} ${plural(j.events, 'ролик', 'ролика', 'роликов')} в календаре и ${j.ideas} идей`, 4000);
     } catch (e) { toast(e.message || 'Не получилось', 6000); }
     finally { state.deptBusy = false; render(); }
@@ -840,6 +857,8 @@ caption — готовая подпись к посту с призывом и 5
     if ((el = g('[data-open]'))) { openDrawer(el.dataset.open); return; }
     // отдел
     if (g('[data-runnow]')) { runDept(); return; }
+    if ((el = g('[data-runresume]'))) { runDept(el.dataset.runresume); return; }
+    if ((el = g('[data-runabort]'))) { await col.doc(el.dataset.runabort).set({ status: 'error', stage: '', error: 'Запуск отменён', updatedAt: Date.now() }, { merge: true }); return; }
     if ((el = g('[data-run]'))) { state.runId = el.dataset.run; render(); return; }
     if ((el = g('[data-trdel]'))) { await col.doc(el.dataset.trdel).delete(); return; }
     if ((el = g('[data-new]'))) { newEventDialog(el.dataset.new); return; }
