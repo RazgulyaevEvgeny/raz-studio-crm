@@ -1291,10 +1291,11 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 #w-sasha .an-ask .btn:hover{background:#e6e9ff}
 #w-sasha .an-ask .btn:disabled{opacity:.55}
 #w-sasha .bw-note{margin:0;color:#fff;opacity:.85}
-#w-sasha{--ab:#c42d68;background:linear-gradient(155deg,#e0457b,#c42d68 42%,#a3205a)}
-#w-sasha .an-ask .btn:hover,#w-sasha .an-card .btn:hover{background:#ffe3ee}
-.sa-av{position:absolute;left:16px;top:-18px;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle at 38% 30%,#fff,#ffdbe8 75%);box-shadow:0 0 0 3px #fff,0 8px 18px rgba(110,10,50,.38);color:var(--ab);font:800 44px/1 var(--f);letter-spacing:-.04em;transition:transform .25s}
-.sa-av i{position:absolute;right:-2px;bottom:4px;width:30px;height:30px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(110,10,50,.3)}
+#w-sasha{--ab:#26262c;background:linear-gradient(155deg,#43434c,#26262c 42%,#121215)}
+#w-sasha .an-ask .btn:hover,#w-sasha .an-card .btn:hover{background:#e6e6ec}
+.sa-av{position:absolute;left:16px;top:-18px;width:92px;height:92px;border-radius:50%;display:grid;place-items:center;pointer-events:none;background:#fff;box-shadow:0 0 0 3px #fff,0 8px 18px rgba(0,0,0,.45);color:var(--ab);font:800 44px/1 var(--f);letter-spacing:-.04em;transition:transform .25s}
+.sa-av img{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.sa-av i{position:absolute;right:-2px;bottom:4px;width:30px;height:30px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .sa-av svg{width:17px;height:17px}
 #w-sasha>.w-h:hover .sa-av{transform:translateY(-3px) rotate(-3deg)}
 .sa-pl li{grid-template-columns:44px minmax(0,1fr)}.sa-pl li::before{content:none}
@@ -1765,7 +1766,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="an-ft"><small class="bw-note">Аня отвечает, когда включён рабочий компьютер.</small><button class="an-ref" type="button" id="anna-ref-btn" aria-label="Обновить сводку Ани"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить</button></div>
         </div>
         <div class="w" id="w-sasha">
-          <div class="w-h"><h2><span class="sa-av" id="sasha-av" aria-hidden="true">С<i><svg viewBox="0 0 24 24" fill="none" stroke="#c42d68" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></i></span><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
+          <div class="w-h"><h2><span class="sa-av" id="sasha-av" aria-hidden="true"><img src="sasha-avatar.webp?v=1" alt="" width="240" height="240"><i><svg viewBox="0 0 24 24" fill="none" stroke="#26262c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></i></span><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
           <div class="an-body" id="w-sasha-body">
             <div class="an-col"><div class="an-say sa-say" id="w-sasha-say">Загружаем…</div><div class="an-stats" id="w-sasha-stats"></div></div>
             <div class="an-col">
