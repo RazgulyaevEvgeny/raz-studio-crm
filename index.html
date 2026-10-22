@@ -5561,7 +5561,8 @@ async function kPrint(){
   if(win)win.document.write('<p style="font:16px system-ui;padding:24px">Собираем накладные…</p>');
   kPrintBusy=true;kPrintFails=[];render();
   try{
-    await kLoadPdfLib();
+    let cropOk=0,cropErr='';
+    await Promise.all([kLoadPdfLib(),kLoadPdfJs().catch(e=>{cropErr='pdf.js не загрузился'})]);
     const {PDFDocument,rgb}=window.PDFLib;
     const out=await PDFDocument.create();const pages=[];
     for(const k of sel){
@@ -5569,9 +5570,9 @@ async function kPrint(){
         const r=await kApi({mode:'waybill',url:k.waybill},{raw:true});
         const bytes=new Uint8Array(await r.arrayBuffer());
         const src=await PDFDocument.load(bytes);
-        let boxes=[];try{boxes=await Promise.race([kInkBoxes(bytes),new Promise(ok=>setTimeout(()=>ok([]),8000))])}catch(e){}
+        let boxes=[];try{boxes=await Promise.race([kInkBoxes(bytes),new Promise((ok,no)=>setTimeout(()=>no(new Error('не успели за 15 с')),15000))])}catch(e){cropErr=cropErr||(e&&e.message)||String(e);console.warn('Обрезка накладной',k.code,e)}
         for(const [i,sp] of src.getPages().entries()){
-          let ep;try{ep=await out.embedPage(sp,boxes[i]||undefined)}catch(e){ep=await out.embedPage(sp)}
+          let ep;try{ep=await out.embedPage(sp,boxes[i]||undefined);if(boxes[i])cropOk++}catch(e){cropErr=cropErr||'вставка: '+e.message;ep=await out.embedPage(sp)}
           pages.push(ep);
         }
       }catch(e){console.warn('Накладная',k.code,e);kPrintFails.push(k)}
@@ -5595,7 +5596,7 @@ async function kPrint(){
     const url=URL.createObjectURL(new Blob([await out.save()],{type:'application/pdf'}));
     if(win)win.location.href=url;
     else{const a=document.createElement('a');a.href=url;a.download='nakladnye-kaspi.pdf';document.body.appendChild(a);a.click();a.remove()}
-    toast('Накладных на листах: '+pages.length+(kPrintFails.length?', не скачалось: '+kPrintFails.length:''));
+    toast('Накладных на листах: '+pages.length+', увеличено: '+cropOk+(cropErr?' ('+cropErr+')':'')+(kPrintFails.length?', не скачалось: '+kPrintFails.length:''));
   }catch(e){if(win)win.close();toast((e&&e.message)||'Не получилось собрать накладные')}
   finally{kPrintBusy=false;render()}
 }
