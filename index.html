@@ -94,11 +94,22 @@
 /* склад, план, бирка, зарплата, загрузка, КП */
 #hx-bar:empty,#load-box:empty,#pay-box:empty,#stock-box:empty{display:none}
 #pay-box{margin-top:16px}
-.hx{background:var(--tile);border-radius:22px;padding:14px 18px;display:flex;flex-direction:column;gap:10px}
-.hx-p{display:flex;flex-direction:column;gap:6px}.hx-t{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px}.hx-t b{font:700 15px var(--f)}.hx-t small{color:var(--muted);font-size:13px}
-.hx-b{height:10px;border-radius:99px;background:var(--paper);overflow:hidden}.hx-b i{display:block;height:100%;border-radius:99px;background:var(--ok)}
+/* план продаж — карточка как остальные виджеты: заголовок со статусом, по плитке на студию и Kaspi */
+.hx{background:var(--tile);border-radius:24px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.hx .w-h h2,#w-today-box>.w-h h2,#w-boss>.w-h h2{flex-direction:column;align-items:flex-start;gap:4px}
+.hx .w-h h2 .c,#w-today-box>.w-h h2 .c,#w-boss>.w-h h2 .c{display:flex;align-items:center;gap:7px}
+.hx .w-h h2 .c::before,#w-today-box>.w-h h2 .c::before,#w-boss>.w-h h2 .c::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--sc,var(--blue))}
+.hx-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px}
+.hx-p{display:flex;flex-direction:column;gap:6px;background:var(--paper);border-radius:18px;padding:12px 14px}
+.hx-l{font:700 11.5px var(--f);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.hx-n{display:flex;align-items:baseline;gap:8px;min-width:0}
+.hx-n b{font:800 24px/1.1 var(--f);letter-spacing:-.03em;white-space:nowrap}
+.hx-n small{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hx-n em{margin-left:auto;font:800 18px var(--f);font-style:normal;color:var(--ok)}
+.hx-s{color:var(--muted);font-size:12.5px}.hx-s.ok{color:var(--ok);font-weight:600}
+.hx-b{height:8px;border-radius:99px;background:var(--tile-2);overflow:hidden}.hx-b i{display:block;height:100%;border-radius:99px;background:var(--ok)}
 .hx-low{border:0;text-align:left;background:color-mix(in srgb,var(--danger) 9%,var(--paper));color:var(--ink);border-radius:14px;padding:10px 14px;font:500 14px var(--fb);cursor:pointer}
-.hx-e{align-self:flex-start;font-size:13px}
+.hx-e{flex:none}
 .sk-l{display:flex;flex-direction:column;gap:8px}
 .sk-r{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;background:var(--paper);border-radius:16px;padding:10px 12px}
 .sk-r.low{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--danger) 55%,transparent)}
@@ -940,6 +951,9 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pack.m .pcol>.w{flex:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
+#pack.flat>.w{margin-top:0;align-self:stretch}
+/* в узкой колонке звёздочки баннера заявок налезали на заголовок — там только градиент */
+#pack.flat>#w-req{background:radial-gradient(120px 90px at 52px 44px,rgba(255,255,255,.2),rgba(255,255,255,0) 70%),linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6)}
 .pfull{grid-column:1/-1;display:flex;flex-direction:column;min-width:0}
 .pduo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;min-width:0}
 .psub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;flex:1 1 auto;align-items:stretch;min-width:0}
@@ -1862,7 +1876,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="legend"><span style="--sc:var(--blue)"><i></i>заказы</span><span style="--sc:var(--boss)"><i></i>задачи</span><span style="--sc:var(--task)"><i></i>дела дня</span><span style="--sc:var(--danger)"><i></i>просрочено</span></div>
         </div>
         <div class="w">
-          <div class="w-h"><h2>Сегодня <span class="c msum" id="w-today-m"></span></h2><button class="go" type="button" data-go="calendar">Все дни</button></div>
+          <div class="w-h"><h2>Сегодня <span class="c" id="w-today-m"></span></h2><button class="go" type="button" data-go="calendar">Все дни</button></div>
           <div class="tday-w" id="w-today"></div>
         </div>
         <div class="w" id="w-print">
@@ -2885,7 +2899,7 @@ function renderHome(){
   const open=boss.filter(t=>!t.done).sort((a,b)=>(isNow(b)-isNow(a))||(a.date||'9999').localeCompare(b.date||'9999'));
   const done=boss.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const acc=open.filter(t=>bossStatus(t)==='accepted').length;
-  $('w-boss-c').textContent=open.length?open.length+' '+plural(open.length,'открыта','открыты','открыто')+(acc?', в работе '+acc:''):'';
+  $('w-boss-c').textContent=open.length?open.length+' '+plural(open.length,'открыта','открыты','открыто')+(acc?', в работе '+acc:''):'открытых нет';
   $('boss-list').innerHTML=!tasksLoaded?'':open.length?open.map(taskRow).join(''):`<div class="w-empty">Открытых задач нет.${canWrite?' Новую можно поставить кнопкой «+ Задача».':''}</div>`;
   const tog=$('boss-done-tog');tog.hidden=!done.length;tog.textContent=(showBossDone?'Скрыть выполненные':'Показать выполненные')+' ('+done.length+')';
   $('boss-done').hidden=!showBossDone||!done.length;$('boss-done').innerHTML=showBossDone?done.slice(0,20).map(taskRow).join(''):'';
@@ -3171,7 +3185,7 @@ document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h,#w
 function packHome(){
   const pack=$('pack');if(!pack||$('p-home').hidden||!packW.length)return;
   const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1400?4:w>=1100?3:w>=700?2:1;
-  if(packN===n)return;packN=n;pack.innerHTML='';pack.style.setProperty('--cols',n);pack.dataset.n=n;
+  if(packN===n)return;packN=n;pack.innerHTML='';pack.classList.remove('flat');packW.forEach(x=>x.style.gridColumn='');pack.style.setProperty('--cols',n);pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
   /* Анна и Саша — первыми, рядом друг с другом, каждый шириной в колонку */
   const duo=()=>{const d=mk('pduo');d.append(packAnna,packSasha);return d};
@@ -3179,8 +3193,10 @@ function packHome(){
   /* «Сегодня» — во всю ширину сразу под плитками сводки, выше всех виджетов */
   const today=()=>{const d=mk('pfull');d.appendChild(packWide[0]);return d};
   /* компьютер: всё на одном экране — слева «Сегодня» и Аня с Сашей, справа задачи с заявками и Kaspi с принтерами (на узком компьютере — одной колонкой) */
-  if(n===4){const L=mk('pleft'),C=mk('pcol'),D=mk('pcol');L.append(packWide[0],duo());C.append(packWide[1],packL.at(-1));packSide.forEach(x=>D.appendChild(x));pack.append(L,C,D);return}
-  if(n===3){const L=mk('pleft'),R=mk('pcol');L.append(packWide[0],duo());[...packSide,packWide[1],packL.at(-1)].forEach(x=>R.appendChild(x));pack.append(L,R);return}
+  /* компьютер: ровная сетка рядами — карточки одного ряда одной высоты, без ступенек */
+  if(n>=3){pack.classList.add('flat');const sp2=x=>{x.style.gridColumn='span 2';return x};[packWide[0],packAnna,packSasha,packWide[1]].forEach(x=>x.style.gridColumn='');
+    const [today,tasks]=packWide,[kaspi,print]=packSide,req=packL.at(-1);
+    pack.append(...(n===4?[sp2(today),tasks,kaspi,packAnna,packSasha,req,print]:[sp2(today),kaspi,packAnna,packSasha,print,sp2(tasks),req]));return}
   const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.appendChild(packSide[0]);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
 }
 ['w-anna','w-sasha'].forEach(id=>$(id+'-kpi').addEventListener('click',()=>{if(!mOpen.has(id))mfToggle(id,true)}));
@@ -6301,8 +6317,12 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   #p-home .ph h1{font-size:34px}
   #p-home .stat{min-height:132px;padding:14px 18px 12px}
   #p-home .stat svg.spark{height:28px}
-  #p-home .hx{padding:10px 16px;gap:6px}
-  #p-home .hx-b{height:8px}
+  /* план продаж одной строкой: заголовок слева, плитки студии и Kaspi справа */
+  #p-home .hx{display:grid;grid-template-columns:minmax(150px,auto) minmax(0,1fr);align-items:center;gap:8px 16px;padding:12px 12px 12px 16px}
+  #p-home .hx>.w-h{flex-direction:column;align-items:flex-start;gap:10px}
+  #p-home .hx>.hx-low{grid-column:1/-1}
+  #p-home .hx-p{padding:10px 14px;gap:4px}
+  #p-home .hx-n b{font-size:22px}
 }
 @media(max-width:560px){
   .nav .pills{display:none}
@@ -6708,14 +6728,14 @@ function renderHomeBar(){
   const box=$('hx-bar');if(!box)return;
   const ym=curMonth(),pl=fx.plan||{},parts=[];
   const bar=(lbl,fact,goal,days,dayWord)=>{const pct=Math.min(100,Math.round(fact/goal*100)),rest=Math.max(0,goal-fact);
-    return `<div class="hx-p"><div class="hx-t"><b>${lbl}: ${money(fact)} из ${money(goal)}</b><small>${rest?(days?'осталось '+days+' '+dayWord+', нужно '+money(rest/days)+' в день':'осталось '+money(rest)):'план выполнен'}</small></div><div class="hx-b"><i style="width:${pct}%"></i></div></div>`};
+    return `<div class="hx-p"><span class="hx-l">${lbl}</span><div class="hx-n"><b>${money(fact)}</b><small>из ${money(goal)}</small><em>${pct}%</em></div><div class="hx-b"><i style="width:${pct}%"></i></div><small class="hx-s${rest?'':' ok'}">${rest?(days?'осталось '+days+' '+dayWord+', нужно '+money(rest/days)+' в день':'осталось '+money(rest)):'план выполнен'}</small></div>`};
   const dLeft=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate()-new Date().getDate()+1;
-  if(+pl.studio>0){const f=orders.filter(o=>inMonth(o,ym)).reduce((s,o)=>s+(+o.price||0),0);const w=workDaysLeft();parts.push(bar('Студия за '+monthName(ym),f,+pl.studio,w,plural(w,'рабочий день','рабочих дня','рабочих дней')))}
-  if(+pl.kaspi>0){parts.push(bar('Kaspi за '+monthName(ym),kaspiMonthSum(ym),+pl.kaspi,dLeft,plural(dLeft,'день','дня','дней')))}
+  if(+pl.studio>0){const f=orders.filter(o=>inMonth(o,ym)).reduce((s,o)=>s+(+o.price||0),0);const w=workDaysLeft();parts.push(bar('Студия',f,+pl.studio,w,plural(w,'рабочий день','рабочих дня','рабочих дней')))}
+  if(+pl.kaspi>0){parts.push(bar('Kaspi',kaspiMonthSum(ym),+pl.kaspi,dLeft,plural(dLeft,'день','дня','дней')))}
   const low=fx.stock?skLow():[];
   const lowRow=low.length?`<button type="button" class="hx-low" data-go="supplies"><b>Заканчивается на складе:</b> ${esc(low.slice(0,3).map(x=>x.name+(x.left!=null?' (на '+x.left+' дн.)':'')).join(', '))}${low.length>3?' и ещё '+(low.length-3):''}</button>`:'';
-  const edit=isBoss()&&canWrite?`<button type="button" class="linkbtn hx-e" data-planedit>${parts.length?'Изменить план':'Задать план продаж на месяц'}</button>`:'';
-  box.innerHTML=parts.length||lowRow||edit?`<div class="hx">${parts.join('')}${lowRow}${edit}</div>`:'';
+  const edit=isBoss()&&canWrite?`<button type="button" class="go hx-e" data-planedit>${parts.length?'Изменить':'Задать план'}</button>`:'';
+  box.innerHTML=parts.length||lowRow||edit?`<div class="hx"><div class="w-h"><h2>План продаж<span class="c">${parts.length?'за '+monthName(ym):'план на месяц не задан'}</span></h2>${edit}</div>${parts.length?`<div class="hx-g">${parts.join('')}</div>`:''}${lowRow}</div>`:'';
 }
 function planEdit(){
   const pl=fx.plan||{};
