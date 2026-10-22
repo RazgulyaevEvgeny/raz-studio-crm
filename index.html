@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261021150000">
+<meta name="app-build" content="20261022160000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -884,6 +884,13 @@ input[data-dm]{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xm
 .kbuy{display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;background:var(--tile);border-radius:18px;padding:12px 16px;border-left:4px solid var(--danger)}
 .kbuy span{font:600 14px var(--f)}.kbuy b{font-weight:800}
 .kbuy small{color:var(--muted);font-size:12.5px}
+.kfc{flex-direction:column;align-items:stretch;gap:10px}
+.kfc-h{display:flex;align-items:baseline;justify-content:space-between;gap:2px 12px;flex-wrap:wrap}
+.kfc-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.kfc-g>div{background:var(--paper);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kfc-g b{font:800 20px/1.15 var(--f);letter-spacing:-.03em;overflow-wrap:anywhere}
+.kfc-g b.pos{color:var(--ok)}.kfc-g b.neg{color:var(--danger)}
+@media(max-width:600px){.kfc-g{grid-template-columns:repeat(2,minmax(0,1fr))}.kfc-g b{font-size:17px}}
 .home-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:980px){.home-grid2{grid-template-columns:minmax(0,1fr)}}
 .stat .neg{color:var(--danger)}
@@ -2721,7 +2728,30 @@ const profitOf=o=>(+o.price||0)-costOf(o);
 const isKBuy=(k,x)=>k==='supplies'&&x.cat==='kaspi';
 const lsum=(k,ym)=>ledger[k].filter(x=>!isKBuy(k,x)&&(x.date||'').slice(0,7)===ym).reduce((s,x)=>s+(+x.amount||0),0);
 const ksum=ym=>ledger.supplies.filter(x=>x.cat==='kaspi'&&(!ym||(x.date||'').slice(0,7)===ym)).reduce((s,x)=>s+(+x.amount||0),0);
-const kbuyNote=(ym,tail)=>{const v=ksum(ym);return v?`<div class="kbuy"><span>Закупки Kaspi за ${esc(monthName(ym))}: <b>${money(v)}</b></span><small>${tail||'идут в себестоимость товаров Kaspi, в расходы и прибыль не входят'}</small></div>`:''};
+/* цена продажи закупки Kaspi: своя «Продаём на Kaspi», иначе цена товара на Kaspi с тем же названием */
+function kbuySell(x,ps){
+  if(+x.kSell)return +x.kSell;
+  const n=kpNorm(x.title);if(!n)return 0;
+  const p=ps.find(p=>kpNorm(p.name)===n)||(n.length>=5?ps.find(p=>{const m=kpNorm(p.name);return m.length>=5&&(m.includes(n)||n.includes(m))}):null);
+  return p?p.ourPrice:0;
+}
+/* ожидаемая выручка и прибыль с закупок Kaspi за месяц: только для информации, нигде больше не учитывается */
+function kbuyForecast(ym){
+  const L=ledger.supplies.filter(x=>x.cat==='kaspi'&&(x.date||'').slice(0,7)===ym);if(!L.length)return '';
+  const ps=kpAll().filter(p=>p.ourPrice);
+  let buy=0,rev=0,net=0,cost=0;const miss=[];
+  L.forEach(x=>{const a=+x.amount||0,q=+x.qty||0,sell=kbuySell(x,ps),fee=x.kFee==null||x.kFee===''?KASPI_FEE*100:+x.kFee;buy+=a;
+    if(!q||!sell){miss.push(x.title||'без названия');return}
+    rev+=sell*q;net+=sell*q*(1-fee/100);cost+=a});
+  const prof=net-cost,t=(l,v,c='')=>`<div><small>${l}</small><b class="${c}">${v}</b></div>`;
+  const ok=L.length-miss.length;
+  const note=!ok?'Чтобы посчитать, откройте закупку и впишите количество в штуках и «Продаём на Kaspi» (цену за 1 шт).'
+    :miss.length?`Посчитано по ${ok} из ${L.length} закупок. Нет количества или цены продажи: ${miss.slice(0,3).map(esc).join(', ')}${miss.length>3?' и ещё '+(miss.length-3):''}. Откройте закупку и впишите «Продаём на Kaspi».`
+    :'Цена продажи из закупки или из прайса Kaspi, комиссия из закупки (обычно 30%).';
+  return `<div class="kbuy kfc"><div class="kfc-h"><span>Закупки Kaspi за ${esc(monthName(ym))}: что получим с продажи</span><small>только для информации, в расходы и прибыль не входит</small></div>
+    <div class="kfc-g">${t('Закупили',money(buy))+t('Продадим за',ok?money(rev):'—')+t('Получим после комиссии',ok?money(net):'—')+t('Ожидаемая прибыль',ok?money(prof):'—',ok?(prof<0?'neg':'pos'):'')}</div>
+    <small>${note}</small></div>`;
+}
 function salesGrowth(){
   const now=new Date(),day=now.getDate(),ym=curMonth(),pd=new Date(now.getFullYear(),now.getMonth()-1,1),pym=pd.getFullYear()+'-'+String(pd.getMonth()+1).padStart(2,'0');
   const upTo=(o,m)=>{const r=receivedOf(o);return o.status!=='cancel'&&r.slice(0,7)===m&&+r.slice(8,10)<=day};
@@ -3097,7 +3127,7 @@ function renderLedger(k){
   const nM=all.filter(x=>!isKBuy(k,x)&&(x.date||'').slice(0,7)===ym).length;
   $(k+'-kpi').innerHTML=`<div class="kpi"><span>За ${esc(monthName(ym))}</span><b>${money(tot)}</b><small>${nM} ${plural(nM,'запись','записи','записей')}</small></div>
     <div class="kpi"><span>За ${esc(monthName(prev))}</span><b>${money(pt)}</b><small>${pt&&tot?(tot>pt?'в этом месяце больше на '+money(tot-pt):'в этом месяце меньше на '+money(pt-tot)):'для сравнения'}</small></div>${third}`;
-  if(k==='supplies')$('supplies-kbuy').innerHTML=kbuyNote(v.m||ym);
+  if(k==='supplies')$('supplies-kbuy').innerHTML=kbuyForecast(v.m||ym);
   const shown=rows.filter(x=>!isKBuy(k,x)).reduce((s,x)=>s+(+x.amount||0),0),shownK=rows.filter(x=>isKBuy(k,x)).reduce((s,x)=>s+(+x.amount||0),0);
   $(k+'-sub').textContent=ledgerLoaded[k]?`Показано ${rows.length} ${plural(rows.length,'запись','записи','записей')} на ${money(shown)}${shownK?' + закупки Kaspi '+money(shownK)+' отдельно':''}`:'Подключаемся к базе…';
   $(k+'-head').hidden=!rows.length;
