@@ -5582,13 +5582,12 @@ async function kPrint(){
     let page=null;
     pages.forEach((p,i)=>{
       const pos=i%per;
-      if(pos===0){
-        page=out.addPage([W,H]);
-        const ln={thickness:.5,color:rgb(.6,.6,.6),dashArray:[4,4]};
-        if(cols>1)page.drawLine({start:{x:W/2,y:0},end:{x:W/2,y:H},...ln});
-        if(rows>1)page.drawLine({start:{x:0,y:H/2},end:{x:W,y:H/2},...ln});
-      }
+      if(pos===0)page=out.addPage([W,H]);
       const c=pos%cols,r=Math.floor(pos/cols);
+      /* линии отреза только по краям занятой ячейки, пустая часть листа остаётся чистой */
+      const ln={thickness:.5,color:rgb(.6,.6,.6),dashArray:[4,4]},y0=H-(r+1)*ch,y1=H-r*ch;
+      if(cols>1)page.drawLine({start:{x:cw,y:y0},end:{x:cw,y:y1},...ln});
+      if(rows>1&&r===0)page.drawLine({start:{x:c*cw,y:y0},end:{x:(c+1)*cw,y:y0},...ln});
       const s=Math.min((cw-2*m)/p.width,(ch-2*m)/p.height,4);
       const w=p.width*s,h=p.height*s;
       page.drawPage(p,{x:c*cw+(cw-w)/2,y:H-(r+1)*ch+(ch-h)/2,width:w,height:h});
