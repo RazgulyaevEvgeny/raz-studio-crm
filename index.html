@@ -3170,7 +3170,7 @@ document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h,#w
   e.preventDefault();e.stopPropagation();mfToggle(h.parentElement.id)},true);
 function packHome(){
   const pack=$('pack');if(!pack||$('p-home').hidden||!packW.length)return;
-  const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1100?3:w>=700?2:1;
+  const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1400?4:w>=1100?3:w>=700?2:1;
   if(packN===n)return;packN=n;pack.innerHTML='';pack.style.setProperty('--cols',n);pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
   /* Анна и Саша — первыми, рядом друг с другом, каждый шириной в колонку */
@@ -3178,7 +3178,9 @@ function packHome(){
   if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,packSasha,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
   /* «Сегодня» — во всю ширину сразу под плитками сводки, выше всех виджетов */
   const today=()=>{const d=mk('pfull');d.appendChild(packWide[0]);return d};
-  if(n===3){const L=mk('pleft'),Rt=mk('pcol');L.appendChild(duo());[...packWide.slice(1),packL.at(-1)].forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(today(),L,Rt);return}
+  /* компьютер: всё на одном экране — слева «Сегодня» и Аня с Сашей, справа задачи с заявками и Kaspi с принтерами (на узком компьютере — одной колонкой) */
+  if(n===4){const L=mk('pleft'),C=mk('pcol'),D=mk('pcol');L.append(packWide[0],duo());C.append(packWide[1],packL.at(-1));packSide.forEach(x=>D.appendChild(x));pack.append(L,C,D);return}
+  if(n===3){const L=mk('pleft'),R=mk('pcol');L.append(packWide[0],duo());[...packSide,packWide[1],packL.at(-1)].forEach(x=>R.appendChild(x));pack.append(L,R);return}
   const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.appendChild(packSide[0]);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
 }
 ['w-anna','w-sasha'].forEach(id=>$(id+'-kpi').addEventListener('click',()=>{if(!mOpen.has(id))mfToggle(id,true)}));
@@ -6290,6 +6292,17 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .nav .pills .who-pill,.nav .pills .logout{position:static;max-width:none;min-height:34px;padding:0 6px;font:600 11px/1.15 var(--f);border-radius:12px;flex-direction:row;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .nav .pills .who-pill{margin-top:auto;display:block;line-height:34px}
   .nav .pills .who-pill .wt{display:none}
+  /* весь экран под рабочий стол: без ограничения ширины, логотип — знаком вверху панели, шапка страницы и плитки сводки плотнее */
+  .shell{max-width:none;gap:0}
+  .nav .logo{position:fixed;left:26px;top:16px;z-index:41;width:44px;height:44px;overflow:hidden;display:block}
+  .nav .logo svg{height:44px;width:auto}
+  .nav .pills{padding-top:76px}
+  #p-home{gap:14px!important}
+  #p-home .ph h1{font-size:34px}
+  #p-home .stat{min-height:132px;padding:14px 18px 12px}
+  #p-home .stat svg.spark{height:28px}
+  #p-home .hx{padding:10px 16px;gap:6px}
+  #p-home .hx-b{height:8px}
 }
 @media(max-width:560px){
   .nav .pills{display:none}
