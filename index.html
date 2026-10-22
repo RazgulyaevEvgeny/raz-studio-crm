@@ -95,43 +95,43 @@
 #hx-bar:empty,#load-box:empty,#pay-box:empty,#stock-box:empty{display:none}
 #pay-box{margin-top:16px}
 /* план продаж — карточка как остальные виджеты: заголовок со статусом, по плитке на студию и Kaspi */
-.hx{container-type:inline-size;background:var(--tile);border-radius:24px;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px}
+.hx{container-type:inline-size;background:var(--tile);border-radius:26px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.hx-h{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:22px}
+.hx-h .lbl{font:700 12px/1.2 var(--f);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.hx-h .hx-e{min-height:28px;padding:0 11px;font-size:12px}
+.hx-none{margin:0;color:var(--muted);font-size:13px}
 .hx .w-h h2,#w-today-box>.w-h h2,#w-boss>.w-h h2{flex-direction:column;align-items:flex-start;gap:4px}
 .hx .w-h h2 .c,#w-today-box>.w-h h2 .c,#w-boss>.w-h h2 .c{display:flex;align-items:center;gap:7px}
 .hx .w-h h2 .c::before,#w-today-box>.w-h h2 .c::before,#w-boss>.w-h h2 .c::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--sc,var(--blue))}
 .rk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 12px}
 .rk:empty{display:none}
+/* цифры Bambu и заявок видны и в свёрнутой карточке — только в ровной сетке компьютера */
+.rk.wk{display:none}
+#pack.flat>:is(#w-kaspi,#w-print,#w-req)>.rk.wk.wk.wk{display:grid!important}
+#pack.flat>.w.mfold:not(.mopen)>.rk.wk{margin-top:auto}
+#pack.flat>:is(#w-kaspi,#w-print,#w-req)>.rk.wk.wk.wk:empty{display:none!important}
+.rk.wk .k b{color:#fff}.rk.wk .k span{color:rgba(255,255,255,.8)}.rk.wk .k.hot b{color:#ffe08a}
 .rk .k{display:flex;flex-direction:column;gap:3px;min-width:0}
 .rk .k b{font:800 26px/1 var(--f);letter-spacing:-.02em}
 .rk .k span{font:500 12px/1.25 var(--f);color:var(--muted)}
 .rk .k.hot b{color:var(--danger)}
-/* «Сегодня» — цветная плитка, как синяя «Поступившие» на референсе: белый текст, иллюстрация в углу */
-#w-today-box{position:relative;overflow:hidden;color:#fff;background:linear-gradient(155deg,#a07bff,#8a5cf0 45%,#6f43d8)}
-#w-today-box>*{position:relative;z-index:1}
-#w-today-box .w-h h2{color:#fff}#w-today-box .w-h h2 .c{color:rgba(255,255,255,.86)}
-#w-today-box .w-h h2 .c::before{--sc:#fff}
-#w-today-box .go{background:rgba(255,255,255,.18);color:#fff}#w-today-box .go:hover{background:rgba(255,255,255,.3)}
-#w-today-box .rk .k span{color:rgba(255,255,255,.78)}#w-today-box .rk .k.hot b{color:#ffd3cd}
-#w-today-box .tsub span,#w-today-box .tsub em{color:#fff}
-#w-today-box .w-empty{background:rgba(255,255,255,.16);color:#fff}
-#w-today-box .done-tog{color:#fff}
+#w-today-box{position:relative;overflow:hidden}#w-today-box>*{position:relative;z-index:1}
 #w-today-box>.w-ill,#w-boss>.w-ill{position:absolute;z-index:0;right:-8px;bottom:-10px;width:104px;height:104px;transform:rotate(-12deg);pointer-events:none}
 #w-boss{position:relative;overflow:hidden}#w-boss>*{position:relative;z-index:1}
 .w-ill{display:none}#pack.flat .w-ill{display:block}
-#w-today-box .mf-x::before{border-color:#fff!important}
-.hx-g{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:18px;flex:1 1 auto}
-.hx-d{position:relative;width:132px;height:132px}
+.hx-g{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:14px;flex:1 1 auto}
+.hx-d{position:relative;width:96px;height:96px}
 .hx-d svg{display:block;width:100%;height:100%}
-.hx-d b{position:absolute;inset:0;display:grid;place-items:center;font:800 30px/1 var(--f);letter-spacing:-.03em}
+.hx-d b{position:absolute;inset:0;display:grid;place-items:center;font:800 22px/1 var(--f);letter-spacing:-.03em}
 .hx-d b small{font-size:.5em;margin-left:1px}
 .hx-d b{grid-auto-flow:column;justify-content:center;align-items:center}
-.hx-lg{display:flex;flex-direction:column;gap:10px;min-width:0}
+.hx-lg{display:flex;flex-direction:column;gap:7px;min-width:0}
 .hx-r{display:grid;grid-template-columns:10px auto minmax(0,1fr);align-items:center;gap:4px 10px}
 .hx-r i{width:10px;height:10px;border-radius:50%;background:var(--c)}.hx-r i.o{background:none;box-shadow:inset 0 0 0 2px var(--muted)}
-.hx-r>b{font:800 24px/1 var(--f);letter-spacing:-.03em;white-space:nowrap}
-.hx-r span{display:flex;flex-direction:column;font:600 13px/1.2 var(--f);color:var(--ink);min-width:0}
+.hx-r>b{font:800 18px/1 var(--f);letter-spacing:-.03em;white-space:nowrap}
+.hx-r span{display:flex;flex-direction:column;font:600 12px/1.2 var(--f);color:var(--ink);min-width:0}
 /* узкая колонка: кольцо меньше, цифры мельче */
-@container (max-width:380px){.hx-g{gap:12px}.hx-d{width:96px;height:96px}.hx-d b{font-size:22px}.hx-r{column-gap:7px}.hx-r>b{font-size:18px}.hx-r span{font-size:12px}}
+@container (max-width:300px){.hx-g{gap:10px}.hx-d{width:78px;height:78px}.hx-d b{font-size:18px}.hx-r{column-gap:6px}.hx-r>b{font-size:16px}.hx-r small{display:none}}
 .hx-r small{font:400 12px/1.3 var(--fb);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hx-low{border:0;text-align:left;background:color-mix(in srgb,var(--danger) 9%,var(--paper));color:var(--ink);border-radius:14px;padding:10px 14px;font:500 14px var(--fb);cursor:pointer}
 .hx-e{flex:none}
@@ -977,7 +977,8 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
 #pack.flat>.w{margin-top:0;align-self:stretch}
-#pack.flat>#hx-bar{display:flex}#pack.flat>#hx-bar>.hx{flex:1 1 auto;min-width:0}#pack.flat>#hx-bar:empty{display:none}
+.stats:has(>#hx-bar:not(:empty)){grid-template-columns:repeat(5,minmax(0,1fr))}
+.stats>#hx-bar{display:flex;min-width:0}.stats>#hx-bar>.hx{flex:1 1 auto;min-width:0}
 /* в узкой колонке звёздочки баннера заявок налезали на заголовок — там только градиент */
 #pack.flat>#w-req .rt{white-space:normal}
 #pack.flat>#w-req{background:radial-gradient(120px 90px at 52px 44px,rgba(255,255,255,.2),rgba(255,255,255,0) 70%),linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6)}
@@ -1865,6 +1866,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         </div>
         <div class="w" id="w-req">
           <div class="w-h"><img class="rcup" src="topper-cup.svg?v=1" alt="" width="74" height="102"><h2><span class="rt">Заявки с сайта топперов</span><span class="c" id="w-req-c"></span></h2></div>
+          <div class="rk wk" id="w-req-k"></div>
           <button class="btn soft sm rq-imp" type="button" id="req-imp-btn">+ Из WhatsApp</button>
           <div class="mini" id="w-req-list"></div>
           <button class="done-tog" type="button" id="req-done-tog" hidden></button>
@@ -1873,6 +1875,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         </div>
         <div class="w" id="w-kaspi">
           <div class="w-h"><h2><svg class="kmark" viewBox="150 150 700 700" role="img" aria-label="Kaspi.kz"><path fill="#fff" fill-rule="evenodd" clip-rule="evenodd" d="M500.016 168.75C682.494 168.75 830.488 314.92 831.25 495.536V498.376C830.919 578.678 801.369 652.144 752.681 709.013C750.913 708.125 747.694 705.225 741.856 696.494C735.819 687.719 683.737 607.566 683.737 515.701C683.737 497.673 709.725 469.509 732.719 444.788L733.213 444.257C750.219 425.854 766.25 408.509 772.188 394.851C779.825 377.056 774.481 364.631 766.031 360.419C758.381 356.676 746.894 359.406 738.837 373.721C725.612 396.887 721.375 401.216 702.081 416.717C683.1 432.211 652.919 447.806 652.919 427.618C652.919 420.256 660.588 406.609 668.119 393.193L668.125 393.192C671.744 386.741 675.338 380.344 678.031 374.726C686.513 357.229 677.375 344.563 659.863 344.563C625.475 344.563 602.653 388.367 602.653 403.541C602.653 410.834 604.354 415.119 606.121 419.567C608.027 424.367 610.008 429.357 610.008 438.522C610.008 456.314 572.28 479.39 536.741 479.39C500.971 479.39 480.909 471.821 473.414 450.214L471.037 443.183L470.642 442.029L470.641 442.028C462.415 417.982 456.392 400.381 446.031 381.999C440.557 372.331 432.176 365.566 424.827 359.633L424.358 359.254C414.607 351.681 409.55 344.709 408.495 339.509C407.522 334.35 406.996 324.627 423.664 302.215C440.295 279.931 442.626 263.096 434.304 254.409C431.286 251.319 426.144 249.339 419.54 249.339C407.859 249.339 391.628 255.528 374.901 272.529C354.598 293.333 359.147 313.315 362.116 326.362C362.95 330.024 363.66 333.142 363.66 335.576C363.66 346.674 358.896 352.951 343.292 368.049C327.574 383.214 322.149 396.217 320.351 448.473C319.663 475.396 314.921 490.896 310.664 504.639C306.986 516.685 303.603 528.008 303.421 544.371C303.129 562.503 306.147 574.188 309.669 587.671C313.127 600.132 316.8 614.412 319.153 638.294C323.207 678.35 321.342 711.669 312.974 746.425L312.549 748.725L312.461 749.075C311.086 754.619 309.453 761.2 307.26 763.7C223.422 704.15 168.75 606.898 168.75 496.964C168.75 315.712 317.057 168.75 500.016 168.75ZM515.438 523.847C498.946 521.251 486.801 523.645 478.251 530.874C456.181 549.67 456.558 602.05 457 662.8L457.11 680C457.368 740.225 457.706 792.3 471.767 815.187C476.251 822.494 484.721 827.837 495.989 831.038C496.815 831.063 497.641 831.088 498.466 831.119C500.555 831.194 502.646 831.269 504.763 831.269C532.644 831.269 559.714 827.819 585.611 821.444C596.314 816.281 604.066 810.087 606.727 803.631C608.322 799.444 609.198 791.819 609.198 781.888C609.198 742.544 597.645 667.5 591.935 630.406L591.766 629.306L588.879 610.089L588.334 606.301L588.308 606.119C583.472 572.038 578.004 533.506 515.438 523.847ZM408.973 766.5C407.313 718.581 399.051 655.381 386.202 656.106C372.351 656.956 367.082 729.056 373.147 777.188C375.134 792.506 378.261 804.2 382.353 811.631C388.484 814.119 394.706 816.406 401.039 818.519C406.634 813.587 410.138 799.869 408.973 766.5ZM708.362 750.525C711.362 735.269 675.162 648.881 654.962 658.638C639.463 666.325 645.475 754.594 661.487 782.731C663.156 785.556 666.575 786.006 670.425 785.356C682.506 778.075 694.056 769.987 705.037 761.169C706.431 758.306 707.562 754.919 708.362 750.525Z"/></svg>Заказы <span class="c" id="w-kaspi-c"></span></h2></div>
+          <div class="rk wk" id="w-kaspi-k"></div>
           <button class="btn soft sm rq-imp" type="button" id="kaspi-sync-btn">Обновить с Kaspi</button>
           <div class="mini" id="w-kaspi-list"></div>
           <div class="wfoot"><small class="bw-note" id="w-kaspi-note"></small><a class="wlink" href="https://kaspi.kz/mc/" target="_blank" rel="noopener">кабинет Kaspi ↗</a></div>
@@ -1909,10 +1912,10 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="w-h"><h2>Сегодня <span class="c" id="w-today-m"></span></h2><button class="go" type="button" data-go="calendar">Все дни</button></div>
           <div class="rk" id="w-today-k"></div>
           <div class="tday-w" id="w-today"></div>
-          <svg class="w-ill" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="12" width="52" height="46" rx="10" fill="#fff" opacity=".22"/><rect x="6" y="12" width="52" height="14" rx="7" fill="#fff" opacity=".35"/><rect x="17" y="5" width="6" height="14" rx="3" fill="#fff" opacity=".6"/><rect x="41" y="5" width="6" height="14" rx="3" fill="#fff" opacity=".6"/><path d="M21 41l7 7 15-15" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/></svg>
         </div>
         <div class="w" id="w-print">
           <div class="w-h"><h2><img class="bmark" src="bambu-logo-w.png?v=1" alt="Bambu Lab" width="103" height="30"><span class="ptxt">Принтеры</span> <span class="c msum" id="w-print-m"></span></h2></div>
+          <div class="rk wk" id="w-print-k"></div>
           <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем принтеры…</span></div></div>
           <div class="wfoot"><small class="bw-note" id="w-print-note"></small><a class="wlink" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">вход в Bambu ↗</a></div>
         </div>
@@ -3224,7 +3227,7 @@ document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h,#w
 function packHome(){
   const pack=$('pack');if(!pack||$('p-home').hidden||!packW.length)return;
   const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1300?4:w>=1100?3:w>=700?2:1;
-  if(packN===n)return;packN=n;if(pack.contains($('hx-bar')))pack.before($('hx-bar'));pack.innerHTML='';pack.classList.remove('flat');packW.forEach(x=>x.style.gridColumn='');pack.style.setProperty('--cols',n);pack.dataset.n=n;
+  if(packN===n)return;packN=n;if(!pack.previousElementSibling||pack.previousElementSibling.id!=='hx-bar')pack.before($('hx-bar'));pack.innerHTML='';pack.classList.remove('flat');packW.forEach(x=>x.style.gridColumn='');pack.style.setProperty('--cols',n);pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
   /* Анна и Саша — первыми, рядом друг с другом, каждый шириной в колонку */
   const duo=()=>{const d=mk('pduo');d.append(packAnna,packSasha);return d};
@@ -3235,8 +3238,8 @@ function packHome(){
   /* компьютер: ровная сетка рядами — карточки одного ряда одной высоты, без ступенек */
   if(n>=3){pack.classList.add('flat');const sp2=x=>{x.style.gridColumn='span 2';return x};[packWide[0],packAnna,packSasha,packWide[1]].forEach(x=>x.style.gridColumn='');
     const [today,tasks]=packWide,[kaspi,print]=packSide,req=packL.at(-1);
-    const plan=$('hx-bar');/* план продаж — тоже плитка сетки, как на референсе */
-    pack.append(...(n===4?[plan,today,tasks,kaspi,packAnna,packSasha,req,print]:[sp2(today),kaspi,packAnna,packSasha,print,plan,tasks,req]));return}
+    document.querySelector('#p-home .stats').appendChild($('hx-bar'));/* план продаж — пятая плитка в ряду сводки */
+    pack.append(...(n===4?[sp2(today),tasks,kaspi,packAnna,packSasha,req,print]:[sp2(today),kaspi,packAnna,packSasha,print,sp2(tasks),req]));return}
   const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.appendChild(packSide[0]);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
 }
 ['w-anna','w-sasha'].forEach(id=>$(id+'-kpi').addEventListener('click',()=>{if(!mOpen.has(id))mfToggle(id,true)}));
@@ -4209,6 +4212,7 @@ function renderReqWidget(){
   $('req-imp-btn').hidden=!canWrite;
   $('w-req-c').innerHTML=!requestsLoaded?'':fresh.length?'<i class="rdot"></i>'+fresh.length+' '+plural(fresh.length,'новая','новые','новых')+(reqWhen(fresh[0])?' · последняя '+esc(reqWhen(fresh[0])):'')
     :'Новых заявок нет'+(done.length?' · обработано '+done.length:'');
+  {const ym=curMonth(),mo=all.filter(r=>reqTime(r)&&new Date(reqTime(r)).toISOString().slice(0,7)===ym);rkFill('w-req-k',requestsLoaded?[[fresh.length,plural(fresh.length,'новая','новые','новых'),fresh.length>0],[mo.filter(r=>r.status==='accepted').length,'в заказ за месяц'],[mo.length,'заявок за месяц']]:[])}
   $('w-req-list').innerHTML=!requestsLoaded?'':fresh.length?fresh.map(reqRow).join(''):`<div class="w-empty">Новых заявок нет. Когда клиент отправит заказ с сайта топперов, он появится здесь сам.</div>`;
   const tog=$('req-done-tog');tog.hidden=!done.length;tog.textContent=(showReqDone?'Скрыть обработанные':'Показать обработанные')+' ('+done.length+')';
   $('req-done').hidden=!showReqDone||!done.length;$('req-done').innerHTML=showReqDone?done.slice(0,30).map(reqRow).join(''):'';
@@ -5962,6 +5966,7 @@ function renderKaspiWidget(){
   const list=$('w-kaspi-list');if(!list||!kaspiSync)return;
   const g=kGroups();
   $('w-kaspi-c').textContent=g.packing.length?g.packing.length+' к упаковке':'';
+  rkFill('w-kaspi-k',[[g.packing.length,'к упаковке',g.packing.length>0],[g.handover.length,'к передаче'],[g.shipped.length,'в доставке']]);
   const b=$('kaspi-sync-btn');b.disabled=kaspiSync.busy||!canWrite;b.textContent=kaspiSync.busy?'Обновляем…':'Обновить с Kaspi';
   if(kaspiDbErr){list.innerHTML=`<div class="w-empty">Нужно обновить правила базы Firestore (строка kaspi_orders). Подробности в разделе Kaspi.</div>`;$('w-kaspi-note').textContent='';return}
   const row=(k,st)=>`<button type="button" class="mrow kq" data-go="kaspi"><span class="kq-t"><b>${esc(kWhat(k))}</b><small>№ ${esc(k.code)}${k.transmitPlan&&st==='packing'?', передать до '+fmtDate(kDay(k.transmitPlan)):''}</small></span><span class="kq-r"><b>${money(k.total)}</b><span class="kq-st">${st==='packing'?'упаковать':'передать'}</span></span></button>`;
@@ -6038,6 +6043,7 @@ async function loadPrinters(){
       return `<div class="bw-card${er?' alert':''}">${left}<div class="bw-head"><b>${esc(p.name)}</b><span class="bw-chip${live?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${info}</div>${er?`<div class="bw-err">${esc(er)}</div>`:hmTxt?`<div class="bw-err warn">${esc(hmTxt)}</div>`:''}</div>`;
     }).join(''):`<div class="bw-card"><span class="bw-meta">${esc(ERR[s.error]||'Принтеров нет')}</span></div>`;
     {const P=s.printers||[],busy=P.filter(p=>p.online&&p.state&&PSTATE[String(p.state).toUpperCase()]?.busy).length,bad=P.filter(p=>p.online&&perrText(p.error,p.errorText)).length,on=P.filter(p=>p.online).length;
+      rkFill('w-print-k',[[on+(P.length?'/'+P.length:''),'в сети'],[busy,'печатают'],[bad,'с ошибкой',bad>0]]);
       $('w-print-m').textContent=bad?bad+' с ошибкой':busy?busy+' '+plural(busy,'печатает','печатают','печатают'):P.length?on+' из '+P.length+' в сети':''}
     note.textContent=[s.error&&s.printers.length?ERR[s.error]:'',s.pausedUntil?'тревога на паузе до '+bwPHM(s.pausedUntil):'',s.lastCheck?'проверка '+printWhen(s.lastCheck):'автопроверка ещё не запускалась'].filter(Boolean).join(' · ');
   }catch(e){list.innerHTML='<div class="bw-card"><span class="bw-meta">Нет связи с наблюдением, попробуем снова через минуту</span></div>';note.textContent=''}
@@ -6784,7 +6790,7 @@ function renderHomeBar(){
   const need=P.filter(x=>x.day);
   const leg=P.map(x=>`<div class="hx-r"><i style="--c:${x.c}"></i><b>${x.pct}%</b><span>${x.lbl}<small>${money(x.fact)} из ${money(x.goal)}</small></span></div>`).join('')
     +(need.length?`<div class="hx-r"><i class="o"></i><b>${money(need[0].day).replace(/\s?₸$/,'')}</b><span>₸ в день<small>нужно ${need[0].lbl==='Студия'?'студии':'Kaspi'}</small></span></div>`:P.length?`<div class="hx-r"><i class="o"></i><b>✓</b><span>план выполнен<small>за ${monthName(ym)}</small></span></div>`:'');
-  box.innerHTML=P.length||lowRow||edit?`<div class="hx"><div class="w-h"><h2>План продаж<span class="c">${P.length?'за '+monthName(ym):'план на месяц не задан'}</span></h2>${edit}</div>${P.length?`<div class="hx-g">${donut}<div class="hx-lg">${leg}</div></div>`:''}${lowRow}</div>`:'';
+  box.innerHTML=P.length||lowRow||edit?`<div class="hx"><div class="hx-h"><span class="lbl">План за ${P.length?monthName(ym):'месяц'}</span>${edit}</div>${P.length?`<div class="hx-g">${donut}<div class="hx-lg">${leg}</div></div>`:'<p class="hx-none">План продаж на месяц не задан.</p>'}${lowRow}</div>`:'';
 }
 function planEdit(){
   const pl=fx.plan||{};
