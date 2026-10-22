@@ -940,7 +940,6 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pack.m .pcol>.w{flex:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
-#pack:not([data-n="1"])>.pcol>.w:first-child{margin-top:12px}
 .pfull{grid-column:1/-1;display:flex;flex-direction:column;min-width:0}
 .pduo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;min-width:0}
 .psub{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;flex:1 1 auto;align-items:stretch;min-width:0}
@@ -1114,10 +1113,10 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 @media(max-width:600px){#w-kaspi .kmark{width:24px;height:24px}#w-print .bmark{height:24px}}
 /* менеджер Анна — ИИ-менеджер в WhatsApp (whatsapp-bot): сводка, дела, кто ждёт человека, вопросы */
 /* шапка — как баннер «Заявки с сайта топперов»: аватар выглядывает поверх края, блок сворачивается нажатием на шапку на любом экране */
-#w-anna{container-type:inline-size;--ab:#4358ef;position:relative;margin-top:12px;padding:14px 16px 16px;border-radius:24px;background:linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
-#pack #w-anna>.w-h{min-height:52px;padding-left:122px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;border-radius:16px;outline-offset:4px}
+#w-anna{container-type:inline-size;--ab:#4358ef;position:relative;margin-top:0;padding:14px 16px 16px;border-radius:24px;background:linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
+#pack #w-anna>.w-h{min-height:40px;padding-left:0;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;border-radius:16px;outline-offset:4px}
 #w-anna>.w-h:focus-visible{outline:2px solid #fff}
-#w-anna .w-h h2{flex:1 1 auto;min-width:0;color:#fff}
+#w-anna .w-h h2{flex:1 1 auto;min-width:0;color:#fff;font-size:18px}
 #w-anna .at{display:flex;flex-direction:column;gap:4px;min-width:0}
 #w-anna .at .c{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.86)}
 /* точка статуса без белого кольца: обрезанное overflow кольцо читалось светлой полоской рядом с аватаром */
@@ -1130,8 +1129,8 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 #w-anna.mfold:not(.mopen)>:not(.w-h){display:none!important}
 /* аватар «выглядывает из круга» и вылезает за верх баннера, как стаканчик у заявок: круг-подложка, фигура без фона (низ уже обрезан по кругу в самой картинке).
    Фигура без сигареты + слой с губами и сигаретой — он качается при открытии; дым поверх */
-.an-av{position:absolute;left:12px;top:-26px;width:101px;height:106px;pointer-events:none;transform-origin:50% 100%;transition:transform .25s}
-#w-anna>.w-h:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
+.an-av{position:absolute;right:-2px;bottom:0;width:80px;height:84px;pointer-events:none;transform-origin:50% 100%;transition:transform .25s}
+#w-anna:hover .an-av,#w-sasha:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
 .an-av .ci{position:absolute;left:10%;top:23.8%;width:80%;height:76.2%;border-radius:50%;background:radial-gradient(circle at 38% 30%,#fff,#dde3ff 75%);box-shadow:0 8px 18px rgba(16,24,120,.38)}
 /* всё, что торчит справа за кругом (кончики волос и их белая обводка), срезаем по дуге круга: между стикером и текстом ничего светлого */
 /* обводка и тень на обёртке .fs: filter на самом .fg срезался бы его clip-path, и ореол тени обрывался прямоугольником (заметно на телефоне) */
@@ -1158,6 +1157,13 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 @keyframes anglow{0%,100%{opacity:0}18%,50%{opacity:.95}70%{opacity:.25}}
 @keyframes anexh{0%,55%{transform:translate(0,0) scale(.4);opacity:0}66%{opacity:.85}100%{transform:translate(9px,-15px) scale(2.4);opacity:0}}
 @media(prefers-reduced-motion:reduce){.an-av .sm b,.an-av.puff .mv,.an-av.puff .gl,.an-av.puff .pf{animation:none}.an-av .sm b:first-child{opacity:.55;transform:translate(1px,-14px) scale(1.6)}.an-av,.an-nb,.an-nb>div,.an-nm .ch{transition:none}}
+/* компактная плитка, как виджеты-сводки: крупные цифры с подписью, аватар — иллюстрация в правом нижнем углу; видна и в свёрнутом виде, нажатие раскрывает карточку */
+.an-kpi{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 12px;min-height:84px;padding-right:88px;align-items:end;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#pack #w-anna.mfold>.an-kpi,#pack #w-sasha.mfold>.an-kpi{display:grid!important}
+.an-kpi .k{display:flex;flex-direction:column;gap:3px;min-width:0}
+.an-kpi .k b{font:800 26px/1 var(--f);letter-spacing:-.02em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.an-kpi .k span{min-height:2.5em;font:500 12px/1.25 var(--f);color:rgba(255,255,255,.75)}
+.an-kpi .k.hot b{color:#ffd3cd}
 .an-body{display:flex;flex-direction:column;gap:14px;min-width:0}
 .an-col{display:flex;flex-direction:column;gap:14px;min-width:0}
 .an-col>div:empty{display:none}
@@ -1269,10 +1275,10 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .an-ref svg{width:12px;height:12px}
 @media(prefers-reduced-motion:reduce){.an-q .a.wait::after{animation:none}}
 @media(max-width:600px){
-  #pack #w-anna{margin-top:14px;padding:10px 12px 12px;border-radius:18px;gap:10px}
-  #pack #w-anna>.w-h{min-height:46px;padding-left:90px}
+  #pack #w-anna{margin-top:0;padding:10px 12px 12px;border-radius:18px;gap:10px}
+  #pack #w-anna>.w-h{min-height:36px;padding-left:0}
   #pack #w-anna .mf-x{width:30px;height:30px}
-  .an-av{left:8px;top:-20px;width:78px;height:82px}
+  .an-av{width:64px;height:67px}
   .an-av .ci{box-shadow:0 5px 12px rgba(16,24,120,.35)}
   .an-av .fs{filter:drop-shadow(.8px 0 0 #fff) drop-shadow(-.8px 0 0 #fff) drop-shadow(0 .8px 0 #fff) drop-shadow(0 -.8px 0 #fff) drop-shadow(0 2px 4px rgba(16,24,120,.4))}
   #w-anna .w-h h2{font-size:16.5px}
@@ -1287,12 +1293,13 @@ body:has(#xim:not([hidden])) .bnav{display:none}
   .an-tg{min-height:38px;padding:0 12px;font-size:11.5px}.an-stats .bw-stat em{font-size:15px}
   .an-ask input,.an-ask .btn{min-height:40px}
   .an-h{font-size:11.5px}
+  .an-kpi{min-height:67px;padding-right:68px;gap:2px 8px}.an-kpi .k b{font-size:22px}.an-kpi .k span{font-size:11px}
 }
 /* Саша — главный маркетолог (ИИ-отдел маркетинга): та же карточка, что у Ани, свой цвет и аватар */
-#w-sasha{container-type:inline-size;--ab:#4358ef;position:relative;margin-top:12px;padding:14px 16px 16px;border-radius:24px;background:linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
-#pack #w-sasha>.w-h{min-height:52px;padding-left:122px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;border-radius:16px;outline-offset:4px}
+#w-sasha{container-type:inline-size;--ab:#4358ef;position:relative;margin-top:0;padding:14px 16px 16px;border-radius:24px;background:linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
+#pack #w-sasha>.w-h{min-height:40px;padding-left:0;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;border-radius:16px;outline-offset:4px}
 #w-sasha>.w-h:focus-visible{outline:2px solid #fff}
-#w-sasha .w-h h2{flex:1 1 auto;min-width:0;color:#fff}
+#w-sasha .w-h h2{flex:1 1 auto;min-width:0;color:#fff;font-size:18px}
 #w-sasha .at{display:flex;flex-direction:column;gap:4px;min-width:0}
 #w-sasha .at .c{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.86)}
 #w-sasha .at .c::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--sc,#c9cfff)}
@@ -1324,20 +1331,20 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 /* телефон: Аня и Саша без пояснительной подписи внизу, сводка Саши короче */
 @media(max-width:600px){#w-anna .an-ft .bw-note,#w-sasha .an-ft .bw-note{display:none}#w-anna .an-ft,#w-sasha .an-ft{justify-content:flex-end}}
 /* стикер Саши — как у Ани: фигура без фона выглядывает из круга, низ обрезан по кругу в самой картинке */
-#w-sasha>.w-h:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
 #w-sasha .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#d9d9e2 75%);box-shadow:0 8px 18px rgba(0,0,0,.45)}
 #w-sasha .an-av .fg{clip-path:none}
 /* нажали на Сашу — из его телефона вылетает плашка TikTok в цветах логотипа */
-#w-sasha .an-av .tt{position:absolute;left:78%;top:52%;display:flex;align-items:center;gap:4px;padding:5px 10px 5px 7px;border-radius:999px;background:#111;color:#fff;font:800 14px/1 var(--f);letter-spacing:-.02em;white-space:nowrap;
-  text-shadow:-1.5px -1px 0 #25f4ee,1.5px 1px 0 #fe2c55;box-shadow:0 6px 16px rgba(0,0,0,.45);transform-origin:0 100%;opacity:0;transform:translate(-6px,6px) scale(.2) rotate(-12deg);z-index:2}
+/* аватар стоит в правом углу — плашка вылетает влево, внутрь карточки */
+#w-sasha .an-av .tt{position:absolute;right:22%;top:52%;display:flex;align-items:center;gap:4px;padding:5px 10px 5px 7px;border-radius:999px;background:#111;color:#fff;font:800 14px/1 var(--f);letter-spacing:-.02em;white-space:nowrap;
+  text-shadow:-1.5px -1px 0 #25f4ee,1.5px 1px 0 #fe2c55;box-shadow:0 6px 16px rgba(0,0,0,.45);transform-origin:100% 100%;opacity:0;transform:translate(6px,6px) scale(.2) rotate(12deg);z-index:2}
 #w-sasha .an-av .tt svg{width:18px;height:18px;flex:none}
 #w-sasha .an-av.tok .tt{animation:satok 1.7s cubic-bezier(.2,.9,.3,1.2)}
-@keyframes satok{0%{opacity:0;transform:translate(-6px,6px) scale(.2) rotate(-12deg)}18%{opacity:1;transform:translate(14px,-30px) scale(1.12) rotate(-6deg)}30%{transform:translate(18px,-36px) scale(1) rotate(-4deg)}75%{opacity:1;transform:translate(24px,-44px) scale(1) rotate(-3deg)}100%{opacity:0;transform:translate(34px,-62px) scale(.9) rotate(-2deg)}}
+@keyframes satok{0%{opacity:0;transform:translate(6px,6px) scale(.2) rotate(12deg)}18%{opacity:1;transform:translate(-14px,-30px) scale(1.12) rotate(6deg)}30%{transform:translate(-18px,-36px) scale(1) rotate(4deg)}75%{opacity:1;transform:translate(-24px,-44px) scale(1) rotate(3deg)}100%{opacity:0;transform:translate(-34px,-62px) scale(.9) rotate(2deg)}}
 @media(prefers-reduced-motion:reduce){#w-sasha .an-av.tok .tt{animation:none}}
 #w-sasha .an-av .fs{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(0,0,0,.45))}
 @media(max-width:600px){
-  #pack #w-sasha{margin-top:14px;padding:10px 12px 12px;border-radius:18px;gap:10px}
-  #pack #w-sasha>.w-h{min-height:46px;padding-left:90px}
+  #pack #w-sasha{margin-top:0;padding:10px 12px 12px;border-radius:18px;gap:10px}
+  #pack #w-sasha>.w-h{min-height:36px;padding-left:0}
   #pack #w-sasha .mf-x{width:30px;height:30px}
   #w-sasha .w-h h2{font-size:16.5px}
   #w-sasha .at{gap:2px}
@@ -1778,7 +1785,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
     <div class="home-grid">
       <div class="home-col">
         <div class="w" id="w-anna">
-          <div class="w-h"><h2><span class="an-av" id="anna-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="anna-avatar-0.webp?v=2" alt="" width="240" height="252"><span class="mv"><img src="anna-avatar.webp?v=2" alt="" width="240" height="252"><i class="gl"></i></span></span></span><i class="sm"><b></b><b></b><b></b></i><i class="pf"></i></span><span class="at">Менеджер Аня<span class="c" id="w-anna-c">подключаемся…</span></span></h2></div>
+          <div class="w-h"><h2><span class="at">Менеджер Аня<span class="c" id="w-anna-c">подключаемся…</span></span></h2></div>
+          <div class="an-kpi" id="w-anna-kpi"><div class="k"><b>—</b><span>загружаем…</span></div><span class="an-av" id="anna-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="anna-avatar-0.webp?v=2" alt="" width="240" height="252"><span class="mv"><img src="anna-avatar.webp?v=2" alt="" width="240" height="252"><i class="gl"></i></span></span></span><i class="sm"><b></b><b></b><b></b></i><i class="pf"></i></span></div>
           <div class="an-body" id="w-anna-body">
             <div class="an-col"><div class="an-say" id="w-anna-say">Загружаем сводку…</div><div id="w-anna-todo"></div><div class="an-stats" id="w-anna-stats"></div><div id="w-anna-ins"></div></div>
             <div class="an-col">
@@ -1797,7 +1805,8 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="an-ft"><small class="bw-note">Аня отвечает, когда включён рабочий компьютер.</small><button class="an-ref" type="button" id="anna-ref-btn" aria-label="Обновить сводку Ани"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить</button></div>
         </div>
         <div class="w" id="w-sasha">
-          <div class="w-h"><h2><span class="an-av" id="sasha-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="sasha-avatar.webp?v=4" alt="" width="240" height="252"></span></span><i class="tt"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path stroke="#25f4ee" transform="translate(-1 -1)" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/><path stroke="#fe2c55" transform="translate(1 1)" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/><path stroke="#fff" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/></g></svg>TikTok</i></span><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
+          <div class="w-h"><h2><span class="at">Маркетолог Саша<span class="c" id="w-sasha-c">подключаемся…</span></span></h2></div>
+          <div class="an-kpi" id="w-sasha-kpi"><div class="k"><b>—</b><span>загружаем…</span></div><span class="an-av" id="sasha-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="sasha-avatar.webp?v=4" alt="" width="240" height="252"></span></span><i class="tt"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path stroke="#25f4ee" transform="translate(-1 -1)" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/><path stroke="#fe2c55" transform="translate(1 1)" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/><path stroke="#fff" d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5M14 3c.6 2.6 2.6 4.2 5.2 4.2"/></g></svg>TikTok</i></span></div>
           <div class="an-body" id="w-sasha-body">
             <div class="an-col">
               <div id="w-sasha-plan"></div>
@@ -3172,6 +3181,7 @@ function packHome(){
   if(n===3){const L=mk('pleft'),Rt=mk('pcol');L.appendChild(duo());[...packWide.slice(1),packL.at(-1)].forEach(x=>L.appendChild(x));packSide.forEach(x=>Rt.appendChild(x));pack.append(today(),L,Rt);return}
   const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.appendChild(packSide[0]);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
 }
+['w-anna','w-sasha'].forEach(id=>$(id+'-kpi').addEventListener('click',()=>{if(!mOpen.has(id))mfToggle(id,true)}));
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 
 /* ---------- прайс ---------- */
@@ -5991,6 +6001,9 @@ function sashaListen(){
 }
 let sashaTokT;
 function sashaTok(){const a=$('sasha-av');if(!a)return;a.classList.remove('tok');void a.offsetWidth;a.classList.add('tok');clearTimeout(sashaTokT);sashaTokT=setTimeout(()=>a.classList.remove('tok'),1800)}
+/* цифры компактной плитки Ани и Саши: ячейки перед аватаром, аватар не трогаем */
+function agKpi(id,cells){const k=$(id);if(!k)return;k.querySelectorAll(':scope>.k').forEach(x=>x.remove());
+  k.insertAdjacentHTML('afterbegin',cells.map(([v,l,hot])=>`<div class="k${hot?' hot':''}"><b>${esc(String(v??'—'))}</b><span>${esc(l)}</span></div>`).join(''))}
 function renderSasha(){
   const plan=$('w-sasha-plan');if(!plan)return;
   const of=k=>sashaItems.filter(x=>x.kind===k),today=sashaDay(),at=r=>+r.finishedAt||+r.updatedAt||+r.createdAt||0;
@@ -6000,6 +6013,8 @@ function renderSasha(){
   c.textContent=sashaErr?'нет доступа к базе':!sashaLoaded?'подключаемся…':live?'отдел работает · '+String(live.stage||'').toLowerCase():last?'план готов · '+printWhen(at(last)):'отдел ещё не запускался';
   c.style.setProperty('--sc',sashaErr?'var(--danger)':live?'#ffd166':last&&Date.now()-at(last)<8*864e5?'var(--ok)':'var(--muted)');
   const evs=of('event').filter(e=>e.date>=today&&e.status!=='done').sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.time||'').localeCompare(String(b.time||'')));
+  const ideas=of('idea').filter(x=>x.status==='new'||x.status==='work').length;
+  agKpi('w-sasha-kpi',!sashaLoaded||sashaErr?[['—',sashaErr?'нет доступа':'загружаем…']]:[[evs.length,'роликов в плане'],[evs[0]?evs[0].date.slice(8)+'.'+evs[0].date.slice(5,7):'—','следующий ролик'],[ideas,'идей в запасе']]);
   const dd=d=>{const x=new Date(d+'T00:00:00');return ['вс','пн','вт','ср','чт','пт','сб'][x.getDay()]+'<br>'+d.slice(8)+'.'+d.slice(5,7)};
   plan.innerHTML=evs.length?`<p class="an-h">Ближайшее в контент-плане</p><ul class="an-todo sa-pl">${evs.slice(0,5).map(e=>`<li><time>${dd(e.date)}</time><a class="an-lk" href="${sashaLink('?open='+encodeURIComponent(e.id))}" target="_blank" rel="noopener">${esc(e.title||'Без названия')}<i aria-hidden="true">→</i></a></li>`).join('')}</ul>`:`<div class="an-say">${sashaErr?'Нет доступа к разделу маркетинга в базе.':!sashaLoaded?'Загружаем…':last?'В контент-плане пока нет ближайших роликов. Откройте отдел, чтобы составить новый план.':'Привет! Я Саша, главный маркетолог. Мой отдел ещё не готовил план: откройте отдел и нажмите «Запустить отдел сейчас». А пока можно спросить меня в чате.'}</div>`;
   const tg=$('sasha-chat-tg');tg.setAttribute('aria-expanded',sashaUi.chat);$('sasha-chat-b').hidden=!sashaUi.chat;
@@ -6093,6 +6108,8 @@ function renderAnna(){
   const c=$('w-anna-c');
   c.textContent=annaErr?'нет доступа к базе':!annaLoaded?'подключаемся…':d.at?(need.length?need.length+' ждут · ':'')+'обновлено '+printWhen(d.at):'сводки пока нет';
   c.style.setProperty('--sc',annaErr?'var(--danger)':d.at&&Date.now()-d.at<3*3600e3?'var(--ok)':'var(--muted)');
+  const nv=v=>v==null||v===''?'—':v;
+  agKpi('w-anna-kpi',annaErr||!annaLoaded?[['—',annaErr?'нет доступа':'загружаем…']]:[[need.length,'ждут ответа',need.length>0],[nv(st.chats),'диалогов за день'],[nv(st.botOrders),'заказов от Ани']]);
   if(annaErr){say.textContent='Нужно обновить правила базы Firestore: добавить строки wa_anna и wa_anna_q из firestore.rules.';$('w-anna-todo').innerHTML=$('w-anna-need').innerHTML=$('w-anna-lead').innerHTML=$('w-anna-stats').innerHTML='';}
   else if(!annaLoaded)say.textContent='Загружаем сводку…';
   else if(!annaD)say.textContent='Аня ещё не готовила сводку. Нажмите «Обновить» внизу, когда рабочий компьютер включён.';
@@ -6111,8 +6128,7 @@ function renderAnna(){
       return `<div class="an-nm${op?' open':''}"><button type="button" class="mrow" data-annm="${esc(key)}" aria-expanded="${op}"><span class="an-w"><b>${who}</b><small>${esc(n.reason||'')}</small></span><span class="r">${n.since?`<small>${annaAgo(+n.since)}</small>`:''}<i class="ch" aria-hidden="true"></i></span></button>`
         +`<div class="an-nb"><div><p>${esc(say)}</p><div class="an-nba">${ph?`<a class="btn sm" href="https://wa.me/${ph}" target="_blank" rel="noopener">Перейти в чат WhatsApp ↗</a>`:''}${n.id&&canWrite?`<button type="button" class="an-hb" data-andone="${esc(n.id)}" title="Клиенту ответили: убрать из списка">Снять ✓</button>`:''}</div></div></div></div>`}).join('')}</div>`:'';
     $('w-anna-lead').innerHTML=annaLeadHtml();
-    const S=[[st.chats,'диалогов за сутки'],[st.botOrders,'заказов от Ани'],[st.needManager,'ждут ответа']].filter(x=>x[0]!=null&&x[0]!=='');
-    $('w-anna-stats').innerHTML=S.map(([v,l])=>bwPStat(l,String(v))).join('');
+    $('w-anna-stats').innerHTML='';
     $('w-anna-ins').innerHTML=annaInsHtml();
   }
   const qNew=annaQ.filter(annaQFresh),qOld=annaQ.filter(q=>!annaQFresh(q)),co=!!annaUi.chat,hb=$('anna-hist-tg');
