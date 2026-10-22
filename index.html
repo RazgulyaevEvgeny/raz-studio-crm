@@ -5569,9 +5569,12 @@ async function kPrint(){
         const r=await kApi({mode:'waybill',url:k.waybill},{raw:true});
         const bytes=new Uint8Array(await r.arrayBuffer());
         const src=await PDFDocument.load(bytes);
-        let boxes=[];try{boxes=await kInkBoxes(bytes)}catch(e){}
-        for(const [i,sp] of src.getPages().entries())pages.push(await out.embedPage(sp,boxes[i]||undefined));
-      }catch(e){kPrintFails.push(k)}
+        let boxes=[];try{boxes=await Promise.race([kInkBoxes(bytes),new Promise(ok=>setTimeout(()=>ok([]),8000))])}catch(e){}
+        for(const [i,sp] of src.getPages().entries()){
+          let ep;try{ep=await out.embedPage(sp,boxes[i]||undefined)}catch(e){ep=await out.embedPage(sp)}
+          pages.push(ep);
+        }
+      }catch(e){console.warn('Накладная',k.code,e);kPrintFails.push(k)}
     }
     if(!pages.length)throw new Error('Kaspi не отдал ни одной накладной. Откройте их по ссылкам ниже.');
     const W=595.28,H=841.89,per=kPer,cols=per===4?2:1,rows=per===1?1:2,cw=W/cols,ch=H/rows,m=10;
