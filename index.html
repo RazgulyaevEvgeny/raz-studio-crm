@@ -5528,6 +5528,32 @@ function kLoadPdfLib(){
   if(window.PDFLib)return Promise.resolve();
   return new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';sc.onload=ok;sc.onerror=()=>no(new Error('Не загрузилась библиотека PDF. Проверьте интернет.'));document.head.appendChild(sc)});
 }
+/* Kaspi кладёт этикетку в угол большой страницы, вокруг пусто: находим, где на странице есть печать, и берём только эту область */
+function kLoadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve();
+  const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  return new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=base+'pdf.min.js';sc.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js';ok()};sc.onerror=()=>no(new Error('pdfjs'));document.head.appendChild(sc)});
+}
+async function kInkBoxes(bytes){
+  await kLoadPdfJs();
+  const doc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise,boxes=[];
+  for(let n=1;n<=doc.numPages;n++){
+    const pg=await doc.getPage(n),vp=pg.getViewport({scale:2});
+    const cv=document.createElement('canvas');cv.width=Math.ceil(vp.width);cv.height=Math.ceil(vp.height);
+    const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);
+    await pg.render({canvasContext:cx,viewport:vp}).promise;
+    const d=cx.getImageData(0,0,cv.width,cv.height).data;
+    let x0=cv.width,y0=cv.height,x1=-1,y1=-1;
+    for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++){
+      const i=(y*cv.width+x)*4;
+      if(d[i]<235||d[i+1]<235||d[i+2]<235){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+    }
+    if(x1<0){boxes.push(null);continue}
+    const a=vp.convertToPdfPoint(x0,y0),b=vp.convertToPdfPoint(x1+1,y1+1),pad=4;
+    boxes.push({left:Math.min(a[0],b[0])-pad,bottom:Math.min(a[1],b[1])-pad,right:Math.max(a[0],b[0])+pad,top:Math.max(a[1],b[1])+pad});
+  }
+  return boxes;
+}
 async function kPrint(){
   const sel=kaspiOrders.filter(k=>kSel.has(k.id)&&k.waybill);
   if(!sel.length){toast('Отметьте заказы, у которых уже есть накладная');return}
@@ -5541,8 +5567,10 @@ async function kPrint(){
     for(const k of sel){
       try{
         const r=await kApi({mode:'waybill',url:k.waybill},{raw:true});
-        const src=await PDFDocument.load(await r.arrayBuffer());
-        pages.push(...await out.embedPdf(src,src.getPageIndices()));
+        const bytes=new Uint8Array(await r.arrayBuffer());
+        const src=await PDFDocument.load(bytes);
+        let boxes=[];try{boxes=await kInkBoxes(bytes)}catch(e){}
+        for(const [i,sp] of src.getPages().entries())pages.push(await out.embedPage(sp,boxes[i]||undefined));
       }catch(e){kPrintFails.push(k)}
     }
     if(!pages.length)throw new Error('Kaspi не отдал ни одной накладной. Откройте их по ссылкам ниже.');
@@ -5557,7 +5585,7 @@ async function kPrint(){
         if(rows>1)page.drawLine({start:{x:0,y:H/2},end:{x:W,y:H/2},...ln});
       }
       const c=pos%cols,r=Math.floor(pos/cols);
-      const s=Math.min((cw-2*m)/p.width,(ch-2*m)/p.height,1.6);
+      const s=Math.min((cw-2*m)/p.width,(ch-2*m)/p.height,4);
       const w=p.width*s,h=p.height*s;
       page.drawPage(p,{x:c*cw+(cw-w)/2,y:H-(r+1)*ch+(ch-h)/2,width:w,height:h});
     });
