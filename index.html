@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261022160000">
+<meta name="app-build" content="20261023140000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -2186,6 +2186,9 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         <div class="fld"><label for="f-status">Статус</label><select id="f-status"></select></div>
         <div class="fld"><label for="f-owner">Ответственный</label><input id="f-owner" data-sugg="owners-dl" autocomplete="off" placeholder="Кто ведёт заказ"></div>
       </div>
+      <div class="fld"><label for="f-stnote">Комментарий к статусу для клиента</label><input id="f-stnote" maxlength="120" autocomplete="off" placeholder="Например: на печати">
+        <div class="sugg" id="stnote-sugg"><button type="button" data-stnote="На печати">На печати</button><button type="button" data-stnote="На вышивке">На вышивке</button><button type="button" data-stnote="На упаковке">На упаковке</button><button type="button" data-stnote="Ждём материал">Ждём материал</button><button type="button" data-stnote="Согласуем макет">Согласуем макет</button></div>
+        <span class="hint">Клиент увидит его по ссылке на заказ, под статусом. При смене статуса старый комментарий убирается сам.</span></div>
       <div class="fld oi-box"><span class="lb" id="oi-lb">Что сделать: позиции заказа</span>
         <div class="oi-conv" id="oi-conv" hidden></div>
         <div class="oitems" id="oi-list" aria-labelledby="oi-lb"></div>
@@ -3542,7 +3545,7 @@ function openEditor(id,preset={}){
   setDM($('f-deadline'),o.deadline||'');setDM($('f-dfrom'),o.deadlineFrom||'');
   setDM($('f-received'),id==='new'?(o.receivedAt||todayStr()):receivedOf(o));
   $('f-status').value=o.status||'new';$('f-price').value=o.price??'';$('f-paid').value=o.paid??'';
-  $('f-owner').value=o.owner||(id==='new'&&isMgr()?ROLE().name:'');$('f-notes').value=o.notes||'';
+  $('f-owner').value=o.owner||(id==='new'&&isMgr()?ROLE().name:'');$('f-notes').value=o.notes||'';$('f-stnote').value=o.stNote||'';
   const f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
   $('f-meta').textContent=o.createdAt?'Создан '+f(o.createdAt)+(o.createdBy?' ('+o.createdBy+')':'')+(o.updatedAt&&o.updatedAt!==o.createdAt?', изменён '+f(o.updatedAt):''):'';
   renderHist(id==='new'?null:o);
@@ -4060,6 +4063,7 @@ $('f-legal').addEventListener('change',e=>{
 $('d-pick').addEventListener('change',e=>{const b=buyerList().find(x=>x.bin===e.target.value);if(!b)return;$('d-name').value=b.name;$('d-bin').value=b.bin;$('d-addr').value=b.addr||'';$('d-contract').value=b.contract||''});
 ['d-bin','bf-bin','iv-bb'].forEach(i=>$(i).addEventListener('input',digits12));
 $('d-make').addEventListener('click',makeInvoice);
+$('stnote-sugg').addEventListener('click',e=>{const b=e.target.closest('[data-stnote]');if(!b||!canWrite)return;$('f-stnote').value=b.dataset.stnote});
 $('r-save').addEventListener('click',saveStudioReq);
 $('r-vat').addEventListener('change',e=>{$('r-vatw').hidden=!e.target.checked;if(e.target.checked&&!$('r-vatrate').value)$('r-vatrate').value=16});
 $('dc-new').addEventListener('click',()=>openIv('new'));
@@ -4779,7 +4783,7 @@ function formData(){
     kaspi:edK.map(l=>({id:l.id,name:l.name,price:+l.price||0,qty:+l.qty||0,date:l.date||'',cost:+l.cost||0,src:l.src||''})),kaspiFee:kFee(),
     qty:edItems.length?edItems.reduce((s,i)=>s+(+i.qty||0),0):(edOrig&&edOrig.qty!=null?edOrig.qty:null),desc:$('f-desc').value.trim(),
     status:$('f-status').value,price:num($('f-price').value),paid:num($('f-paid').value),
-    owner:$('f-owner').value.trim(),notes:$('f-notes').value.trim(),
+    owner:$('f-owner').value.trim(),notes:$('f-notes').value.trim(),stNote:$('f-stnote').value.trim(),
     ...($('f-legal').checked||(edOrig&&edOrig.legal!=null)?{legal:$('f-legal').checked,buyer:docBuyer(),invoice:{num:$('d-num').value.trim(),date:$('d-date').dataset.iso||''}}:{})
   };
 }
@@ -4834,6 +4838,7 @@ async function saveOrder(ev){
       waNotify(ref.id); // ссылку на страницу заказа Аня шлёт только по кнопке в ведомости
     }else{
       const id=editing,prev=edOrig;
+      if(prev&&prev.status!==d.status&&d.stNote===(prev.stNote||''))d.stNote='';
       await db.doc('orders/'+id).update({...d,...histPatch(prev,d,now),updatedAt:now});
       const kn=kidNumsRead('d-kids');if(kn.length)await legalMut(c=>kidNumsApply(c,kn));
       toast('Сохранено');
@@ -4848,7 +4853,7 @@ async function saveOrder(ev){
 }
 async function quickStatus(id,status){
   const now=Date.now(),prev=orders.find(o=>o.id===id);
-  try{await db.doc('orders/'+id).update({status,...(prev?histPatch(prev,{...prev,status},now):{}),updatedAt:now});toast('Статус: '+ST[status].label);waNotify(id)}
+  try{await db.doc('orders/'+id).update({status,stNote:'',...(prev?histPatch(prev,{...prev,status,stNote:''},now):{}),updatedAt:now});toast('Статус: '+ST[status].label);waNotify(id)}
   catch(e){toast(handleWriteError(e));render()}
 }
 /* уведомление клиенту в WhatsApp: учёт кладёт задание в wa_outbox, бот на рабочем компьютере (папка whatsapp-bot)
@@ -4869,7 +4874,7 @@ function pubOf(o){
   const stAt={};Object.keys(o.statusAt||{}).sort().forEach(k=>stAt[k]=o.statusAt[k]);
   return {num:String(o.num||0).padStart(3,'0'),st:o.status||'new',stAt,svc:o.service==='other'?(o.customService||''):((SV[o.service]||{}).label||''),
     items,desc:items.length?'':String(o.desc||'').slice(0,400),total:o.price??null,paid:o.paid??null,
-    from:o.deadlineFrom||'',to:o.deadline||'',rec:o.receivedAt||'',gone:!!o.deletedAt};
+    from:o.deadlineFrom||'',to:o.deadline||'',rec:o.receivedAt||'',gone:!!o.deletedAt,...(o.stNote?{note:String(o.stNote).slice(0,120)}:{})};
 }
 function pubHash(p){const t=JSON.stringify(p);let h=5381;for(let i=0;i<t.length;i++)h=(h*33+t.charCodeAt(i))|0;return (h>>>0).toString(36)}
 async function pubWrite(o){
@@ -6447,6 +6452,8 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .bnav .n.hot{background:var(--danger)}
   .bnav .fab.bn-plus{position:static;width:52px;height:52px;margin:2px auto;box-shadow:0 10px 24px -8px rgba(67,88,239,.7);color:#fff;border-radius:50%;min-height:0}
   .net-bar{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  /* окно заказа и другие боковые окна поверх нижнего меню: иначе меню закрывает кнопку «Сохранить» */
+  body:has(.ed:not([hidden])) .bnav{display:none}
   .more-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .more-g button{min-height:56px;border-radius:18px;background:var(--tile);font:600 15px var(--f);display:flex;align-items:center;justify-content:center;gap:8px}
   .more-g button.on{background:var(--blue);color:#fff}
@@ -6478,7 +6485,7 @@ async function nextOrderNum(){
 const HIST_F=[
   ['client','Клиент',v=>v||'—'],['phone','Телефон',v=>v||'—'],['status','Статус',v=>(ST[v]||{}).label||v||'—'],
   ['price','Сумма',v=>v==null||v===''?'—':money(v)],['paid','Оплачено',v=>v==null||v===''?'—':money(v)],
-  ['deadline','Срок',v=>v?fmtDate(v):'—'],['owner','Ответственный',v=>v||'—'],['service','Услуга',v=>(SV[v]||{}).label||v||'—']
+  ['deadline','Срок',v=>v?fmtDate(v):'—'],['owner','Ответственный',v=>v||'—'],['stNote','Комментарий для клиента',v=>v||'—'],['service','Услуга',v=>(SV[v]||{}).label||v||'—']
 ];
 function histPatch(prev,d,now){
   const by=ROLE().name||'',out=[];
