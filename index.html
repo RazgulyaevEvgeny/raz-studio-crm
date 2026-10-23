@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261023140000">
+<meta name="app-build" content="20261023150000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -433,6 +433,13 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .st-w{position:relative;display:inline-flex;max-width:100%}
 .st-w::before{content:"";position:absolute;left:11px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--sc);pointer-events:none}
 .st:disabled{cursor:default;background-image:none;padding-right:14px}
+.c-status{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.st-cm{max-width:180px;min-height:24px;padding:0 9px;border-radius:999px;font:600 12px var(--f);color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.st-cm:hover{box-shadow:inset 0 0 0 1.5px var(--blue)}
+.st-cm.on{background:var(--paper);color:var(--ink)}
+.st-cm:disabled{cursor:default;box-shadow:none}
+.st-cm-in{width:180px;max-width:100%;min-height:30px;border:0;border-radius:10px;background:var(--paper);box-shadow:inset 0 0 0 1.5px var(--blue);padding:0 10px;font:500 13px var(--f)}
+@media(max-width:980px){.c-status{align-items:flex-end}.st-cm{max-width:150px;text-align:right}.st-cm-in{width:170px}}
 @media(max-width:980px){
   .row.head{display:none}
   .row.item{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"client status" "svc svc" "due money" "num num";gap:8px 12px}
@@ -2186,8 +2193,9 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         <div class="fld"><label for="f-status">Статус</label><select id="f-status"></select></div>
         <div class="fld"><label for="f-owner">Ответственный</label><input id="f-owner" data-sugg="owners-dl" autocomplete="off" placeholder="Кто ведёт заказ"></div>
       </div>
-      <div class="fld"><label for="f-stnote">Комментарий к статусу для клиента</label><input id="f-stnote" maxlength="120" autocomplete="off" placeholder="Например: на печати">
+      <div class="fld"><label for="f-stnote">Комментарий к статусу для клиента</label><input id="f-stnote" list="stnote-dl" maxlength="120" autocomplete="off" placeholder="Например: на печати">
         <div class="sugg" id="stnote-sugg"><button type="button" data-stnote="На печати">На печати</button><button type="button" data-stnote="На вышивке">На вышивке</button><button type="button" data-stnote="На упаковке">На упаковке</button><button type="button" data-stnote="Ждём материал">Ждём материал</button><button type="button" data-stnote="Согласуем макет">Согласуем макет</button></div>
+        <datalist id="stnote-dl"><option value="На печати"><option value="На вышивке"><option value="На упаковке"><option value="Ждём материал"><option value="Согласуем макет"></datalist>
         <span class="hint">Клиент увидит его по ссылке на заказ, под статусом. При смене статуса старый комментарий убирается сам.</span></div>
       <div class="fld oi-box"><span class="lb" id="oi-lb">Что сделать: позиции заказа</span>
         <div class="oi-conv" id="oi-conv" hidden></div>
@@ -3043,7 +3051,7 @@ function renderOrders(){
       <div class="cell c-client"><span class="cc-h"><b>${esc(o.client)}</b>${canWrite&&waLink(o.phone)&&!isKaspiLedger(o)?sendLinkBtn(o.id):''}</span><small>${esc(sub)}</small></div>
       <div class="cell c-svc"><b>${esc(svcLabel(o.service,o))}${esc(qty)}</b><small>${esc(itemsText(o)||o.desc||'')}</small></div>
       <div class="cell due"><b class="${due.cls}">${o.deadline?fmtRange(o.deadlineFrom,o.deadline):'—'}</b><small class="${due.cls}">${due.txt}</small></div>
-      <div class="c-status"><span class="st-w" style="--sc:var(${s.c})"><select class="st" data-id="${esc(o.id)}" aria-label="Статус заказа №${o.num}" ${canWrite?'':'disabled'}>${STATUSES.map(x=>`<option value="${x.id}" data-c="${x.c}"${x.id===s.id?' selected':''}>${x.label}</option>`).join('')}</select></span></div>
+      <div class="c-status"><span class="st-w" style="--sc:var(${s.c})"><select class="st" data-id="${esc(o.id)}" aria-label="Статус заказа №${o.num}" ${canWrite?'':'disabled'}>${STATUSES.map(x=>`<option value="${x.id}" data-c="${x.c}"${x.id===s.id?' selected':''}>${x.label}</option>`).join('')}</select></span>${stCmBtn(o)}</div>
       <div class="cell money"><b>${o.price?money(o.price):'—'}</b>${pay}${(o.expenses||[]).length||(o.kaspi||[]).length||itemsCost(o.items)?`<small>прибыль ${money((+o.price||0)-costOf(o))}</small>`:''}</div>
     </div>`;
   }).join('');
@@ -4851,6 +4859,26 @@ async function saveOrder(ev){
   }catch(e){showErr('f-err',handleWriteError(e))}
   finally{btn.disabled=false}
 }
+/* комментарий к статусу прямо в ведомости: нажали «+ комментарий» — появилось поле, Enter или клик мимо сохраняет */
+function stCmBtn(o){
+  const can=canWrite&&!CLOSED.has(o.status)&&!isKaspiLedger(o);
+  if(!o.stNote&&!can)return '';
+  return `<button type="button" class="st-cm${o.stNote?' on':''}" data-stcm="${esc(o.id)}" ${can?'':'disabled'} title="Комментарий к статусу для клиента: виден по ссылке на заказ">${o.stNote?esc(o.stNote):'+ комментарий'}</button>`;
+}
+function editStNote(btn){
+  const id=btn.dataset.stcm,o=orders.find(x=>x.id===id);if(!o||!canWrite)return;
+  const inp=document.createElement('input');inp.className='st-cm-in';inp.maxLength=120;inp.setAttribute('list','stnote-dl');
+  inp.value=o.stNote||'';inp.placeholder='Например: на печати';inp.setAttribute('aria-label','Комментарий к статусу для клиента');
+  let done=false;const fin=save=>{if(done)return;done=true;const v=inp.value.trim();if(save&&v!==(o.stNote||''))saveStNote(id,v);else render()};
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();e.stopPropagation();fin(true)}else if(e.key==='Escape'){e.stopPropagation();fin(false)}});
+  inp.addEventListener('blur',()=>fin(true));
+  btn.replaceWith(inp);inp.focus();
+}
+async function saveStNote(id,v){
+  const now=Date.now(),prev=orders.find(o=>o.id===id);
+  try{await db.doc('orders/'+id).update({stNote:v,...(prev?histPatch(prev,{...prev,stNote:v},now):{}),updatedAt:now});toast(v?'Клиент увидит: «'+v+'»':'Комментарий убран')}
+  catch(e){toast(handleWriteError(e));render()}
+}
 async function quickStatus(id,status){
   const now=Date.now(),prev=orders.find(o=>o.id===id);
   try{await db.doc('orders/'+id).update({status,stNote:'',...(prev?histPatch(prev,{...prev,status,stNote:''},now):{}),updatedAt:now});toast('Статус: '+ST[status].label);waNotify(id)}
@@ -5259,7 +5287,7 @@ $('del-box').addEventListener('click',e=>{const b=e.target.closest('[data-del]')
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(csSel){csClose(true);return}if(dpEl){dpClose();return}if(!$('xed').hidden){closeX();return}if(!$('ped').hidden){closeP();return}if(!$('qed').hidden){closeQ();return}if(!$('copy-lb').hidden){$('copy-lb').hidden=true;return}if(!$('lb').hidden){closeViewer();return}if(!$('ed').hidden)closeEditor()});
 let qt;$('q').addEventListener('input',e=>{clearTimeout(qt);qt=setTimeout(()=>{view.q=e.target.value.trim();render()},120)});
 $('list').addEventListener('change',e=>{const s=e.target.closest('select.st');if(s)quickStatus(s.dataset.id,s.value)});
-$('list').addEventListener('click',e=>{const sl=e.target.closest('[data-sendlink]');if(sl){sendLink(sl);return}if(e.target.closest('select,.cs-btn'))return;const r=e.target.closest('.row.item');if(r)openEditor(r.dataset.id)});
+$('list').addEventListener('click',e=>{const sl=e.target.closest('[data-sendlink]');if(sl){sendLink(sl);return}const cm=e.target.closest('[data-stcm]');if(cm){if(!cm.disabled)editStNote(cm);return}if(e.target.closest('select,.cs-btn,.st-cm-in'))return;const r=e.target.closest('.row.item');if(r)openEditor(r.dataset.id)});
 $('list').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList.contains('item'))openEditor(e.target.dataset.id)});
 $('svc-sel').addEventListener('change',e=>{view.svc=e.target.value;render()});
 $('cal-prev').onclick=()=>{calM--;if(calM<0){calM=11;calY--}render()};
