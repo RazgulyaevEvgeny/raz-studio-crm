@@ -311,6 +311,7 @@ function orderPublic(o) {
     svc: o.service === 'other' ? (o.customService || '') : (SERVICE_NAMES[o.service] || ''),
     items, desc: items.length ? '' : String(o.desc || '').slice(0, 400), total: o.price ?? null, paid: o.paid ?? null,
     from: o.deadlineFrom || '', to: o.deadline || '', rec: o.receivedAt || '', gone: !!o.deletedAt,
+    ...(o.stNote ? { note: String(o.stNote).slice(0, 120) } : {}), // комментарий студии к статусу, как в учёте (pubOf)
   };
 }
 
