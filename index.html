@@ -1434,7 +1434,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
   #w-sasha .at .c{font-size:12px}
 }
 
-/* Даулет — ИИ-аналитик Kaspi (kaspi-bot на рабочем компьютере): та же карточка, что у Ани и Саши, зелёный — «прибыль» */
+/* Каспивед Даулет — ИИ-аналитик Kaspi (kaspi-bot на рабочем компьютере): та же карточка, что у Ани и Саши, в красном цвете Kaspi */
 #w-daulet{container-type:inline-size;--ab:#4358ef;position:relative;margin-top:0;padding:14px 16px 16px;border-radius:24px;background:linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
 #pack #w-daulet>.w-h{min-height:40px;padding-left:0;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;border-radius:16px;outline-offset:4px}
 #w-daulet>.w-h:focus-visible{outline:2px solid #fff}
@@ -1483,14 +1483,14 @@ body:has(#xim:not([hidden])) .bnav{display:none}
   #w-daulet .at{gap:2px}
   #w-daulet .at .c{font-size:12px}
 }
-#w-daulet{--ab:#0c7a4f;background:linear-gradient(155deg,#20b27a,#0e8a58 42%,#06663f)}
-#w-daulet .an-ask .btn:hover,#w-daulet .an-ref:hover{background:#e3f6ec;color:var(--ab)}
-#w-daulet .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#d8efe3 75%);box-shadow:0 8px 18px rgba(0,60,30,.45)}
+#w-daulet{--ab:#d42a2f;background:linear-gradient(155deg,#ff5a4e,#e8312f 42%,#bf1d22)}
+#w-daulet .an-ask .btn:hover,#w-daulet .an-ref:hover{background:#ffe6e3;color:var(--ab)}
+#w-daulet .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#ffe1dc 75%);box-shadow:0 8px 18px rgba(110,0,0,.45)}
 #w-daulet .an-av .fg{clip-path:none}
-#w-daulet .an-av .fs{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(0,60,30,.45))}
+#w-daulet .an-av .fs{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(110,0,0,.45))}
 /* нажали на Даулета — вылетает плашка с лучшей прибылью */
-#w-daulet .an-av .tt{position:absolute;right:30%;top:50%;padding:6px 10px;border-radius:999px;background:#fff;color:#0c7a4f;font:800 14px/1 var(--f);letter-spacing:-.02em;white-space:nowrap;font-style:normal;
-  box-shadow:0 6px 16px rgba(0,60,30,.45);transform-origin:100% 100%;opacity:0;transform:translate(6px,6px) scale(.2) rotate(12deg);z-index:2}
+#w-daulet .an-av .tt{position:absolute;right:30%;top:50%;padding:6px 10px;border-radius:999px;background:#fff;color:#d42a2f;font:800 14px/1 var(--f);letter-spacing:-.02em;white-space:nowrap;font-style:normal;
+  box-shadow:0 6px 16px rgba(110,0,0,.45);transform-origin:100% 100%;opacity:0;transform:translate(6px,6px) scale(.2) rotate(12deg);z-index:2}
 #w-daulet .an-av.tok .tt{animation:satok 1.7s cubic-bezier(.2,.9,.3,1.2)}
 @media(prefers-reduced-motion:reduce){#w-daulet .an-av.tok .tt{animation:none}}
 .pack #w-daulet .an-body,#w-daulet .an-body{display:flex}
@@ -1985,7 +1985,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="an-ft"><small class="bw-note">Саша руководит ИИ-отделом маркетинга: план и сценарии каждый понедельник.</small><a class="an-ref" href="marketing/?view=dept" target="_blank" rel="noopener">Открыть отдел ↗</a></div>
         </div>
         <div class="w" id="w-daulet">
-          <div class="w-h"><h2><span class="at">Аналитик Даулет<span class="c" id="w-daulet-c">подключаемся…</span></span></h2></div>
+          <div class="w-h"><h2><span class="at">Каспивед Даулет<span class="c" id="w-daulet-c">подключаемся…</span></span></h2></div>
           <div class="an-kpi" id="w-daulet-kpi"><div class="k"><b>—</b><span>загружаем…</span></div><span class="an-av" id="daulet-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="daulet-avatar.webp?v=1" alt="" width="240" height="252"></span></span><i class="tt" id="daulet-tt">1688 → Kaspi</i></span></div>
           <div class="an-body" id="w-daulet-body">
             <div class="an-col">
@@ -6673,7 +6673,7 @@ function renderDaulet(){
   const cr=d.criteria||{};
   const say=$('w-daulet-say');
   say.innerHTML=daulErr?'<div class="an-say">Нет доступа к сводке Даулета в базе.</div>':!daulLoaded?'<div class="an-say">Загружаем…</div>':!daulD?
-    '<div class="an-say">Сәлем! Я Даулет, аналитик Kaspi. Я ещё не подключился к учёту: обновите меня на рабочем компьютере (папка kaspi-bot) — и здесь появятся товары, которые выгодно привезти с 1688.</div>':
+    '<div class="an-say">Сәлем! Я Даулет, каспивед студии. Я ещё не подключился к учёту: обновите меня на рабочем компьютере (папка kaspi-bot) — и здесь появятся товары, которые выгодно привезти с 1688.</div>':
     !top.length?`<div class="an-say">Пока нет товаров, которые точно совпадают по фото с 1688 и дают от ${money(cr.minProfit||3000)} прибыли с штуки. ${st.awaiting?'Ещё '+st.awaiting+' '+plural(st.awaiting,'товар ждёт','товара ждут','товаров ждут')+' сверки с 1688. ':''}Я продолжу искать${d.schedule?' завтра в '+d.schedule:''}.</div>`:'';
   $('w-daulet-list').innerHTML=top.length?`<p class="an-h">Что заказать <em>${top.length}</em></p><ul class="dl-list">${top.slice(0,5).map(x=>`<li class="dl-it ${x.status==='best'?'best':''}">
     <a class="dl-ph" href="${esc(x.url)}" target="_blank" rel="noopener">${x.photo?`<img src="${esc(x.photo)}" alt="" loading="lazy" onerror="this.remove()">`:''}</a>
