@@ -2407,8 +2407,6 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         <div class="fld"><label for="cn-track">Трек-номер</label><input id="cn-track" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="YT1234567890"></div>
         <div class="fld"><label for="cn-qty">Сколько штук</label><input id="cn-qty" type="number" min="0" step="1" inputmode="numeric"></div>
       </div>
-      <div class="fld"><label for="cn-prod">Товар на Kaspi</label><input id="cn-prod" list="cn-prod-dl" autocomplete="off" placeholder="Необязательно"><span class="hint">Пока посылка едет, «Пора заказывать» по этому товару учитывает, что штуки уже в пути.</span></div>
-      <datalist id="cn-prod-dl"></datalist>
       <div class="fld"><span class="lb" id="cn-st-lb">Где сейчас</span><div class="svc-pick" id="cn-stages" role="group" aria-labelledby="cn-st-lb"></div><span class="hint" id="cn-eta"></span></div>
       <div class="cn-dates" id="cn-dates"><div class="fld" id="cn-dw-ordered"><label for="cn-d-ordered">Заказали</label><input id="cn-d-ordered" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div><div class="fld" id="cn-dw-sent"><label for="cn-d-sent">Отправлена</label><input id="cn-d-sent" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div><div class="fld" id="cn-dw-left"><label for="cn-d-left">Покинула Китай</label><input id="cn-d-left" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div><div class="fld" id="cn-dw-customs"><label for="cn-d-customs">Прошла таможню</label><input id="cn-d-customs" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div><div class="fld" id="cn-dw-ready"><label for="cn-d-ready">Готова к выдаче</label><input id="cn-d-ready" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div><div class="fld" id="cn-dw-got"><label for="cn-d-got">Забрали</label><input id="cn-d-got" data-dm placeholder="дд.мм" inputmode="numeric" maxlength="5" autocomplete="off"></div></div>
       <h3 class="cn-sub">Деньги</h3>
@@ -2425,7 +2423,6 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
         <div class="fld"><label for="cn-extra">Доплата</label><div class="suffix"><input id="cn-extra" type="number" min="0" step="1" inputmode="numeric"><span>₸</span></div><span class="hint">Упаковка, страховка</span></div>
       </div>
       <div class="kcalc" id="cn-calc"></div>
-      <div class="fld"><label for="cn-supply">Закупка в учёте</label><select id="cn-supply"></select><span class="hint" id="cn-supply-h"></span></div>
       <div class="fld"><label for="cn-notes">Заметки</label><textarea id="cn-notes" placeholder="Номер заказа на 1688, продавец, что проверить"></textarea></div>
       <div class="cn-links" id="cn-links"></div>
       <div class="meta" id="cn-meta"></div>
@@ -5907,12 +5904,11 @@ const KP_STALE_DAYS=45;
 const kpLead=()=>Math.max(1,+kaspiMeta.leadDays||25);
 function kpForecast(p,now=Date.now()){
   p.left=p.stock!=null&&p.stock!==''?Math.max(0,(+p.stock||0)-(p.soldAfter||0)):null;
-  p.onWay=(typeof cnParcels!=='undefined'&&cnParcels||[]).filter(c=>c.product&&kpNorm(c.product)===kpNorm(p.name)&&!['ready','got'].includes(c.stage)).reduce((s,c)=>s+(+c.qty||0),0);
   p.rate=p.sold30/30;
-  p.daysLeft=p.left!=null&&p.rate>0?Math.floor((p.left+p.onWay)/p.rate):null;
+  p.daysLeft=p.left!=null&&p.rate>0?Math.floor(p.left/p.rate):null;
   const lead=kpLead();
   p.reorder=p.status==='sale'&&p.daysLeft!=null&&p.daysLeft<=lead+7;
-  p.reorderQty=p.reorder?Math.max(1,Math.ceil(p.rate*(lead+30)-p.left-p.onWay)):0;
+  p.reorderQty=p.reorder?Math.max(1,Math.ceil(p.rate*(lead+30)-p.left)):0;
   const since=+p.lastSold||+p.addedAt||+p.importedAt||0; // последняя продажа, а если продаж не было — когда товар появился в учёте
   p.stale=p.status==='sale'&&p.left>0&&!!since&&now-since>KP_STALE_DAYS*864e5;
   p.frozen=p.stale?p.left*(+p.cost||0):0;
@@ -6249,7 +6245,6 @@ function renderChina(){
   const L=lg.d,usual=L.reduce((a,b)=>a+b,0);
   const learned=lg.n.some(x=>x>=2);
   const tripTxt=trip&&trip.n>=2?`По вашим посылкам от заказа до выдачи в среднем <b>${trip.d} ${plural(trip.d,'день','дня','дней')}</b> (${trip.n} ${plural(trip.n,'посылка','посылки','посылок')}).`:`Пока считаем по обычным срокам: около ${usual} дней от заказа до выдачи. Когда заберёте 2–3 посылки, срок будет считаться по вашим.`;
-  const leadBtn=trip&&trip.n>=2&&Math.abs(trip.d-kpLead())>=3&&canWrite?` <button class="linkbtn" type="button" id="cn-lead">Учесть ${trip.d} дн. в прогнозе «Пора заказывать»</button>`:'';
   $('k-tools').innerHTML=`<div class="kfees">
     <div class="kf-h"><h3>Посылки из Китая</h3>${canWrite?'<button class="btn primary sm" type="button" id="cn-new">Добавить посылку</button>':''}</div>
     <div class="kpis">
@@ -6262,11 +6257,11 @@ function renderChina(){
       <label>Тариф, ₸ за кг<input id="cn-s-rate" type="number" min="0" step="1" inputmode="numeric" value="${cnRate()||''}" placeholder="например 2200" ${canWrite?'':'disabled'}></label>
       <label>Курс юаня, ₸<input id="cn-s-cny" type="number" min="0" step="0.01" inputmode="decimal" value="${cnCny()||''}" placeholder="например 72" ${canWrite?'':'disabled'}></label>
     </div>
-    <p class="knote">${tripTxt}${learned&&!(trip&&trip.n>=2)?' Часть сроков уже уточнена по вашим посылкам.':''}${leadBtn} ${cnL7Txt()}</p>
+    <p class="knote">${tripTxt}${learned&&!(trip&&trip.n>=2)?' Часть сроков уже уточнена по вашим посылкам.':''}${cnL7Txt()}</p>
     <div class="ktools"><div class="chips">${F.map(([id,l,fn])=>`<button type="button" class="chip${cnView.f===id?' on':''}" data-cnf="${id}">${l} <em>${cnParcels.filter(fn).length}</em></button>`).join('')}</div>
       <label class="search kp-q"><input id="cn-q" type="search" placeholder="Товар или трек-номер" value="${esc(cnView.q)}" aria-label="Поиск посылки"></label></div>
   </div>`;
-  let rows=cnParcels.filter(f[2]).filter(p=>!q||kpNorm([p.title,p.track,p.product,p.notes,cnPlatL(p.platform)].join(' ')).includes(q));
+  let rows=cnParcels.filter(f[2]).filter(p=>!q||kpNorm([p.title,p.track,p.notes,cnPlatL(p.platform)].join(' ')).includes(q));
   const ex=new Map(rows.map(p=>[p.id,cnInfo(p,L)]));
   rows.sort((a,b)=>{const A=ex.get(a.id),B=ex.get(b.id);
     if(A.i>=5||B.i>=5)return (B.i>=5)-(A.i>=5)||String(cnD(b).got||'').localeCompare(String(cnD(a).got||''));
@@ -6283,7 +6278,6 @@ async function cnAdvance(id){
   try{
     const np={...p,stage:st,dates};
     await kaspiCol.doc(id).update({stage:st,dates,eta:cnEta(np),updatedAt:Date.now(),updatedBy:ROLE().name||''});
-    if(p.supplyId)await cnSyncSupply(p.supplyId,{...np});
     toast(CN_ST[i+1][1]+': '+(p.title||'посылка'));
     if(st==='ready'&&!(+p.weight>0))setTimeout(()=>{openCn(id);setTimeout(()=>{const w=$('cn-weight');if(w){w.scrollIntoView({block:'center'});w.focus()}},120);toast('Впишите вес из приложения карго — посчитаем стоимость')},300);
   }catch(e){toast(handleWriteError(e))}
@@ -6294,7 +6288,6 @@ $('p-kaspi').addEventListener('click',e=>{
   if(t.closest('[data-cntrack]'))return;
   const ff=t.closest('[data-cnf]');if(ff){cnView.f=ff.dataset.cnf;render();return}
   if(t.closest('#cn-new,#cn-new2')){openCn('new');return}
-  if(t.closest('#cn-lead')){const tr=cnTrip();if(tr)kpSaveMeta({leadDays:tr.d}).then(()=>toast('В прогнозе товаров доставка теперь '+tr.d+' дн.')).catch(er=>toast(handleWriteError(er)));return}
   const nx=t.closest('[data-cnnext]');if(nx){cnAdvance(nx.dataset.cnnext);return}
   const op=t.closest('[data-cnopen]');if(op){openCn(op.dataset.cnopen);return}
 });
@@ -6336,31 +6329,16 @@ function cnCalc(fromWeight){
   $('cn-calc').innerHTML=r2('Товар',money(goods))+r2('Карго',cargo?money(cargo):'вес ещё не знаем')+(w&&cargo?r2('За 1 кг',money(Math.round(((n('cn-cargo')||0))/w))):'')
     +r2('Всего за посылку',money(goods+cargo),'tot')+(qty?r2('Себестоимость 1 шт',money(Math.round((goods+cargo)/qty))):'');
 }
-function cnSupplyOpts(p){
-  const list=(ledger.supplies||[]).filter(x=>x.cat==='kaspi').sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,40);
-  const cur=p.supplyId||'';
-  if(cur&&!list.find(x=>x.id===cur)){const x=(ledger.supplies||[]).find(y=>y.id===cur);if(x)list.unshift(x)}
-  $('cn-supply').innerHTML=`<option value="">Не связывать</option>${cur?'':'<option value="new">Создать закупку Kaspi из этой посылки</option>'}`
-    +list.map(x=>`<option value="${esc(x.id)}">${esc(x.title)}, ${x.date?fmtDate(x.date):'без даты'} · ${money(x.amount)}${x.status?' · '+(SSTAT[x.status]?.label||'').toLowerCase():''}</option>`).join('');
-  $('cn-supply').value=cur||(cnEditing==='new'?'new':'');
-  cnSupplyHint();
-}
-function cnSupplyHint(){
-  const v=$('cn-supply').value;
-  $('cn-supply-h').textContent=v==='new'?'В «Закупке расходников» появится запись Kaspi: товар и карго из посылки, станет «Получено», когда заберёте.'
-    :v?'Карго из посылки впишется в эту закупку как «Доставка карго» и попадёт в себестоимость.':'Карго посчитается здесь, но в себестоимость товаров не попадёт.';
-}
 function openCn(id){
   const p=id==='new'?{stage:'ordered',platform:'1688',dates:{ordered:todayStr()},rate:cnRate()||null}:cnParcels.find(x=>x.id===id);if(!p)return;
   cnEditing=id;cnStage=cnSt(p);cnPlat=p.platform||'1688';
   $('cn-h').textContent=id==='new'?'Новая посылка':(p.title||'Посылка');
-  $('cn-title').value=p.title||'';$('cn-track').value=p.track||'';$('cn-qty').value=p.qty??'';$('cn-prod').value=p.product||'';
+  $('cn-title').value=p.title||'';$('cn-track').value=p.track||'';$('cn-qty').value=p.qty??'';
   CN_ST.forEach(([s])=>setDM($('cn-d-'+s),cnD(p)[s]||''));
   $('cn-cny').value=p.goodsCny??'';$('cn-goods').value=p.goods??'';$('cn-weight').value=p.weight??'';$('cn-rate').value=p.rate??(cnRate()||'');
   $('cn-cargo').value=p.cargo??'';$('cn-extra').value=p.extra??'';$('cn-notes').value=p.notes||'';
   if(p.cargoManual)$('cn-cargo').dataset.manual='1';else delete $('cn-cargo').dataset.manual;
-  $('cn-prod-dl').innerHTML=(()=>{try{return kpAll().filter(x=>x.status!=='off').map(x=>`<option value="${esc(x.name)}">`).join('')}catch(_){return ''}})();
-  cnFillPlats();cnFillStages();cnSupplyOpts(p);cnCalc(false);
+  cnFillPlats();cnFillStages();cnCalc(false);
   const tr=cnTrack(p);
   $('cn-links').innerHTML=id==='new'?'':[tr?`<a class="btn soft sm" href="${esc(cnTrackUrl(tr))}" target="_blank" rel="noopener">Где посылка в Китае ↗</a>`:'',
     CN_IDX[cnSt(p)]<5?`<button class="btn soft sm" type="button" id="cn-ics">В календарь телефона</button>`:''].join('');
@@ -6378,21 +6356,6 @@ function renderCnDel(conf){
   const b=$('cn-del');if(!canWrite||cnEditing==='new'){b.innerHTML='';return}
   b.innerHTML=conf?`<span class="err">Удалить посылку?</span> <button class="btn danger solid sm" type="button" data-cndel="yes">Удалить</button> <button class="btn soft sm" type="button" data-cndel="no">Нет</button>`:`<button class="btn danger sm" type="button" data-cndel="ask">Удалить</button>`;
 }
-/* карго из посылок → закупка Kaspi: поле kCargo = сумма карго всех посылок этой закупки */
-async function cnSyncSupply(sid,changed){
-  const x=(ledger.supplies||[]).find(r=>r.id===sid);if(!x)return;
-  const ps=cnParcels.filter(p=>p.supplyId===sid&&p.id!==changed.id).concat(changed.supplyId===sid?[changed]:[]);
-  const cargo=ps.reduce((s,p)=>s+cnCargoT(p),0);
-  const d={kCargo:cargo||null,updatedAt:Date.now()};
-  const own=ps.length===1&&x.cnParcel===ps[0].id; // закупку создали из этой посылки — держим её в согласии с посылкой
-  if(own){const p=ps[0],q=+p.qty||0;d.title=p.title||x.title;if(q){d.qty=q;d.unit='шт'}if(+p.goods>0&&q)d.kBuy=Math.round(+p.goods/q)}
-  const q=d.qty??+x.qty,buy=d.kBuy??x.kBuy;
-  d.amount=buy!=null&&buy!==''&&q?Math.round(+buy*q+cargo):Math.max(0,Math.round((+x.amount||0)-(+x.kCargo||0)+cargo));
-  if(own&&+ps[0].goods>0&&!q)d.amount=Math.round(+ps[0].goods+cargo);
-  if(ps.length&&ps.every(p=>cnSt(p)==='got'))d.status='received';else if(own)d.status='ordered';
-  if(!(d.amount>0))delete d.amount;
-  await db.doc('supplies/'+sid).update(d);
-}
 async function saveCn(e){
   e.preventDefault();if(!db||!canWrite||!kaspiCol)return;$('cn-err').hidden=true;
   const title=$('cn-title').value.trim();
@@ -6402,7 +6365,7 @@ async function saveCn(e){
   if(!dates[cnStage])dates[cnStage]=todayStr();
   if(!dates.ordered)dates.ordered=CN_ST.map(([s])=>dates[s]).find(Boolean)||todayStr();
   const nv=i=>{const v=$(i).value.trim();return v===''?null:Math.max(0,+v.replace(',','.'))};
-  const p={kind:'parcel',title,platform:cnPlat,track:$('cn-track').value.trim().replace(/\s+/g,'').toUpperCase(),qty:nv('cn-qty'),product:$('cn-prod').value.trim(),
+  const p={kind:'parcel',title,platform:cnPlat,track:$('cn-track').value.trim().replace(/\s+/g,'').toUpperCase(),qty:nv('cn-qty'),
     stage:cnStage,dates,goodsCny:nv('cn-cny'),goods:nv('cn-goods'),weight:nv('cn-weight'),rate:nv('cn-rate'),cargo:nv('cn-cargo'),cargoManual:!!$('cn-cargo').dataset.manual,extra:nv('cn-extra'),
     notes:$('cn-notes').value.trim(),updatedAt:Date.now(),updatedBy:ROLE().name||''};
   if(p.goods==null&&p.goodsCny!=null&&cnCny())p.goods=Math.round(p.goodsCny*cnCny());
@@ -6411,31 +6374,16 @@ async function saveCn(e){
   p.eta=cnEta(p);
   const old=cnEditing==='new'?null:cnParcels.find(x=>x.id===cnEditing);
   const id=old?old.id:'cn-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  let sup=$('cn-supply').value;
   const btn=$('cn-save');btn.disabled=true;
   try{
-    if(sup==='new'){
-      const amount=Math.round((p.goods||0)+cnCargoT(p));
-      if(amount>0){
-        const ref=db.collection('supplies').doc();
-        await ref.set({title,amount,date:dates.ordered,cat:'kaspi',catCustom:'',qty:p.qty||null,unit:'шт',vendor:cnPlatL(cnPlat),status:cnStage==='got'?'received':'ordered',
-          kBuy:p.goods&&p.qty?Math.round(p.goods/p.qty):null,kCargo:cnCargoT(p)||null,kSell:null,kFee:KASPI_FEE*100,
-          who:ROLE().name||'',notes:'Из посылки «'+title+'»'+(p.track?', трек '+p.track:''),files:[],cnParcel:id,createdAt:Date.now(),createdBy:ROLE().name||'',updatedAt:Date.now()});
-        sup=ref.id;
-      }else sup='';
-    }
-    p.supplyId=sup||'';
     if(old)await kaspiCol.doc(id).update(p);
     else await kaspiCol.doc(id).set({...p,createdAt:Date.now(),createdBy:ROLE().name||''});
-    const full={...(old||{}),...p,id};
-    if(sup)await cnSyncSupply(sup,full).catch(()=>{});
-    if(old&&old.supplyId&&old.supplyId!==sup)await cnSyncSupply(old.supplyId,{...full,supplyId:''}).catch(()=>{});
     toast(old?'Сохранено':'Посылка добавлена'+(cnStage!=='got'?', ждём ≈ '+fmtDate(p.eta):''));closeCn();
   }catch(er){showErr('cn-err',handleWriteError(er))}finally{btn.disabled=false}
 }
 async function delCn(){
   const p=cnParcels.find(x=>x.id===cnEditing);if(!p)return;
-  try{await kaspiCol.doc(p.id).delete();if(p.supplyId)await cnSyncSupply(p.supplyId,{...p,supplyId:''}).catch(()=>{});closeCn();toast('Посылка удалена'+(p.supplyId?'. Закупка в учёте осталась':''))}
+  try{await kaspiCol.doc(p.id).delete();closeCn();toast('Посылка удалена')}
   catch(er){showErr('cn-err',handleWriteError(er))}
 }
 /* .ics: iPhone предлагает добавить событие в свой календарь */
@@ -6459,7 +6407,7 @@ $('cned-form').addEventListener('click',e=>{
   const pl=e.target.closest('[data-cnplat]');if(pl&&canWrite){cnPlat=pl.dataset.cnplat;cnFillPlats();return}
   if(e.target.closest('#cn-ics')){cnIcs();return}
 });
-$('cned-form').addEventListener('change',e=>{if(e.target.matches('[id^="cn-d-"]'))cnEtaHint();if(e.target.id==='cn-supply')cnSupplyHint()});
+$('cned-form').addEventListener('change',e=>{if(e.target.matches('[id^="cn-d-"]'))cnEtaHint()});
 $('cned-form').addEventListener('input',e=>{
   const id=e.target.id;
   if(id==='cn-cargo'){if(e.target.value==='')delete e.target.dataset.manual;else e.target.dataset.manual='1'}
