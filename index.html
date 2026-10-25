@@ -2974,12 +2974,14 @@ function renderHome(){
   }
   renderLedgerWidgets();renderProjWidget();
   // задачи от начальства
-  const boss=tasks.filter(isBossBlock);
-  const tdy=todayStr(),isNow=t=>!t.done&&taskOn(t,tdy);
+  // задачи с showFrom (например, смены пластин по графику) появляются в виджете только в свой день; в календаре видны всегда
+  const tdy=todayStr(),isNow=t=>!t.done&&taskOn(t,tdy),later=t=>!t.done&&t.showFrom&&t.showFrom>tdy;
+  const boss=tasks.filter(t=>isBossBlock(t)&&!later(t)),planned=tasks.filter(t=>isBossBlock(t)&&later(t)).length;
   const open=boss.filter(t=>!t.done).sort((a,b)=>(isNow(b)-isNow(a))||(a.date||'9999').localeCompare(b.date||'9999'));
   const done=boss.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   const acc=open.filter(t=>bossStatus(t)==='accepted').length;
   $('w-boss-c').textContent=open.length?open.length+' '+plural(open.length,'открыта','открыты','открыто')+(acc?', в работе '+acc:''):'открытых нет';
+  if(planned)$('w-boss-c').textContent+=', ещё '+planned+' по графику в календаре';
   const late=open.filter(t=>t.date&&t.date<tdy).length;
   rkFill('w-boss-k',[[open.length,'открыто'],[acc,'в работе'],[late,'просрочено',late>0]]);
   $('boss-list').innerHTML=!tasksLoaded?'':open.length?open.map(taskRow).join(''):`<div class="w-empty">Открытых задач нет.${canWrite?' Новую можно поставить кнопкой «+ Задача».':''}</div>`;
