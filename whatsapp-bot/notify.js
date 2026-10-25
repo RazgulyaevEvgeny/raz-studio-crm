@@ -1,12 +1,13 @@
 // Бот команды в Telegram (бесплатно). Уведомления:
 //   - Аня позвала менеджера в WhatsApp;
 //   - пришёл новый заказ Kaspi (бот сам раз в 5 минут спрашивает воркер kaspi-orders, учёт открывать не нужно);
+//   - посылки из Китая (учёт → Kaspi → «Из Китая»): сменился этап, посылка задерживается, лежит в карго 2+ дня (раз в 5 минут, с 8 до 22);
 //   - то, о чём попросили Аню: «оповести, когда принтер закончит печать / закроется заказ / выполнят задачу» (раз в минуту).
 // Подписка: открыть своего бота в Telegram и отправить ему /start. Список подписчиков — wa_anna/telegram.
 // Подписчики могут писать или наговаривать Ане вопросы и задачи (ответ готовит tgAssistant в anna.js).
 // В .env: TELEGRAM_BOT_TOKEN (выдаёт @BotFather). Для Kaspi почта бота (BOT_EMAIL) должна быть в ALLOWED_EMAILS воркера.
 
-import { tgAssistant, checkWatches } from './anna.js';
+import { tgAssistant, checkWatches, parcels, CN_ORD } from './anna.js';
 import { transcribe } from './brain.js';
 
 const KASPI_API = 'https://kaspi-orders.design-onegin.workers.dev';
@@ -140,12 +141,60 @@ export function startNotify(fs, env, idToken, log) {
     }
   }
 
+  // Посылки из Китая: о смене этапа пишем один раз — что уже сообщили, помечаем в самой посылке (tgStage, tgLate, tgRemind)
+  const CN_TXT = { sent: 'отправлена продавцом', left: 'покинула Китай', customs: 'прошла таможню', ready: 'готова к выдаче в карго' };
+  const kzNow = () => new Date(Date.now() + 5 * 3600e3);
+  const dm = iso => { const [, m, d] = String(iso).split('-').map(Number); return d + ' ' + ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'][m - 1]; };
+  const rub = n => Math.round(n).toLocaleString('ru-RU') + ' ₸';
+  let cnErr = '';
+  async function checkParcels() {
+    const h = kzNow().getUTCHours();
+    if (h < 8 || h >= 22) return; // ночью не будим, утром придёт всё накопившееся
+    try {
+      const today = kzNow().toISOString().slice(0, 10);
+      for (const p of await parcels(fs)) {
+        const st = CN_ORD.includes(p.stage) ? p.stage : 'ordered', i = CN_ORD.indexOf(st);
+        const name = `«${p.title || 'посылка'}»${p.qty ? ', ' + p.qty + ' шт' : ''}`;
+        const patch = {};
+        const cargo = (+p.cargo || 0) + (+p.extra || 0);
+        if (p.tgStage == null) patch.tgStage = st; // первую встречу просто запоминаем, иначе после обновления пришла бы пачка старых новостей
+        else if (i > CN_ORD.indexOf(p.tgStage)) {
+          patch.tgStage = st;
+          if (CN_TXT[st]) {
+            const tail = st === 'ready'
+              ? (cargo ? `\nКарго ${rub(cargo)}${p.weight ? ' за ' + String(p.weight).replace('.', ',') + ' кг' : ''}` : '\nВес и сумму карго впишите в учёт, когда увидите в приложении')
+              : p.eta ? `\nПридёт примерно ${dm(p.eta)}` : '';
+            await send(`📦 Посылка ${name} ${CN_TXT[st]}${tail}${p.track ? '\nТрек ' + p.track : ''}`);
+            log('Telegram: посылка', p.title, st);
+          }
+        }
+        if (i < 4 && p.eta && p.eta < today && p.tgLate !== p.eta) {
+          patch.tgLate = p.eta;
+          await send(`⏳ Посылка ${name} задерживается: ждали примерно ${dm(p.eta)}, а она пока «${{ ordered: 'заказали', sent: 'отправлена', left: 'покинула Китай', customs: 'прошла таможню' }[st]}». Проверьте в приложении карго.`);
+        }
+        const rd = p.dates?.ready;
+        if (st === 'ready' && rd && patch.tgStage !== 'ready' && (Date.parse(today) - Date.parse(rd)) / 864e5 >= 2 && !p.tgRemind) {
+          patch.tgRemind = today;
+          await send(`📦 Посылка ${name} уже ${Math.round((Date.parse(today) - Date.parse(rd)) / 864e5)} дн. ждёт в карго — заберите${cargo ? ', карго ' + rub(cargo) : ''}.`);
+        }
+        if (Object.keys(patch).length) await fs.patch('kaspi_orders/' + p.id, patch);
+      }
+      cnErr = '';
+    } catch (e) {
+      const why = String(e?.message || e);
+      if (why !== cnErr) log('ошибка проверки посылок', why);
+      cnErr = why;
+    }
+  }
+
   if (on) {
     poll();
     testOnce().catch(e => log('Telegram: тест не отправлен', e?.message || e));
     checkKaspi();
     setInterval(watchTick, 60e3);
     setInterval(checkKaspi, KASPI_EVERY);
+    checkParcels();
+    setInterval(checkParcels, KASPI_EVERY);
   }
   return {
     alert: text => send(text),

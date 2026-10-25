@@ -27,7 +27,7 @@ async function collect(fs) {
   const needManager = chats.filter(c => c.needsManager)
     .sort((a, b) => (a.managerCalledAt || 0) - (b.managerCalledAt || 0))
     .map(c => ({ id: c.id, name: c.clientName || c.name || '', phone: c.phone || '', reason: c.managerReason || '', since: c.managerCalledAt || c.updatedAt || now }));
-  const kaspi = await kaspiToDo(fs);
+  const kaspi = await kaspiToDo(fs) + '\n\nПосылки из Китая (учёт → Kaspi → «Из Китая»):\n' + await parcelFacts(fs);
   const tasks = (await fs.query('tasks', { where: { fieldFilter: { field: { fieldPath: 'done' }, op: 'EQUAL', value: { booleanValue: false } } } }).catch(() => []))
     .sort((a, b) => String(a.date || '9').localeCompare(String(b.date || '9'))).slice(0, 30)
     .map(t => `[задача ${t.id}] ${t.date || 'без даты'}${t.time ? ' ' + t.time : ''}: ${t.title || ''}${t.who ? ' (' + t.who + ')' : ''}`).join('\n');
@@ -88,6 +88,23 @@ async function kaspiToDo(fs) {
     `\nИтого за неделю: ${money(total)}, на руки примерно ${money(total * (1 - KASPI_FEE))} (минус ~${KASPI_FEE * 100}% комиссии и доставки)` : 'нет';
   return `Собрать: ${todo.filter(t => t.includes('— собрать')).length}, передать курьеру: ${todo.filter(t => t.includes('передать курьеру')).length}\n` +
     (todo.join('\n') || 'нет') + `\n\nKaspi заплатит в ближайшие 7 дней (отправленные заказы, по плановой дате доставки):\n${payText}`;
+}
+
+// Посылки из Китая: документы kaspi_orders с kind:'parcel' (их ведёт учёт, этапы как в приложении карго)
+export const CN_ORD = ['ordered', 'sent', 'left', 'customs', 'ready', 'got'];
+export const CN_LABEL = { ordered: 'заказали, продавец собирает', sent: 'отправлена, едет на склад карго в Китае', left: 'покинула Китай', customs: 'прошла таможню, едет в Павлодар', ready: 'готова к выдаче в карго', got: 'забрали' };
+export const parcels = fs => fs.query('kaspi_orders', { where: { fieldFilter: { field: { fieldPath: 'kind' }, op: 'EQUAL', value: { stringValue: 'parcel' } } } });
+async function parcelFacts(fs) {
+  const list = (await parcels(fs).catch(() => [])).filter(p => p.stage !== 'got');
+  if (!list.length) return 'нет';
+  const today = kz().toISOString().slice(0, 10);
+  const money = n => Math.round(n).toLocaleString('ru-RU') + ' ₸';
+  return list.sort((a, b) => String(a.eta || '9').localeCompare(String(b.eta || '9'))).map(p => {
+    const st = CN_ORD.includes(p.stage) ? p.stage : 'ordered', cargo = (+p.cargo || 0) + (+p.extra || 0);
+    return `${p.title || 'посылка'}${p.qty ? ', ' + p.qty + ' шт' : ''}: ${CN_LABEL[st]}` +
+      (st === 'ready' ? `${p.dates?.ready ? ' с ' + p.dates.ready : ''}` : p.eta ? `, придёт примерно ${p.eta}${p.eta < today ? ' (ЗАДЕРЖИВАЕТСЯ)' : ''}` : '') +
+      (cargo ? `, карго ${money(cargo)}${p.weight ? ' за ' + p.weight + ' кг' : ''}` : '') + (p.track ? `, трек ${p.track}` : '');
+  }).join('\n');
 }
 
 /* ---------- 3D-принтеры (воркер bambu-watch, тот же, что на главной учёта) ---------- */
