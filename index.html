@@ -1996,7 +1996,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
               <form class="an-ask" id="daulet-ask" novalidate><input id="daulet-q" placeholder="Проверить товар, например «органайзер для кабелей»" autocomplete="off" maxlength="120" aria-label="Что проверить на Kaspi"><button class="btn primary sm" type="submit" id="daulet-q-btn">Проверить</button></form>
             </div>
           </div>
-          <div class="an-ft"><small class="bw-note">Даулет каждое утро ищет на Kaspi товары, которые выгодно привезти с 1688.</small><span class="dl-btns"><a class="an-ref" id="daulet-panel" target="_blank" rel="noopener" hidden>Панель ↗</a> <button class="an-ref" type="button" id="daulet-ref-btn" aria-label="Обновить данные Даулета"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить данные</button></span></div>
+          <div class="an-ft"><small class="bw-note">Даулет каждое утро отбирает на Kaspi ходовые товары под ваши условия — на 1688 их проверяете вы.</small><span class="dl-btns"><a class="an-ref" id="daulet-panel" target="_blank" rel="noopener" hidden>Панель ↗</a> <button class="an-ref" type="button" id="daulet-ref-btn" aria-label="Обновить данные Даулета"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить данные</button></span></div>
         </div>
         <div class="w" id="w-req">
           <div class="w-h"><img class="rcup" src="topper-cup.svg?v=1" alt="" width="74" height="102"><h2><span class="rt">Заявки с сайта топперов</span><span class="c" id="w-req-c"></span></h2></div>
@@ -6647,7 +6647,7 @@ $('sasha-ask').addEventListener('submit',async e=>{
 /* ---------- Даулет — ИИ-аналитик Kaspi (kaspi-bot на рабочем компьютере) ----------
    wa_anna/daulet — сводка: {heartbeatAt, status:'idle'|'running', running:{label,started}, step, queue,
      stats:{categories,scanned,products,best,good,awaiting}, lastRun:{started,finished,status,...},
-     top:[{id,title,url,photo,mimg,murl,status,price,profit,margin,sales,sellers,cny,weight,conf,summary,pain}],
+     top:[{id,title,url,photo,status,price,maxLanded,maxCny,r30,reviews,rating,sales,sellers,weight,summary,pain}],
      schedule, criteria:{maxPrice,minProfit,maxWeight}, panel, reqHandledAt}.
    wa_anna/daulet_req — кнопка «Обновить данные» {at, by, query}: Даулет проверяет её раз в 15 секунд. */
 let daulD=null,daulReq=null,daulLoaded=false,daulErr='';
@@ -6669,23 +6669,23 @@ function renderDaulet(){
   c.textContent=daulErr?'нет доступа к базе':!daulLoaded?'подключаемся…':!daulD?'ещё не подключался к учёту':run?'ищет товары'+(d.running&&d.running.label?' · '+d.running.label:''):pend?(on?'принял заявку, сейчас начнёт':'заявка ждёт, когда включат компьютер'):on?'в сети'+(d.schedule?' · каждый день в '+d.schedule:''):'компьютер выключен · был '+printWhen(+d.heartbeatAt);
   c.style.setProperty('--sc',daulErr?'var(--danger)':run||pend?'#ffd166':on?'#c9ffe2':'rgba(255,255,255,.45)');
   agKpi('w-daulet-kpi',!daulLoaded||daulErr||!daulD?[['—',daulErr?'нет доступа':!daulLoaded?'загружаем…':'ждём Даулета']]:
-    [[(st.best||0)+(st.good||0),'товаров к заказу'],[top[0]?'+'+Math.round(top[0].profit).toLocaleString('ru-RU'):'—','₸ лучшая прибыль с шт.'],[(st.categories?Math.min(100,Math.round((st.scanned||0)/st.categories*100)):0)+'%','Kaspi уже проверено']]);
-  const tt=$('daulet-tt');if(tt)tt.textContent=top[0]?'+'+money(top[0].profit):'1688 → Kaspi';
+    [[(st.best||0)+(st.good||0),'товаров на проверку'],[st.best||0,'хитов продаж'],[(st.categories?Math.min(100,Math.round((st.scanned||0)/st.categories*100)):0)+'%','Kaspi уже проверено']]);
+  const tt=$('daulet-tt');if(tt)tt.textContent=top[0]?'~'+(top[0].sales||0)+' продаж/мес':'ищу хиты';
   const cr=d.criteria||{};
   const say=$('w-daulet-say');
   say.innerHTML=daulErr?'<div class="an-say">Нет доступа к сводке Даулета в базе.</div>':!daulLoaded?'<div class="an-say">Загружаем…</div>':!daulD?
     '<div class="an-say">Сәлем! Я Даулет, каспивед студии. Я ещё не подключился к учёту: обновите меня на рабочем компьютере (папка kaspi-bot) — и здесь появятся товары, которые выгодно привезти с 1688.</div>':
-    !top.length?`<div class="an-say">Пока нет товаров, которые точно совпадают по фото с 1688 и дают от ${money(cr.minProfit||3000)} прибыли с штуки. ${st.awaiting?'Ещё '+st.awaiting+' '+plural(st.awaiting,'товар ждёт','товара ждут','товаров ждут')+' сверки с 1688. ':''}Я продолжу искать${d.schedule?' завтра в '+d.schedule:''}.</div>`:'';
-  $('w-daulet-list').innerHTML=top.length?`<p class="an-h">Что заказать <em>${top.length}</em></p><ul class="dl-list">${top.slice(0,5).map(x=>`<li class="dl-it ${x.status==='best'?'best':''}">
+    !top.length?`<div class="an-say">Пока нет новых товаров под ваши условия: цена до ${money(cr.maxPrice||10000)}, вес до ${String(cr.maxWeight||5).replace('.',',')} кг, много свежих отзывов. Я продолжу искать${d.schedule?' завтра в '+d.schedule:''}.</div>`:'';
+  $('w-daulet-list').innerHTML=top.length?`<p class="an-h">Проверить на 1688 <em>${top.length}</em></p><ul class="dl-list">${top.slice(0,5).map(x=>`<li class="dl-it ${x.status==='best'?'best':''}">
     <a class="dl-ph" href="${esc(x.url)}" target="_blank" rel="noopener">${x.photo?`<img src="${esc(x.photo)}" alt="" loading="lazy" onerror="this.remove()">`:''}</a>
     <div class="dl-t"><a class="an-lk" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>
-      <small>Kaspi ${money(x.price)} · 1688 ¥${esc(String(x.cny||'—'))} · ~${esc(String(x.sales||0))} продаж/мес · продавцов ${esc(String(x.sellers||0))}${x.conf?' · фото совпали на '+Math.round(x.conf)+'%':''}</small>
-      ${x.summary?`<p>${esc(x.summary)}</p>`:''}
-      <span class="dl-ln">${x.murl?`<a href="${esc(x.murl)}" target="_blank" rel="noopener">1688 ↗</a>`:''}<a href="${esc(x.url)}" target="_blank" rel="noopener">Kaspi ↗</a></span></div>
-    <b class="dl-p">+${money(x.profit)}<small>маржа ${Math.round(x.margin||0)}%</small></b></li>`).join('')}</ul>`:'';
+      <small>Kaspi ${money(x.price)} · ~${esc(String(x.sales||0))} продаж/мес · ${esc(String(x.r30||0))} отзывов за 30 дн · продавцов ${esc(String(x.sellers||0))}</small>
+      ${x.summary||x.pain?`<p>${esc(x.pain||x.summary)}</p>`:''}
+      <span class="dl-ln"><a href="${esc(x.url)}" target="_blank" rel="noopener">Kaspi ↗</a>${x.photo?`<a href="https://lens.google.com/uploadbyurl?url=${encodeURIComponent(x.photo)}" target="_blank" rel="noopener">Найти по фото ↗</a>`:''}</span></div>
+    <b class="dl-p" title="Столько можно потратить на закуп с доставкой, чтобы заработать ${money(cr.minProfit||3000)}">до ${money(x.maxLanded||0)}<small>закуп с карго${x.maxCny?' · ≈ ¥'+x.maxCny:''}</small></b></li>`).join('')}</ul>`:'';
   const lr=d.lastRun||null;
   $('w-daulet-run').innerHTML=run?`<div class="an-say dl-run"><b>Ищу товары…</b>${d.step?'\n'+esc(d.step):''}</div>`:
-    lr&&lr.finished?`<p class="dl-last">Последний поиск: ${esc(String(lr.finished).slice(8,10)+'.'+String(lr.finished).slice(5,7)+' в '+String(lr.finished).slice(11,16))} · товаров на Kaspi ${lr.products||0}, проверено на 1688 ${lr.searched_1688||0}, отсеяно ${lr.rejected||0}</p>`:'';
+    lr&&lr.finished?`<p class="dl-last">Последний поиск: ${esc(String(lr.finished).slice(8,10)+'.'+String(lr.finished).slice(5,7)+' в '+String(lr.finished).slice(11,16))} · просмотрено товаров ${lr.products||0}, подробно проверено ${lr.deep_checked||0}, подошло ${(lr.best||0)+(lr.good||0)}</p>`:'';
   const pn=$('daulet-panel');if(d.panel){pn.href=d.panel;pn.hidden=false;pn.title='Открывается только в офисной сети'}else pn.hidden=true;
   $('daulet-ref-btn').disabled=$('daulet-q-btn').disabled=!canWrite||run||pend;
 }
