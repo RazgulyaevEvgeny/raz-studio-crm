@@ -1496,10 +1496,11 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pack #w-daulet .an-body,#w-daulet .an-body{display:flex}
 #w-daulet .an-ft .an-ref{text-decoration:none}
 .dl-list{display:flex;flex-direction:column;gap:6px;margin:0;padding:0}
-.dl-it{list-style:none;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:start;background:rgba(255,255,255,.12);border-radius:14px;padding:8px 10px}
+.dl-it{position:relative;list-style:none;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:start;background:rgba(255,255,255,.12);border-radius:14px;padding:8px 10px}
 .dl-ph{display:block;width:52px;height:52px;border-radius:10px;overflow:hidden;background:#fff}
 .dl-ph img{display:block;width:100%;height:100%;object-fit:contain}
 .dl-t{display:flex;flex-direction:column;gap:3px;min-width:0;font:600 13.5px/1.3 var(--f)}
+.dl-t .an-lk::after{content:none}
 .dl-t .an-lk{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#fff}
 .dl-t small{font:500 11.5px/1.35 var(--f);color:rgba(255,255,255,.78)}
 .dl-t p{margin:2px 0 0;font:400 12.5px/1.4 var(--fb);color:rgba(255,255,255,.92);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
