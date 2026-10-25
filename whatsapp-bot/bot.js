@@ -28,6 +28,7 @@ import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPho
 import { startExtras } from './extras.js';
 import { makeDigest, digestDue, answerQuestions, makeInsights, insightsDue } from './anna.js';
 import { startNotify } from './notify.js';
+import { startL7 } from './l7.js';
 import { rememberPhoto, warmUp } from './mockup.js';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
@@ -444,9 +445,10 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   setInterval(checkWaitingChats, 60e3);
   setInterval(checkAnna, 30e3);
   if (!missing.length) notify = startNotify(fs, env, () => botToken(env), log);
+  if (!missing.length) startL7({ fs, env, log });
   if (!missing.length) extras = startExtras({ fs, env, log, notify, send, online: () => state.status === 'online' && !!sock, sock: () => sock, aiOn, DIR });
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
-  for (const f of ['brain.js', 'anna.js', 'notify.js', 'extras.js', 'mockup.js', 'bot.js', '.env']) {
+  for (const f of ['brain.js', 'anna.js', 'notify.js', 'l7.js', 'extras.js', 'mockup.js', 'bot.js', '.env']) {
     watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
       if (cur.mtimeMs !== prev.mtimeMs) { log('Файл ' + f + ' изменился, перезапускаюсь'); process.exit(0); }
     });

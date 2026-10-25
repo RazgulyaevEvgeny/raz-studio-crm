@@ -6229,11 +6229,17 @@ function cnRow(p,L){
     :d('Придёт ≈',fmtDate(f.eta)+' <span class="cn-rel">'+cnRel(f.eta)+'</span>');
   const cost=c?d('Карго',money(c)+(+p.weight?' <span class="cn-rel">'+cnNum(+p.weight)+' кг</span>':'')):d('Карго','<span class="cn-rel">вес не указан</span>');
   const act=f.i<5&&canWrite?`<button class="btn ${f.i===4?'primary':'soft'} sm" type="button" data-cnnext="${esc(p.id)}" ${busy?'disabled':''}>${busy?'Сохраняем…':'→ '+CN_NEXT[f.st]}</button>`:'';
-  const sub=[cnPlatL(p.platform),+p.qty?p.qty+' шт':'',+p.goods?'товар '+money(p.goods):''].filter(Boolean).join(' · ');
+  const sub=[p.platform==='other'&&p.l7Id?'':cnPlatL(p.platform),+p.qty?p.qty+' шт':'',+p.goods?'товар '+money(p.goods):'',p.l7Id?'L7':''].filter(Boolean).join(' · ');
   return `<div class="cnrow${f.late?' cn-is-late':''}${f.i>=5?' cn-is-got':''}" data-cnopen="${esc(p.id)}" role="button" tabindex="0" aria-label="Посылка ${esc(p.title||'')}">
     <div class="kr-m"><b>${esc(p.title||'Посылка')}</b><small>${esc(sub)}${tr?`${sub?' · ':''}<a class="cn-tr" href="${esc(cnTrackUrl(tr))}" target="_blank" rel="noopener" data-cntrack>${esc(tr)} ↗</a>`:`${sub?' · ':''}без трек-номера`}</small></div>
     <div class="cn-st"><b>${esc(CN_ST[f.i][1])}</b>${steps}<small>${esc(CN_HINT[f.st])}</small></div>
     ${when}${cost}<div class="kr-a">${act}</div></div>`;
+}
+function cnL7Txt(){
+  const m=kaspiMeta||{},hm=t=>new Date(t).toTimeString().slice(0,5),day=t=>dayDiff(kDay(t))===0?'в '+hm(t):fmtDate(kDay(t))+' в '+hm(t);
+  if(m.l7Err&&(+m.l7ErrAt||0)>(+m.l7SyncAt||0))return '<span class="cn-late">L7 Cargo: '+esc(m.l7Err)+'.</span> Аня пишет в Telegram о смене этапа.';
+  if(m.l7SyncAt)return 'Этапы, вес и сумма карго подтягиваются из L7 Cargo сами, раз в 15 минут (последний раз '+day(+m.l7SyncAt)+'). Трек-номера отсюда сами добавляются в кабинет L7. Аня пишет в Telegram о смене этапа.';
+  return 'Этапы пока отмечаются кнопкой. Чтобы они подтягивались из L7 Cargo сами, впишите телефон и пароль кабинета L7 в настройки бота (L7_PHONE и L7_PASSWORD). Аня пишет в Telegram о смене этапа.';
 }
 function renderChina(){
   const ae=document.activeElement;if(ae&&ae.matches&&ae.matches('#cn-set input'))return;
@@ -6256,7 +6262,7 @@ function renderChina(){
       <label>Тариф, ₸ за кг<input id="cn-s-rate" type="number" min="0" step="1" inputmode="numeric" value="${cnRate()||''}" placeholder="например 2200" ${canWrite?'':'disabled'}></label>
       <label>Курс юаня, ₸<input id="cn-s-cny" type="number" min="0" step="0.01" inputmode="decimal" value="${cnCny()||''}" placeholder="например 72" ${canWrite?'':'disabled'}></label>
     </div>
-    <p class="knote">${tripTxt}${learned&&!(trip&&trip.n>=2)?' Часть сроков уже уточнена по вашим посылкам.':''}${leadBtn} Когда посылка меняет этап, Аня пишет об этом в Telegram.</p>
+    <p class="knote">${tripTxt}${learned&&!(trip&&trip.n>=2)?' Часть сроков уже уточнена по вашим посылкам.':''}${leadBtn} ${cnL7Txt()}</p>
     <div class="ktools"><div class="chips">${F.map(([id,l,fn])=>`<button type="button" class="chip${cnView.f===id?' on':''}" data-cnf="${id}">${l} <em>${cnParcels.filter(fn).length}</em></button>`).join('')}</div>
       <label class="search kp-q"><input id="cn-q" type="search" placeholder="Товар или трек-номер" value="${esc(cnView.q)}" aria-label="Поиск посылки"></label></div>
   </div>`;
