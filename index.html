@@ -1212,7 +1212,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 /* аватар «выглядывает из круга» и вылезает за верх баннера, как стаканчик у заявок: круг-подложка, фигура без фона (низ уже обрезан по кругу в самой картинке).
    Фигура без сигареты + слой с губами и сигаретой — он качается при открытии; дым поверх */
 .an-av{position:absolute;right:-2px;bottom:0;width:80px;height:84px;pointer-events:none;transform-origin:50% 100%;transition:transform .25s}
-#w-anna:hover .an-av,#w-sasha:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
+#w-anna:hover .an-av,#w-sasha:hover .an-av,#w-daulet:hover .an-av{transform:translateY(-3px) rotate(-3deg)}
 .an-av .ci{position:absolute;left:10%;top:23.8%;width:80%;height:76.2%;border-radius:50%;background:radial-gradient(circle at 38% 30%,#fff,#dde3ff 75%);box-shadow:0 8px 18px rgba(16,24,120,.38)}
 /* всё, что торчит справа за кругом (кончики волос и их белая обводка), срезаем по дуге круга: между стикером и текстом ничего светлого */
 /* обводка и тень на обёртке .fs: filter на самом .fg срезался бы его clip-path, и ореол тени обрывался прямоугольником (заметно на телефоне) */
@@ -1241,7 +1241,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 @media(prefers-reduced-motion:reduce){.an-av .sm b,.an-av.puff .mv,.an-av.puff .gl,.an-av.puff .pf{animation:none}.an-av .sm b:first-child{opacity:.55;transform:translate(1px,-14px) scale(1.6)}.an-av,.an-nb,.an-nb>div,.an-nm .ch{transition:none}}
 /* компактная плитка, как виджеты-сводки: крупные цифры с подписью, аватар — иллюстрация в правом нижнем углу; видна и в свёрнутом виде, нажатие раскрывает карточку */
 .an-kpi{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 12px;min-height:84px;padding-right:88px;align-items:end;cursor:pointer;-webkit-tap-highlight-color:transparent}
-#pack #w-anna.mfold>.an-kpi,#pack #w-sasha.mfold>.an-kpi{display:grid!important}
+#pack #w-anna.mfold>.an-kpi,#pack #w-sasha.mfold>.an-kpi,#pack #w-daulet.mfold>.an-kpi{display:grid!important}
 .an-kpi .k{display:flex;flex-direction:column;gap:3px;min-width:0}
 .an-kpi .k b{font:800 26px/1 var(--f);letter-spacing:-.02em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .an-kpi .k span{min-height:2.5em;font:500 12px/1.25 var(--f);color:rgba(255,255,255,.75)}
@@ -1412,7 +1412,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pack #w-sasha .an-body,#w-sasha .an-body{display:flex}
 #w-sasha #w-sasha-plan .an-h{margin-top:6px}
 /* телефон: Аня и Саша без пояснительной подписи внизу, сводка Саши короче */
-@media(max-width:600px){#w-anna .an-ft .bw-note,#w-sasha .an-ft .bw-note{display:none}#w-anna .an-ft,#w-sasha .an-ft{justify-content:flex-end}}
+@media(max-width:600px){#w-anna .an-ft .bw-note,#w-sasha .an-ft .bw-note,#w-daulet .an-ft .bw-note{display:none}#w-anna .an-ft,#w-sasha .an-ft,#w-daulet .an-ft{justify-content:flex-end}}
 /* стикер Саши — как у Ани: фигура без фона выглядывает из круга, низ обрезан по кругу в самой картинке */
 #w-sasha .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#d9d9e2 75%);box-shadow:0 8px 18px rgba(0,0,0,.45)}
 #w-sasha .an-av .fg{clip-path:none}
@@ -1433,6 +1433,86 @@ body:has(#xim:not([hidden])) .bnav{display:none}
   #w-sasha .at{gap:2px}
   #w-sasha .at .c{font-size:12px}
 }
+
+/* Даулет — ИИ-аналитик Kaspi (kaspi-bot на рабочем компьютере): та же карточка, что у Ани и Саши, зелёный — «прибыль» */
+#w-daulet{container-type:inline-size;--ab:#4358ef;position:relative;margin-top:0;padding:14px 16px 16px;border-radius:24px;background:linear-gradient(155deg,#5a6dff,#4358ef 42%,#3443d6);color:#fff}
+#pack #w-daulet>.w-h{min-height:40px;padding-left:0;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;border-radius:16px;outline-offset:4px}
+#w-daulet>.w-h:focus-visible{outline:2px solid #fff}
+#w-daulet .w-h h2{flex:1 1 auto;min-width:0;color:#fff}
+#w-daulet .at{display:flex;flex-direction:column;gap:4px;min-width:0}
+#w-daulet .at .c{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.86)}
+#w-daulet .at .c::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--sc,#c9cfff)}
+#w-daulet .an-ref:focus-visible,#w-daulet .an-ask .btn:focus-visible,#w-daulet .mrow:focus-visible,#w-daulet .an-nb .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#pack #w-daulet .mf-x{display:grid;place-items:center;flex:none;width:36px;height:36px;margin:0;border-radius:50%;background:rgba(255,255,255,.17);transition:background .15s}
+#w-daulet>.w-h:hover .mf-x{background:rgba(255,255,255,.28)}
+#pack #w-daulet .mf-x::before{content:"";width:8px;height:8px;border-right:2.4px solid #fff;border-bottom:2.4px solid #fff;transform:translateY(-2px) rotate(45deg);transition:transform .2s}
+#pack #w-daulet.mopen .mf-x::before{transform:translateY(2px) rotate(-135deg)}
+#w-daulet.mfold:not(.mopen)>:not(.w-h){display:none!important}
+#w-daulet,#w-daulet button,#w-daulet a{-webkit-tap-highlight-color:transparent}
+#w-daulet .an-nm .mrow{background:none;color:#fff}
+#w-daulet .an-nm .mrow:hover{box-shadow:none}
+#w-daulet .mrow small{color:rgba(255,255,255,.75)}
+#w-daulet .an-nm .r{flex-direction:row;align-items:center;gap:10px}
+#w-daulet .mrow .r small{color:#ffd3cd;font-weight:600}
+#w-daulet .an-stats .bw-stat{background:rgba(255,255,255,.12)}
+#w-daulet .an-stats .bw-stat span{color:rgba(255,255,255,.78)}
+#w-daulet .an-ask .btn{background:#fff;color:var(--ab)}
+#w-daulet .an-ask .btn:hover{background:#e6e9ff}
+#w-daulet .an-ask .btn:disabled{opacity:.55}
+#w-daulet .bw-note{margin:0;color:#fff;opacity:.85}
+#w-daulet{--ab:#26262c;background:linear-gradient(155deg,#43434c,#26262c 42%,#121215)}
+#w-daulet .an-ask .btn:hover,#w-daulet .an-card .btn:hover{background:#e6e6ec}
+.sa-pl li{grid-template-columns:44px minmax(0,1fr)}.sa-pl li::before{content:none}
+.sa-pl time{font:700 12px/1.35 var(--f);color:rgba(255,255,255,.78);text-transform:uppercase}
+.sa-pl a.an-lk{color:#fff}
+.pack #w-daulet .an-body,#w-daulet .an-body{display:flex}
+#w-daulet #w-daulet-list .an-h{margin-top:6px}
+/* телефон: Аня и Саша без пояснительной подписи внизу, сводка Саши короче */
+@media(max-width:600px){#w-anna .an-ft .bw-note,#w-daulet .an-ft .bw-note{display:none}#w-anna .an-ft,#w-daulet .an-ft{justify-content:flex-end}}
+/* стикер Саши — как у Ани: фигура без фона выглядывает из круга, низ обрезан по кругу в самой картинке */
+#w-daulet .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#d9d9e2 75%);box-shadow:0 8px 18px rgba(0,0,0,.45)}
+#w-daulet .an-av .fg{clip-path:none}
+/* нажали на Сашу — из его телефона вылетает плашка TikTok в цветах логотипа */
+/* аватар стоит в правом углу — плашка вылетает влево, внутрь карточки */
+#w-daulet .an-av .fs{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+@media(max-width:600px){
+  #pack #w-daulet{margin-top:0;padding:10px 12px 12px;border-radius:18px;gap:10px}
+  #pack #w-daulet>.w-h{min-height:36px;padding-left:0}
+  #pack #w-daulet .mf-x{width:30px;height:30px}
+  #w-daulet .w-h h2{font-size:16.5px}
+  #w-daulet .at{gap:2px}
+  #w-daulet .at .c{font-size:12px}
+}
+#w-daulet{--ab:#0c7a4f;background:linear-gradient(155deg,#20b27a,#0e8a58 42%,#06663f)}
+#w-daulet .an-ask .btn:hover,#w-daulet .an-ref:hover{background:#e3f6ec;color:var(--ab)}
+#w-daulet .an-av .ci{background:radial-gradient(circle at 38% 30%,#fff,#d8efe3 75%);box-shadow:0 8px 18px rgba(0,60,30,.45)}
+#w-daulet .an-av .fg{clip-path:none}
+#w-daulet .an-av .fs{filter:drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(0,60,30,.45))}
+/* нажали на Даулета — вылетает плашка с лучшей прибылью */
+#w-daulet .an-av .tt{position:absolute;right:30%;top:50%;padding:6px 10px;border-radius:999px;background:#fff;color:#0c7a4f;font:800 14px/1 var(--f);letter-spacing:-.02em;white-space:nowrap;font-style:normal;
+  box-shadow:0 6px 16px rgba(0,60,30,.45);transform-origin:100% 100%;opacity:0;transform:translate(6px,6px) scale(.2) rotate(12deg);z-index:2}
+#w-daulet .an-av.tok .tt{animation:satok 1.7s cubic-bezier(.2,.9,.3,1.2)}
+@media(prefers-reduced-motion:reduce){#w-daulet .an-av.tok .tt{animation:none}}
+.pack #w-daulet .an-body,#w-daulet .an-body{display:flex}
+#w-daulet .an-ft .an-ref{text-decoration:none}
+.dl-list{display:flex;flex-direction:column;gap:6px;margin:0;padding:0}
+.dl-it{list-style:none;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:start;background:rgba(255,255,255,.12);border-radius:14px;padding:8px 10px}
+.dl-ph{display:block;width:52px;height:52px;border-radius:10px;overflow:hidden;background:#fff}
+.dl-ph img{display:block;width:100%;height:100%;object-fit:contain}
+.dl-t{display:flex;flex-direction:column;gap:3px;min-width:0;font:600 13.5px/1.3 var(--f)}
+.dl-t .an-lk{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:#fff}
+.dl-t small{font:500 11.5px/1.35 var(--f);color:rgba(255,255,255,.78)}
+.dl-t p{margin:2px 0 0;font:400 12.5px/1.4 var(--fb);color:rgba(255,255,255,.92);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.dl-ln{display:flex;gap:10px;margin-top:2px}
+.dl-ln a{font:700 12px var(--f);color:#fff;text-decoration:underline 1.5px rgba(255,255,255,.45);text-underline-offset:3px}
+.dl-p{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font:800 15px/1.1 var(--f);color:#fff;white-space:nowrap}
+.dl-p small{font:600 11px var(--f);color:rgba(255,255,255,.75)}
+.dl-it.best .dl-p{color:#fff4a8}
+.dl-run{font-size:13.5px}
+.dl-run b{font-weight:700}
+.dl-last{margin:0 2px;font:500 12px/1.4 var(--f);color:rgba(255,255,255,.8)}
+#w-daulet .an-ask{margin-top:0}
+.dl-btns{display:flex;gap:6px;flex-wrap:wrap}
 .kq:hover{box-shadow:inset 0 0 0 2px #fff,0 0 0 2px var(--kr)}
 .kq-t{display:flex;flex-direction:column;gap:2px;min-width:0}
 .kq-t b{font:600 14px/1.3 var(--f);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1903,6 +1983,19 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
             </div>
           </div>
           <div class="an-ft"><small class="bw-note">Саша руководит ИИ-отделом маркетинга: план и сценарии каждый понедельник.</small><a class="an-ref" href="marketing/?view=dept" target="_blank" rel="noopener">Открыть отдел ↗</a></div>
+        </div>
+        <div class="w" id="w-daulet">
+          <div class="w-h"><h2><span class="at">Аналитик Даулет<span class="c" id="w-daulet-c">подключаемся…</span></span></h2></div>
+          <div class="an-kpi" id="w-daulet-kpi"><div class="k"><b>—</b><span>загружаем…</span></div><span class="an-av" id="daulet-av" aria-hidden="true"><span class="ci"></span><span class="fs"><span class="fg"><img src="daulet-avatar.webp?v=1" alt="" width="240" height="252"></span></span><i class="tt" id="daulet-tt">1688 → Kaspi</i></span></div>
+          <div class="an-body" id="w-daulet-body">
+            <div class="an-col">
+              <div id="w-daulet-say"></div>
+              <div id="w-daulet-list"></div>
+              <div id="w-daulet-run"></div>
+              <form class="an-ask" id="daulet-ask" novalidate><input id="daulet-q" placeholder="Проверить товар, например «органайзер для кабелей»" autocomplete="off" maxlength="120" aria-label="Что проверить на Kaspi"><button class="btn primary sm" type="submit" id="daulet-q-btn">Проверить</button></form>
+            </div>
+          </div>
+          <div class="an-ft"><small class="bw-note">Даулет каждое утро ищет на Kaspi товары, которые выгодно привезти с 1688.</small><span class="dl-btns"><a class="an-ref" id="daulet-panel" target="_blank" rel="noopener" hidden>Панель ↗</a> <button class="an-ref" type="button" id="daulet-ref-btn" aria-label="Обновить данные Даулета"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>Обновить данные</button></span></div>
         </div>
         <div class="w" id="w-req">
           <div class="w-h"><img class="rcup" src="topper-cup.svg?v=1" alt="" width="74" height="102"><h2><span class="rt">Заявки с сайта топперов</span><span class="c" id="w-req-c"></span></h2></div>
@@ -3305,29 +3398,29 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 
 /* ---------- раскладка главной ---------- */
 let packW=[];
-let packWide=[],packSide=[],packL=[],packAnna=null,packSasha=null;
+let packWide=[],packSide=[],packL=[],packAnna=null,packSasha=null,packDaulet=null;
 function initPack(){
   packWide=[$('w-today').closest('.w'),$('boss-list').closest('.w')];packSide=[$('w-kaspi'),$('w-print')];
-  packL=[packWide[0],...packSide,packWide[1],$('w-req')];packAnna=$('w-anna');packSasha=$('w-sasha');packW=[packAnna,packSasha,...packL];
+  packL=[packWide[0],...packSide,packWide[1],$('w-req')];packAnna=$('w-anna');packSasha=$('w-sasha');packDaulet=$('w-daulet');packW=[packAnna,packSasha,packDaulet,...packL];
   /* убранные с главной блоки остаются скрытыми: их данные считаются, просто не показываются */
   const hid=document.createElement('div');hid.id='home-hidden';hid.hidden=true;$('p-home').appendChild(hid);
   ['w-cal','w-projects','w-office','w-supplies'].forEach(id=>{const w=$(id);if(w)hid.appendChild(w)});
   $('w-today').closest('.w').id||=('w-today-box');$('boss-list').closest('.w').id||=('w-boss');
   packW.forEach(w=>{w.classList.add('mfold');const h=w.querySelector(':scope>.w-h');if(h)h.insertAdjacentHTML('beforeend','<span class="mf-x" aria-hidden="true"></span>')});mfApply();
-  const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);[packAnna,packSasha,...packL].forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
+  const c=document.createElement('div');c.className='pcol';$('pack').appendChild(c);[packAnna,packSasha,packDaulet,...packL].forEach(x=>c.appendChild(x));$('pack').style.setProperty('--cols',1);
   /* заявки с сайта топперов — колонкой под принтерами, как Kaspi и Bambu */
-  [['w-req','w-req-list'],['w-anna','w-anna-body'],['w-sasha','w-sasha-body'],['w-kaspi','w-kaspi'],['w-print','w-print']].forEach(([id,ctl])=>{const rh=$(id).querySelector(':scope>.w-h');rh.tabIndex=0;rh.setAttribute('role','button');rh.setAttribute('aria-controls',ctl);
+  [['w-req','w-req-list'],['w-anna','w-anna-body'],['w-sasha','w-sasha-body'],['w-daulet','w-daulet-body'],['w-kaspi','w-kaspi'],['w-print','w-print']].forEach(([id,ctl])=>{const rh=$(id).querySelector(':scope>.w-h');rh.tabIndex=0;rh.setAttribute('role','button');rh.setAttribute('aria-controls',ctl);
     rh.addEventListener('keydown',e=>{if(e.target===rh&&(e.key==='Enter'||e.key===' ')){e.preventDefault();mfToggle(id)}})});
   document.querySelectorAll('#p-home .home-grid,#p-home .home-grid2').forEach(el=>el.remove());
 }
 let packN=0;
 /* телефон: блоки главной сворачиваются, открываются нажатием на заголовок; что открыто — запоминается на этом устройстве.
    Заявки и Анна сворачиваются и на компьютере; Анна там открыта, пока её не свернули («-w-anna» в списке) */
-const MF_KEY='raz.home.open',MF_ALL=['w-req','w-anna','w-sasha','w-kaspi','w-print'];let mOpen=new Set();try{mOpen=new Set(JSON.parse(localStorage.getItem(MF_KEY)||'[]'))}catch(_){}
+const MF_KEY='raz.home.open',MF_ALL=['w-req','w-anna','w-sasha','w-daulet','w-kaspi','w-print'];let mOpen=new Set();try{mOpen=new Set(JSON.parse(localStorage.getItem(MF_KEY)||'[]'))}catch(_){}
 const isPhone=()=>matchMedia('(max-width:600px)').matches;
-if(!isPhone())['w-anna','w-kaspi','w-print'].forEach(id=>{if(!mOpen.has('-'+id))mOpen.add(id)});
+if(!isPhone())['w-anna','w-daulet','w-kaspi','w-print'].forEach(id=>{if(!mOpen.has('-'+id))mOpen.add(id)});
 function mfApply(){packW.forEach(w=>{const o=mOpen.has(w.id);w.classList.toggle('mopen',o);const h=w.querySelector(':scope>.w-h');if(h){h.setAttribute('aria-expanded',isPhone()||MF_ALL.includes(w.id)?String(o):'true')}})}
-function mfToggle(id,force){const o=force!=null?force:!mOpen.has(id);o?(mOpen.add(id),mOpen.delete('-'+id)):(mOpen.delete(id),mOpen.add('-'+id));try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff();if(id==='w-sasha')sashaTok()}
+function mfToggle(id,force){const o=force!=null?force:!mOpen.has(id);o?(mOpen.add(id),mOpen.delete('-'+id)):(mOpen.delete(id),mOpen.add('-'+id));try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff();if(id==='w-sasha')sashaTok();if(id==='w-daulet')daulTok()}
 document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h,#w-req>.w-h');if(!h||(!isPhone()&&!MF_ALL.includes(h.parentElement.id))||e.target.closest('a,button,select,input,.go'))return;
   e.preventDefault();e.stopPropagation();mfToggle(h.parentElement.id)},true);
 function packHome(){
@@ -3337,7 +3430,7 @@ function packHome(){
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
   /* Анна и Саша — первыми, рядом друг с другом, каждый шириной в колонку */
   const duo=()=>{const d=mk('pduo');d.append(packAnna,packSasha);return d};
-  if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,packSasha,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
+  if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,packSasha,packDaulet,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
   /* «Сегодня» — во всю ширину сразу под плитками сводки, выше всех виджетов */
   const today=()=>{const d=mk('pfull');d.appendChild(packWide[0]);return d};
   /* компьютер: всё на одном экране — слева «Сегодня» и Аня с Сашей, справа задачи с заявками и Kaspi с принтерами (на узком компьютере — одной колонкой) */
@@ -3345,10 +3438,10 @@ function packHome(){
   if(n>=3){pack.classList.add('flat');const sp2=x=>{x.style.gridColumn='span 2';return x};[packWide[0],packAnna,packSasha,packWide[1]].forEach(x=>x.style.gridColumn='');
     const [today,tasks]=packWide,[kaspi,print]=packSide,req=packL.at(-1);
     document.querySelector('#p-home .stats').appendChild($('hx-bar'));/* план продаж — пятая плитка в ряду сводки */
-    pack.append(...(n===4?[sp2(today),tasks,kaspi,packAnna,packSasha,req,print]:[sp2(today),kaspi,packAnna,packSasha,print,sp2(tasks),req]));return}
-  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.appendChild(packSide[0]);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
+    pack.append(...(n===4?[sp2(today),tasks,kaspi,packAnna,packSasha,packDaulet,print,req]:[sp2(today),kaspi,packAnna,packSasha,packDaulet,print,sp2(tasks),req]));return}
+  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.append(packSide[0],packDaulet);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
 }
-['w-anna','w-sasha'].forEach(id=>$(id+'-kpi').addEventListener('click',()=>{if(!mOpen.has(id))mfToggle(id,true)}));
+['w-anna','w-sasha','w-daulet'].forEach(id=>$(id+'-kpi').addEventListener('click',()=>{if(!mOpen.has(id))mfToggle(id,true)}));
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 
 /* ---------- прайс ---------- */
@@ -5476,7 +5569,7 @@ $('task-form').addEventListener('submit',async e=>{
   db.collection('requests').onSnapshot(snap=>{requests=snap.docs.map(d=>({id:d.id,...d.data()}));requestsLoaded=true;render();setTimeout(importPendingReq,300)},e=>{requestsLoaded=true;try{console.warn('requests',e)}catch(_){}});
   db.collection('projects').onSnapshot(snap=>{projects=snap.docs.map(d=>({id:d.id,...d.data()}));projLoaded=true;render();if(pEditing&&pEditing!=='new'&&!projects.find(x=>x.id===pEditing)){closeP();toast('Этот проект удалили')}},fail);
   for(const k of ['office','supplies'])db.collection(k).onSnapshot(snap=>{ledger[k]=snap.docs.map(d=>({id:d.id,...d.data()}));ledgerLoaded[k]=true;render();if(xEditing&&xEditing!=='new'&&xKind===k&&!ledger[k].find(r=>r.id===xEditing)){closeX();toast('Эту запись удалили')}},fail);
-  annaListen();sashaListen();
+  annaListen();sashaListen();daulListen();
 })();
 for(const n of ['openEditor','openX','openQ','openP']){const f=window[n];if(typeof f==='function')window[n]=function(...a){const r=f.apply(this,a);enhanceSelects();return r}}
 /* ---------- магазин Kaspi (воркер kaspi-orders, коллекция kaspi_orders) ----------
@@ -6550,6 +6643,59 @@ $('sasha-ask').addEventListener('submit',async e=>{
   }catch(er){m.a='Не получилось: '+(er.message||er);m.err=true}
   sashaBusy=false;sashaSave();renderSasha();
 });
+/* ---------- Даулет — ИИ-аналитик Kaspi (kaspi-bot на рабочем компьютере) ----------
+   wa_anna/daulet — сводка: {heartbeatAt, status:'idle'|'running', running:{label,started}, step, queue,
+     stats:{categories,scanned,products,best,good,awaiting}, lastRun:{started,finished,status,...},
+     top:[{id,title,url,photo,mimg,murl,status,price,profit,margin,sales,sellers,cny,weight,conf,summary,pain}],
+     schedule, criteria:{maxPrice,minProfit,maxWeight}, panel, reqHandledAt}.
+   wa_anna/daulet_req — кнопка «Обновить данные» {at, by, query}: Даулет проверяет её раз в 15 секунд. */
+let daulD=null,daulReq=null,daulLoaded=false,daulErr='';
+function daulListen(){
+  const fs=annaFs();if(!fs)return;
+  fs.doc('wa_anna/daulet').onSnapshot(s=>{daulD=s.exists?s.data():null;daulLoaded=true;daulErr='';renderDaulet()},
+    e=>{daulLoaded=true;daulErr='rules';try{console.warn('daulet',e)}catch(_){}renderDaulet()});
+  fs.doc('wa_anna/daulet_req').onSnapshot(s=>{daulReq=s.exists?s.data():null;renderDaulet()},()=>{});
+  setInterval(()=>{if(!document.hidden&&!$('p-home').hidden)renderDaulet()},30000);
+  renderDaulet();
+}
+let daulTokT;
+function daulTok(){const a=$('daulet-av');if(!a)return;a.classList.remove('tok');void a.offsetWidth;a.classList.add('tok');clearTimeout(daulTokT);daulTokT=setTimeout(()=>a.classList.remove('tok'),1800)}
+const daulOnline=()=>!!daulD&&Date.now()-(+daulD.heartbeatAt||0)<5*60e3;
+const daulPending=()=>!!daulReq&&+daulReq.at>(+(daulD&&daulD.reqHandledAt)||0)&&Date.now()-(+daulReq.at||0)<6*3600e3;
+function renderDaulet(){
+  const c=$('w-daulet-c');if(!c)return;
+  const d=daulD||{},on=daulOnline(),run=on&&d.status==='running',pend=daulPending(),st=d.stats||{},top=d.top||[];
+  c.textContent=daulErr?'нет доступа к базе':!daulLoaded?'подключаемся…':!daulD?'ещё не подключался к учёту':run?'ищет товары'+(d.running&&d.running.label?' · '+d.running.label:''):pend?(on?'принял заявку, сейчас начнёт':'заявка ждёт, когда включат компьютер'):on?'в сети'+(d.schedule?' · каждый день в '+d.schedule:''):'компьютер выключен · был '+printWhen(+d.heartbeatAt);
+  c.style.setProperty('--sc',daulErr?'var(--danger)':run||pend?'#ffd166':on?'#c9ffe2':'rgba(255,255,255,.45)');
+  agKpi('w-daulet-kpi',!daulLoaded||daulErr||!daulD?[['—',daulErr?'нет доступа':!daulLoaded?'загружаем…':'ждём Даулета']]:
+    [[(st.best||0)+(st.good||0),'товаров к заказу'],[top[0]?'+'+Math.round(top[0].profit).toLocaleString('ru-RU'):'—','₸ лучшая прибыль с шт.'],[(st.categories?Math.min(100,Math.round((st.scanned||0)/st.categories*100)):0)+'%','Kaspi уже проверено']]);
+  const tt=$('daulet-tt');if(tt)tt.textContent=top[0]?'+'+money(top[0].profit):'1688 → Kaspi';
+  const cr=d.criteria||{};
+  const say=$('w-daulet-say');
+  say.innerHTML=daulErr?'<div class="an-say">Нет доступа к сводке Даулета в базе.</div>':!daulLoaded?'<div class="an-say">Загружаем…</div>':!daulD?
+    '<div class="an-say">Сәлем! Я Даулет, аналитик Kaspi. Я ещё не подключился к учёту: обновите меня на рабочем компьютере (папка kaspi-bot) — и здесь появятся товары, которые выгодно привезти с 1688.</div>':
+    !top.length?`<div class="an-say">Пока нет товаров, которые точно совпадают по фото с 1688 и дают от ${money(cr.minProfit||3000)} прибыли с штуки. ${st.awaiting?'Ещё '+st.awaiting+' '+plural(st.awaiting,'товар ждёт','товара ждут','товаров ждут')+' сверки с 1688. ':''}Я продолжу искать${d.schedule?' завтра в '+d.schedule:''}.</div>`:'';
+  $('w-daulet-list').innerHTML=top.length?`<p class="an-h">Что заказать <em>${top.length}</em></p><ul class="dl-list">${top.slice(0,5).map(x=>`<li class="dl-it ${x.status==='best'?'best':''}">
+    <a class="dl-ph" href="${esc(x.url)}" target="_blank" rel="noopener">${x.photo?`<img src="${esc(x.photo)}" alt="" loading="lazy" onerror="this.remove()">`:''}</a>
+    <div class="dl-t"><a class="an-lk" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a>
+      <small>Kaspi ${money(x.price)} · 1688 ¥${esc(String(x.cny||'—'))} · ~${esc(String(x.sales||0))} продаж/мес · продавцов ${esc(String(x.sellers||0))}${x.conf?' · фото совпали на '+Math.round(x.conf)+'%':''}</small>
+      ${x.summary?`<p>${esc(x.summary)}</p>`:''}
+      <span class="dl-ln">${x.murl?`<a href="${esc(x.murl)}" target="_blank" rel="noopener">1688 ↗</a>`:''}<a href="${esc(x.url)}" target="_blank" rel="noopener">Kaspi ↗</a></span></div>
+    <b class="dl-p">+${money(x.profit)}<small>маржа ${Math.round(x.margin||0)}%</small></b></li>`).join('')}</ul>`:'';
+  const lr=d.lastRun||null;
+  $('w-daulet-run').innerHTML=run?`<div class="an-say dl-run"><b>Ищу товары…</b>${d.step?'\n'+esc(d.step):''}</div>`:
+    lr&&lr.finished?`<p class="dl-last">Последний поиск: ${esc(String(lr.finished).slice(8,10)+'.'+String(lr.finished).slice(5,7)+' в '+String(lr.finished).slice(11,16))} · товаров на Kaspi ${lr.products||0}, проверено на 1688 ${lr.searched_1688||0}, отсеяно ${lr.rejected||0}</p>`:'';
+  const pn=$('daulet-panel');if(d.panel){pn.href=d.panel;pn.hidden=false;pn.title='Открывается только в офисной сети'}else pn.hidden=true;
+  $('daulet-ref-btn').disabled=$('daulet-q-btn').disabled=!canWrite||run||pend;
+}
+async function daulAsk(query){
+  const fs=annaFs();if(!fs||!canWrite)return;
+  try{await fs.doc('wa_anna/daulet_req').set({at:Date.now(),by:(ROLE().name||''),query:query||''});
+    toast(daulOnline()?(query?'Даулет проверит «'+query+'» через несколько секунд':'Даулет начнёт поиск через несколько секунд'):'Заявка сохранена: Даулет начнёт, когда включат рабочий компьютер');daulTok()}
+  catch(e){toast('Не получилось отправить заявку Даулету')}
+}
+$('daulet-ref-btn').addEventListener('click',()=>daulAsk(''));
+$('daulet-ask').addEventListener('submit',e=>{e.preventDefault();const inp=$('daulet-q'),q=inp.value.trim();if(!q)return;inp.value='';daulAsk(q)});
 let annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={},annaWait=null,annaLead=[];
 /* отмеченные дела из «Сегодня сделать»: wa_anna/done {items:{ключ:{text, at, by, orderId?, kaspiId?}}}.
    Видно всем, кто открыл учёт; дело скрыто сутки после отметки, Аня его в новую сводку не возвращает. */
