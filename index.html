@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261023150000">
+<meta name="app-build" content="20261027000000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -5689,6 +5689,7 @@ async function syncKaspiOrders(manual){
     }
     const fresh=d.orders.filter(x=>!before.has(x.id)).length;
     kaspiSync.at=Date.now();kaspiSync.err='';kaspiSync.count=d.count||0;kaspiSync.stats=d.stats||null;
+    try{await kaspiCol.doc('_meta').set({syncAt:kaspiSync.at},{merge:true})}catch(_){}
     if(manual||fresh)toast(fresh?'С Kaspi пришло новых заказов: '+fresh:'Заказы Kaspi обновлены');
     if(!kHist.started&&!kaspiMeta.historyDone){kHist.started=true;setTimeout(()=>loadKaspiHistory(false),1500)}
   }catch(e){
@@ -6214,7 +6215,7 @@ $('p-kaspi').addEventListener('focusout',()=>setTimeout(()=>{if(page==='kaspi'&&
 document.addEventListener('click',e=>{const b=e.target.closest('[data-kpgo]');if(b){kTab='products';kpView.f=b.dataset.kpgo}},true);
 document.addEventListener('click',e=>{if(e.target.closest('[data-kpalert]')){kTab='products';kpView.f='alert'}},true);
 /* цены конкурентов — сами раз в 6 часов, пока учёт открыт */
-setInterval(()=>{if(kaspiLoaded&&!kaspiDbErr&&canWrite&&!kpBusy&&Date.now()-(+kaspiMeta.pricesAt||0)>6*3600e3&&Date.now()-(kpCheckPrices._t||0)>30*60e3){kpCheckPrices._t=Date.now();kpCheckPrices(false)}},60*1000);
+setInterval(()=>{if(!document.hidden&&kaspiLoaded&&!kaspiDbErr&&canWrite&&!kpBusy&&Date.now()-(+kaspiMeta.pricesAt||0)>6*3600e3&&Date.now()-(kpCheckPrices._t||0)>30*60e3){kpCheckPrices._t=Date.now();kpCheckPrices(false)}},60*1000);
 
 /* ---------- блок на главной ---------- */
 function renderKaspiWidget(){
@@ -6511,9 +6512,11 @@ $('cned-form').addEventListener('input',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key!=='Escape'||$('cned').hidden)return;if(dpEl||csSel)return;e.stopPropagation();closeCn()},true);
 
-/* первая проверка — как только загрузится база, дальше раз в 10 минут, пока учёт открыт */
+/* первая проверка — как только загрузится база, дальше раз в 10 минут, пока учёт открыт.
+   Бережём лимиты Kaspi и базы: проверяет только видимая вкладка, и одна на всех — если другое устройство
+   уже обновило заказы за последние 10 минут (kaspi_orders/_meta.syncAt), это устройство ждёт */
 (function kaspiAuto(){
-  const tick=()=>{if(loaded&&db&&canWrite&&kaspiLoaded&&!kaspiDbErr&&Date.now()-kaspiSync.tried>=10*60*1000-5000)syncKaspiOrders(false)};
+  const tick=()=>{if(!document.hidden&&loaded&&db&&canWrite&&kaspiLoaded&&!kaspiDbErr&&Date.now()-kaspiSync.tried>=10*60*1000-5000&&Date.now()-(+kaspiMeta.syncAt||0)>=10*60*1000-5000)syncKaspiOrders(false)};
   setInterval(tick,5000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
 })();
