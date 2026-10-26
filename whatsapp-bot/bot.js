@@ -44,7 +44,9 @@ const MAX_AGE = 3 * 24 * 3600e3;             // досланные после в
 // Аня отвечает только на свежее сообщение клиента: если клиент написал больше 40 минут назад (компьютер был выключен,
 // бот перезапускался, ждали менеджера), она уже не пишет — иначе это выглядит так, будто Аня пишет первой (правило Евгения 26.10)
 const FRESH = 40 * 60e3;
-const OUTBOX_EVERY = 15e3;                   // как часто проверять задания на уведомления
+// Бесплатная база Firebase даёт 50 000 чтений в сутки на всё (учёт, бот, страница заказа для клиента).
+// Каждая проверка — минимум одно чтение, поэтому бот проверяет не чаще раза в минуту (раньше выбирали лимит к утру).
+const OUTBOX_EVERY = 60e3;                   // как часто проверять задания на уведомления
 const OUTBOX_TTL = 7 * 24 * 3600e3;          // задания старше недели выбрасываем
 const SEND_GAP = 3e3;                        // не чаще одного сообщения в 3 секунды
 const MANAGER_WAIT = 10 * 60e3;              // если менеджер не ответил за 10 минут после вызова — извиняемся перед клиентом
@@ -328,10 +330,11 @@ async function checkWaitingChats() {
   if (state.status !== 'online' || missing.length) return;
   // После перезапуска бота таймеры ответа теряются: подбираем чаты, где клиент ждёт дольше 7 минут (но не дольше 40), а ответа нет
   if (aiOn) try {
-    const silent = await fs.query('wa_chats', {
-      where: { fieldFilter: { field: { fieldPath: 'lastRole' }, op: 'EQUAL', value: { stringValue: 'client' } } },
+    // Берём из базы только чаты со свежим сообщением (старше 40 минут Аня всё равно не отвечает), а не все, где писал клиент
+    const recent = await fs.query('wa_chats', {
+      where: { fieldFilter: { field: { fieldPath: 'lastAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { integerValue: String(Date.now() - FRESH) } } },
     });
-    for (const chat of silent) {
+    for (const chat of recent.filter(c => c.lastRole === 'client')) {
       const age = Date.now() - (chat.lastAt || chat.updatedAt || 0);
       if (pending.has(chat.id) || answering.has(chat.id) || age < replyDelay() || age > FRESH || skipped(chat) || !hasQuestion(chat.messages)) continue;
       const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
@@ -366,13 +369,15 @@ async function checkWaitingChats() {
 
 let notify = null; // уведомления команде в Telegram (notify.js)
 let extras = null; // копии базы, «Кому можно написать», проверка цен Kaspi (extras.js)
-let annaBusy = false, annaErr = '';
+let annaBusy = false, annaErr = '', annaTick = 0;
 async function checkAnna() {
   if (annaBusy || missing.length || !aiOn) return;
   annaBusy = true;
   try {
     const n = await answerQuestions(fs, env);
     if (n) log('Аня ответила на вопросы из учёта:', n);
+    // Сводку и аналитику проверяем раз в 3 минуты: это ещё 3–4 чтения базы, а нужны они редко
+    if (annaTick++ % 3) return;
     const why = await digestDue(fs);
     if (why) { await makeDigest(fs, env); log('Аня подготовила сводку для учёта (' + why + ')'); }
     const per = await insightsDue(fs);
@@ -457,7 +462,7 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   warmUp();
   setInterval(processOutbox, OUTBOX_EVERY);
   setInterval(checkWaitingChats, 60e3);
-  setInterval(checkAnna, 30e3);
+  setInterval(checkAnna, 60e3);
   if (!missing.length) notify = startNotify(fs, env, () => botToken(env), log);
   if (!missing.length) startL7({ fs, env, log });
   if (!missing.length) extras = startExtras({ fs, env, log, notify, send, online: () => state.status === 'online' && !!sock, sock: () => sock, aiOn, DIR });

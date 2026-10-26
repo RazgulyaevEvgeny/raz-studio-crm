@@ -187,7 +187,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
   </div>
 
   <div id="loading" aria-label="Загружаем заказ"><div class="sk"></div><div class="sk s2"></div></div>
-  <div class="empty" id="missing" hidden><b>Заказ не найден</b><p id="missing-t">Похоже, ссылка открылась не полностью. Напишите нам в WhatsApp, и мы пришлём её ещё раз.</p></div>
+  <div class="empty" id="missing" hidden><b id="missing-h">Заказ не найден</b><p id="missing-t">Похоже, ссылка открылась не полностью. Напишите нам в WhatsApp, и мы пришлём её ещё раз.</p></div>
 
   <main id="main" hidden>
     <section class="tag" id="tag" aria-labelledby="t-st">
@@ -353,9 +353,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
     $('loading').hidden=true;$('missing').hidden=true;$('main').hidden=false;
   }
 
-  function missing(text){
+  function missing(text,head){
     $('loading').hidden=true;$('main').hidden=true;$('missing').hidden=false;
     if(text)$('missing-t').textContent=text;
+    $('missing-h').textContent=head||'Заказ не найден';
     $('wa').href='https://wa.me/'+PHONE;
   }
 
@@ -373,7 +374,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
         if(s===last){var n=new Date();$('live').textContent='Обновлено в '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+', страница обновляется сама';return}
         last=s;render(o);
       })
-      .catch(function(){if(first)missing('Не получилось загрузить заказ. Проверьте интернет и обновите страницу.')});
+      .catch(function(){if(first)missing('Не получилось загрузить заказ. Страница попробует ещё раз сама, а если торопитесь, напишите нам в WhatsApp: менеджер подскажет статус.','Заказ временно недоступен')});
   }
   $('wa').href='https://wa.me/'+PHONE;
   document.addEventListener('click',function(e){
