@@ -5,12 +5,13 @@
 //   - отвечает клиентам ИИ-консультантом на бесплатном Google Gemini (логика в brain.js);
 //   - отправляет клиентам уведомления о заказах: учёт кладёт задание в коллекцию wa_outbox, бот его забирает;
 //   - если менеджер сам написал клиенту, бот молчит в этом чате 30 минут, а потом читает переписку и сам решает,
-//     нужно ли отвечать (на «спасибо» и «хорошо» молчит, на новый вопрос отвечает: «менеджер сейчас занят заказом»); под каждым сообщением Ани подпись «💁‍♀️ Виртуальный помощник Аня»;
-//   - если бот позвал менеджера, а тот не ответил за 10 минут, бот извиняется перед клиентом (один раз);
+//     нужно ли отвечать (на «спасибо» и «хорошо» молчит, на новый вопрос отвечает); под каждым сообщением Ани подпись «💁‍♀️ Виртуальный помощник Аня»;
+//   - Аня никогда не пишет первой: отвечает только на свежее (до 40 минут) сообщение клиента с вопросом;
+//     извинение «менеджеры заняты» через 10 минут после вызова менеджера выключено (BUSY_NOTICE_ON), правило Евгения 26.10;
 //   - готовит для учёта сводку «Менеджер Аня» (утром и по кнопке «Обновить») и отвечает на вопросы сотрудников (anna.js);
 //   - присылает команде в Telegram уведомления: Аня зовёт менеджера, новый заказ Kaspi (notify.js);
 //   - сообщения не отмечает прочитанными, чтобы менеджеры видели новые чаты в телефоне;
-//   - фото клиента смотрит через Gemini, делает из логотипа визуализацию на футболке или худи (mockup.js), примеры работ присылает из учёта; после включения компьютера отвечает всем, кто ждал;
+//   - фото клиента смотрит через Gemini, делает из логотипа визуализацию на футболке или худи (mockup.js), примеры работ присылает из учёта; на старые сообщения (компьютер был выключен) не отвечает — их видит менеджер;
 //   - копия базы каждую ночь, подсказки менеджеру «Кому можно написать» (сама Аня первой не пишет), цены конкурентов Kaspi (extras.js).
 // Состояние и QR-код: http://localhost:3777 на этом компьютере.
 //
@@ -39,11 +40,15 @@ const PORT = 3777;
 // Днём (и в обед) Аня ждёт менеджера 7 минут; вечером, ночью и в выходные отвечает через 15 секунд
 const replyDelay = () => (isClosed() ? 15e3 : 7 * 60e3);
 const OFF_HOURS_PAUSE = 3 * 60e3;             // в нерабочее время после сообщения менеджера Аня ждёт только 3 минуты
-const MAX_AGE = 3 * 24 * 3600e3;             // компьютер был выключен: после включения отвечаем всем, кто ждал до 3 дней (с извинением за ожидание)
+const MAX_AGE = 3 * 24 * 3600e3;             // досланные после включения компьютера сообщения до 3 дней записываем в учёт
+// Аня отвечает только на свежее сообщение клиента: если клиент написал больше 40 минут назад (компьютер был выключен,
+// бот перезапускался, ждали менеджера), она уже не пишет — иначе это выглядит так, будто Аня пишет первой (правило Евгения 26.10)
+const FRESH = 40 * 60e3;
 const OUTBOX_EVERY = 15e3;                   // как часто проверять задания на уведомления
 const OUTBOX_TTL = 7 * 24 * 3600e3;          // задания старше недели выбрасываем
 const SEND_GAP = 3e3;                        // не чаще одного сообщения в 3 секунды
 const MANAGER_WAIT = 10 * 60e3;              // если менеджер не ответил за 10 минут после вызова — извиняемся перед клиентом
+const BUSY_NOTICE_ON = false;                // это извинение — сообщение без вопроса клиента, поэтому выключено (правило Евгения 26.10)
 
 const env = process.env;
 const missing = ['FIREBASE_API_KEY', 'FIREBASE_PROJECT', 'BOT_EMAIL', 'BOT_PASSWORD'].filter(k => !String(env[k] || '').trim());
@@ -141,7 +146,7 @@ async function onMessage(m) {
   await appendChat(fs, chatId, { role: 'client', text: heard || text, at, id: m.key.id || '' }, {
     phone, jid, unread: true, ...(m.pushName ? { name: m.pushName } : {}),
   });
-  if (!aiOn || m._late || Date.now() - at > MAX_AGE) return;
+  if (!aiOn || m._late || Date.now() - at > FRESH) return;
   log('Сообщение от клиента', phone || chatId, '— отвечу через', Math.round(replyDelay() / 1000), 'с');
 
   // Клиенты часто пишут несколькими сообщениями подряд: отвечаем, когда допишет
@@ -196,6 +201,7 @@ async function answer(jid, chatId, phone) {
 async function answerNow(jid, chatId, phone) {
   const chat = await fs.get('wa_chats/' + chatId);
   if (!chat || chat.lastRole !== 'client') return; // пока ждали, ответил менеджер
+  if (Date.now() - (chat.lastAt || 0) > FRESH) { log('Аня не отвечает в чате', phone || chatId, '— клиент писал давно, ответит менеджер'); return; }
   if (skipped(chat)) { log('Аня не отвечает в чате', phone || chatId, '— уже решила раньше:', chat.botSkipReason || ''); return; } // Аня уже решила, что на эти сообщения отвечать не нужно
   if (!hasQuestion(chat.messages)) { log('Аня не отвечает в чате', phone || chatId, '— в сообщении клиента нет вопроса'); return; } // правило Евгения 20.10, днём и ночью
   // Менеджер недавно писал в этом чате: ждём конца паузы, и если клиенту так и не ответили — отвечаем сами
@@ -218,7 +224,15 @@ async function answerNow(jid, chatId, phone) {
     log('Аня решила не отвечать в чате', phone || chatId, '—', reply.silent);
     return;
   }
-  if (!reply.text) return;
+  if (!reply.text) {
+    // ИИ не смог ответить: клиенту ничего не пишем («менеджер занят» без ответа на вопрос не нужен), только зовём менеджера
+    if (reply.handoff && !chat.needsManager) {
+      await fs.patch('wa_chats/' + chatId, { needsManager: true, managerReason: reply.handoff, managerCalledAt: Date.now(), busyNoticeAt: 0 });
+      log('Нужен менеджер в чате', phone || chatId, '—', reply.handoff);
+      notify?.managerNeeded({ name: chat.clientName || chat.name, phone }, reply.handoff).catch(() => {});
+    }
+    return;
+  }
   let ok = true, id = '';
   try { id = await send(jid, reply.text, true); } catch (e) { ok = false; log('не отправлено', e?.message || e); }
   // Менеджера зовём один раз: повторный вызов, пока он не подключился, не сбрасывает 10-минутное ожидание
@@ -312,14 +326,14 @@ function textOf(message) {
 
 async function checkWaitingChats() {
   if (state.status !== 'online' || missing.length) return;
-  // После перезапуска бота таймеры ответа теряются: подбираем чаты, где клиент ждёт дольше 7 минут, а ответа нет
+  // После перезапуска бота таймеры ответа теряются: подбираем чаты, где клиент ждёт дольше 7 минут (но не дольше 40), а ответа нет
   if (aiOn) try {
     const silent = await fs.query('wa_chats', {
       where: { fieldFilter: { field: { fieldPath: 'lastRole' }, op: 'EQUAL', value: { stringValue: 'client' } } },
     });
     for (const chat of silent) {
       const age = Date.now() - (chat.lastAt || chat.updatedAt || 0);
-      if (pending.has(chat.id) || answering.has(chat.id) || age < replyDelay() || age > MAX_AGE || skipped(chat) || !hasQuestion(chat.messages)) continue;
+      if (pending.has(chat.id) || answering.has(chat.id) || age < replyDelay() || age > FRESH || skipped(chat) || !hasQuestion(chat.messages)) continue;
       const jid = chat.jid || (chat.phone ? chat.phone + '@s.whatsapp.net' : '');
       if (!jid) continue;
       pending.set(chat.id, null); // отметка «уже отвечаем», чтобы следующая проверка не ответила второй раз
@@ -328,7 +342,7 @@ async function checkWaitingChats() {
   } catch (e) {
     log('ошибка проверки неотвеченных чатов', e?.message || e);
   }
-  try {
+  if (BUSY_NOTICE_ON) try {
     const waiting = await fs.query('wa_chats', {
       where: { fieldFilter: { field: { fieldPath: 'needsManager' }, op: 'EQUAL', value: { booleanValue: true } } },
     });
