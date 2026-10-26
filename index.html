@@ -1509,6 +1509,7 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .dl-p{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font:800 15px/1.1 var(--f);color:#fff;white-space:nowrap}
 .dl-p small{font:600 11px var(--f);color:rgba(255,255,255,.75)}
 .dl-it.best .dl-p{color:#fff4a8}
+.dl-p.no{color:#ffd3cd;text-decoration:line-through 1.5px rgba(255,255,255,.5)}.dl-p.no small{text-decoration:none}
 .dl-run{font-size:13.5px}
 .dl-run b{font-weight:700}
 .dl-last{margin:0 2px;font:500 12px/1.4 var(--f);color:rgba(255,255,255,.8)}
@@ -6682,7 +6683,8 @@ function renderDaulet(){
       <small>Kaspi ${money(x.price)} · ~${esc(String(x.sales||0))} продаж/мес · ${esc(String(x.r30||0))} отзывов за 30 дн · продавцов ${esc(String(x.sellers||0))}</small>
       ${x.summary||x.pain?`<p>${esc(x.pain||x.summary)}</p>`:''}
       <span class="dl-ln"><a href="${esc(x.url)}" target="_blank" rel="noopener">Kaspi ↗</a>${x.photo?`<a href="https://lens.google.com/uploadbyurl?url=${encodeURIComponent(x.photo)}" target="_blank" rel="noopener">Найти по фото ↗</a>`:''}</span></div>
-    <b class="dl-p" title="Столько можно потратить на закуп с доставкой, чтобы заработать ${money(cr.minProfit||3000)}">до ${money(x.maxLanded||0)}<small>закуп с карго${x.maxCny?' · ≈ ¥'+x.maxCny:''}</small></b></li>`).join('')}</ul>`:'';
+    ${x.manual?`<b class="dl-p ${x.manual.ok?'':'no'}" title="Посчитано по весу и цене с 1688, которые вписал менеджер">${x.manual.ok?'+':''}${money(x.manual.profit)}<small>${x.manual.ok?'✓ проверено на 1688':'✕ не проходит'}</small></b>`
+      :`<b class="dl-p" title="Столько можно потратить на закуп с доставкой, чтобы заработать ${money(cr.minProfit||3000)}">до ${money(x.maxLanded||0)}<small>закуп с карго${x.maxCny?' · ≈ ¥'+x.maxCny:''}</small></b>`}</li>`).join('')}</ul>`:'';
   const lr=d.lastRun||null;
   $('w-daulet-run').innerHTML=run?`<div class="an-say dl-run"><b>Ищу товары…</b>${d.step?'\n'+esc(d.step):''}</div>`:
     lr&&lr.finished?`<p class="dl-last">Последний поиск: ${esc(String(lr.finished).slice(8,10)+'.'+String(lr.finished).slice(5,7)+' в '+String(lr.finished).slice(11,16))} · просмотрено товаров ${lr.products||0}, подробно проверено ${lr.deep_checked||0}, подошло ${(lr.best||0)+(lr.good||0)}</p>`:'';
