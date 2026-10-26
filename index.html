@@ -6662,7 +6662,7 @@ function daulListen(){
 }
 let daulTokT;
 function daulTok(){const a=$('daulet-av');if(!a)return;a.classList.remove('tok');void a.offsetWidth;a.classList.add('tok');clearTimeout(daulTokT);daulTokT=setTimeout(()=>a.classList.remove('tok'),1800)}
-const daulOnline=()=>!!daulD&&Date.now()-(+daulD.heartbeatAt||0)<25*60e3;
+const daulOnline=()=>!!daulD&&Date.now()-(+daulD.heartbeatAt||0)<70*60e3;
 const daulPending=()=>!!daulReq&&+daulReq.at>(+(daulD&&daulD.reqHandledAt)||0)&&Date.now()-(+daulReq.at||0)<6*3600e3;
 function renderDaulet(){
   const c=$('w-daulet-c');if(!c)return;
