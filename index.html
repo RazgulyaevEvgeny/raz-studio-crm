@@ -5689,7 +5689,7 @@ async function syncKaspiOrders(manual){
     }
     const fresh=d.orders.filter(x=>!before.has(x.id)).length;
     kaspiSync.at=Date.now();kaspiSync.err='';kaspiSync.count=d.count||0;kaspiSync.stats=d.stats||null;
-    try{await kaspiCol.doc('_meta').set({syncAt:kaspiSync.at},{merge:true})}catch(_){}
+    try{await kaspiCol.doc('_meta').update({syncAt:kaspiSync.at})}catch(_){} /* update, не set: set обёртки затирает документ целиком */
     if(manual||fresh)toast(fresh?'С Kaspi пришло новых заказов: '+fresh:'Заказы Kaspi обновлены');
     if(!kHist.started&&!kaspiMeta.historyDone){kHist.started=true;setTimeout(()=>loadKaspiHistory(false),1500)}
   }catch(e){
