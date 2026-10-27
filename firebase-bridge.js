@@ -78,17 +78,108 @@
         : e && e.code === 'resource-exhausted' ? 'quota_exceeded' : 'unavailable',
     message: (e && e.message) || ''
   });
+  /* ---------- экономная загрузка: копия на устройстве + только изменения ----------
+     Коллекции SYNCED хранятся в IndexedDB этого устройства. При открытии учёт сразу показывает копию,
+     а из базы берёт только документы, изменённые после последней загрузки (поле _ts — серверное время записи).
+     Свёрнутая вкладка отключается от базы и ничего не тратит; при возврате докачивает изменения.
+     Удаление в этих коллекциях — заглушка {_del:true}, чтобы другие устройства узнали об удалении.
+     Раз в 3 дня (и на новом устройстве) — полная загрузка: на случай, если что-то записали в обход. */
+  const SYNCED = new Set(['orders', 'tasks', 'prices', 'projects', 'requests', 'office', 'supplies', 'kaspi_orders']);
+  const FULL_EVERY = 3 * 864e5, OVERLAP = 10 * 60e3, HIDE_AFTER = 60e3;
+  const TS = () => firebase.firestore.FieldValue.serverTimestamp();
+  const colName = d => String(d.path || '').split('/')[0];
+  const isSynced = d => SYNCED.has(colName(d));
+  const msOf = v => v && typeof v.toMillis === 'function' ? v.toMillis() : (typeof v === 'number' ? v : 0);
+  const clean = (data, ts) => { const o = { ...data }; o._ts = ts; return o; };
+  const copy = d => { try { return structuredClone(d); } catch (_) { return JSON.parse(JSON.stringify(d)); } }; // учёт может менять объект — копия с устройства не портится
+  const idb = (() => {
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((ok, no) => {
+      if (!window.indexedDB) return no(new Error('no idb'));
+      const r = indexedDB.open('raz-sync', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('cols');
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+    }));
+    const tx = (mode, fn) => open().then(db => new Promise((ok, no) => {
+      const t = db.transaction('cols', mode), st = t.objectStore('cols'); const req = fn(st);
+      t.oncomplete = () => ok(req && req.result); t.onerror = () => no(t.error);
+    }));
+    return { get: k => tx('readonly', st => st.get(k)).catch(() => null), put: (k, v) => tx('readwrite', st => st.put(v, k)).catch(() => {}) };
+  })();
+  window.RAZ_SYNC = { reads: 0, mode: {} }; // для проверки: сколько документов прочитали из базы за этот сеанс
+
+  function deltaListen(c, next, err) {
+    const name = c.path, uid = (firebase.auth().currentUser || {}).uid || 'anon', key = uid + ':' + name;
+    let docs = new Map(), maxTs = 0, fullAt = 0, unsub = null, hideT = null, saveT = null, stopped = false, ready = false;
+    const emit = () => {
+      const list = [];
+      for (const [id, d] of docs) if (!d._del) list.push({ id, exists: true, data: () => copy(d) });
+      next({ docs: list, size: list.length, empty: !list.length });
+    };
+    const save = () => { clearTimeout(saveT); saveT = setTimeout(() => idb.put(key, { docs: Object.fromEntries(docs), maxTs, fullAt, v: 1 }), 1500); };
+    const take = (snap, full) => {
+      if (full) { const keep = new Map(); snap.docs.forEach(x => keep.set(x.id, true)); for (const id of [...docs.keys()]) if (!keep.has(id)) docs.delete(id); }
+      const ch = snap.docChanges();
+      if (!snap.metadata.fromCache) window.RAZ_SYNC.reads += ch.length;
+      for (const x of ch) {
+        if (x.type === 'removed') { if (!full) docs.delete(x.doc.id); continue; }
+        const raw = x.doc.data({ serverTimestamps: 'estimate' });
+        const ts = msOf(raw._ts);
+        if (!x.doc.metadata.hasPendingWrites && ts > maxTs) maxTs = ts;
+        if (raw._del) docs.delete(x.doc.id); else docs.set(x.doc.id, clean(raw, ts));
+      }
+      if (full && !snap.metadata.fromCache) { fullAt = Date.now(); backfill(snap); }
+      save(); emit();
+    };
+    /* один раз проставить _ts старым записям (делает руководитель), чтобы они тоже участвовали в догрузке */
+    const backfill = snap => {
+      if ((window.APP_ROLE || {}).role !== 'admin') return;
+      const old = snap.docs.filter(x => !x.data()._ts && !x.metadata.hasPendingWrites).map(x => x.ref);
+      for (let i = 0; i < old.length; i += 400) { const b = c.firestore.batch(); old.slice(i, i + 400).forEach(r => b.update(r, { _ts: TS() })); b.commit().catch(() => {}); }
+    };
+    const attach = () => {
+      if (stopped || unsub) return;
+      const full = !fullAt || Date.now() - fullAt > FULL_EVERY || !maxTs;
+      window.RAZ_SYNC.mode[name] = full ? 'полная' : 'изменения';
+      const q = full ? c : c.where('_ts', '>', firebase.firestore.Timestamp.fromMillis(Math.max(0, maxTs - OVERLAP)));
+      let first = true;
+      unsub = q.onSnapshot({ includeMetadataChanges: false }, s => { take(s, full && first && !s.metadata.fromCache); if (!s.metadata.fromCache) first = false; },
+        e => {
+          unsub = null;
+          /* нет индекса или старая база — откатываемся на обычную загрузку */
+          if (!full && e && e.code === 'failed-precondition') { fullAt = 0; attach(); return; }
+          err && err(mapErr(e));
+        });
+    };
+    const detach = () => { if (unsub) { unsub(); unsub = null; } };
+    const onVis = () => {
+      clearTimeout(hideT);
+      if (document.hidden) hideT = setTimeout(detach, HIDE_AFTER); else attach();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    idb.get(key).then(saved => {
+      if (stopped) return;
+      if (saved && saved.v === 1 && saved.docs) {
+        docs = new Map(Object.entries(saved.docs)); maxTs = saved.maxTs || 0; fullAt = saved.fullAt || 0;
+        emit(); // сразу показываем копию с устройства
+      }
+      ready = true;
+      if (!document.hidden) attach(); else onVis();
+    });
+    return () => { stopped = true; detach(); document.removeEventListener('visibilitychange', onVis); };
+  }
+
   const wrapDoc = d => ({
     id: d.id, path: d.path,
-    set: data => d.set(data).catch(e => { throw mapErr(e); }),
-    update: data => d.update(data).catch(e => { throw mapErr(e); }),
-    delete: () => d.delete().catch(e => { throw mapErr(e); }),
-    get: () => d.get().then(x => ({ id: x.id, exists: x.exists, data: () => x.data() }))
+    set: (data, opt) => (opt ? d.set(isSynced(d) ? { ...data, _ts: TS() } : data, opt) : d.set(isSynced(d) ? { ...data, _ts: TS() } : data)).catch(e => { throw mapErr(e); }),
+    update: data => d.update(isSynced(d) ? { ...data, _ts: TS() } : data).catch(e => { throw mapErr(e); }),
+    delete: () => (isSynced(d) ? d.set({ _del: true, _ts: TS() }) : d.delete()).catch(e => { throw mapErr(e); }),
+    get: () => d.get().then(x => { const v = x.exists ? x.data() : null; const live = !!v && !v._del; return { id: x.id, exists: live, data: () => (live ? v : undefined) }; })
   });
   const wrapCol = c => ({
     path: c.path,
     doc: id => wrapDoc(id ? c.doc(id) : c.doc()),
-    onSnapshot: (next, err) => c.onSnapshot(
+    onSnapshot: (next, err) => SYNCED.has(c.path) ? deltaListen(c, next, err) : c.onSnapshot(
       s => next({ docs: s.docs.map(x => ({ id: x.id, exists: true, data: () => x.data() })), size: s.size, empty: s.empty }),
       e => err && err(mapErr(e)))
   });

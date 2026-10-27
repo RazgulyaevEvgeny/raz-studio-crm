@@ -880,42 +880,53 @@ export async function botToken(env) {
   return d.idToken;
 }
 
+/* Каждая запись получает серверную отметку _ts (время изменения по часам Google). По ней учёт
+   догружает на устройства только изменившееся, а не всю базу при каждом открытии.
+   Удаление в «синхронных» коллекциях — заглушка {_del:true}: так другие устройства узнают, что запись удалена. */
+export const SYNCED = new Set(['orders', 'tasks', 'prices', 'projects', 'requests', 'office', 'supplies', 'kaspi_orders']);
+const TS = [{ fieldPath: '_ts', setToServerValue: 'REQUEST_TIME' }];
+const colOf = path => String(path).split('/')[0];
+
 export function firestore(env) {
   const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents`;
+  const root = `projects/${env.FIREBASE_PROJECT}/databases/(default)/documents`;
   const H = async () => ({ Authorization: 'Bearer ' + await botToken(env), 'Content-Type': 'application/json' });
   const doc = d => ({ id: d.name.split('/').pop(), ...fromFirestore(d.fields || {}) });
+  const alive = d => !d._del;
+  const strip = data => { const { _ts, _del, ...rest } = data || {}; return rest; };
+  const commit = async (writes, what) => {
+    const r = await fetch(`${base}:commit`, { method: 'POST', headers: await H(), body: JSON.stringify({ writes }) });
+    if (!r.ok) throw new Error('firestore ' + what + ' ' + r.status);
+    return r;
+  };
+  const newId = () => randomBytes(15).toString('base64url').replace(/[-_]/g, 'x').slice(0, 20);
   return {
     async get(path) {
       const r = await fetch(`${base}/${path}`, { headers: await H() });
       if (r.status === 404) return null;
       if (!r.ok) throw new Error('firestore get ' + r.status);
-      return doc(await r.json());
+      const d = doc(await r.json());
+      return alive(d) ? d : null;
     },
     async set(path, data) {
-      const r = await fetch(`${base}/${path}`, { method: 'PATCH', headers: await H(), body: JSON.stringify({ fields: toFields(data) }) });
-      if (!r.ok) throw new Error('firestore set ' + r.status);
+      await commit([{ update: { name: `${root}/${path}`, fields: toFields(strip(data)) }, updateTransforms: TS }], 'set');
     },
     async patch(path, data) {
-      const mask = Object.keys(data).map(k => 'updateMask.fieldPaths=' + encodeURIComponent(k)).join('&');
-      const r = await fetch(`${base}/${path}?${mask}`, { method: 'PATCH', headers: await H(), body: JSON.stringify({ fields: toFields(data) }) });
-      if (!r.ok) throw new Error('firestore patch ' + r.status);
+      const d = strip(data);
+      await commit([{ update: { name: `${root}/${path}`, fields: toFields(d) }, updateMask: { fieldPaths: Object.keys(d) }, updateTransforms: TS }], 'patch');
     },
     async create(col, data) {
-      const r = await fetch(`${base}/${col}`, { method: 'POST', headers: await H(), body: JSON.stringify({ fields: toFields(data) }) });
-      if (!r.ok) throw new Error('firestore create ' + r.status);
-      return doc(await r.json());
+      const id = newId();
+      await commit([{ update: { name: `${root}/${col}/${id}`, fields: toFields(strip(data)) }, currentDocument: { exists: false }, updateTransforms: TS }], 'create');
+      return { id, ...strip(data) };
     },
     // Дописать элемент в массив документа (создаст документ, если его нет)
     async append(path, field, item, fields = {}) {
-      const name = `projects/${env.FIREBASE_PROJECT}/databases/(default)/documents/${path}`;
-      const r = await fetch(`${base}:commit`, {
-        method: 'POST', headers: await H(),
-        body: JSON.stringify({ writes: [
-          { update: { name, fields: toFields(fields) }, updateMask: { fieldPaths: Object.keys(fields) } },
-          { transform: { document: name, fieldTransforms: [{ fieldPath: field, appendMissingElements: { values: [toValue(item)] } }] } },
-        ] }),
-      });
-      if (!r.ok) throw new Error('firestore append ' + r.status);
+      const name = `${root}/${path}`;
+      await commit([
+        { update: { name, fields: toFields(fields) }, updateMask: { fieldPaths: Object.keys(fields) } },
+        { transform: { document: name, fieldTransforms: [{ fieldPath: field, appendMissingElements: { values: [toValue(item)] } }, ...TS] } },
+      ], 'append');
     },
     // Записать, только если документ не менялся с прочтения (updateTime) — для счётчика номеров
     async getWithTime(path) {
@@ -926,11 +937,13 @@ export function firestore(env) {
       return { data: fromFirestore(j.fields || {}), updateTime: j.updateTime };
     },
     async setIf(path, data, updateTime) {
-      const pre = updateTime ? 'currentDocument.updateTime=' + encodeURIComponent(updateTime) : 'currentDocument.exists=false';
-      const r = await fetch(`${base}/${path}?${pre}`, { method: 'PATCH', headers: await H(), body: JSON.stringify({ fields: toFields(data) }) });
+      const r = await fetch(`${base}:commit`, { method: 'POST', headers: await H(), body: JSON.stringify({ writes: [{
+        update: { name: `${root}/${path}`, fields: toFields(strip(data)) }, updateTransforms: TS,
+        currentDocument: updateTime ? { updateTime } : { exists: false } }] }) });
       return r.ok;
     },
     async remove(path) {
+      if (SYNCED.has(colOf(path))) { await commit([{ update: { name: `${root}/${path}`, fields: toFields({ _del: true }) }, updateTransforms: TS }], 'delete'); return; }
       const r = await fetch(`${base}/${path}`, { method: 'DELETE', headers: await H() });
       if (!r.ok && r.status !== 404) throw new Error('firestore delete ' + r.status);
     },
@@ -941,7 +954,7 @@ export function firestore(env) {
         const r = await fetch(`${base}/${col}?pageSize=300${token ? '&pageToken=' + token : ''}`, { headers: await H() });
         if (!r.ok) throw new Error('firestore list ' + r.status);
         const d = await r.json();
-        out.push(...(d.documents || []).map(doc));
+        out.push(...(d.documents || []).map(doc).filter(alive));
         token = d.nextPageToken || '';
       } while (token);
       return out;
@@ -949,7 +962,7 @@ export function firestore(env) {
     async query(col, q) {
       const r = await fetch(`${base}:runQuery`, { method: 'POST', headers: await H(), body: JSON.stringify({ structuredQuery: { from: [{ collectionId: col }], ...q } }) });
       if (!r.ok) throw new Error('firestore query ' + r.status);
-      return (await r.json()).filter(x => x.document).map(x => doc(x.document));
+      return (await r.json()).filter(x => x.document).map(x => doc(x.document)).filter(alive);
     },
   };
 }
@@ -961,6 +974,7 @@ function fromFirestore(fields) {
     if ('doubleValue' in v) return v.doubleValue;
     if ('booleanValue' in v) return v.booleanValue;
     if ('nullValue' in v) return null;
+    if ('timestampValue' in v) return Date.parse(v.timestampValue);
     if ('arrayValue' in v) return (v.arrayValue.values || []).map(val);
     if ('mapValue' in v) return fromFirestore(v.mapValue.fields || {});
     return null;
