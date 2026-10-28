@@ -1,0 +1,14 @@
+rules_version = '2';
+// Проект raz-agents: ИИ-агенты — отдел маркетинга (коллекция marketing: Саша, запуски отдела, календарь, идеи, тренды).
+// Читать и писать могут только свои: руководитель, менеджер и бот (воркер отдела маркетинга входит под AGENT_EMAIL — это один из них). Проверка по почте — без лишних чтений базы.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function team() {
+      return request.auth != null
+        && request.auth.token.email in ['design.onegin@gmail.com', 'raz.brandstudio@gmail.com', 'bot@raz.kz'];
+    }
+    match /{document=**} {
+      allow read, write: if team();
+    }
+  }
+}
