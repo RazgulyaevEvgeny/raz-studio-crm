@@ -6,7 +6,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function isAdmin() { return signedIn() && request.auth.token.email == 'design.onegin@gmail.com'; }
-    function staff() { return isAdmin() || (signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid))); }
+    // Свои почты проверяются прямо здесь, без чтения базы: проверка через exists() стоит одно чтение на КАЖДЫЙ запрос,
+    // а бот делает их тысячи в день. Новых сотрудников по-прежнему можно пускать кнопкой «Сотрудники» (список staff).
+    function team() { return signedIn() && request.auth.token.email in ['raz.brandstudio@gmail.com', 'bot@raz.kz']; }
+    function staff() { return isAdmin() || team() || (signedIn() && exists(/databases/$(database)/documents/staff/$(request.auth.uid))); }
 
     // Список сотрудников с доступом (документ = uid). Меняет только руководитель.
     match /staff/{uid} {
