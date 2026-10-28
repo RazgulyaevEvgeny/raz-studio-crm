@@ -49,7 +49,8 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
     backupDay = today();
     try {
       const out = { at: new Date().toISOString(), collections: {} };
-      for (const c of BACKUP_COLS) out.collections[c] = Object.fromEntries((await fs.list(c)).map(({ id, ...x }) => [id, x]));
+      // нет прав на коллекцию (403, например staff) — пропускаем; база недоступна (429 и т.п.) — копия не удалась
+      for (const c of BACKUP_COLS) out.collections[c] = Object.fromEntries((await fs.list(c).catch(e => { if (/ 403$/.test(String(e?.message))) return []; throw e; })).map(({ id, ...x }) => [id, x]));
       await mkdir(dir, { recursive: true });
       await writeFile(file, JSON.stringify(out));
       const old = (await readdir(dir)).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(0, -BACKUP_KEEP);
