@@ -106,7 +106,8 @@
     }));
     return { get: k => tx('readonly', st => st.get(k)).catch(() => null), put: (k, v) => tx('readwrite', st => st.put(v, k)).catch(() => {}) };
   })();
-  window.RAZ_SYNC = { reads: 0, mode: {} }; // для проверки: сколько документов прочитали из базы за этот сеанс
+  window.RAZ_SYNC = { reads: 0, mode: {}, log: [] };
+  const slog = (...a) => { const l = window.RAZ_SYNC.log; l.push(new Date().toTimeString().slice(0, 8) + ' ' + a.join(' ')); if (l.length > 300) l.shift(); }; // для проверки: сколько документов прочитали из базы за этот сеанс
 
   function deltaListen(c, next, err) {
     const name = c.path, uid = (firebase.auth().currentUser || {}).uid || 'anon', key = uid + ':' + name;
@@ -145,7 +146,8 @@
       let first = true;
       /* includeMetadataChanges: иначе, если копия на устройстве совпадает с базой, ответ сервера «всё так же» не приходит,
          и коллекция навсегда остаётся в режиме полной загрузки */
-      unsub = q.onSnapshot({ includeMetadataChanges: true }, s => { if (!first && !s.docChanges().length) return; take(s, full && first && !s.metadata.fromCache); if (!s.metadata.fromCache) first = false; },
+      slog(name, 'attach', full ? 'full' : 'delta', maxTs);
+      unsub = q.onSnapshot({ includeMetadataChanges: true }, s => { slog(name, 'snap', s.metadata.fromCache ? 'cache' : 'server', s.docChanges().length, s.size, first); if (!first && !s.docChanges().length) return; try { take(s, full && first && !s.metadata.fromCache); } catch (x) { slog(name, 'ERR', x && x.message); throw x; } if (!s.metadata.fromCache) first = false; },
         e => {
           unsub = null;
           /* нет индекса или старая база — откатываемся на обычную загрузку */
@@ -153,7 +155,7 @@
           err && err(mapErr(e));
         });
     };
-    const detach = () => { if (unsub) { unsub(); unsub = null; } };
+    const detach = () => { if (unsub) { slog(name, 'detach'); unsub(); unsub = null; } };
     const onVis = () => {
       clearTimeout(hideT);
       if (document.hidden) hideT = setTimeout(detach, HIDE_AFTER); else attach();
