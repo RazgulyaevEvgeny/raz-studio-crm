@@ -6,7 +6,7 @@
 //   - раз в 6 часов проверяет цены конкурентов на Kaspi и пишет в Telegram, если у кого-то дешевле (учёт открывать не нужно);
 //   - сообщает в Telegram, если у Ани кончился бесплатный лимит Gemini и отвечает запасной ИИ.
 
-import { mkdir, writeFile, readdir, rm } from 'node:fs/promises';
+import { mkdir, writeFile, readdir, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { appendChat, normPhone, isWorkTime, botToken } from './brain.js';
 import { leadHint } from './anna.js';
@@ -38,17 +38,18 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
   const alert = text => { if (notify?.alert) notify.alert(text).catch(() => {}); };
 
   /* ---------- копия базы ---------- */
-  let backupDay = '';
+  let backupDay = '', backupWarned = '';
   async function backup() {
     const d = kz();
     if (d.getUTCHours() < BACKUP_HOUR || backupDay === today()) return;
     const dir = join(DIR, 'backup'), file = join(dir, today() + '.json');
-    const files = await readdir(dir).catch(() => []);
-    if (files.includes(today() + '.json')) { backupDay = today(); return; }
+    // пустая копия (база не читалась — например, кончилась квота) не считается: пробуем снова через 10 минут
+    const ok = await stat(file).then(s => s.size > 2000).catch(() => false);
+    if (ok) { backupDay = today(); return; }
     backupDay = today();
     try {
       const out = { at: new Date().toISOString(), collections: {} };
-      for (const c of BACKUP_COLS) out.collections[c] = Object.fromEntries((await fs.list(c).catch(() => [])).map(({ id, ...x }) => [id, x]));
+      for (const c of BACKUP_COLS) out.collections[c] = Object.fromEntries((await fs.list(c)).map(({ id, ...x }) => [id, x]));
       await mkdir(dir, { recursive: true });
       await writeFile(file, JSON.stringify(out));
       const old = (await readdir(dir)).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(0, -BACKUP_KEEP);
@@ -57,8 +58,9 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
       log('Копия базы сохранена:', file);
       alert(`💾 Копия базы за ${d.getUTCDate()}.${String(d.getUTCMonth() + 1).padStart(2, '0')} сохранена на рабочем компьютере: ${n} заказов. Хранятся последние ${BACKUP_KEEP} дней.`);
     } catch (e) {
+      backupDay = ''; // не получилось — попробуем при следующей проверке
       log('копия базы не сохранилась', e?.message || e);
-      alert('⚠️ Не получилось сохранить ночную копию базы: ' + String(e?.message || e).slice(0, 200));
+      if (backupWarned !== today()) { backupWarned = today(); alert('⚠️ Не получилось сохранить ночную копию базы, пробую снова каждые 10 минут: ' + String(e?.message || e).slice(0, 200)); }
     }
   }
 
