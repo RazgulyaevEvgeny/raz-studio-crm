@@ -27,6 +27,7 @@ import pino from 'pino';
 import QRCode from 'qrcode';
 import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, describeImage, botToken, PAUSE_AFTER_MANAGER, isWorkTime, isClosed, hasQuestion, busyText, workStartedAt, fromFields } from './brain.js';
 import { startExtras } from './extras.js';
+import { startChatMirror, moveChats } from './mirror.js';
 import { makeDigest, digestDue, answerQuestions, makeInsights, insightsDue } from './anna.js';
 import { startNotify } from './notify.js';
 import { startL7 } from './l7.js';
@@ -498,6 +499,23 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   if (!missing.length) startL7({ fs, env, log, notify });
   if (!missing.length) {
     migrateSignals().catch(e => log('перенос сигналов в Realtime Database:', e?.message || e));
+    // Переписка — в отдельный проект raz-anna (свой лимит). Пока туда нельзя войти, всё остаётся по-старому; пробуем раз в 10 минут
+    let annaErr = '', mirrorOn = false;
+    const annaTry = async () => {
+      if (mirrorOn) return;
+      try {
+        if (!fs.annaOn()) { await fs.useAnna(); log('Переписка WhatsApp теперь хранится в проекте raz-anna'); }
+        await moveChats({ fs, log });
+        startChatMirror({ fs, log });
+        mirrorOn = true;
+      } catch (e) {
+        const why = String(e?.message || e);
+        if (why !== annaErr) log('raz-anna пока недоступен, переписка остаётся в основной базе:', why);
+        annaErr = why;
+      }
+    };
+    annaTry();
+    setInterval(annaTry, 10 * 60e3);
     // Учёт положил задание или вопрос — реагируем сразу, не дожидаясь минутной проверки
     let sigT = null;
     fs.onSignal(path => {

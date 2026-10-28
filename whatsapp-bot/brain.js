@@ -881,6 +881,33 @@ export async function botToken(env) {
   return d.idToken;
 }
 
+/* ---------- отдельный проект Firebase для переписки WhatsApp (raz-anna) ----------
+   Чаты и архив переписки (wa_chats, wa_log) живут в своём бесплатном проекте со своим лимитом: каждое сообщение
+   клиента — это запись в базу, и всплеск переписки больше не может съесть лимит учёта. Бот входит туда под той же
+   почтой и паролем (пользователя bot@raz.kz нужно завести и в raz-anna). Учёт сам в raz-anna не ходит:
+   списки «Ждут менеджера» и «Кому можно написать» бот кладёт в Realtime Database (sig/anna/waiting, sig/anna/leads). */
+export const ANNA = { project: 'raz-anna', apiKey: 'AIzaSyAA9_e1SRUuDEsA4GfHSs3-qOhzi3rHlqo' };
+export const ANNA_COLS = new Set(['wa_chats', 'wa_log']);
+let annaCache = null;
+export async function annaToken(env) {
+  if (annaCache && annaCache.exp > Date.now()) return annaCache.token;
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${String(env.ANNA_API_KEY || ANNA.apiKey).trim()}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: env.BOT_EMAIL, password: env.BOT_PASSWORD, returnSecureToken: true }),
+  });
+  const d = await r.json();
+  if (!d.idToken) throw new Error('вход бота в raz-anna не удался (заведите там пользователя ' + env.BOT_EMAIL + ' с тем же паролем): ' + (d.error?.message || r.status));
+  annaCache = { token: d.idToken, exp: Date.now() + 50 * 60e3 };
+  return d.idToken;
+}
+// Изменились пометки чата «ждёт менеджера» / «кому написать» — бот обновит списки для учёта
+const flagSubs = new Set();
+// Переписка уходит в raz-anna, только когда бот проверил, что может туда войти и писать (useAnna).
+// До этого всё работает по-старому, в основном проекте — чтобы бот не сломался, пока raz-anna не настроен.
+let annaOn = false;
+const FLAG_KEYS = ['needsManager', 'leadOpen', 'lead', 'managerCalledAt', 'managerReason', 'clientName', 'name'];
+const flagTouch = (path, data) => { if (colOf(path) === 'wa_chats' && data && FLAG_KEYS.some(k => k in data)) for (const f of flagSubs) { try { f(); } catch (_) {} } };
+
 /* Каждая запись получает серверную отметку _ts (время изменения по часам Google). По ней учёт
    догружает на устройства только изменившееся, а не всю базу при каждом открытии.
    Удаление в «синхронных» коллекциях — заглушка {_del:true}: так другие устройства узнают, что запись удалена. */
@@ -912,15 +939,20 @@ function localQuery(list, q = {}) {
   return q.limit ? out.slice(0, q.limit) : out;
 }
 
-export function firestore(env) {
+export function firestore(env, sub = null) {
   const rt = rtdbOf(env);
+  const project = sub?.project || env.FIREBASE_PROJECT;
+  const tokenOf = sub?.token || (() => botToken(env));
+  // основной экземпляр отправляет чаты в raz-anna, второй (sub) работает только со своим проектом
+  const anna = sub ? null : firestore(env, { project: String(env.ANNA_PROJECT || ANNA.project).trim(), token: () => annaToken(env) });
+  const toAnna = p => annaOn && !!anna && ANNA_COLS.has(colOf(p));
   const rtList = async mv => { await rt.ready(); return Object.entries(rt.get(mv) || {}).filter(([, v]) => v && typeof v === 'object').map(([id, v]) => ({ id, ...v })); };
   const rtWrap = {
     async get(mv, path) { await rt.ready(); if (!mv.startsWith('sig/')) return null; const v = rt.get(mv); return v && typeof v === 'object' ? { id: String(path).split('/').pop(), ...v } : null; },
   };
-  const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents`;
-  const root = `projects/${env.FIREBASE_PROJECT}/databases/(default)/documents`;
-  const H = async () => ({ Authorization: 'Bearer ' + await botToken(env), 'Content-Type': 'application/json' });
+  const base = `https://firestore.googleapis.com/v1/projects/${project}/databases/(default)/documents`;
+  const root = `projects/${project}/databases/(default)/documents`;
+  const H = async () => ({ Authorization: 'Bearer ' + await tokenOf(), 'Content-Type': 'application/json' });
   const doc = d => ({ id: d.name.split('/').pop(), ...fromFirestore(d.fields || {}) });
   const alive = d => !d._del;
   const strip = data => { const { _ts, _del, ...rest } = data || {}; return rest; };
@@ -933,8 +965,20 @@ export function firestore(env) {
   return {
     // подписка бота на изменения сигналов (путь относительно /sig)
     onSignal: fn => rt.on(fn),
-    rt,
+    onChatFlags: fn => { flagSubs.add(fn); },
+    annaOn: () => annaOn,
+    async useAnna() {
+      if (annaOn || !anna) return annaOn;
+      await annaToken(env);
+      await anna.query('wa_chats', { limit: 1 }); // проверка правил raz-anna: без них будет 403
+      annaOn = true;
+      return true;
+    },
+    rt, anna,
+    // прямой доступ к основному проекту без пересылки чатов в raz-anna — только для разового переноса
+    main: () => firestore(env, { project: env.FIREBASE_PROJECT, token: () => botToken(env) }),
     async get(path) {
+      if (toAnna(path)) return anna.get(path);
       const mv = movedPath(path); if (mv) return rtWrap.get(mv, path);
       const r = await fetch(`${base}/${path}`, { headers: await H() });
       if (r.status === 404) return null;
@@ -943,15 +987,18 @@ export function firestore(env) {
       return alive(d) ? d : null;
     },
     async set(path, data) {
+      if (toAnna(path)) { await anna.set(path, data); flagTouch(path, data); return; }
       const mv = movedPath(path); if (mv) return rt.set(mv, strip(data));
       await commit([{ update: { name: `${root}/${path}`, fields: toFields(strip(data)) }, updateTransforms: TS }], 'set');
     },
     async patch(path, data) {
+      if (toAnna(path)) { await anna.patch(path, data); flagTouch(path, data); return; }
       const mv = movedPath(path); if (mv) return rt.update(mv, strip(data));
       const d = strip(data);
       await commit([{ update: { name: `${root}/${path}`, fields: toFields(d) }, updateMask: { fieldPaths: Object.keys(d) }, updateTransforms: TS }], 'patch');
     },
     async create(col, data) {
+      if (toAnna(col)) return anna.create(col, data);
       const mv = movedPath(col); if (mv) { const id = await rt.push(mv, strip(data)); return { id, ...strip(data) }; }
       const id = newId();
       await commit([{ update: { name: `${root}/${col}/${id}`, fields: toFields(strip(data)) }, currentDocument: { exists: false }, updateTransforms: TS }], 'create');
@@ -959,6 +1006,7 @@ export function firestore(env) {
     },
     // Дописать элемент в массив документа (создаст документ, если его нет)
     async append(path, field, item, fields = {}) {
+      if (toAnna(path)) { await anna.append(path, field, item, fields); flagTouch(path, fields); return; }
       const name = `${root}/${path}`;
       await commit([
         { update: { name, fields: toFields(fields) }, updateMask: { fieldPaths: Object.keys(fields) } },
@@ -967,6 +1015,7 @@ export function firestore(env) {
     },
     // Записать, только если документ не менялся с прочтения (updateTime) — для счётчика номеров
     async getWithTime(path) {
+      if (toAnna(path)) return anna.getWithTime(path);
       const r = await fetch(`${base}/${path}`, { headers: await H() });
       if (r.status === 404) return { data: null, updateTime: null };
       if (!r.ok) throw new Error('firestore get ' + r.status);
@@ -974,18 +1023,21 @@ export function firestore(env) {
       return { data: fromFirestore(j.fields || {}), updateTime: j.updateTime };
     },
     async setIf(path, data, updateTime) {
+      if (toAnna(path)) return anna.setIf(path, data, updateTime);
       const r = await fetch(`${base}:commit`, { method: 'POST', headers: await H(), body: JSON.stringify({ writes: [{
         update: { name: `${root}/${path}`, fields: toFields(strip(data)) }, updateTransforms: TS,
         currentDocument: updateTime ? { updateTime } : { exists: false } }] }) });
       return r.ok;
     },
     async remove(path) {
+      if (toAnna(path)) return anna.remove(path);
       const mv = movedPath(path); if (mv) return rt.remove(mv);
       if (SYNCED.has(colOf(path))) { await commit([{ update: { name: `${root}/${path}`, fields: toFields({ _del: true }) }, updateTransforms: TS }], 'delete'); return; }
       const r = await fetch(`${base}/${path}`, { method: 'DELETE', headers: await H() });
       if (!r.ok && r.status !== 404) throw new Error('firestore delete ' + r.status);
     },
     async list(col) {
+      if (toAnna(col)) return anna.list(col);
       const mv = movedPath(col); if (mv) return rtList(mv);
       const out = [];
       let token = '';
@@ -999,6 +1051,7 @@ export function firestore(env) {
       return out;
     },
     async query(col, q) {
+      if (toAnna(col)) return anna.query(col, q);
       const mv = movedPath(col); if (mv) return localQuery(await rtList(mv), q);
       const r = await fetch(`${base}:runQuery`, { method: 'POST', headers: await H(), body: JSON.stringify({ structuredQuery: { from: [{ collectionId: col }], ...q } }) });
       if (!r.ok) throw new Error('firestore query ' + r.status);

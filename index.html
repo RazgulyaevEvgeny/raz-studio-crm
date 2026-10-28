@@ -6707,7 +6707,7 @@ async function daulAsk(query){
 }
 $('daulet-ref-btn').addEventListener('click',()=>daulAsk(''));
 $('daulet-ask').addEventListener('submit',e=>{e.preventDefault();const inp=$('daulet-q'),q=inp.value.trim();if(!q)return;inp.value='';daulAsk(q)});
-let annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={},annaWait=null,annaLead=[];
+let annaChatsRt=false,annaD=null,annaQ=[],annaLoaded=false,annaErr='',annaIns=null,annaInsWait={},annaWait=null,annaLead=[];
 /* отмеченные дела из «Сегодня сделать»: wa_anna/done {items:{ключ:{text, at, by, orderId?, kaspiId?}}}.
    Видно всем, кто открыл учёт; дело скрыто сутки после отметки, Аня его в новую сводку не возвращает. */
 let annaDoneT={};const annaTick={},ANNA_DONE_TTL=24*3600e3;
@@ -6734,9 +6734,26 @@ function annaListen(){
   /* сводка, отмеченные дела, аналитика и вопросы — в Realtime Database (sig/anna/*, sig/annaQ) */
   r.ref('sig/anna/digest').on('value',s=>{annaD=rtFix(s.val(),['todo','needManager']);annaLoaded=true;annaErr='';renderAnna()},fail);
   /* кто ждёт менеджера — прямо из чатов: менеджер ответил клиенту или сняли вручную — строка сразу уходит */
-  fs.collection('wa_chats').where('needsManager','==',true).onSnapshot(s=>{annaWait=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaWait=null});
-  /* «Кому можно написать»: клиент спрашивал и пропал без заказа — Аня сама не пишет, только подсказывает (wa_chats.lead, extras.js) */
-  fs.collection('wa_chats').where('leadOpen','==',true).onSnapshot(s=>{annaLead=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaLead=[]});
+  /* «Ждут менеджера» и «Кому можно написать» (клиент спрашивал и пропал без заказа — Аня сама не пишет, только подсказывает).
+     Переписка переехала в отдельный проект raz-anna (свой лимит): после переезда (sig/chatsMovedAt) бот кладёт короткие
+     списки в Realtime Database — sig/anna/waiting и sig/anna/leads, а «Снять»/«Убрать» передаются ему через sig/anna/chatDone.
+     До переезда читаем чаты по-старому из Firestore. */
+  let unW=null,unL=null,mvW=null,rtW={},rtL={},rtDone={};
+  const rtApply=()=>{const pend=new Set(Object.values(rtDone).map(d=>d&&d.kind+':'+d.id));
+    annaWait=Object.values(rtW).filter(c=>c&&!pend.has('manager:'+c.id));annaLead=Object.values(rtL).filter(c=>c&&!pend.has('lead:'+c.id));renderAnna()};
+  r.ref('sig/chatsMovedAt').on('value',m=>{
+    annaChatsRt=!!m.val();
+    if(annaChatsRt){
+      if(unW){unW();unW=null}if(unL){unL();unL=null}
+      if(!mvW){mvW=1;
+        r.ref('sig/anna/waiting').on('value',x=>{rtW=x.val()||{};rtApply()},()=>{annaWait=null});
+        r.ref('sig/anna/leads').on('value',x=>{rtL=x.val()||{};rtApply()},()=>{annaLead=[]});
+        r.ref('sig/anna/chatDone').on('value',x=>{rtDone=x.val()||{};rtApply()},()=>{});}
+    }else if(!unW){
+      unW=fs.collection('wa_chats').where('needsManager','==',true).onSnapshot(s=>{annaWait=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaWait=null});
+      unL=fs.collection('wa_chats').where('leadOpen','==',true).onSnapshot(s=>{annaLead=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaLead=[]});
+    }
+  });
   r.ref('sig/anna/done/items').on('value',s=>{annaDoneT=s.val()||{};renderAnna()},()=>{});
   r.ref('sig/anna/insights').on('value',s=>{const v=s.val();if(v)for(const k of ['week','month'])rtFix(v[k],['services','questions','offers','lost','followups']);annaIns=v;renderAnna()},()=>{});
   r.ref('sig/annaQ').orderByChild('at').limitToLast(30).on('value',s=>{const a=[];s.forEach(x=>{a.push({id:x.key,...x.val()})});annaQ=a.reverse();renderAnna()},fail);
@@ -6851,8 +6868,9 @@ function annaCheck(k){
 }
 /* снять клиента из «Ждут менеджера» вручную; Аня снова пометит его, если позже опять позовёт менеджера */
 async function annaDone(id){
-  const fs=annaFs();if(!fs||!canWrite)return;
-  try{await fs.doc('wa_chats/'+id).update({needsManager:false,managerDoneAt:Date.now(),managerDoneBy:annaWho()});toast('Сняла: клиенту ответили')}
+  const fs=annaFs(),r=rt();if(!fs||!canWrite)return;
+  try{if(annaChatsRt&&r)await r.ref('sig/anna/chatDone/m_'+String(id).replace(/[.#$[\]\/]/g,'_')).set({id:String(id),kind:'manager',at:Date.now(),by:annaWho()});
+    else await fs.doc('wa_chats/'+id).update({needsManager:false,managerDoneAt:Date.now(),managerDoneBy:annaWho()});toast('Сняла: клиенту ответили')}
   catch(e){toast('Не получилось снять, попробуйте ещё раз')}
 }
 /* «Кому можно написать»: прячем, если клиент снова написал или у него появился заказ; «Убрать» — менеджер решил не писать или уже написал */
@@ -6873,7 +6891,9 @@ function annaLeadHtml(){
 async function annaLeadDone(id){
   const fs=annaFs();if(!fs||!canWrite)return;
   annaLead=annaLead.filter(c=>c.id!==id);renderAnna();
-  try{await fs.doc('wa_chats/'+id).update({leadOpen:false,leadDoneAt:Date.now(),leadDoneBy:annaWho()});toast('Убрала из списка')}
+  const r=rt();
+  try{if(annaChatsRt&&r)await r.ref('sig/anna/chatDone/l_'+String(id).replace(/[.#$[\]\/]/g,'_')).set({id:String(id),kind:'lead',at:Date.now(),by:annaWho()});
+    else await fs.doc('wa_chats/'+id).update({leadOpen:false,leadDoneAt:Date.now(),leadDoneBy:annaWho()});toast('Убрала из списка')}
   catch(e){toast('Не получилось убрать, попробуйте ещё раз')}
 }
 async function annaInsGo(){

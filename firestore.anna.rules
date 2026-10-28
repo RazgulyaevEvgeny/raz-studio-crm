@@ -1,0 +1,14 @@
+rules_version = '2';
+// Проект raz-anna: переписка WhatsApp (wa_chats — чаты, wa_log — архив по месяцам).
+// Читать и писать могут только свои: руководитель, менеджер и бот. Проверка по почте — без лишних чтений базы.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function team() {
+      return request.auth != null
+        && request.auth.token.email in ['design.onegin@gmail.com', 'raz.brandstudio@gmail.com', 'bot@raz.kz'];
+    }
+    match /{document=**} {
+      allow read, write: if team();
+    }
+  }
+}
