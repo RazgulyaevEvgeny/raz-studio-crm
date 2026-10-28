@@ -314,7 +314,7 @@ async function instagram(env) {
    Без участия людей воркер входит в базу как отдельный сотрудник:
      AGENT_EMAIL, AGENT_PASSWORD — секреты: почта и пароль сотрудника с доступом в учёт (можно взять вход бота Ани);
      TELEGRAM_BOT_TOKEN — необязательно, секрет: тот же токен, что у бота Ани, тогда итог недели придёт в Telegram. */
-const DEPT_VER = 6; // версия отдела: сайт сверяет её и просит обновить код воркера
+const DEPT_VER = 7; // версия отдела: сайт сверяет её и просит обновить код воркера
 const FB_API_KEY = 'AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0'; // публичный ключ из firebase-config.js
 const SITE = 'https://razgulyaevevgeny.github.io/raz-studio-crm/marketing/';
 const kzNow = () => new Date(Date.now() + 5 * 3600e3);               // Казахстан, UTC+5
@@ -345,10 +345,52 @@ const decD = d => ({ id: d.name.split('/').pop(), ...decF(d.fields) });
 const encV = x => x == null ? { nullValue: null } : typeof x === 'string' ? { stringValue: x } : typeof x === 'boolean' ? { booleanValue: x }
   : typeof x === 'number' ? (Number.isInteger(x) ? { integerValue: String(x) } : { doubleValue: x }) : Array.isArray(x) ? { arrayValue: { values: x.map(encV) } } : { mapValue: { fields: encF(x) } };
 const encF = o => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined).map(([k, v]) => [k, encV(v)]));
+/* ---------- отдельный проект Firebase для ИИ-агентов (raz-agents) ----------
+   Коллекция marketing (запуски отдела, календарь, идеи, тренды, переписка со специалистами) живёт в своём бесплатном
+   проекте со своим лимитом. Воркер входит туда под AGENT_EMAIL / AGENT_PASSWORD (этот пользователь заведён и в raz-agents).
+   Заказы, прайс и wa_anna — по-прежнему в основном проекте учёта. Пока перенос не сделан (нет marketing/_moved
+   в raz-agents) или войти туда нельзя — всё работает по-старому, с основным проектом. */
+const AGENTS = { project: 'raz-agents', apiKey: 'AIzaSyBP9bQQ4vt5xwFNLPeKCxlRgNaOnLw4RVI' };
+let agentsTok = null, movedMemo = { at: 0, v: false };
+async function agentsToken(env) {
+  if (agentsTok && agentsTok.exp > Date.now()) return agentsTok.token;
+  if (!env.AGENT_EMAIL || !env.AGENT_PASSWORD) throw new Error('нет секретов AGENT_EMAIL и AGENT_PASSWORD');
+  const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + (env.AGENTS_API_KEY || AGENTS.apiKey), {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: env.AGENT_EMAIL, password: env.AGENT_PASSWORD, returnSecureToken: true })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!j.idToken) throw new Error('Отдел не смог войти в raz-agents: ' + ((j.error && j.error.message) || r.status));
+  agentsTok = { token: j.idToken, exp: Date.now() + 50 * 60e3 };
+  return j.idToken;
+}
+const isMkt = p => String(p).split('/')[0] === 'marketing';
 function firestore(env, token) {
-  const name = `projects/${env.FIREBASE_PROJECT || 'raz-studio-5a486'}/databases/(default)/documents`, root = 'https://firestore.googleapis.com/v1/' + name;
+  const main = store(env.FIREBASE_PROJECT || 'raz-studio-5a486', async () => token);
+  const agents = store(env.AGENTS_PROJECT || AGENTS.project, () => agentsToken(env));
+  const moved = async () => {
+    if (Date.now() - movedMemo.at < 5 * 60e3) return movedMemo.v;
+    let v = false;
+    try { v = !!(await agents.get('marketing/_moved')); } catch (_) { v = false; }
+    movedMemo = { at: Date.now(), v };
+    return v;
+  };
+  const mk = async () => (await moved()) ? agents : main;
+  return {
+    main, agents, moved,
+    async get(path) { return (isMkt(path) ? await mk() : main).get(path); },
+    async query(coll, select, where) { return (isMkt(coll) ? await mk() : main).query(coll, select, where); },
+    async write(docs) {
+      const m = docs.filter(d => isMkt(d.path)), o = docs.filter(d => !isMkt(d.path));
+      if (m.length) await (await mk()).write(m);
+      if (o.length) await main.write(o);
+    }
+  };
+}
+function store(project, tokenFn) {
+  const name = `projects/${project}/databases/(default)/documents`, root = 'https://firestore.googleapis.com/v1/' + name;
   const call = async (url, init) => {
-    const r = await fetch(url, { ...init, headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' } });
+    const r = await fetch(url, { ...init, headers: { authorization: 'Bearer ' + await tokenFn(), 'content-type': 'application/json' } });
     if (r.status === 404) return null;
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error('База: ' + ((j.error && j.error.message) || r.status));
@@ -373,7 +415,9 @@ function firestore(env, token) {
 async function loadStudio(db) {
   const kinds = ['offer', 'competitor', 'idea', 'event', 'igpost', 'trend', 'run'];
   const [orders, prices, items, about, agents, ig] = await Promise.all([
-    db.query('orders', ['price', 'service', 'customService', 'status', 'receivedAt', 'createdAt']),
+    // продажи считаются максимум за 180 дней — старые заказы не читаем (бережём лимит базы)
+    db.query('orders', ['price', 'service', 'customService', 'status', 'receivedAt', 'createdAt'],
+      { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { integerValue: String(Date.now() - 200 * 864e5) } } }),
     db.query('prices', ['svc', 'name', 'unit', 'price', 'from', 'calc', 'cost', 'mat', 'work', 'extra', 'hidden']),
     db.query('marketing', ['kind', 'title', 'status', 'date', 'type', 'format', 'price', 'audience', 'includes', 'until', 'name', 'services', 'prices', 'strong', 'weak', 'caption', 'likes', 'link', 'note', 'createdAt'],
       { fieldFilter: { field: { fieldPath: 'kind' }, op: 'IN', value: encV(kinds) } }),
@@ -666,7 +710,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const url = new URL(req.url);
     if (url.pathname === '/api/status') return json({ ok: true, engine: env.ANTHROPIC_API_KEY ? 'Claude' : env.GEMINI_API_KEY ? 'Gemini' : env.AI ? 'Llama' : null, fallback: !!env.AI, images: !!env.AI, instagram: !!env.IG_TOKEN, gen: 2, dept: true, deptVer: DEPT_VER, deptAuto: !!(env.AGENT_EMAIL && env.AGENT_PASSWORD), deptTelegram: !!env.TELEGRAM_BOT_TOKEN, sasha: 1 });
-    if (!['/api/ask', '/api/gen', '/api/image', '/api/instagram', '/api/department', '/api/sasha'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
+    if (!['/api/ask', '/api/gen', '/api/image', '/api/instagram', '/api/department', '/api/sasha', '/api/widget', '/api/move'].includes(url.pathname) || req.method !== 'POST') return json({ error: 'not found' }, 404);
 
     let user;
     try { user = await verifyFirebase((req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), env.FIREBASE_PROJECT || 'raz-studio-5a486'); }
@@ -676,6 +720,29 @@ export default {
 
     let b;
     try { b = await req.json(); } catch (_) { return json({ error: 'bad json' }, 400); }
+    const bearer = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    // виджет Саши на главной CRM: только названия, даты и статусы (учёт сам в raz-agents не ходит)
+    if (url.pathname === '/api/widget') {
+      try {
+        const db = firestore(env, bearer);
+        const items = await db.query('marketing', ['kind', 'status', 'stage', 'title', 'date', 'time', 'createdAt', 'updatedAt', 'finishedAt'],
+          { fieldFilter: { field: { fieldPath: 'kind' }, op: 'IN', value: encV(['run', 'event', 'idea', 'trend']) } });
+        return json({ items, moved: await db.moved() });
+      } catch (e) { return json({ error: e.message || 'Не удалось загрузить отдел' }, 502); }
+    }
+    // разовый перенос маркетинга в raz-agents (делает руководитель, сайт отдела зовёт сам)
+    if (url.pathname === '/api/move') {
+      if (String(user.email || '').toLowerCase() !== 'design.onegin@gmail.com') return json({ error: 'Перенос делает руководитель' }, 403);
+      try {
+        const db = firestore(env, bearer);
+        if (await db.moved()) return json({ moved: true, n: 0 });
+        const all = await db.main.query('marketing');
+        await db.agents.write(all.map(({ id, ...data }) => ({ path: 'marketing/' + id, data })));
+        await db.agents.write([{ path: 'marketing/_moved', data: { at: Date.now(), by: user.email || '', n: all.length } }]);
+        movedMemo = { at: Date.now(), v: true };
+        return json({ moved: true, n: all.length });
+      } catch (e) { return json({ error: e.message || 'Перенос не удался' }, 502); }
+    }
     if (url.pathname === '/api/department') {
       // запуск отдела кнопкой: работаем с правами вошедшего сотрудника
       try { return json(await departmentApi(env, (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, ''), user.email || 'сотрудник', b)); }

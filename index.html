@@ -6607,10 +6607,31 @@ try{sashaChat=JSON.parse(localStorage.getItem(SASHA_CHAT)||'[]').filter(x=>x&&x.
 function sashaSave(){try{localStorage.setItem(SASHA_UI,JSON.stringify(sashaUi));localStorage.setItem(SASHA_CHAT,JSON.stringify(sashaChat.filter(x=>x.a&&!x.err).slice(-20)))}catch(_){}}
 const sashaDay=()=>new Date(Date.now()+5*3600e3).toISOString().slice(0,10);
 const sashaLink=q=>'marketing/'+q;
-function sashaListen(){
+/* Маркетинг живёт в отдельном проекте raz-agents (свой лимит), учёт туда сам не ходит: короткий список
+   (названия, даты, статусы) отдаёт воркер raz-marketing — /api/widget. Обновляем при открытии, раз в 10 минут,
+   пока вкладка видна, и раз в минуту, пока отдел работает. Старый воркер без /api/widget — читаем базу по-старому. */
+let sashaAt=0,sashaOld=false;
+async function sashaLoad(){
+  if(sashaOld||document.hidden)return;
+  const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;if(!u)return;
+  sashaAt=Date.now();
+  try{
+    const r=await fetch(MKT_API+'/api/widget',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+await u.getIdToken()},body:'{}'});
+    if(r.status===404){sashaOld=true;sashaFs();return}
+    const j=await r.json();if(!r.ok||!Array.isArray(j.items))throw new Error(j.error||r.status);
+    sashaItems=j.items;sashaLoaded=true;sashaErr='';
+  }catch(e){sashaLoaded=true;if(!sashaItems.length)sashaErr='rules';try{console.warn('marketing',e)}catch(_){}}
+  renderSasha();
+}
+function sashaFs(){
   const fs=annaFs();if(!fs)return;
   fs.collection('marketing').where('kind','in',['run','event','idea','trend']).onSnapshot(s=>{sashaItems=s.docs.map(d=>({id:d.id,...d.data()}));sashaLoaded=true;sashaErr='';renderSasha()},
     e=>{sashaLoaded=true;sashaErr='rules';try{console.warn('marketing',e)}catch(_){}renderSasha()});
+}
+function sashaListen(){
+  sashaLoad();
+  setInterval(()=>{const live=sashaItems.some(r=>r.kind==='run'&&r.status==='working');if(Date.now()-sashaAt>=(live?60e3:10*60e3))sashaLoad()},30e3);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-sashaAt>5*60e3)sashaLoad()});
   renderSasha();
 }
 let sashaTokT;

@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   const API = 'https://raz-marketing.design-onegin.workers.dev';
-  const DEPT_NEED = 6; // версия отдела в marketing-worker/worker.js (DEPT_VER)
+  const DEPT_NEED = 7; // версия отдела в marketing-worker/worker.js (DEPT_VER)
 
   /* ================= справочники ================= */
   const TYPES = {
@@ -187,22 +187,58 @@ caption — готовая подпись к посту с призывом и 5
 
   /* ================= Firebase ================= */
   if (!window.firebase || !window.FIREBASE_CONFIG) { document.body.innerHTML = '<p style="padding:24px">Не загрузились настройки Firebase.</p>'; return; }
+  /* Маркетинг (коллекция marketing) живёт в отдельном бесплатном проекте raz-agents со своим лимитом.
+     Вход — та же почта и пароль, что в учёте: форма входа заходит сразу в оба проекта.
+     Заказы и прайс по-прежнему читаются из основного проекта учёта. */
+  const AGENTS_CFG = { apiKey: 'AIzaSyBP9bQQ4vt5xwFNLPeKCxlRgNaOnLw4RVI', authDomain: 'raz-agents.firebaseapp.com', projectId: 'raz-agents',
+    storageBucket: 'raz-agents.firebasestorage.app', messagingSenderId: '674565102940', appId: '1:674565102940:web:ca9c34862ad406791cf599' };
   firebase.initializeApp(window.FIREBASE_CONFIG);
+  const agentsApp = firebase.initializeApp(AGENTS_CFG, 'agents');
   const auth = firebase.auth(), fs = firebase.firestore();
-  const col = fs.collection('marketing');
+  const aAuth = agentsApp.auth(), afs = agentsApp.firestore();
+  let col = fs.collection('marketing');
+  const aReady = new Promise(ok => { const off = aAuth.onAuthStateChanged(() => { off(); ok(); }); });
+  // Куда смотреть: в raz-agents, если там уже есть перенос (marketing/_moved); руководитель при первом входе запускает перенос сам
+  async function pickCol(u) {
+    await aReady;
+    if (!aAuth.currentUser) return 'login';
+    try {
+      if ((await afs.doc('marketing/_moved').get()).exists) { col = afs.collection('marketing'); return 'agents'; }
+      if (String(u.email || '').toLowerCase() === 'design.onegin@gmail.com') {
+        const r = await fetch(API + '/api/move', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + await u.getIdToken() }, body: '{}' });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.moved) { col = afs.collection('marketing'); if (j.n) toast('Маркетинг перенесён в отдельную базу: ' + j.n + ' записей'); return 'agents'; }
+      }
+    } catch (_) {}
+    col = fs.collection('marketing');
+    return 'main';
+  }
 
   $('login-form').addEventListener('submit', async e => {
     e.preventDefault(); const b = $('l-btn'); b.disabled = true; $('l-err').textContent = '';
-    try { await auth.signInWithEmailAndPassword($('l-email').value.trim(), $('l-pass').value); }
+    const em = $('l-email').value.trim(), pw = $('l-pass').value;
+    signingIn = true;
+    try {
+      if (!auth.currentUser) await auth.signInWithEmailAndPassword(em, pw);
+      try { await aAuth.signInWithEmailAndPassword(em, pw); }
+      catch (x) { if (!auth.currentUser) throw x; $('l-err').textContent = 'В учёт вошли, а в базу маркетинга (raz-agents) нет: руководителю нужно завести там эту почту с тем же паролем.'; }
+      if (auth.currentUser) startData(auth.currentUser);
+    }
     catch (x) { $('l-err').textContent = x && x.code === 'auth/network-request-failed' ? 'Нет интернета.' : 'Почта или пароль не подходят.'; }
-    finally { b.disabled = false; }
+    finally { b.disabled = false; signingIn = false; }
   });
-  let unsub = [];
+  let unsub = [], signingIn = false;
   auth.onAuthStateChanged(u => {
+    if (!u) { aAuth.signOut().catch(() => {}); unsub.forEach(f => f()); unsub = []; state.user = null; $('login').hidden = false; return; }
+    if (!signingIn) startData(u); // при входе через форму данные запускает сама форма — после входа в оба проекта
+  });
+  async function startData(u) {
+    const where = await pickCol(u);
+    // в учёт уже вошли, а в raz-agents ещё нет (первый раз после переезда) — просим пароль один раз
+    if (where === 'login') { state.user = null; $('login').hidden = false; if (!$('l-email').value) $('l-email').value = u.email || ''; if (!$('l-err').textContent) $('l-err').textContent = 'Маркетинг переехал в отдельную базу — введите пароль ещё раз (один раз на этом устройстве).'; return; }
     unsub.forEach(f => f()); unsub = [];
     state.user = u;
-    $('login').hidden = !!u;
-    if (!u) return;
+    $('login').hidden = true;
     $('who').innerHTML = `<span>${E(me())}</span><button type="button" id="logout">Выйти</button>`;
     unsub.push(col.onSnapshot(s => {
       const items = [], threads = [];
@@ -217,10 +253,11 @@ caption — готовая подпись к посту с призывом и 5
       onData();
     }, e => { state.loaded = true; state.dbErr = 'Нет доступа к базе: ' + (e.message || e.code); render(); }));
     fs.collection('prices').get().then(s => { state.prices = s.docs.map(d => ({ id: d.id, ...d.data() })); }).catch(() => {});
-    fs.collection('orders').get().then(s => { state.orders = s.docs.map(d => ({ id: d.id, ...d.data() })); if (state.view === 'cal') render(); }).catch(() => {});
+    // заказы — только за ~полгода (для календаря и продаж), старые не читаем
+    fs.collection('orders').where('createdAt', '>=', Date.now() - 200 * 864e5).get().then(s => { state.orders = s.docs.map(d => ({ id: d.id, ...d.data() })); if (state.view === 'cal') render(); }).catch(() => {});
     fetch(API + '/api/status').then(r => r.json()).then(j => { state.status = j; if (state.view === 'ig' || state.view === 'crt' || state.view === 'dept') render(); }).catch(() => (state.status = {}));
     render();
-  });
+   }
 
   /* ================= ИИ ================= */
   async function gen(o) {
