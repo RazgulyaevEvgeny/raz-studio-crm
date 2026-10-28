@@ -7,7 +7,7 @@
 // Подписчики могут писать или наговаривать Ане вопросы и задачи (ответ готовит tgAssistant в anna.js).
 // В .env: TELEGRAM_BOT_TOKEN (выдаёт @BotFather). Для Kaspi почта бота (BOT_EMAIL) должна быть в ALLOWED_EMAILS воркера.
 
-import { tgAssistant, checkWatches, parcels, CN_ORD } from './anna.js';
+import { tgAssistant, checkWatches, activeParcels, CN_ORD } from './anna.js';
 import { transcribe } from './brain.js';
 
 const KASPI_API = 'https://kaspi-orders.design-onegin.workers.dev';
@@ -15,6 +15,7 @@ const KASPI_API = 'https://kaspi-orders.design-onegin.workers.dev';
 const CALL = [[/мил/i, 'Милаша'], [/евген|женя/i, 'Евгений Кириллович']];
 const callOf = c => (CALL.find(([re]) => re.test(c.name || '')) || [])[1] || (c.name || '').split(' ')[0] || 'коллега';
 const KASPI_EVERY = 5 * 60e3;
+const PARCELS_EVERY = 30 * 60e3; // посылки: раз в 30 минут, а сразу — когда L7 Cargo сменил этап (l7.js зовёт parcelsChanged)
 const tg = (env, method, body) => fetch(`https://api.telegram.org/bot${String(env.TELEGRAM_BOT_TOKEN).trim()}/${method}`, {
   method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
 }).then(r => r.json());
@@ -114,7 +115,7 @@ export function startNotify(fs, env, idToken, log) {
     }
   }
 
-  let kaspiErr = '';
+  let kaspiErr = '', seenDoc = null;
   // Новые заказы Kaspi: сравниваем с уже виденными (wa_anna/kaspi_seen); при первом запуске просто запоминаем
   async function checkKaspi() {
     try {
@@ -127,7 +128,8 @@ export function startNotify(fs, env, idToken, log) {
       }
       kaspiErr = '';
       const { orders = [] } = await r.json();
-      const doc = await fs.get('wa_anna/kaspi_seen');
+      // список уже виденных заказов читаем из базы один раз, дальше держим в памяти
+      const doc = seenDoc || (seenDoc = await fs.get('wa_anna/kaspi_seen'));
       const seen = new Set(doc?.ids || []);
       const fresh = orders.filter(o => !seen.has(o.id));
       if (doc) for (const o of fresh) {
@@ -135,7 +137,7 @@ export function startNotify(fs, env, idToken, log) {
         await send(`🛒 Новый заказ Kaspi № ${o.code}\n${items || 'состав уточняется'}\n${o.total != null ? o.total.toLocaleString('ru-RU') + ' ₸' : ''}${o.town ? ', ' + o.town : ''}`.trim());
         log('Уведомление о заказе Kaspi', o.code);
       }
-      if (fresh.length || !doc) await fs.set('wa_anna/kaspi_seen', { ids: [...seen, ...fresh.map(o => o.id)].slice(-500), at: Date.now() });
+      if (fresh.length || !doc) { seenDoc = { ids: [...seen, ...fresh.map(o => o.id)].slice(-500), at: Date.now() }; await fs.set('wa_anna/kaspi_seen', seenDoc); }
     } catch (e) {
       log('ошибка проверки Kaspi', e?.message || e);
     }
@@ -152,7 +154,7 @@ export function startNotify(fs, env, idToken, log) {
     if (h < 8 || h >= 22) return; // ночью не будим, утром придёт всё накопившееся
     try {
       const today = kzNow().toISOString().slice(0, 10);
-      for (const p of await parcels(fs)) {
+      for (const p of await activeParcels(fs)) {
         const st = CN_ORD.includes(p.stage) ? p.stage : 'ordered', i = CN_ORD.indexOf(st);
         const name = `«${p.title || 'посылка'}»${p.qty ? ', ' + p.qty + ' шт' : ''}`;
         const patch = {};
@@ -194,10 +196,11 @@ export function startNotify(fs, env, idToken, log) {
     setInterval(watchTick, 60e3);
     setInterval(checkKaspi, KASPI_EVERY);
     checkParcels();
-    setInterval(checkParcels, KASPI_EVERY);
+    setInterval(checkParcels, PARCELS_EVERY);
   }
   return {
     alert: text => send(text),
+    parcelsChanged: () => { if (on) setTimeout(checkParcels, 3000); },
     managerNeeded: (chat, reason) => send(`🔔 Нужен менеджер в WhatsApp\n${chat.name || 'Клиент'}${chat.phone ? ' +' + chat.phone : ''}: ${reason}${chat.phone ? '\nhttps://wa.me/' + chat.phone : ''}`),
   };
 }

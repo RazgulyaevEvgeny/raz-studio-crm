@@ -360,16 +360,36 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
     $('wa').href='https://wa.me/'+PHONE;
   }
 
-  var last='';
+  /* Копия заказа лежит в Realtime Database (pub/<ключ>): её можно открывать сколько угодно, лимит чтений базы учёта
+     она не тратит. Старые ссылки, которые ещё не перенесены, читаются по-старому из Firestore (order_pub). */
+  var RTDB='https://raz-studio-5a486-default-rtdb.europe-west1.firebasedatabase.app';
+  var SHOW_DAYS=30; // после «Выдан» страница открывается ещё месяц
+  var last='',fsTick=0;
+  function fromFs(t){
+    return fetch('https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/order_pub/'+t+'?key='+KEY,{cache:'no-store'})
+      .then(function(r){if(r.status===404||r.status===403)return null;if(!r.ok)throw new Error(r.status);return r.json()})
+      .then(function(j){if(!j)return null;var o={},f=j.fields||{};for(var k in f)o[k]=val(f[k]);return o});
+  }
+  function fetchOrder(t,first){
+    return fetch(RTDB+'/pub/'+encodeURIComponent(t)+'.json',{cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null}).catch(function(){return null})
+      .then(function(o){
+        if(o&&typeof o==='object')return o;
+        /* в Realtime Database пока нет — Firestore: при открытии и дальше раз в 10 минут, не чаще */
+        if(first||(++fsTick%10===0))return fromFs(t);
+        return 'same';
+      });
+  }
   function load(first){
     var t=token();
     if(t.length<24){missing();return}
-    fetch('https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/order_pub/'+t+'?key='+KEY,{cache:'no-store'})
-      .then(function(r){if(r.status===404||r.status===403)return null;if(!r.ok)throw new Error(r.status);return r.json()})
-      .then(function(j){
-        if(!j){missing();return}
-        var o={},f=j.fields||{};for(var k in f)o[k]=val(f[k]);
+    fetchOrder(t,first)
+      .then(function(o){
+        if(o==='same')return;
+        if(!o){missing();return}
         if(o.gone){missing('Этот заказ больше не отображается. Если остались вопросы, напишите нам в WhatsApp.');return}
+        var doneAt=o.st==='done'&&o.stAt?+o.stAt.done||0:0;
+        if(doneAt&&Date.now()-doneAt>SHOW_DAYS*864e5){missing('Заказ выдан, страница больше не отображается. Спасибо, что выбрали нас! Если остались вопросы, напишите нам в WhatsApp.','Заказ выдан');return}
         var s=JSON.stringify(o);
         if(s===last){var n=new Date();$('live').textContent='Обновлено в '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+', страница обновляется сама';return}
         last=s;render(o);

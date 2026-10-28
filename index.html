@@ -192,8 +192,9 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="firebase-config.js"></script>
-<script src="firebase-bridge.js?v=20261028124500"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js?v=20261028"></script>
+<script src="firebase-bridge.js?v=20261028140000"></script>
 </head>
 <body>
 <title>Заказы RAZ Brand Studio</title>
@@ -5048,8 +5049,9 @@ async function quickStatus(id,status){
    забирает его и сам решает по заказу, что и кому отправить. Пока бот выключен, задания ждут его до недели. */
 async function waNotify(id,event='status'){
   const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;if(!u||!id)return;
-  try{await db.collection('wa_outbox').doc().set({orderId:id,event,at:Date.now(),by:u.email||''})}
-  catch(_){/* правило для wa_outbox ещё не опубликовано — молча пропускаем */}
+  const job={orderId:id,event,at:Date.now(),by:u.email||''};
+  try{const r=rt();if(r)await r.ref('sig/outbox').push(job);else await db.collection('wa_outbox').doc().set(job)} // бот получает задание сразу, без опроса базы
+  catch(_){try{await db.collection('wa_outbox').doc().set(job)}catch(__){}}
 }
 /* Страница заказа для клиента (order.html). Клиенту уходит ссылка с длинным случайным ключом,
    а в order_pub/<ключ> лежит копия только нужных полей: состав, суммы, сроки и статус. Телефон, заметки,
@@ -5065,15 +5067,17 @@ function pubOf(o){
     from:o.deadlineFrom||'',to:o.deadline||'',rec:o.receivedAt||'',gone:!!o.deletedAt,...(o.stNote?{note:String(o.stNote).slice(0,120)}:{})};
 }
 function pubHash(p){const t=JSON.stringify(p);let h=5381;for(let i=0;i<t.length;i++)h=(h*33+t.charCodeAt(i))|0;return (h>>>0).toString(36)}
+/* копия лежит в Realtime Database (pub/<ключ>): клиент может открывать страницу сколько угодно — квоту Firestore это не тратит.
+   pubR — отпечаток копии в Realtime Database (старые копии в Firestore order_pub/ дописываются туда один раз сами) */
 async function pubWrite(o){
-  const p=pubOf(o),h=pubHash(p);
-  await db.doc('order_pub/'+o.pub).set({...p,upd:Date.now()});
-  if(o.pubHash!==h)await db.doc('orders/'+o.id).update({pubHash:h});
+  const p=pubOf(o),h=pubHash(p),r=rt();
+  if(r)await r.ref('pub/'+o.pub).set(JSON.parse(JSON.stringify({...p,upd:Date.now()})));else await db.doc('order_pub/'+o.pub).set({...p,upd:Date.now()});
+  if(r&&o.pubR!==h)await db.doc('orders/'+o.id).update({pubR:h});else if(!r&&o.pubHash!==h)await db.doc('orders/'+o.id).update({pubHash:h});
 }
 let pubBusy=false,pubOff=false;
 async function pubSync(){
   if(pubBusy||pubOff||!canWrite||!db)return;pubBusy=true;
-  try{for(const o of ordersAll){if(o.pub&&o.pubHash!==pubHash(pubOf(o)))await pubWrite(o)}}
+  try{const r=rt();for(const o of ordersAll){if(o.pub&&(r?o.pubR:o.pubHash)!==pubHash(pubOf(o)))await pubWrite(o)}}
   catch(e){pubOff=true;try{console.warn('order_pub: правила не опубликованы?',e)}catch(_){}} // не повторяем до перезагрузки
   finally{pubBusy=false}
 }
@@ -6653,13 +6657,14 @@ $('sasha-ask').addEventListener('submit',async e=>{
      stats:{categories,scanned,products,best,good,awaiting}, lastRun:{started,finished,status,...},
      top:[{id,title,url,photo,status,price,maxLanded,maxCny,r30,reviews,rating,sales,sellers,weight,summary,pain}],
      schedule, criteria:{maxPrice,minProfit,maxWeight}, panel, reqHandledAt}.
-   wa_anna/daulet_req — кнопка «Обновить данные» {at, by, query}: Даулет проверяет её раз в 15 секунд. */
+   wa_anna/daulet_req — кнопка «Обновить данные» {at, by, query}: Даулет проверяет её раз в 20 секунд.
+   Оба документа живут в Realtime Database: sig/daulet и sig/dauletReq (квоту Firestore не тратят). */
 let daulD=null,daulReq=null,daulLoaded=false,daulErr='';
 function daulListen(){
-  const fs=annaFs();if(!fs)return;
-  fs.doc('wa_anna/daulet').onSnapshot(s=>{daulD=s.exists?s.data():null;daulLoaded=true;daulErr='';renderDaulet()},
+  const r=rt();if(!r)return;
+  r.ref('sig/daulet').on('value',s=>{daulD=rtFix(s.val(),['top']);daulLoaded=true;daulErr='';renderDaulet()},
     e=>{daulLoaded=true;daulErr='rules';try{console.warn('daulet',e)}catch(_){}renderDaulet()});
-  fs.doc('wa_anna/daulet_req').onSnapshot(s=>{daulReq=s.exists?s.data():null;renderDaulet()},()=>{});
+  r.ref('sig/dauletReq').on('value',s=>{daulReq=s.val();renderDaulet()},()=>{});
   setInterval(()=>{if(!document.hidden&&!$('p-home').hidden)renderDaulet()},30000);
   renderDaulet();
 }
@@ -6695,8 +6700,8 @@ function renderDaulet(){
   $('daulet-ref-btn').disabled=$('daulet-q-btn').disabled=!canWrite||run||pend;
 }
 async function daulAsk(query){
-  const fs=annaFs();if(!fs||!canWrite)return;
-  try{await fs.doc('wa_anna/daulet_req').set({at:Date.now(),by:(ROLE().name||''),query:query||''});
+  const r=rt();if(!r||!canWrite)return;
+  try{await r.ref('sig/dauletReq').set({at:Date.now(),by:(ROLE().name||''),query:query||''});
     toast(daulOnline()?(query?'Даулет проверит «'+query+'» через несколько секунд':'Даулет начнёт поиск через несколько секунд'):'Заявка сохранена: Даулет начнёт, когда включат рабочий компьютер');daulTok()}
   catch(e){toast('Не получилось отправить заявку Даулету')}
 }
@@ -6714,19 +6719,27 @@ function annaIsDone(t){
   return !!id&&Object.values(annaDoneT).some(r=>fresh(r)&&String(r[id[0]]||'')===id[1]);
 }
 const annaFs=()=>window.firebase&&firebase.firestore&&firebase.firestore();
+/* Realtime Database (вторая база того же проекта): «сигналы» — сводка и вопросы Ани, Даулет, задания боту, страницы заказов.
+   Её бесплатный лимит считается по трафику, а не по числу чтений, поэтому квоту Firestore эти виджеты больше не тратят. */
+const rt=()=>{try{return window.firebase&&firebase.database&&firebase.apps.length&&firebase.app().options.databaseURL?firebase.database():null}catch(_){return null}};
+/* Realtime Database не хранит пустые списки: возвращаем их, чтобы остальной код видел привычные массивы */
+const rtArr=v=>Array.isArray(v)?v:v&&typeof v==='object'?Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]):[];
+const rtFix=(o,keys)=>{if(!o||typeof o!=='object')return o;for(const k of keys)o[k]=rtArr(o[k]);return o};
 const annaWho=()=>{const u=window.firebase&&firebase.auth&&firebase.auth().currentUser;return (u&&u.email)||''};
 function annaAgo(ts){const m=Math.max(0,Math.round((Date.now()-ts)/6e4));if(m<1)return 'только что';if(m<60)return m+' мин назад';const h=Math.round(m/60);return h<48?h+' ч назад':Math.round(h/24)+' дн назад'}
 function annaListen(){
   const fs=annaFs();if(!fs)return;
   const fail=e=>{annaLoaded=true;annaErr='rules';try{console.warn('wa_anna',e)}catch(_){}renderAnna()};
-  fs.doc('wa_anna/digest').onSnapshot(s=>{annaD=s.exists?s.data():null;annaLoaded=true;annaErr='';renderAnna()},fail);
+  const r=rt();if(!r){fail(new Error('no rtdb'));return}
+  /* сводка, отмеченные дела, аналитика и вопросы — в Realtime Database (sig/anna/*, sig/annaQ) */
+  r.ref('sig/anna/digest').on('value',s=>{annaD=rtFix(s.val(),['todo','needManager']);annaLoaded=true;annaErr='';renderAnna()},fail);
   /* кто ждёт менеджера — прямо из чатов: менеджер ответил клиенту или сняли вручную — строка сразу уходит */
   fs.collection('wa_chats').where('needsManager','==',true).onSnapshot(s=>{annaWait=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaWait=null});
   /* «Кому можно написать»: клиент спрашивал и пропал без заказа — Аня сама не пишет, только подсказывает (wa_chats.lead, extras.js) */
   fs.collection('wa_chats').where('leadOpen','==',true).onSnapshot(s=>{annaLead=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaLead=[]});
-  fs.doc('wa_anna/done').onSnapshot(s=>{annaDoneT=(s.exists&&s.data().items)||{};renderAnna()},()=>{});
-  fs.doc('wa_anna/insights').onSnapshot(s=>{annaIns=s.exists?s.data():null;renderAnna()},()=>{});
-  fs.collection('wa_anna_q').orderBy('at','desc').limit(30).onSnapshot(s=>{annaQ=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},fail);
+  r.ref('sig/anna/done/items').on('value',s=>{annaDoneT=s.val()||{};renderAnna()},()=>{});
+  r.ref('sig/anna/insights').on('value',s=>{const v=s.val();if(v)for(const k of ['week','month'])rtFix(v[k],['services','questions','offers','lost','followups']);annaIns=v;renderAnna()},()=>{});
+  r.ref('sig/annaQ').orderByChild('at').limitToLast(30).on('value',s=>{const a=[];s.forEach(x=>{a.push({id:x.key,...x.val()})});annaQ=a.reverse();renderAnna()},fail);
 }
 /* затяжка на аватаре: при первом показе сводки и при открытии блока */
 let annaPuffed=false,annaPuffT,annaNm=null;
@@ -6774,7 +6787,7 @@ function renderAnna(){
   c.style.setProperty('--sc',annaErr?'var(--danger)':d.at&&Date.now()-d.at<3*3600e3?'var(--ok)':'var(--muted)');
   const nv=v=>v==null||v===''?'—':v;
   agKpi('w-anna-kpi',annaErr||!annaLoaded?[['—',annaErr?'нет доступа':'загружаем…']]:[[need.length,'ждут ответа',need.length>0],[nv(st.chats),'диалогов за день'],[nv(st.botOrders),'заказов от Ани']]);
-  if(annaErr){say.textContent='Нужно обновить правила базы Firestore: добавить строки wa_anna и wa_anna_q из firestore.rules.';$('w-anna-todo').innerHTML=$('w-anna-need').innerHTML=$('w-anna-lead').innerHTML=$('w-anna-stats').innerHTML='';}
+  if(annaErr){say.textContent='Нет доступа к Realtime Database: опубликуйте правила из файла database.rules.json (Firebase → Realtime Database → Rules).';$('w-anna-todo').innerHTML=$('w-anna-need').innerHTML=$('w-anna-lead').innerHTML=$('w-anna-stats').innerHTML='';}
   else if(!annaLoaded)say.textContent='Загружаем сводку…';
   else if(!annaD)say.textContent='Аня ещё не готовила сводку. Нажмите «Обновить» внизу, когда рабочий компьютер включён.';
   else say.textContent=String(d.summary||'').trim()||'Пока без новостей.';
@@ -6830,8 +6843,8 @@ function annaCheck(k){
   annaTick[k]=setTimeout(async()=>{
     const r={text:String(t.text).slice(0,200),at:Date.now(),by:annaWho(),...(t.orderId?{orderId:String(t.orderId)}:{}),...(t.kaspiId?{kaspiId:String(t.kaspiId)}:{})};
     annaDoneT={...annaDoneT,[k]:r};delete annaTick[k];renderAnna();
-    const fs=annaFs();
-    try{if(!fs)throw 0;await fs.doc('wa_anna/done').set({items:{[k]:r}},{merge:true})}
+    const db2=rt();
+    try{if(!db2)throw 0;await db2.ref('sig/anna/done/items/'+k).set(r)}
     catch(e){const c={...annaDoneT};delete c[k];annaDoneT=c;renderAnna();toast('Не получилось отметить, попробуйте ещё раз')}
   },1500);
   renderAnna();
@@ -6864,20 +6877,20 @@ async function annaLeadDone(id){
   catch(e){toast('Не получилось убрать, попробуйте ещё раз')}
 }
 async function annaInsGo(){
-  const fs=annaFs(),per=annaUi.per==='month'?'month':'week';if(!fs||!canWrite)return;
+  const r=rt(),per=annaUi.per==='month'?'month':'week';if(!r||!canWrite)return;
   annaInsWait[per]=Date.now();renderAnna();
-  try{await fs.doc('wa_anna/request').set({insights:per,insightsAt:Date.now(),by:annaWho()},{merge:true});toast('Аня разбирает переписки…')}
+  try{await r.ref('sig/anna/request').update({insights:per,insightsAt:Date.now(),by:annaWho()});toast('Аня разбирает переписки…')}
   catch(e){annaInsWait[per]=0;renderAnna();toast('Не получилось: обновите правила базы (wa_anna)')}
 }
 $('anna-ref-btn').addEventListener('click',async()=>{
-  const fs=annaFs();if(!fs||!canWrite)return;
-  try{await fs.doc('wa_anna/request').set({refreshAt:Date.now(),by:annaWho()},{merge:true});toast('Аня готовит свежую сводку…')}
+  const r=rt();if(!r||!canWrite)return;
+  try{await r.ref('sig/anna/request').update({refreshAt:Date.now(),by:annaWho()});toast('Аня готовит свежую сводку…')}
   catch(e){toast('Не получилось: обновите правила базы (wa_anna)')}
 });
 $('anna-ask').addEventListener('submit',async e=>{
-  e.preventDefault();const inp=$('anna-q'),q=inp.value.trim(),fs=annaFs();if(!q||!fs||!canWrite)return;
+  e.preventDefault();const inp=$('anna-q'),q=inp.value.trim(),r=rt();if(!q||!r||!canWrite)return;
   $('anna-q-btn').disabled=true;
-  try{await fs.collection('wa_anna_q').add({q,at:Date.now(),by:annaWho(),status:'new'});inp.value=''}
+  try{await r.ref('sig/annaQ').push({q,at:Date.now(),by:annaWho(),status:'new'});inp.value=''}
   catch(_){toast('Не получилось: обновите правила базы (wa_anna_q)')}finally{$('anna-q-btn').disabled=!canWrite}
 });
 setInterval(()=>{if(!document.hidden&&!$('p-home').hidden)renderAnna()},60000);
@@ -7058,7 +7071,7 @@ async function trashBack(id){
 }
 async function trashKill(id,silent){
   const o=trashOrders.find(x=>x.id===id);
-  try{await db.doc('orders/'+id).delete();if(o&&o.pub)db.doc('order_pub/'+o.pub).delete().catch(()=>{});if(assets&&o)(o.files||[]).forEach(f=>assets.delete(f.id).catch(()=>{}));if(!silent)toast('Заказ удалён навсегда')}
+  try{await db.doc('orders/'+id).delete();if(o&&o.pub){db.doc('order_pub/'+o.pub).delete().catch(()=>{});const r=rt();if(r)r.ref('pub/'+o.pub).remove().catch(()=>{})}if(assets&&o)(o.files||[]).forEach(f=>assets.delete(f.id).catch(()=>{}));if(!silent)toast('Заказ удалён навсегда')}
   catch(e){if(!silent)toast(handleWriteError(e))}
   if(!silent)setTimeout(()=>trashOrders.length?openTrash():closeSheet(),300);
 }

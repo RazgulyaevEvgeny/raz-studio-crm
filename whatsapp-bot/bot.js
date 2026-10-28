@@ -25,7 +25,7 @@ import { dirname, join } from 'node:path';
 import makeWASocket, { downloadMediaMessage, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, isJidGroup, isJidBroadcast, isLidUser, isPnUser } from 'baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, describeImage, botToken, PAUSE_AFTER_MANAGER, isWorkTime, isClosed, hasQuestion, busyText, workStartedAt } from './brain.js';
+import { firestore, prepareNotice, markNoticeSent, runAgent, appendChat, normPhone, transcribe, describeImage, botToken, PAUSE_AFTER_MANAGER, isWorkTime, isClosed, hasQuestion, busyText, workStartedAt, fromFields } from './brain.js';
 import { startExtras } from './extras.js';
 import { makeDigest, digestDue, answerQuestions, makeInsights, insightsDue } from './anna.js';
 import { startNotify } from './notify.js';
@@ -326,10 +326,18 @@ function textOf(message) {
 
 /* ---------- менеджер не ответил за 10 минут ---------- */
 
+// Экономим квоту Firestore: свежие сообщения бот и так ловит сам (таймеры ответа), а запрос к базе нужен
+// только чтобы подобрать чаты после перезапуска — первые 10 минут после старта раз в минуту, дальше раз в 10 минут.
+// Извинение «менеджер занят» проверяем раз в 3 минуты и только в рабочее время.
+let waitTick = 0;
+const startedAt = Date.now();
 async function checkWaitingChats() {
   if (state.status !== 'online' || missing.length) return;
+  const tick = waitTick++;
+  const recoverNow = Date.now() - startedAt < 10 * 60e3 || tick % 10 === 0;
+  const busyNow = isWorkTime() && tick % 3 === 0;
   // После перезапуска бота таймеры ответа теряются: подбираем чаты, где клиент ждёт дольше 7 минут (но не дольше 40), а ответа нет
-  if (aiOn) try {
+  if (aiOn && recoverNow) try {
     // Берём из базы только чаты со свежим сообщением (старше 40 минут Аня всё равно не отвечает), а не все, где писал клиент
     const recent = await fs.query('wa_chats', {
       where: { fieldFilter: { field: { fieldPath: 'lastAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { integerValue: String(Date.now() - FRESH) } } },
@@ -345,7 +353,7 @@ async function checkWaitingChats() {
   } catch (e) {
     log('ошибка проверки неотвеченных чатов', e?.message || e);
   }
-  if (BUSY_NOTICE_ON) try {
+  if (BUSY_NOTICE_ON && busyNow) try {
     const waiting = await fs.query('wa_chats', {
       where: { fieldFilter: { field: { fieldPath: 'needsManager' }, op: 'EQUAL', value: { booleanValue: true } } },
     });
@@ -376,8 +384,7 @@ async function checkAnna() {
   try {
     const n = await answerQuestions(fs, env);
     if (n) log('Аня ответила на вопросы из учёта:', n);
-    // Сводку и аналитику проверяем раз в 3 минуты: это ещё 3–4 чтения базы, а нужны они редко
-    if (annaTick++ % 3) return;
+    // Просьбы «обновить» и сводка лежат в Realtime Database (rtdb.js): проверка идёт по копии в памяти бота и ничего не стоит
     const why = await digestDue(fs);
     if (why) { await makeDigest(fs, env); log('Аня подготовила сводку для учёта (' + why + ')'); }
     const per = await insightsDue(fs);
@@ -391,6 +398,30 @@ async function checkAnna() {
   } finally {
     annaBusy = false;
   }
+}
+
+/* ---------- одноразовый перенос сигналов из Firestore в Realtime Database ----------
+   Сводка, аналитика, отмеченные дела, оповещения и последние вопросы Ане копируются один раз (метка sig/migratedAt). */
+async function migrateSignals() {
+  await fs.rt.ready();
+  if (fs.rt.get('sig/migratedAt')) return;
+  const raw = async p => { const r = await fetch(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents/${p}`, { headers: { Authorization: 'Bearer ' + await botToken(env) } }); return r.ok ? r.json() : null; };
+  let n = 0;
+  for (const k of ['digest', 'insights', 'done', 'watches', 'request']) {
+    if (fs.rt.get('sig/anna/' + k)) continue;
+    const d = await raw('wa_anna/' + k);
+    if (d?.fields) { const { _ts, _del, ...v } = fromFields(d.fields); await fs.rt.set('sig/anna/' + k, v); n++; }
+  }
+  if (!fs.rt.get('sig/daulet')) { const d = await raw('wa_anna/daulet'); if (d?.fields) { const { _ts, ...v } = fromFields(d.fields); await fs.rt.set('sig/daulet', v); n++; } }
+  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents:runQuery`, { method: 'POST',
+    headers: { Authorization: 'Bearer ' + await botToken(env), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'wa_anna_q' }], orderBy: [{ field: { fieldPath: 'at' }, direction: 'DESCENDING' }], limit: 30 } }) });
+  if (r.ok) for (const x of (await r.json()).filter(x => x.document)) {
+    const id = x.document.name.split('/').pop(), { _ts, _del, ...v } = fromFields(x.document.fields || {});
+    if (!_del) { await fs.rt.set('sig/annaQ/' + id, v); n++; }
+  }
+  await fs.rt.set('sig/migratedAt', Date.now());
+  log('Сигналы перенесены в Realtime Database:', n);
 }
 
 /* ---------- уведомления о заказах (задания от учёта в wa_outbox) ---------- */
@@ -464,7 +495,19 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   setInterval(checkWaitingChats, 60e3);
   setInterval(checkAnna, 60e3);
   if (!missing.length) notify = startNotify(fs, env, () => botToken(env), log);
-  if (!missing.length) startL7({ fs, env, log });
+  if (!missing.length) startL7({ fs, env, log, notify });
+  if (!missing.length) {
+    migrateSignals().catch(e => log('перенос сигналов в Realtime Database:', e?.message || e));
+    // Учёт положил задание или вопрос — реагируем сразу, не дожидаясь минутной проверки
+    let sigT = null;
+    fs.onSignal(path => {
+      clearTimeout(sigT);
+      sigT = setTimeout(() => {
+        if (path === '/' || path.startsWith('/outbox')) processOutbox();
+        if (path === '/' || path.startsWith('/annaQ') || path.startsWith('/anna/request')) checkAnna();
+      }, 1500);
+    });
+  }
   if (!missing.length) extras = startExtras({ fs, env, log, notify, send, online: () => state.status === 'online' && !!sock, sock: () => sock, aiOn, DIR });
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
   for (const f of ['brain.js', 'anna.js', 'notify.js', 'l7.js', 'extras.js', 'mockup.js', 'bot.js', '.env']) {

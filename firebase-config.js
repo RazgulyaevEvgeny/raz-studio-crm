@@ -4,6 +4,8 @@
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0",
   authDomain: "raz-studio-5a486.firebaseapp.com",
+  // Realtime Database: сигналы (Аня, Даулет, задания боту) и страницы заказов для клиентов — квоту Firestore не тратят
+  databaseURL: "https://raz-studio-5a486-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "raz-studio-5a486",
   storageBucket: "raz-studio-5a486.firebasestorage.app",
   messagingSenderId: "661085467003",

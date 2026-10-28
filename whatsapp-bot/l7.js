@@ -43,10 +43,10 @@ export function etaOf(p, all) {
   return addDays(base, legs.slice(i, 4).reduce((s, x) => s + x, 0));
 }
 
-export function startL7({ fs, env, log }) {
+export function startL7({ fs, env, log, notify }) {
   const phone = e164(env.L7_PHONE), password = String(env.L7_PASSWORD || '').trim();
   if (phone.length < 8 || !password) { log('L7 Cargo: не заполнены L7_PHONE и L7_PASSWORD в .env, посылки из карго не подтягиваются'); return null; }
-  let base = null, cookie = '', lastErr = '';
+  let base = null, cookie = '', lastErr = '', lastHash = '', lastCrmAt = 0, lastMetaAt = Date.now();
 
   // Адрес сервера L7: обычный, а если сайт переедет — ищем в скрипте сайта
   async function apiBase() {
@@ -116,6 +116,15 @@ export function startL7({ fs, env, log }) {
     if (h < 8 || h >= 22) return;
     try {
       const l7 = (await allParcels()).filter(x => !x.isHiddenByClient);
+      // Учёт читаем, только если в L7 что-то поменялось (или раз в 6 часов — на случай новых треков, вписанных в учёт):
+      // кабинет L7 спрашивать бесплатно, а каждое чтение посылок учёта тратит квоту Firestore
+      const hash = JSON.stringify(l7.map(x => [x.id, x.status, x.weightKg, x.deliveryFee, x.trackingNumber]));
+      if (hash === lastHash && Date.now() - lastCrmAt < 6 * 3600e3) {
+        // отметку «последняя сверка» на вкладке обновляем не чаще раза в час
+        if (Date.now() - lastMetaAt > 3600e3) { lastMetaAt = Date.now(); await fs.patch('kaspi_orders/_meta', { l7SyncAt: Date.now(), l7Err: '' }); }
+        lastErr = '';
+        return;
+      }
       const crm = await fs.query('kaspi_orders', { where: { fieldFilter: { field: { fieldPath: 'kind' }, op: 'EQUAL', value: { stringValue: 'parcel' } } } });
       const byTrack = new Map(crm.filter(p => p.track).map(p => [normTrack(p.track), p]));
       const today = kzDay();
@@ -185,6 +194,8 @@ export function startL7({ fs, env, log }) {
         await fs.patch('kaspi_orders/' + p.id, { l7Added: Date.now() });
         sent++;
       }
+      lastHash = hash; lastCrmAt = lastMetaAt = Date.now();
+      if (upd || made) notify?.parcelsChanged?.();
       await fs.patch('kaspi_orders/_meta', { l7SyncAt: Date.now(), l7Err: '', l7Count: l7.length });
       if (upd || made || sent || lastErr) log(`L7 Cargo: обновлено ${upd}, новых из L7 ${made}, добавлено в L7 ${sent}`);
       lastErr = '';

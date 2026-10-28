@@ -94,8 +94,12 @@ async function kaspiToDo(fs) {
 export const CN_ORD = ['ordered', 'sent', 'left', 'customs', 'ready', 'got'];
 export const CN_LABEL = { ordered: 'заказали, продавец собирает', sent: 'отправлена, едет на склад карго в Китае', left: 'покинула Китай', customs: 'прошла таможню, едет в Павлодар', ready: 'готова к выдаче в карго', got: 'забрали' };
 export const parcels = fs => fs.query('kaspi_orders', { where: { fieldFilter: { field: { fieldPath: 'kind' }, op: 'EQUAL', value: { stringValue: 'parcel' } } } });
+// Только посылки в пути (не «Забрали»): поле stage есть только у посылок, поэтому хватает одного условия.
+// Забранные посылки копятся годами — их не перечитываем.
+export const activeParcels = fs => fs.query('kaspi_orders', { where: { fieldFilter: { field: { fieldPath: 'stage' }, op: 'IN',
+  value: { arrayValue: { values: ['ordered', 'sent', 'left', 'customs', 'ready'].map(stringValue => ({ stringValue })) } } } } });
 async function parcelFacts(fs) {
-  const list = (await parcels(fs).catch(() => [])).filter(p => p.stage !== 'got');
+  const list = (await activeParcels(fs).catch(() => []));
   if (!list.length) return 'нет';
   const today = kz().toISOString().slice(0, 10);
   const money = n => Math.round(n).toLocaleString('ru-RU') + ' ₸';

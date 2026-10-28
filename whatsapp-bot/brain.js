@@ -3,6 +3,7 @@
 // Нейросеть: бесплатный Google Gemini (GEMINI_API_KEY), либо платный Claude, если задан ANTHROPIC_API_KEY.
 
 import { randomBytes } from 'node:crypto';
+import { startRtdb, movedPath, RTDB_URL } from './rtdb.js';
 import Anthropic from '@anthropic-ai/sdk';
 import { makeMockup, lastPhoto, describe as mockupText, ITEMS as MOCKUP_ITEMS, SIDES as MOCKUP_SIDES, SIZES as MOCKUP_SIZES } from './mockup.js';
 
@@ -887,7 +888,36 @@ export const SYNCED = new Set(['orders', 'tasks', 'prices', 'projects', 'request
 const TS = [{ fieldPath: '_ts', setToServerValue: 'REQUEST_TIME' }];
 const colOf = path => String(path).split('/')[0];
 
+/* Сигналы (сводка Ани, вопросы, очередь уведомлений, оповещения) и страницы заказов живут в Realtime Database —
+   см. rtdb.js. Код бота по-прежнему пишет fs.get('wa_anna/digest') и т.п., а здесь эти пути уходят туда. */
+let rtdbOne = null;
+export function rtdbOf(env) {
+  return rtdbOne || (rtdbOne = startRtdb({ url: String(env.RTDB_URL || RTDB_URL).trim().replace(/\/$/, ''), token: () => botToken(env), log: (...a) => console.log(new Date().toLocaleString('ru-RU'), ...a) }));
+}
+const fieldOf = (o, f) => String(f).split('.').reduce((x, k) => (x == null ? x : x[k]), o);
+// Простейшие запросы к копии сигналов: равенство полей, сортировка и limit — как их пишет код бота
+function localQuery(list, q = {}) {
+  const conds = [];
+  const walk = w => { if (!w) return; if (w.fieldFilter) conds.push(w.fieldFilter); (w.compositeFilter?.filters || []).forEach(walk); };
+  walk(q.where);
+  const val = v => v == null ? v : 'stringValue' in v ? v.stringValue : 'integerValue' in v ? +v.integerValue : 'booleanValue' in v ? v.booleanValue : 'doubleValue' in v ? v.doubleValue : null;
+  let out = list.filter(d => conds.every(c => {
+    const a = fieldOf(d, c.field.fieldPath), b = val(c.value);
+    return c.op === 'EQUAL' ? a === b : c.op === 'GREATER_THAN_OR_EQUAL' ? a >= b : c.op === 'LESS_THAN' ? a < b : true;
+  }));
+  for (const o of [...(q.orderBy || [])].reverse()) {
+    const f = o.field.fieldPath, k = o.direction === 'DESCENDING' ? -1 : 1;
+    out.sort((x, y) => ((fieldOf(x, f) ?? 0) > (fieldOf(y, f) ?? 0) ? k : (fieldOf(x, f) ?? 0) < (fieldOf(y, f) ?? 0) ? -k : 0));
+  }
+  return q.limit ? out.slice(0, q.limit) : out;
+}
+
 export function firestore(env) {
+  const rt = rtdbOf(env);
+  const rtList = async mv => { await rt.ready(); return Object.entries(rt.get(mv) || {}).filter(([, v]) => v && typeof v === 'object').map(([id, v]) => ({ id, ...v })); };
+  const rtWrap = {
+    async get(mv, path) { await rt.ready(); if (!mv.startsWith('sig/')) return null; const v = rt.get(mv); return v && typeof v === 'object' ? { id: String(path).split('/').pop(), ...v } : null; },
+  };
   const base = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents`;
   const root = `projects/${env.FIREBASE_PROJECT}/databases/(default)/documents`;
   const H = async () => ({ Authorization: 'Bearer ' + await botToken(env), 'Content-Type': 'application/json' });
@@ -901,7 +931,11 @@ export function firestore(env) {
   };
   const newId = () => randomBytes(15).toString('base64url').replace(/[-_]/g, 'x').slice(0, 20);
   return {
+    // подписка бота на изменения сигналов (путь относительно /sig)
+    onSignal: fn => rt.on(fn),
+    rt,
     async get(path) {
+      const mv = movedPath(path); if (mv) return rtWrap.get(mv, path);
       const r = await fetch(`${base}/${path}`, { headers: await H() });
       if (r.status === 404) return null;
       if (!r.ok) throw new Error('firestore get ' + r.status);
@@ -909,13 +943,16 @@ export function firestore(env) {
       return alive(d) ? d : null;
     },
     async set(path, data) {
+      const mv = movedPath(path); if (mv) return rt.set(mv, strip(data));
       await commit([{ update: { name: `${root}/${path}`, fields: toFields(strip(data)) }, updateTransforms: TS }], 'set');
     },
     async patch(path, data) {
+      const mv = movedPath(path); if (mv) return rt.update(mv, strip(data));
       const d = strip(data);
       await commit([{ update: { name: `${root}/${path}`, fields: toFields(d) }, updateMask: { fieldPaths: Object.keys(d) }, updateTransforms: TS }], 'patch');
     },
     async create(col, data) {
+      const mv = movedPath(col); if (mv) { const id = await rt.push(mv, strip(data)); return { id, ...strip(data) }; }
       const id = newId();
       await commit([{ update: { name: `${root}/${col}/${id}`, fields: toFields(strip(data)) }, currentDocument: { exists: false }, updateTransforms: TS }], 'create');
       return { id, ...strip(data) };
@@ -943,11 +980,13 @@ export function firestore(env) {
       return r.ok;
     },
     async remove(path) {
+      const mv = movedPath(path); if (mv) return rt.remove(mv);
       if (SYNCED.has(colOf(path))) { await commit([{ update: { name: `${root}/${path}`, fields: toFields({ _del: true }) }, updateTransforms: TS }], 'delete'); return; }
       const r = await fetch(`${base}/${path}`, { method: 'DELETE', headers: await H() });
       if (!r.ok && r.status !== 404) throw new Error('firestore delete ' + r.status);
     },
     async list(col) {
+      const mv = movedPath(col); if (mv) return rtList(mv);
       const out = [];
       let token = '';
       do {
@@ -960,6 +999,7 @@ export function firestore(env) {
       return out;
     },
     async query(col, q) {
+      const mv = movedPath(col); if (mv) return localQuery(await rtList(mv), q);
       const r = await fetch(`${base}:runQuery`, { method: 'POST', headers: await H(), body: JSON.stringify({ structuredQuery: { from: [{ collectionId: col }], ...q } }) });
       if (!r.ok) throw new Error('firestore query ' + r.status);
       return (await r.json()).filter(x => x.document).map(x => doc(x.document)).filter(alive);
@@ -967,6 +1007,7 @@ export function firestore(env) {
   };
 }
 
+export function fromFields(fields) { return fromFirestore(fields); }
 function fromFirestore(fields) {
   const val = v => {
     if ('stringValue' in v) return v.stringValue;

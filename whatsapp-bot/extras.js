@@ -80,12 +80,16 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
           where: { fieldFilter: { field: { fieldPath: 'lastRole' }, op: 'EQUAL', value: { stringValue: role } } },
         }).catch(() => []));
       }
+      // сначала отбираем чаты, которые по времени подходят; если таких нет — заказы из базы не читаем вовсе
+      const cand = chats.filter(chat => { const last = chat.lastAt || chat.updatedAt || 0, quiet = Date.now() - last;
+        return quiet >= LEAD_MIN && quiet <= LEAD_MAX && (chat.leadAt || 0) < last && !chat.needsManager && (chat.messages || []).some(m => m.role === 'client'); });
+      if (!cand.length) return;
       // заказы за последний месяц: у кого заказ уже есть, тому писать не нужно
       const orders = await fs.query('orders', {
         where: { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { integerValue: String(Date.now() - 30 * DAY) } } },
       }).catch(() => []);
       const ordered = new Set(orders.filter(o => !o.deletedAt && o.status !== 'cancel').map(o => normPhone(o.phone)).filter(Boolean));
-      for (const chat of chats) {
+      for (const chat of cand) {
         if (leadN >= LEAD_PER_DAY) break;
         const last = chat.lastAt || chat.updatedAt || 0, quiet = Date.now() - last;
         const clientMsgs = (chat.messages || []).filter(m => m.role === 'client').length;
@@ -135,14 +139,16 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
   }
 
   /* ---------- цены конкурентов на Kaspi ---------- */
-  let pricesBusy = false;
+  let pricesBusy = false, pricesNext = 0;
   const shopKey = s => String(s || '').toLowerCase().replace(/[^a-zа-яё0-9]+/gi, '');
   async function kaspiPrices() {
     if (pricesBusy) return;
     pricesBusy = true;
     try {
+      if (Date.now() < pricesNext) return; // срок следующей проверки помним сами, а не читаем из базы каждые полчаса
       const meta = (await fs.get('kaspi_orders/_meta')) || {};
-      if (Date.now() - (+meta.pricesAt || 0) < PRICES_EVERY) return;
+      pricesNext = (+meta.pricesAt || 0) + PRICES_EVERY;
+      if (Date.now() < pricesNext) return;
       const products = (await fs.query('kaspi_orders', {
         where: { fieldFilter: { field: { fieldPath: 'kind' }, op: 'EQUAL', value: { stringValue: 'product' } } },
       }).catch(() => [])).filter(p => p.code && p.available !== false);
@@ -175,7 +181,7 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
           await fs.patch('kaspi_orders/' + p.id, { offers });
         }
       }
-      await fs.patch('kaspi_orders/_meta', { pricesAt: Date.now() });
+      pricesNext = Date.now() + PRICES_EVERY; await fs.patch('kaspi_orders/_meta', { pricesAt: Date.now() });
       if (cheaper.length) alert('🏷 Kaspi: у конкурентов дешевле\n' + cheaper.slice(0, 15).join('\n'));
       log('Цены конкурентов Kaspi проверены, дешевле:', cheaper.length);
     } catch (e) {
@@ -194,7 +200,7 @@ export function startExtras({ fs, env, log, notify, send, online, sock, aiOn, DI
   }
 
   setInterval(() => backup().catch(() => {}), 10 * 60e3);
-  setInterval(() => leads().catch(() => {}), 10 * 60e3);
+  setInterval(() => leads().catch(() => {}), 60 * 60e3); // раз в час: подсказка «кому написать» не срочная, а квоту базы бережём
   setInterval(() => reviews().catch(() => {}), 15 * 60e3);
   setInterval(() => kaspiPrices().catch(() => {}), 30 * 60e3);
   setTimeout(() => { backup().catch(() => {}); kaspiPrices().catch(() => {}); }, 60e3);
