@@ -143,7 +143,9 @@
       window.RAZ_SYNC.mode[name] = full ? 'полная' : 'изменения';
       const q = full ? c : c.where('_ts', '>', firebase.firestore.Timestamp.fromMillis(Math.max(0, maxTs - OVERLAP)));
       let first = true;
-      unsub = q.onSnapshot({ includeMetadataChanges: false }, s => { take(s, full && first && !s.metadata.fromCache); if (!s.metadata.fromCache) first = false; },
+      /* includeMetadataChanges: иначе, если копия на устройстве совпадает с базой, ответ сервера «всё так же» не приходит,
+         и коллекция навсегда остаётся в режиме полной загрузки */
+      unsub = q.onSnapshot({ includeMetadataChanges: true }, s => { if (!first && !s.docChanges().length) return; take(s, full && first && !s.metadata.fromCache); if (!s.metadata.fromCache) first = false; },
         e => {
           unsub = null;
           /* нет индекса или старая база — откатываемся на обычную загрузку */
