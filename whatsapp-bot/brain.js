@@ -354,6 +354,8 @@ export async function runAgent(fs, env, phone, chat, opts = {}) {
     (chat.older ? `\nРаньше в этой переписке (старые сообщения, коротко): ${String(chat.older).slice(-1500)}` : '');
   const messages = toClaudeMessages(chat.messages || []);
   if (!messages.length) return {};
+  // Правило Евгения 30.10: заказ с сайта топперов Аня не трогает — ни ответа, ни заказа, им занимается менеджер
+  if (lastClient && isSiteCart(lastClient.text)) return { silent: 'заказ с сайта топперов — оформляет менеджер из заявки в учёте' };
   // Правило Евгения: в нерабочее время на вопрос клиента Аня отвечает обязательно, молчать нельзя (без вопроса её не зовут — hasQuestion в bot.js)
   const mustAnswer = isClosed();
   const ctx = { fs, phone, chat, handoff: '', silent: '', media: null, mockup: null, mustAnswer };
@@ -743,34 +745,24 @@ async function runTool(name, input, { fs, phone, chat }) {
     return { standard: '2–3 рабочих дня', say: 'Стандартный срок на эту услугу 2–3 дня. Точные сроки вам подскажет менеджер.' };
   }
   if (name === 'create_order') {
+    // Заказы с сайта топперов Аня не оформляет: их подтверждает менеджер из заявки в учёте
+    if (siteCartIn(chat.messages || [])) return { error: 'Это заказ с сайта топперов: он уже пришёл в учёт заявкой, его подтвердит менеджер. Заказ не создавай.' };
     const svc = SERVICE_NAMES[input.service] ? input.service : 'other';
     const due = addWorkDays(new Date(Date.now() + 5 * 3600e3), ORDER_DAYS[svc] || ORDER_DAYS_DEFAULT);
     const num = await nextOrderNum(fs);
     const now = Date.now();
     const notes = ['Оформлено ИИ-ботом в WhatsApp, проверить и подтвердить.',
       input.wanted_by ? 'Клиенту нужно к: ' + input.wanted_by : '', input.estimate ? 'Оценка бота: ' + input.estimate : ''].filter(Boolean).join('\n');
-    // Заказ с сайта топперов: позиции берём из заявки (или из текста корзины), а не из описания бота
-    const site = await siteOrder(fs, chat.messages || []);
-    if (site && site.req && site.req.status === 'accepted' && site.req.orderNum) {
-      return { ok: true, num: String(site.req.orderNum).padStart(3, '0'), note: 'Этот заказ с сайта уже оформлен, новый не создан.' };
-    }
-    const siteNotes = site ? [site.r.name ? 'Контакт: ' + site.r.name : '', site.r.note ? 'Комментарий клиента: ' + site.r.note : '',
-      'Заявка с сайта топперов' + (site.code ? ' № ' + site.code : '')].filter(Boolean).join('\n') : '';
-    const made0 = await fs.create('orders', {
-      client: String(input.client_name || (site && (site.r.cafe || site.r.name)) || chat.clientName || chat.name || 'Клиент WhatsApp').slice(0, 200), phone: phone ? '+' + phone : '',
-      service: site ? 'print3d' : svc, customService: !site && svc === 'other' ? 'Уточнить' : '', items: site ? site.items : [], unit: 'шт', expenses: [], files: [], kaspi: [], kaspiFee: 0,
-      qty: site ? site.r.qty || null : input.qty ? Math.max(0, +input.qty || 0) : null,
-      desc: site ? (site.r.customDesc ? 'Своя модель: ' + site.r.customDesc : '') : String(input.description || '').slice(0, 2000),
-      ...(site ? { source: 'toppers', ...(site.req ? { requestId: site.req.id } : {}) } : {}),
-      status: 'new', price: site ? Math.round(site.r.total) || null : null, paid: null, owner: '', notes: site ? [notes, siteNotes].join('\n') : notes,
+    await fs.create('orders', {
+      client: String(input.client_name || chat.clientName || chat.name || 'Клиент WhatsApp').slice(0, 200), phone: phone ? '+' + phone : '',
+      service: svc, customService: svc === 'other' ? 'Уточнить' : '', items: [], unit: 'шт', expenses: [], files: [], kaspi: [], kaspiFee: 0,
+      qty: input.qty ? Math.max(0, +input.qty || 0) : null, desc: String(input.description || '').slice(0, 2000),
+      status: 'new', price: null, paid: null, owner: '', notes,
       receivedAt: isoDate(new Date(now + 5 * 3600e3)), deadlineFrom: '', deadline: isoDate(due),
-      ...(site ? {} : { source: 'whatsapp' }), num, createdAt: now, updatedAt: now, createdBy: 'WhatsApp-бот',
+      source: 'whatsapp', num, createdAt: now, updatedAt: now, createdBy: 'WhatsApp-бот',
       waSent: { new: now }, // клиенту бот уже сам написал, что заказ принят
       statusAt: { new: now }, history: [{ at: now, by: 'Аня (WhatsApp)', t: 'Заказ оформлен в WhatsApp' }],
     });
-    if (site && site.req && made0 && made0.id) {
-      await fs.patch('requests/' + site.req.id, { status: 'accepted', orderId: made0.id, orderNum: num, handledBy: 'Аня (WhatsApp)', handledAt: now }).catch(() => {});
-    }
     const mk = chat.lastMockup;
     if (mk && mk.approvedAt && Date.now() - mk.approvedAt < 3 * 24 * 3600e3) {
       const made = (await fs.query('orders', { where: { fieldFilter: { field: { fieldPath: 'num' }, op: 'EQUAL', value: { integerValue: String(num) } } }, limit: 1 }).catch(() => []))[0];
@@ -784,7 +776,7 @@ async function runTool(name, input, { fs, phone, chat }) {
 
 /* ---------- заказ с сайта топперов ----------
    Сайт открывает WhatsApp с готовым текстом корзины («1. Тыква: 50 шт × 35 ₸», «- Оранжевый: 50 шт», «Номер заявки: T…»)
-   и параллельно пишет заявку в requests. Позиции заказа — по модели и цвету, как при подтверждении заявки в учёте. */
+   и параллельно пишет заявку в requests. Такие сообщения Аня не трогает: заявку подтверждает менеджер в учёте. */
 const TOP_COLORS = { 'белый': '#ffffff', 'жёлтый': '#f5b800', 'желтый': '#f5b800', 'оранжевый': '#ff7a0d', 'красный': '#ff3b30', 'розовый': '#f0537f', 'бордовый': '#a02b50',
   'чёрный': '#262626', 'черный': '#262626', 'синий': '#2563eb', 'фиолетовый': '#7c3aed', 'зелёный': '#22a447', 'зеленый': '#22a447', 'голубой': '#38bdf8', 'серый': '#9ca3af', 'коричневый': '#8b5a2b' };
 const numOf = t => +(String(t || '').replace(/[^\d]/g, '')) || 0;
@@ -808,33 +800,12 @@ export function parseSiteOrder(text) {
   r.qty = r.items.reduce((a, x) => a + x.qty, 0); r.total = r.items.reduce((a, x) => a + x.sum, 0);
   return r;
 }
-// Позиции заказа: строка на каждую модель и цвет (как reqItemsSplit в учёте; себестоимость учёт подставит сам)
-export function siteItems(items) {
-  const out = [];
-  for (const i of items || []) {
-    const cls = (i.colors || []).filter(c => +c.qty > 0);
-    for (const rw of cls.length ? cls.map(c => ({ c: c.name || '', q: +c.qty || 0 })) : [{ c: '', q: +i.qty || 0 }]) {
-      out.push({ id: randomBytes(6).toString('hex'), name: i.model + (rw.c ? ' — ' + String(rw.c).toLowerCase() : ''), price: +i.price || 0, qty: rw.q, unit: 'шт', made: 0,
-        top: { m: i.modelId || '', n: i.model || '', c: rw.c } });
-    }
-  }
-  return out;
-}
-// Последнее сообщение клиента за 3 дня с корзиной сайта → { code, req, r, items } или null
-async function siteOrder(fs, list) {
+// Есть ли за последние 3 дня сообщение клиента с корзиной сайта топперов
+function siteCartIn(list) {
   const since = Date.now() - 3 * 24 * 3600e3;
-  for (let k = list.length - 1; k >= 0; k--) {
-    const m = list[k];
-    if (m.role !== 'client' || (m.at || 0) < since) continue;
-    const r = parseSiteOrder(m.text);
-    if (!r.items.length) continue;
-    const req = r.code ? await fs.get('requests/' + r.code).catch(() => null) : null;
-    const src = req && (req.items || []).length ? { ...r, name: req.name || r.name, cafe: req.cafe || r.cafe, note: req.note || r.note, customDesc: req.customDesc || r.customDesc,
-      items: req.items, qty: +req.qty || r.qty, total: +req.total || r.total } : r;
-    return { code: r.code, req: req ? { ...req, id: req.id || r.code } : null, r: src, items: siteItems(src.items) };
-  }
-  return null;
+  return (list || []).some(m => m.role === 'client' && (m.at || 0) >= since && isSiteCart(m.text));
 }
+export const isSiteCart = t => /номер заявки\s*:\s*T[A-Z0-9]{6}/i.test(String(t || '')) || parseSiteOrder(t).items.length > 0 && /хочу заказать топперы/i.test(String(t || ''));
 
 // Согласованная визуализация → в заказ (раздел «Макет») и запись в историю заказа
 async function attachMockup(fs, order, mk) {
