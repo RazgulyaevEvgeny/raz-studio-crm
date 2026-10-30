@@ -140,6 +140,7 @@
       for (let i = 0; i < old.length; i += 400) { const b = c.firestore.batch(); old.slice(i, i + 400).forEach(r => b.update(r, { _ts: TS() })); b.commit().catch(() => {}); }
     };
     const attach = () => {
+      attachNew();
       if (stopped || unsub) return;
       const full = !fullAt || Date.now() - fullAt > FULL_EVERY || !maxTs;
       window.RAZ_SYNC.mode[name] = full ? 'полная' : 'изменения';
@@ -156,7 +157,26 @@
           err && err(mapErr(e));
         });
     };
-    const detach = () => { if (unsub) { slog(name, 'detach'); unsub(); unsub = null; } };
+    /* Заявки с сайта топперов сайт пишет без входа и без _ts, поэтому догрузка «по изменениям» их не видит.
+       Новые заявки (их всегда немного) слушаем отдельно целиком — они появляются в виджете сразу. */
+    let unsubNew = null;
+    const attachNew = () => {
+      if (name !== 'requests' || stopped || unsubNew) return;
+      unsubNew = c.where('status', '==', 'new').onSnapshot(s => {
+        if (!s.metadata.fromCache) window.RAZ_SYNC.reads += s.docChanges().length;
+        let ch = false;
+        for (const x of s.docChanges()) {
+          if (x.type === 'removed') continue; // заявку подтвердили или отклонили — это придёт основной загрузкой
+          const raw = x.doc.data({ serverTimestamps: 'estimate' });
+          if (raw._del) continue;
+          const cur = docs.get(x.doc.id);
+          if (cur && (cur.status || 'new') !== 'new') continue; // на устройстве уже обработана
+          docs.set(x.doc.id, clean(raw, msOf(raw._ts) || (cur && cur._ts) || 0)); ch = true;
+        }
+        if (ch) { save(); emit(); }
+      }, () => { unsubNew = null; });
+    };
+    const detach = () => { if (unsubNew) { unsubNew(); unsubNew = null; } if (unsub) { slog(name, 'detach'); unsub(); unsub = null; } };
     const onVis = () => {
       clearTimeout(hideT);
       if (document.hidden) hideT = setTimeout(detach, HIDE_AFTER); else attach();

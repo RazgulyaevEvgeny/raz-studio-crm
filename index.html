@@ -194,7 +194,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=20261028"></script>
-<script src="firebase-bridge.js?v=20261028140000"></script>
+<script src="firebase-bridge.js?v=20261030150000"></script>
 </head>
 <body>
 <title>Заказы RAZ Brand Studio</title>
@@ -4439,7 +4439,21 @@ function reqItemsSplit(r){const out=[];(r.items||[]).forEach(i=>{const cls=(i.co
   (cls.length?cls.map(c=>({c:c.name||'',q:+c.qty||0})):[{c:'',q:+i.qty||0}]).forEach(rw=>out.push(mkTopItem(i.model,i.modelId,rw.c,rw.q,i.price)))});return out}
 /* старые заказы из заявок: одна позиция на модель («Тыква (оранжевый 300)») → модель и цвет отдельно.
    Цены, которые меняли руками, и прочие позиции (доставка и т. п.) сохраняются */
+/* заказ, который Аня оформила из сообщения с сайта: позиции попали в описание, а заявка осталась висеть.
+   Ищем заявку по номеру в тексте заказа или по кофейне/имени (±3 дня) и берём позиции из неё */
+function botSiteReq(o){
+  if(!o||o.source!=='whatsapp'||(o.items||[]).length)return null;
+  const txt=[o.desc,o.notes].filter(Boolean).join('\n'),code=(txt.match(/\b(T[A-Z0-9]{6})\b/)||[])[1];
+  let r=code&&requests.find(x=>x.id===code);
+  if(!r){const n=normClr(o.client),t=o.createdAt||0;
+    r=requests.find(x=>(x.status||'new')==='new'&&(x.items||[]).length&&n&&[x.cafe,x.name].some(v=>v&&normClr(v)===n)&&Math.abs((reqTime(x)||0)-t)<3*864e5)}
+  if(r&&(r.items||[]).length)return r;
+  const p=parseWaOrder(txt);return p.items.length?{...p,id:'',_parsed:true}:null;
+}
+let edLinkReq=null;
 function splitOldTopItems(o){
+  edLinkReq=null;
+  {const br=botSiteReq(o);if(br){if(br.id)edLinkReq=br;return reqItemsSplit(br)}}
   if(!o||!(o.requestId||o.source==='toppers'))return null;
   const items=o.items||[];if(items.some(i=>i.top))return null;
   const r=o.requestId&&requests.find(x=>x.id===o.requestId);
@@ -5008,7 +5022,9 @@ async function saveOrder(ev){
     }else{
       const id=editing,prev=edOrig;
       if(prev&&prev.status!==d.status&&d.stNote===(prev.stNote||''))d.stNote='';
+      const lr=edConvFrom&&edLinkReq;if(lr){d.requestId=lr.id;d.source='toppers'}
       await db.doc('orders/'+id).update({...d,...histPatch(prev,d,now),updatedAt:now});
+      if(lr&&(lr.status||'new')==='new'){try{await db.doc('requests/'+lr.id).update({status:'accepted',orderId:id,orderNum:prev.num||null,handledBy:ROLE().name||'',handledAt:now})}catch(_){}}
       const kn=kidNumsRead('d-kids');if(kn.length)await legalMut(c=>kidNumsApply(c,kn));
       toast('Сохранено');
       if(prev&&prev.status!==d.status)waNotify(id);
