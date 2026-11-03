@@ -738,6 +738,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .pub-row{display:flex;justify-content:space-between;align-items:center;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:-4px}
 .pub-a{display:inline-flex;gap:14px;align-items:center}
 .pub-a .linkbtn{font-size:13px;font-weight:600}
+.lb-canvas{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--line,#ddd);border-radius:6px;box-sizing:border-box}
+.lb-warn{color:var(--danger);font-size:13px}
 .meta{font-size:12.5px;color:var(--muted)}
 .ed-foot{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:14px 24px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
 .ed-foot .r{display:flex;gap:8px;margin-left:auto}
@@ -2348,6 +2350,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
       </div>
       <div class="sum"><span>Остаток к оплате <button class="linkbtn" type="button" id="pay-full">· оплачено полностью</button></span><b id="f-rest">0 ₸</b></div>
       <div class="pub-row" id="pub-row" hidden><span>Страница заказа для клиента: состав, сроки, оплата и статус</span><span class="pub-a"><a class="wa" id="pub-open" target="_blank" rel="noopener">Открыть ↗</a><button class="linkbtn" type="button" id="pub-copy">Скопировать ссылку</button></span></div>
+      <div class="pub-row" id="lb-row" hidden><span>Этикетка на упаковку, 54×40 мм</span><span class="pub-a"><button class="linkbtn" type="button" id="lb-open">Сделать этикетку</button></span></div>
       <div class="fld"><label for="f-notes">Заметки</label><textarea id="f-notes" placeholder="Макет согласован в WhatsApp, клиент заберёт сам и т.п."></textarea></div>
       <div class="ofiles" id="o-filebox">
         <div class="ofg"><div class="ofg-h"><b>Макет</b><button class="attach sm" type="button" data-oattach="mockup" data-need-assets><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l8-8"/></svg>Файл или фото</button></div><div class="files" id="o-files-mockup"></div><p class="hint ofg-empty" id="o-empty-mockup">Эскиз, исходник или фото от клиента.</p></div>
@@ -2419,6 +2422,19 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
       </div>
     </div>
   </form>
+</div>
+
+<div class="ed" id="lb" hidden>
+  <div class="ed-back" id="lb-back"></div>
+  <div class="ed-panel">
+    <div class="ed-head"><h2>Этикетка заказа</h2><button class="x" type="button" id="lb-close" aria-label="Закрыть">×</button></div>
+    <div class="ed-body">
+      <canvas class="lb-canvas" id="lb-canvas" width="1296" height="960" aria-label="Как будет выглядеть этикетка"></canvas>
+      <div class="fld"><label for="lb-text">Содержимое</label><textarea id="lb-text" rows="4" maxlength="400" placeholder="Что лежит в упаковке: например, футболки чёрные, 12 шт."></textarea><span class="lb-warn" id="lb-warn" hidden>Текст не поместился целиком, сократите его.</span></div>
+      <div class="fld"><label for="lb-date">Дата на этикетке</label><input id="lb-date" type="date"></div>
+    </div>
+    <div class="ed-foot"><div></div><div class="r"><button class="btn soft sm" type="button" id="lb-cancel">Закрыть</button><button class="btn primary sm" type="button" id="lb-pdf">Скачать PDF</button></div></div>
+  </div>
 </div>
 
 <div class="ed" id="ried" hidden>
@@ -3723,6 +3739,7 @@ function openEditor(id,preset={}){
   document.querySelectorAll('#ed-form input,#ed-form select,#ed-form textarea').forEach(el=>el.disabled=!canWrite);
   $('ed-save').hidden=!canWrite;$('pay-full').hidden=!canWrite;
   $('pub-row').hidden=id==='new'||isKaspiLedger(o)||(!o.pub&&!canWrite);$('pub-open').hidden=!o.pub;if(o.pub)$('pub-open').href=PUB_URL+o.pub;$('pub-copy').hidden=!canWrite;
+  $('lb-row').hidden=id==='new'||isKaspiLedger(o);
   updateRest();setTab(preset.tab||'main');renderCost();priceHint();
   $('ed').hidden=false;edScrollReset.delete(edTab);$('pane-'+edTab).scrollTop=0;
   setTimeout(()=>{if(canWrite&&id==='new'&&!preset.req)$('f-client').focus()},50);
@@ -3943,6 +3960,90 @@ async function invPdf(){
 function invPrint(){invOldTitle=document.title;document.title=invTitle.replace(/[\\/:*?"<>|«»]/g,'').slice(0,120);document.body.classList.add('printing');setTimeout(()=>window.print(),50)}
 window.addEventListener('afterprint',()=>{document.body.classList.remove('printing');if(invOldTitle){document.title=invOldTitle;invOldTitle=''}});
 window.addEventListener('resize',()=>{if(!$('inv').hidden)invZoom()});
+/* ---------- этикетка заказа 54×40 мм ----------
+   Шаблон label-template.png, поверх него заказчик, содержимое и дата. Картинка строго чёрно-белая: принтер термический.
+   Координаты — в рамке шаблона шириной 1999. Текст содержимого хранится в заказе, поле labelText. */
+const LB_K=1296/1999,LB_SIZES=[85,78,72,66,60];
+let lbTpl=null,lbO=null;
+function lbFont(){
+  if(!document.fonts)return Promise.resolve();
+  if(!document.getElementById('lb-font')){const l=document.createElement('link');l.id='lb-font';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap';document.head.appendChild(l)}
+  const load=()=>Promise.all([document.fonts.load('600 64px Montserrat','Заказчик 0123'),document.fonts.load('700 64px Montserrat','Заказчик №0123')]).then(r=>r.flat()).catch(()=>{});
+  return Promise.race([new Promise(ok=>{const l=document.getElementById('lb-font');l.addEventListener('load',()=>load().then(ok),{once:true});l.addEventListener('error',ok,{once:true});load().then(f=>{if(f&&f.length)ok()})}),new Promise(ok=>setTimeout(ok,3000))]);
+}
+function lbLoad(){return lbTpl||(lbTpl=Promise.all([new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>{lbTpl=null;no(new Error('Не загрузился шаблон этикетки'))};i.src='label-template.png'}),lbFont()]).then(r=>r[0]))}
+const lbSet=(g,s,w=600)=>{g.font=`${w} ${s}px Montserrat,Arial,sans-serif`};
+function lbFit(g,t,x,y,w,size,min,wt=600){
+  let s=size;lbSet(g,s,wt);
+  while(s>min&&g.measureText(t).width>w){s-=2;lbSet(g,s,wt)}
+  if(g.measureText(t).width>w){while(t&&g.measureText(t+'…').width>w)t=t.slice(0,-1);t+='…'}
+  g.fillText(t,x,typeof y==='function'?y(s):y);
+}
+function lbWrap(g,text,size){
+  lbSet(g,size);
+  const slot=n=>{const y=855+n*size*1.3;return y>1290?null:{x:60,y,w:1880}};
+  const out=[];let n=0,over=false,cur='';
+  const flush=()=>{const c=slot(n);if(!c){over=true;return false}out.push({...c,t:cur});n++;cur='';return true};
+  const fits=t=>{const c=slot(n);return c&&g.measureText(t).width<=c.w};
+  outer:for(const para of text.split('\n')){
+    for(const word of para.trim().split(/\s+/).filter(Boolean)){
+      const t=cur?cur+' '+word:word;
+      if(fits(t)){cur=t;continue}
+      if(cur&&!flush())break outer;
+      if(fits(word)){cur=word;continue}
+      for(const ch of word){if(!fits(cur+ch)&&!flush())break outer;cur+=ch}
+    }
+    if(!flush())break;
+  }
+  if(over&&out.length){const l=out[out.length-1];while(l.t&&g.measureText(l.t+'…').width>l.w)l.t=l.t.slice(0,-1);l.t+='…'}
+  return {lines:out,over};
+}
+async function lbDraw(){
+  const img=await lbLoad(),cv=$('lb-canvas'),g=cv.getContext('2d',{willReadFrequently:true});
+  g.setTransform(1,0,0,1,0,0);g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.drawImage(img,0,0,cv.width,cv.height);
+  g.setTransform(LB_K,0,0,LB_K,0,0);g.textBaseline='alphabetic';
+  g.fillStyle='#fff';g.textAlign='center';
+  lbFit(g,lbO.num?'№'+String(lbO.num).padStart(3,'0'):'б/н',1640,338,540,165,90,700);
+  g.textAlign='left';
+  lbFit(g,lbO.client,100,s=>555+s*.35,1800,120,70,700);
+  g.fillStyle='#000';
+  const iso=$('lb-date').value;if(iso){const [y,m,d]=iso.split('-');g.textAlign='right';lbFit(g,d+'.'+m+'.'+y,1940,1420,900,100,70,700);g.textAlign='left'}
+  const text=$('lb-text').value.trim();let r={lines:[],over:false},sz=LB_SIZES[0];
+  for(const s of LB_SIZES){sz=s;r=lbWrap(g,text,s);if(!r.over)break}
+  lbSet(g,sz);r.lines.forEach(l=>g.fillText(l.t,l.x,l.y));
+  $('lb-warn').hidden=!r.over;
+  const d=g.getImageData(0,0,cv.width,cv.height),a=d.data;
+  for(let i=0;i<a.length;i+=4){const v=a[i]*.3+a[i+1]*.59+a[i+2]*.11<150?0:255;a[i]=a[i+1]=a[i+2]=v;a[i+3]=255}
+  g.putImageData(d,0,0);
+}
+async function lbOpen(){
+  const o=orders.find(x=>x.id===editing)||edOrig;if(!o)return;
+  lbO={id:o.id,num:o.num,client:$('f-client').value.trim()||o.client||'',saved:o.labelText||''};
+  $('lb-text').value=lbO.saved;$('lb-date').value=valIso($('f-received'))||receivedOf(o)||todayStr();
+  $('lb').hidden=false;
+  try{await lbDraw()}catch(e){toast(e.message||'Не получилось показать этикетку')}
+  $('lb-text').focus();
+}
+function lbClose(){$('lb').hidden=true;lbO=null}
+async function lbPdf(){
+  const btn=$('lb-pdf');btn.disabled=true;btn.textContent='Готовлю…';
+  try{
+    await loadPdfLibs();await lbDraw();
+    const text=$('lb-text').value.trim();
+    if(canWrite&&db&&text!==lbO.saved){try{await db.doc('orders/'+lbO.id).update({labelText:text});lbO.saved=text}catch(_){toast('Текст этикетки не сохранился в заказе')}}
+    const pdf=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:[54,40],compress:true});
+    pdf.addImage($('lb-canvas').toDataURL('image/png'),'PNG',0,0,54,40);
+    const name=('Этикетка '+(lbO.num?'№'+String(lbO.num).padStart(3,'0')+' ':'')+lbO.client).replace(/[\\/:*?"<>|«»]/g,'').replace(/\s+/g,' ').trim().slice(0,100);
+    const f=new File([pdf.output('blob')],name+'.pdf',{type:'application/pdf'});
+    if(!(invTouch()&&navigator.canShare&&navigator.canShare({files:[f]})&&await invShare(f)))invDownload(f);
+  }catch(e){toast(e.message||'Не получилось сделать PDF')}
+  finally{btn.disabled=false;btn.textContent='Скачать PDF'}
+}
+$('lb-open').onclick=lbOpen;
+$('lb-close').onclick=$('lb-cancel').onclick=$('lb-back').onclick=lbClose;
+$('lb-pdf').onclick=lbPdf;
+$('lb-text').oninput=$('lb-date').oninput=()=>{if(lbO)lbDraw().catch(()=>{})};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('lb').hidden){e.stopPropagation();lbClose()}},true);
 /* ---- накладные, акты, счета-фактуры ----
    wa_anna/legal.docs: [{id,type:'waybill'|'act'|'sf',from,num,date,buyer,lines,createdAt,updatedAt,by}].
    from — на основании чего: id счёта (у счёта из заказа 'o:<id заказа>'), у счёта-фактуры — id накладной или акта.
