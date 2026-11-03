@@ -2430,7 +2430,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
     <div class="ed-head"><h2>Этикетка заказа</h2><button class="x" type="button" id="lb-close" aria-label="Закрыть">×</button></div>
     <div class="ed-body">
       <canvas class="lb-canvas" id="lb-canvas" width="1296" height="960" aria-label="Как будет выглядеть этикетка"></canvas>
-      <div class="fld"><label for="lb-text">Содержимое</label><textarea id="lb-text" rows="4" maxlength="400" placeholder="Что лежит в упаковке: например, футболки чёрные, 12 шт."></textarea><span class="lb-warn" id="lb-warn" hidden>Текст не поместился целиком, сократите его.</span></div>
+      <div class="fld"><label for="lb-text">Содержимое</label><textarea id="lb-text" rows="4" maxlength="400" placeholder="Что лежит в упаковке: например, футболки чёрные, 12 шт."></textarea><span class="lb-warn" id="lb-warn" hidden>Текст не поместился целиком, сократите его.</span><span class="hint">Состав подставляется из заказа, текст можно менять. <button class="linkbtn" type="button" id="lb-auto">Подтянуть заново</button></span></div>
       <div class="fld"><label for="lb-date">Дата на этикетке</label><input id="lb-date" type="date"></div>
     </div>
     <div class="ed-foot"><div></div><div class="r"><button class="btn soft sm" type="button" id="lb-cancel">Закрыть</button><button class="btn primary sm" type="button" id="lb-pdf">Скачать PDF</button></div></div>
@@ -4042,10 +4042,16 @@ function lbMakePdf(res){
   });
   return pdf;
 }
+/* состав заказа для этикетки: позиции без доставки, каждая с новой строки; нет позиций — описание заказа */
+function lbAuto(){
+  const it=edItems.filter(i=>i.name&&!/доставк/i.test(i.name)).map(i=>{const q=+i.qty||0;return i.name+(q&&(q!==1||(i.unit&&i.unit!=='шт'))?' — '+fmtQty(q)+' '+(i.unit||'шт'):'')});
+  return it.join(it.length>5?', ':'\n')||$('f-desc').value.trim();
+}
 async function lbOpen(){
   const o=orders.find(x=>x.id===editing)||edOrig;if(!o)return;
   lbO={id:o.id,num:o.num,client:$('f-client').value.trim()||o.client||'',saved:o.labelText||''};
-  $('lb-text').value=lbO.saved;$('lb-date').value=valIso($('f-received'))||receivedOf(o)||todayStr();
+  const auto=lbAuto();$('lb-auto').hidden=!auto;
+  $('lb-text').value=lbO.saved||auto;$('lb-date').value=valIso($('f-received'))||receivedOf(o)||todayStr();
   $('lb').hidden=false;
   try{await lbDraw()}catch(e){toast(e.message||'Не получилось показать этикетку')}
   $('lb-text').focus();
@@ -4055,7 +4061,8 @@ async function lbPdf(){
   const btn=$('lb-pdf');btn.disabled=true;btn.textContent='Готовлю…';
   try{
     await loadPdfLibs();await lbDraw();
-    const text=$('lb-text').value.trim();
+    /* без правок поле не храним: тогда этикетка и дальше берёт свежий состав заказа */
+    const raw=$('lb-text').value.trim(),text=raw===lbAuto()?'':raw;
     if(canWrite&&db&&text!==lbO.saved){try{await db.doc('orders/'+lbO.id).update({labelText:text});lbO.saved=text}catch(_){toast('Текст этикетки не сохранился в заказе')}}
     const pdf=lbMakePdf(await lbLoad());await lbDraw();
     const name=('Этикетка '+(lbO.num?'№'+String(lbO.num).padStart(3,'0')+' ':'')+lbO.client).replace(/[\\/:*?"<>|«»]/g,'').replace(/\s+/g,' ').trim().slice(0,100);
@@ -4067,6 +4074,7 @@ async function lbPdf(){
 $('lb-open').onclick=lbOpen;
 $('lb-close').onclick=$('lb-cancel').onclick=$('lb-back').onclick=lbClose;
 $('lb-pdf').onclick=lbPdf;
+$('lb-auto').onclick=()=>{$('lb-text').value=lbAuto();lbDraw().catch(()=>{});$('lb-text').focus()};
 $('lb-text').oninput=$('lb-date').oninput=()=>{if(lbO)lbDraw().catch(()=>{})};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('lb').hidden){e.stopPropagation();lbClose()}},true);
 /* ---- накладные, акты, счета-фактуры ----
