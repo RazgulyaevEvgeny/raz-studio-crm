@@ -1274,6 +1274,8 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .an-todo{margin:0;padding:0}
 /* свёртки внутри Ани: «Сегодня сделать» и чат */
 #w-anna,#w-anna button,#w-anna a{-webkit-tap-highlight-color:transparent}
+/* виджеты Ани и маркетолога убраны с главной; элементы остаются в странице, их обновляет код */
+#pack #w-anna,#pack #w-sasha{display:none!important}
 .an-sec{display:flex;flex-direction:column;gap:8px;min-width:0}
 .an-tg{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px;padding:0 14px;border-radius:14px;background:rgba(255,255,255,.12);color:#fff;font:700 12.5px var(--f);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;transition:background .15s}
 .an-tg:hover{background:rgba(255,255,255,.2)}
@@ -3447,8 +3449,6 @@ function packHome(){
   const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1300?4:w>=1100?3:w>=700?2:1;
   if(packN===n)return;packN=n;if(!pack.previousElementSibling||pack.previousElementSibling.id!=='hx-bar')pack.before($('hx-bar'));pack.innerHTML='';pack.classList.remove('flat');packW.forEach(x=>x.style.gridColumn='');pack.style.setProperty('--cols',n);pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
-  /* Анна и Саша — первыми, рядом друг с другом, каждый шириной в колонку */
-  const duo=()=>{const d=mk('pduo');d.append(packAnna,packSasha);return d};
   if(n===1){const c=mk('pcol');pack.appendChild(c);[packL[0],packAnna,packSasha,packDaulet,...packL.slice(1)].forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
   /* «Сегодня» — во всю ширину сразу под плитками сводки, выше всех виджетов */
   const today=()=>{const d=mk('pfull');d.appendChild(packWide[0]);return d};
@@ -3457,8 +3457,9 @@ function packHome(){
   if(n>=3){pack.classList.add('flat');const sp2=x=>{x.style.gridColumn='span 2';return x};[packWide[0],packAnna,packSasha,packWide[1]].forEach(x=>x.style.gridColumn='');
     const [today,tasks]=packWide,[kaspi,print]=packSide,req=packL.at(-1);
     document.querySelector('#p-home .stats').appendChild($('hx-bar'));/* план продаж — пятая плитка в ряду сводки */
-    pack.append(...(n===4?[sp2(today),tasks,kaspi,packAnna,packSasha,packDaulet,print,req]:[sp2(today),kaspi,packAnna,packSasha,packDaulet,print,sp2(tasks),req]));return}
-  const top=mk('pleft'),a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');top.append(duo());a.append(packSide[0],packDaulet);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),top,a,b,bot);
+    if(n===3)tasks.style.gridColumn='1/-1';
+    pack.append(...(n===4?[sp2(today),tasks,kaspi,packDaulet,print,sp2(req)]:[sp2(today),kaspi,packDaulet,print,req,tasks]),packAnna,packSasha);return}
+  const a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');a.append(packSide[0],packDaulet,packAnna,packSasha);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),a,b,bot);
 }
 ['w-anna','w-sasha','w-daulet'].forEach(id=>$(id+'-kpi').addEventListener('click',()=>{if(!mOpen.has(id))mfToggle(id,true)}));
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
