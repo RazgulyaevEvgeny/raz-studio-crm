@@ -3961,27 +3961,28 @@ function invPrint(){invOldTitle=document.title;document.title=invTitle.replace(/
 window.addEventListener('afterprint',()=>{document.body.classList.remove('printing');if(invOldTitle){document.title=invOldTitle;invOldTitle=''}});
 window.addEventListener('resize',()=>{if(!$('inv').hidden)invZoom()});
 /* ---------- этикетка заказа 54×40 мм ----------
-   Шаблон label-template.png, поверх него заказчик, содержимое и дата. Картинка строго чёрно-белая: принтер термический.
-   Координаты — в рамке шаблона шириной 1999. Текст содержимого хранится в заказе, поле labelText. */
-const LB_K=1296/1999,LB_SIZES=[85,78,72,66,60];
-let lbTpl=null,lbO=null;
-function lbFont(){
-  if(!document.fonts)return Promise.resolve();
-  if(!document.getElementById('lb-font')){const l=document.createElement('link');l.id='lb-font';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap';document.head.appendChild(l)}
-  const load=()=>Promise.all([document.fonts.load('600 64px Montserrat','Заказчик 0123'),document.fonts.load('700 64px Montserrat','Заказчик №0123')]).then(r=>r.flat()).catch(()=>{});
-  return Promise.race([new Promise(ok=>{const l=document.getElementById('lb-font');l.addEventListener('load',()=>load().then(ok),{once:true});l.addEventListener('error',ok,{once:true});load().then(f=>{if(f&&f.length)ok()})}),new Promise(ok=>setTimeout(ok,3000))]);
-}
-function lbLoad(){return lbTpl||(lbTpl=Promise.all([new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>{lbTpl=null;no(new Error('Не загрузился шаблон этикетки'))};i.src='label-template.png'}),lbFont()]).then(r=>r[0]))}
-const lbSet=(g,s,w=600)=>{g.font=`${w} ${s}px Montserrat,Arial,sans-serif`};
-function lbFit(g,t,x,y,w,size,min,wt=600){
+   PDF векторный: текст и логотип не картинка, поэтому драйвер строит их точно по точкам принтера (203 dpi).
+   Предпросмотр и PDF рисуются из одного списка lbOps. Координаты текста — в рамке шириной 1999, логотип label-logo.json — в мм.
+   Текст содержимого хранится в заказе, поле labelText. */
+const LB_U=54/1999,LB_F='LabelM',LB_SIZES=[95,86,78,70];
+let lbRes=null,lbO=null;
+const lbB64=b=>{let s='';const u=new Uint8Array(b);for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)};
+function lbLoad(){return lbRes||(lbRes=(async()=>{
+  const get=async(u,k)=>{const r=await fetch(u);if(!r.ok)throw new Error('Не загрузился файл этикетки');return r[k]()};
+  const [f6,f7,logo]=await Promise.all([get('label-font-600.ttf','arrayBuffer'),get('label-font-700.ttf','arrayBuffer'),get('label-logo.json','json')]);
+  for(const [w,b] of [['600',f6],['700',f7]])document.fonts.add(await new FontFace(LB_F,b.slice(0),{weight:w}).load());
+  return {f6:lbB64(f6),f7:lbB64(f7),logo};
+})().catch(e=>{lbRes=null;throw e}))}
+const lbSet=(g,s,w=600)=>{g.font=`${w} ${s}px ${LB_F}`;if('fontKerning' in g)g.fontKerning='none'};
+function lbFit(g,t,w,size,min,wt=600){
   let s=size;lbSet(g,s,wt);
   while(s>min&&g.measureText(t).width>w){s-=2;lbSet(g,s,wt)}
   if(g.measureText(t).width>w){while(t&&g.measureText(t+'…').width>w)t=t.slice(0,-1);t+='…'}
-  g.fillText(t,x,typeof y==='function'?y(s):y);
+  return {t,s};
 }
 function lbWrap(g,text,size){
   lbSet(g,size);
-  const slot=n=>{const y=855+n*size*1.3;return y>1290?null:{x:60,y,w:1880}};
+  const slot=n=>{const y=865+n*size*1.25;return y>1295?null:{x:60,y,w:1880}};
   const out=[];let n=0,over=false,cur='';
   const flush=()=>{const c=slot(n);if(!c){over=true;return false}out.push({...c,t:cur});n++;cur='';return true};
   const fits=t=>{const c=slot(n);return c&&g.measureText(t).width<=c.w};
@@ -3998,23 +3999,48 @@ function lbWrap(g,text,size){
   if(over&&out.length){const l=out[out.length-1];while(l.t&&g.measureText(l.t+'…').width>l.w)l.t=l.t.slice(0,-1);l.t+='…'}
   return {lines:out,over};
 }
-async function lbDraw(){
-  const img=await lbLoad(),cv=$('lb-canvas'),g=cv.getContext('2d',{willReadFrequently:true});
-  g.setTransform(1,0,0,1,0,0);g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);g.drawImage(img,0,0,cv.width,cv.height);
-  g.setTransform(LB_K,0,0,LB_K,0,0);g.textBaseline='alphabetic';
-  g.fillStyle='#fff';g.textAlign='center';
-  lbFit(g,lbO.num?'№'+String(lbO.num).padStart(3,'0'):'б/н',1640,338,540,165,90,700);
-  g.textAlign='left';
-  lbFit(g,lbO.client,100,s=>555+s*.35,1800,120,70,700);
-  g.fillStyle='#000';
-  const iso=$('lb-date').value;if(iso){const [y,m,d]=iso.split('-');g.textAlign='right';lbFit(g,d+'.'+m+'.'+y,1940,1420,900,100,70,700);g.textAlign='left'}
+/* список элементов этикетки; x у текста всегда левый край, поэтому центр и правый край считаем здесь */
+function lbOps(g){
+  const ops=[],txt=(t,x,y,s,w,c,al,cs=0)=>{lbSet(g,s,w);const tw=g.measureText(t).width+cs*Math.max(0,[...t].length-1);ops.push({k:'t',t,x:al==='c'?x-tw/2:al==='r'?x-tw:x,y,s,w,c,cs})};
+  ops.push({k:'r',x:1335,y:60,w:609,h:345,r:34},{k:'r',x:55,y:445,w:1889,h:220,r:34},{k:'r',x:55,y:1325,w:1889,h:8,r:0});
+  txt('ЗАКАЗ',1640,150,58,700,1,'c',9);txt('СОДЕРЖИМОЕ',60,770,58,700,0,'l',9);txt('ДАТА',60,1415,58,700,0,'l',9);
+  const n=lbFit(g,lbO.num?'№'+String(lbO.num).padStart(3,'0'):'б/н',540,165,90,700);txt(n.t,1640,338,n.s,700,1,'c');
+  const c=lbFit(g,lbO.client,1800,120,70,700);txt(c.t,100,555+c.s*.35,c.s,700,1);
+  const iso=$('lb-date').value;if(iso){const [y,m,d]=iso.split('-'),v=lbFit(g,d+'.'+m+'.'+y,900,100,70,700);txt(v.t,1940,1420,v.s,700,0,'r')}
   const text=$('lb-text').value.trim();let r={lines:[],over:false},sz=LB_SIZES[0];
   for(const s of LB_SIZES){sz=s;r=lbWrap(g,text,s);if(!r.over)break}
-  lbSet(g,sz);r.lines.forEach(l=>g.fillText(l.t,l.x,l.y));
+  r.lines.forEach(l=>txt(l.t,l.x,l.y,sz,600,0));
   $('lb-warn').hidden=!r.over;
-  const d=g.getImageData(0,0,cv.width,cv.height),a=d.data;
-  for(let i=0;i<a.length;i+=4){const v=a[i]*.3+a[i+1]*.59+a[i+2]*.11<150?0:255;a[i]=a[i+1]=a[i+2]=v;a[i+3]=255}
-  g.putImageData(d,0,0);
+  return ops;
+}
+async function lbDraw(){
+  const {logo}=await lbLoad(),cv=$('lb-canvas'),g=cv.getContext('2d'),K=cv.width/1999;
+  g.setTransform(1,0,0,1,0,0);g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
+  const m=cv.width/54,pl=new Path2D();logo.forEach(p=>{for(let i=0;i<p.length;i+=2)pl[i?'lineTo':'moveTo'](p[i]*m,p[i+1]*m);pl.closePath()});
+  g.fillStyle='#000';g.fill(pl,'evenodd');
+  g.setTransform(K,0,0,K,0,0);g.textBaseline='alphabetic';g.textAlign='left';
+  lbOps(g).forEach(o=>{
+    g.fillStyle=o.k==='r'||!o.c?'#000':'#fff';
+    if(o.k==='r'){g.beginPath();g.roundRect(o.x,o.y,o.w,o.h,o.r);g.fill();return}
+    lbSet(g,o.s,o.w);
+    if(!o.cs){g.fillText(o.t,o.x,o.y);return}
+    let x=o.x;for(const ch of o.t){g.fillText(ch,x,o.y);x+=g.measureText(ch).width+o.cs}
+  });
+}
+function lbMakePdf(res){
+  const pdf=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:[54,40],compress:true}),U=LB_U,pt=72/25.4;
+  pdf.addFileToVFS('m600.ttf',res.f6);pdf.addFont('m600.ttf',LB_F,'normal');
+  pdf.addFileToVFS('m700.ttf',res.f7);pdf.addFont('m700.ttf',LB_F,'bold');
+  pdf.setFillColor(0,0,0);
+  const seg=[];res.logo.forEach(p=>{for(let i=0;i<p.length;i+=2)seg.push({op:i?'l':'m',c:[p[i],p[i+1]]});seg.push({op:'h',c:[]})});
+  pdf.path(seg);pdf.fillEvenOdd();
+  const ctx=$('lb-canvas').getContext('2d');ctx.setTransform(1,0,0,1,0,0);
+  lbOps(ctx).forEach(o=>{
+    if(o.k==='r'){pdf.setFillColor(0,0,0);if(o.r)pdf.roundedRect(o.x*U,o.y*U,o.w*U,o.h*U,o.r*U,o.r*U,'F');else pdf.rect(o.x*U,o.y*U,o.w*U,o.h*U,'F');return}
+    pdf.setFont(LB_F,o.w>=700?'bold':'normal');pdf.setFontSize(o.s*U*pt);pdf.setTextColor(o.c?255:0);
+    pdf.text(o.t,o.x*U,o.y*U,o.cs?{charSpace:o.cs*U}:{});
+  });
+  return pdf;
 }
 async function lbOpen(){
   const o=orders.find(x=>x.id===editing)||edOrig;if(!o)return;
@@ -4031,8 +4057,7 @@ async function lbPdf(){
     await loadPdfLibs();await lbDraw();
     const text=$('lb-text').value.trim();
     if(canWrite&&db&&text!==lbO.saved){try{await db.doc('orders/'+lbO.id).update({labelText:text});lbO.saved=text}catch(_){toast('Текст этикетки не сохранился в заказе')}}
-    const pdf=new jspdf.jsPDF({orientation:'landscape',unit:'mm',format:[54,40],compress:true});
-    pdf.addImage($('lb-canvas').toDataURL('image/png'),'PNG',0,0,54,40);
+    const pdf=lbMakePdf(await lbLoad());await lbDraw();
     const name=('Этикетка '+(lbO.num?'№'+String(lbO.num).padStart(3,'0')+' ':'')+lbO.client).replace(/[\\/:*?"<>|«»]/g,'').replace(/\s+/g,' ').trim().slice(0,100);
     const f=new File([pdf.output('blob')],name+'.pdf',{type:'application/pdf'});
     if(!(invTouch()&&navigator.canShare&&navigator.canShare({files:[f]})&&await invShare(f)))invDownload(f);
