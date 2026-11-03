@@ -1020,6 +1020,15 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
 #pack.flat>.w{margin-top:0;align-self:stretch}
+/* компьютер: главная помещается на экран. Сверху «Сегодня» и задачи, снизу Kaspi, Bambu и заявки; лишнее листается внутри карточки */
+#pack.flat{grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:minmax(0,.85fr) minmax(0,1.15fr);gap:12px}
+#pack.flat>#w-boss>.w-ill,#pack.flat>#w-today-box>.w-ill{right:10px;bottom:12px}
+body:has(#p-home:not([hidden]) #pack.flat){padding-bottom:16px}
+#pack.flat>.w{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+#pack.flat>#w-today-box,#pack.flat>#w-boss{grid-column:span 3}
+#pack.flat>:is(#w-kaspi,#w-print,#w-req){grid-column:span 2;scrollbar-color:rgba(255,255,255,.35) transparent}
+#pack.flat>:is(#w-kaspi,#w-print,#w-req) .mf-x{display:none!important}
+#pack.flat>:is(#w-kaspi,#w-print,#w-req)>.w-h{cursor:default}
 .stats:has(>#hx-bar:not(:empty)){grid-template-columns:repeat(5,minmax(0,1fr))}
 .stats>#hx-bar{display:flex;min-width:0}.stats>#hx-bar>.hx{flex:1 1 auto;min-width:0}
 /* в узкой колонке звёздочки баннера заявок налезали на заголовок — там только градиент */
@@ -3449,13 +3458,20 @@ let packN=0;
 const MF_KEY='raz.home.open',MF_ALL=['w-req','w-anna','w-sasha','w-daulet','w-kaspi','w-print'];let mOpen=new Set();try{mOpen=new Set(JSON.parse(localStorage.getItem(MF_KEY)||'[]'))}catch(_){}
 const isPhone=()=>matchMedia('(max-width:600px)').matches;
 if(!isPhone())['w-anna','w-daulet','w-kaspi','w-print'].forEach(id=>{if(!mOpen.has('-'+id))mOpen.add(id)});
-function mfApply(){packW.forEach(w=>{const o=mOpen.has(w.id);w.classList.toggle('mopen',o);const h=w.querySelector(':scope>.w-h');if(h){h.setAttribute('aria-expanded',isPhone()||MF_ALL.includes(w.id)?String(o):'true')}})}
-function mfToggle(id,force){const o=force!=null?force:!mOpen.has(id);o?(mOpen.add(id),mOpen.delete('-'+id)):(mOpen.delete(id),mOpen.add('-'+id));try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff();if(id==='w-sasha')sashaTok();if(id==='w-daulet')daulTok()}
+const mfAlways=id=>!isPhone()&&['w-req','w-kaspi','w-print'].includes(id); /* на компьютере эти карточки всегда открыты */
+function mfApply(){packW.forEach(w=>{const o=mOpen.has(w.id)||mfAlways(w.id);w.classList.toggle('mopen',o);const h=w.querySelector(':scope>.w-h');if(h){h.setAttribute('aria-expanded',isPhone()||MF_ALL.includes(w.id)?String(o):'true')}})}
+function mfToggle(id,force){if(mfAlways(id))return;const o=force!=null?force:!mOpen.has(id);o?(mOpen.add(id),mOpen.delete('-'+id)):(mOpen.delete(id),mOpen.add('-'+id));try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff();if(id==='w-sasha')sashaTok();if(id==='w-daulet')daulTok()}
 document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h,#w-req>.w-h');if(!h||(!isPhone()&&!MF_ALL.includes(h.parentElement.id))||e.target.closest('a,button,select,input,.go'))return;
   e.preventDefault();e.stopPropagation();mfToggle(h.parentElement.id)},true);
-function packHome(){
+function packFit(){
+  const pack=$('pack');if(!pack||$('p-home').hidden)return;
+  if(!pack.classList.contains('flat')){pack.style.height='';return}
+  pack.style.height=Math.max(440,innerHeight-(pack.getBoundingClientRect().top+scrollY)-16)+'px';
+}
+function packHome(){packLay();packFit()}
+function packLay(){
   const pack=$('pack');if(!pack||$('p-home').hidden||!packW.length)return;
-  const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=1300?4:w>=1100?3:w>=700?2:1;
+  const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=900?3:w>=700?2:1;mfApply();
   if(packN===n)return;packN=n;if(!pack.previousElementSibling||pack.previousElementSibling.id!=='hx-bar')pack.before($('hx-bar'));pack.innerHTML='';pack.classList.remove('flat');packW.forEach(x=>x.style.gridColumn='');pack.style.setProperty('--cols',n);pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d};
   if(n===1){const c=mk('pcol');pack.appendChild(c);packL.forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
@@ -3463,11 +3479,10 @@ function packHome(){
   const today=()=>{const d=mk('pfull');d.appendChild(packWide[0]);return d};
   /* компьютер: всё на одном экране — слева «Сегодня» и Аня с Сашей, справа задачи с заявками и Kaspi с принтерами (на узком компьютере — одной колонкой) */
   /* компьютер: ровная сетка рядами — карточки одного ряда одной высоты, без ступенек */
-  if(n>=3){pack.classList.add('flat');const sp2=x=>{x.style.gridColumn='span 2';return x};[packWide[0],packWide[1]].forEach(x=>x.style.gridColumn='');
+  if(n>=3){pack.classList.add('flat');
     const [today,tasks]=packWide,[kaspi,print]=packSide,req=packL.at(-1);
     document.querySelector('#p-home .stats').appendChild($('hx-bar'));/* план продаж — пятая плитка в ряду сводки */
-    if(n===3)tasks.style.gridColumn='1/-1';req.style.gridColumn=n===4?'span 3':'span 2';
-    pack.append(...(n===4?[sp2(today),tasks,kaspi,print,req]:[sp2(today),kaspi,print,req,tasks]));return}
+    pack.append(today,tasks,kaspi,print,req);return}
   const a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');a.append(packSide[0]);b.appendChild(packSide[1]);[...packWide.slice(1),packL.at(-1)].forEach(x=>bot.appendChild(x));pack.append(today(),a,b,bot);
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
@@ -7175,7 +7190,8 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .nav .pills{padding-top:76px}
   #p-home{gap:14px!important}
   #p-home .ph h1{font-size:34px}
-  #p-home .stat{min-height:132px;padding:14px 18px 12px}
+  #p-home .stat{min-height:104px;padding:12px 16px 10px}
+  #p-home .ph{margin-bottom:-4px}
   #p-home .stat svg.spark{height:28px}
 }
 @media(max-width:560px){
