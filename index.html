@@ -1020,13 +1020,13 @@ body:has(#xim:not([hidden])) .bnav{display:none}
 .pleft{grid-column:span 2;display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Аня и Саша — рядом, каждый шириной в колонку, как Kaspi и принтеры */
 #pack.flat>.w{margin-top:0;align-self:stretch}
-/* компьютер: главная помещается на экран. Сверху «Сегодня» и задачи, снизу Kaspi, Bambu и заявки; лишнее листается внутри карточки */
-#pack.flat{grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:minmax(0,.85fr) minmax(0,1.15fr);gap:12px}
+/* компьютер: сверху «Сегодня» и задачи, снизу Kaspi, Bambu и заявки. Карточки всегда раскрыты полностью, без прокрутки внутри */
+#pack.flat{grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:auto auto;align-content:stretch;gap:12px}
 #pack.flat>#w-boss>.w-ill,#pack.flat>#w-today-box>.w-ill{right:10px;bottom:12px}
-body:has(#p-home:not([hidden]) #pack.flat){padding-bottom:16px}
-#pack.flat>.w{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+body.home-fit:has(#p-home:not([hidden]) #pack.flat){padding-bottom:16px}
+#pack.flat>.w{min-width:0;overflow:hidden}
 #pack.flat>#w-today-box,#pack.flat>#w-boss{grid-column:span 3}
-#pack.flat>:is(#w-kaspi,#w-print,#w-req){grid-column:span 2;scrollbar-color:rgba(255,255,255,.35) transparent}
+#pack.flat>:is(#w-kaspi,#w-print,#w-req){grid-column:span 2}
 #pack.flat>:is(#w-kaspi,#w-print,#w-req) .mf-x{display:none!important}
 #pack.flat>:is(#w-kaspi,#w-print,#w-req)>.w-h{cursor:default}
 .stats:has(>#hx-bar:not(:empty)){grid-template-columns:repeat(5,minmax(0,1fr))}
@@ -3465,8 +3465,9 @@ document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h,#w
   e.preventDefault();e.stopPropagation();mfToggle(h.parentElement.id)},true);
 function packFit(){
   const pack=$('pack');if(!pack||$('p-home').hidden)return;
-  if(!pack.classList.contains('flat')){pack.style.height='';return}
-  pack.style.height=Math.max(440,innerHeight-(pack.getBoundingClientRect().top+scrollY)-16)+'px';
+  const flat=pack.classList.contains('flat'),min=flat?Math.max(440,innerHeight-(pack.getBoundingClientRect().top+scrollY)-16):0;
+  pack.style.minHeight=flat?min+'px':'';
+  document.body.classList.toggle('home-fit',flat&&pack.offsetHeight<=min+1); /* всё влезло: убираем нижний отступ страницы */
 }
 function packHome(){packLay();packFit()}
 function packLay(){
