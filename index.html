@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261028124500">
+<meta name="app-build" content="20261104150000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -598,6 +598,13 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .oi-pr.full{color:var(--ok)}.oi-pr.full label{color:var(--ok)}
 .mrow small .mt{color:var(--ok);font-weight:600}
 .oi-all{font:600 12px var(--f);color:var(--blue);padding:4px 6px}
+.oi-hl{display:block;margin-top:4px;cursor:default}
+.oi-hb{font:600 12px var(--f);color:var(--blue);padding:3px 0}
+.oi-hl ol{list-style:none;margin:4px 0 2px;padding:8px 10px;border-radius:10px;background:var(--paper);display:flex;flex-direction:column;gap:5px}
+.oi-hl li{display:flex;gap:8px;font:400 12.5px/1.35 var(--fb);color:var(--ink)}
+.oi-hl li time{flex:none;min-width:88px;color:var(--muted)}
+.oi-hl li b{font-weight:600}
+.oi-hl em{font-style:normal;font-weight:700;margin-left:2px}.oi-hl em.up{color:var(--ok)}.oi-hl em.down{color:var(--danger)}
 .oi-conv{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;background:color-mix(in srgb,var(--ok) 10%,var(--paper));border-radius:12px;padding:9px 12px;font-size:12.5px;color:var(--ink)}
 @media(max-width:600px){.oi-pr{display:grid;grid-template-columns:auto 56px auto auto;justify-content:start;gap:5px 6px}.oi-pr input{min-height:30px;height:30px;width:56px}.oi-pr .bar{grid-column:1/-1;max-width:none;order:9}}
 .oi-add{display:grid;grid-template-columns:minmax(0,1fr) 112px 112px auto;gap:6px;align-items:center}
@@ -3746,7 +3753,7 @@ function openEditor(id,preset={}){
   edExp=(o.expenses||[]).map(e=>({...e}));edFiles=(o.files||[]).map(f=>({...f}));edFilesOrig=edFiles.map(f=>f.id);askFile=null;
   $('e-title').value='';$('e-amount').value='';
   edK=(o.kaspi||[]).map(l=>({...l}));$('k-fee').value=kaspiFeeOf(o);kClear();
-  edOrig=o;edItems=(o.items||[]).map(i=>({...i}));edConvFrom=null;
+  edOrig=o;edItems=(o.items||[]).map(i=>({...i}));edConvFrom=null;oiHistOpen=new Set();
   if(id!=='new'&&canWrite){const sp=splitOldTopItems(o);if(sp){edConvFrom=edItems;edItems=sp}}
   edItems.forEach(i=>{if(i.top&&(i.cost==null||i.cost==='')){const tc=topperItemCost(i);if(tc){i.cost=tc.cost;if(tc.p3d)i.p3d=tc.p3d;if(!i.pid)i.pid=tc.pid}}});
   oiClear();renderItems();
@@ -4885,7 +4892,7 @@ function madeOf(o){let m=0,q=0;(o.items||[]).forEach(i=>{if(tracked(i)){m+=Math.
 function oiProg(i){const q=+i.qty||0,m=Math.min(+i.made||0,q),pc=q?Math.round(m/q*100):0;
   return `<span class="oi-pr${m>=q&&q?' full':''}"><label>сделано</label><input type="number" min="0" max="${q}" step="1" inputmode="numeric" data-oimade="${esc(i.id)}" value="${m}" aria-label="Сколько сделано: ${esc(i.name)}" ${canWrite?'':'disabled'}><span>из ${fmtQty(q)}</span><span class="bar"><span class="fill" style="width:${pc}%"></span></span>${canWrite?`<button type="button" class="oi-all" data-oiall="${esc(i.id)}" title="Отметить всё сделанным"${m>=q?' hidden':''}>всё</button>`:''}</span>`}
 function renderItems(){
-  $('oi-list').innerHTML=edItems.map(i=>`<div class="oi${oiEditId===i.id?' edit':''}" role="button" tabindex="0" data-oiedit="${esc(i.id)}"><span class="ot"><b>${esc(i.name)}</b><small>${fmtQty(i.qty)} ${esc(i.unit||'шт')} × ${money(i.price)}</small>${tracked(i)?oiProg(i):''}</span><span class="os">${money((+i.price||0)*(+i.qty||0))}</span>${canWrite?`<button class="tdel" type="button" data-oirm="${esc(i.id)}" aria-label="Убрать позицию ${esc(i.name)}">×</button>`:'<span></span>'}</div>`).join('');
+  $('oi-list').innerHTML=edItems.map(i=>`<div class="oi${oiEditId===i.id?' edit':''}" role="button" tabindex="0" data-oiedit="${esc(i.id)}"><span class="ot"><b>${esc(i.name)}</b><small>${fmtQty(i.qty)} ${esc(i.unit||'шт')} × ${money(i.price)}</small>${tracked(i)?oiProg(i):''}${oiHist(i)}</span><span class="os">${money((+i.price||0)*(+i.qty||0))}</span>${canWrite?`<button class="tdel" type="button" data-oirm="${esc(i.id)}" aria-label="Убрать позицию ${esc(i.name)}">×</button>`:'<span></span>'}</div>`).join('');
   const cv=$('oi-conv');cv.hidden=!edConvFrom;if(edConvFrom)cv.innerHTML=`<span>Позиции из заявки разложены по моделям и цветам: можно отмечать, сколько сделано, удалять и добавлять позиции. Нажмите «Сохранить», чтобы оставить так.</span><button class="linkbtn" type="button" data-convundo>Вернуть как было</button>`;
   const t=$('oi-tot');t.hidden=!edItems.length;
   if(edItems.length)t.innerHTML=`<span>${edItems.length} ${plural(edItems.length,'позиция','позиции','позиций')}</span><span>Итого: <b>${money(itemsTotal(edItems))}</b></span>`;
@@ -5504,6 +5511,8 @@ $('oi-name').addEventListener('input',()=>{if(oiPick&&!$('oi-name').value.trim()
 ['oi-name','oi-price','oi-qty'].forEach(i=>$(i).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addItem()}}));
 $('oi-list').addEventListener('click',e=>{
   const rm=e.target.closest('[data-oirm]');if(rm){const prev=edAutoTotal();edItems=edItems.filter(i=>i.id!==rm.dataset.oirm);if(oiEditId===rm.dataset.oirm)oiClear();kSyncPrice(prev);renderItems();return}
+  const hb=e.target.closest('[data-oihist]');if(hb){const k=hb.dataset.oihist;oiHistOpen.has(k)?oiHistOpen.delete(k):oiHistOpen.add(k);renderItems();return}
+  if(e.target.closest('.oi-hl'))return;
   if(e.target.closest('.oi-pr')){const a=e.target.closest('[data-oiall]');if(a){const i=edItems.find(x=>x.id===a.dataset.oiall);if(i){i.made=+i.qty||0;renderItems()}}return}
   const ed=e.target.closest('[data-oiedit]');if(ed&&canWrite){const i=edItems.find(x=>x.id===ed.dataset.oiedit);if(!i)return;oiEditId=i.id;
     $('oi-name').value=i.name;$('oi-price').value=i.price;$('oi-qty').value=i.qty;$('oi-unit').textContent=i.unit||'шт';$('oi-addbtn').textContent='Сохранить позицию';
@@ -7246,12 +7255,33 @@ function histPatch(prev,d,now){
   const by=ROLE().name||'',out=[];
   for(const [k,l,f] of HIST_F){const a=prev[k]??null,b=d[k]??null;if(String(a??'')!==String(b??''))out.push(l+': '+f(a)+' → '+f(b))}
   const sum=o=>(o.items||[]).reduce((s,i)=>s+(+i.price||0)*(+i.qty||0),0);
-  if(d.items&&JSON.stringify(prev.items||[])!==JSON.stringify(d.items))out.push('Позиции заказа изменены'+(sum(prev)!==sum(d)?' ('+money(sum(prev))+' → '+money(sum(d))+')':''));
+  const ml=madeDiff(prev,d,now,by),noMade=a=>JSON.stringify((a||[]).map(({made,...r})=>r));
+  ml.forEach(x=>out.push('Готово «'+x.n+'»: '+x.a+' → '+x.b+' ('+madeDelta(x)+')'));
+  if(d.items&&noMade(prev.items)!==noMade(d.items))out.push('Позиции заказа изменены'+(sum(prev)!==sum(d)?' ('+money(sum(prev))+' → '+money(sum(d))+')':''));
   if(d.desc!=null&&(prev.desc||'')!==(d.desc||''))out.push('Описание изменено');
   const patch={};
   if(out.length)patch.history=[...(prev.history||[]),...out.map(t=>({at:now,by,t}))].slice(-60);
+  if(ml.length)patch.madeLog=[...(prev.madeLog||[]),...ml].slice(-MADE_LOG_MAX);
   if(prev.status!==d.status)patch.statusAt={...(prev.statusAt||{}),[d.status]:now};
   return patch;
+}
+/* журнал «сколько готово»: каждое изменение готовых штук по позиции (когда, кто, было → стало).
+   Лежит прямо в документе заказа (madeLog), поэтому лишних чтений базы нет. */
+const MADE_LOG_MAX=300;
+const madeDelta=x=>(x.b-x.a>0?'+':'−')+fmtQty(Math.abs(x.b-x.a));
+function madeDiff(prev,d,now,by){
+  if(!d.items)return [];
+  const old=new Map((prev.items||[]).map(i=>[i.id,i])),mv=i=>Math.max(0,+(i&&i.made)||0),out=[];
+  const tot=a=>(a||[]).reduce((s,i)=>s+mv(i),0),regroup=tot(prev.items)>0&&tot(prev.items)===tot(d.items);
+  d.items.forEach(i=>{const p=old.get(i.id);if(!p&&regroup)return; // позиции разложили по-новому, а готовых столько же: это не изменение
+    const a=mv(p),b=mv(i);if(a!==b)out.push({at:now,by,id:i.id,n:String(i.name||'').slice(0,80),a,b})});
+  return out;
+}
+let oiHistOpen=new Set();
+function oiHist(i){
+  const log=((edOrig&&edOrig.madeLog)||[]).filter(x=>x.id===i.id);if(!log.length)return '';
+  const open=oiHistOpen.has(i.id),f=t=>new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  return `<span class="oi-hl"><button type="button" class="oi-hb" data-oihist="${esc(i.id)}" aria-expanded="${open}">${open?'Скрыть историю':'История готовых · '+log.length}</button>${open?'<ol>'+[...log].reverse().map(x=>`<li><time>${f(x.at)}</time><span>${x.by?'<b>'+esc(x.by)+'</b> ':''}${fmtQty(x.a)} → ${fmtQty(x.b)} <em class="${x.b>x.a?'up':'down'}">${madeDelta(x)}</em></span></li>`).join('')+'</ol>':''}</span>`;
 }
 function renderHist(o){
   const box=$('f-hist'),h=(o&&o.history)||[];
