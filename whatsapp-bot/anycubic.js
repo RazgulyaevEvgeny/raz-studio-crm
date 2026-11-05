@@ -14,6 +14,8 @@
 import tls from 'node:tls';
 import http from 'node:http';
 import os from 'node:os';
+import net from 'node:net';
+import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -83,8 +85,8 @@ async function scan(log) {
   for (const list of Object.values(os.networkInterfaces())) for (const a of list || []) {
     if (a.family === 'IPv4' && !a.internal && /^(10|172|192)\./.test(a.address)) nets.push(a.address.split('.').slice(0, 3).join('.'));
   }
-  for (const net of [...new Set(nets)]) {
-    const ips = Array.from({ length: 254 }, (_, i) => net + '.' + (i + 1));
+  for (const sub of [...new Set(nets)]) {
+    const ips = Array.from({ length: 254 }, (_, i) => sub + '.' + (i + 1));
     for (let i = 0; i < ips.length; i += 32) {
       const hits = await Promise.all(ips.slice(i, i + 32).map(ip => getJson(`http://${ip}:18910/info`, 'GET', 1500).then(j => (j?.token ? ip : null), () => null)));
       const ip = hits.find(Boolean);
@@ -92,8 +94,45 @@ async function scan(log) {
     }
   }
   log('Anycubic: принтер в сети не найден (сети: ' + (nets.join(', ') || 'нет') + ')');
+  await survey(nets, log);
   return null;
 }
+
+// Принтер не нашёлся — записываем, какие устройства вообще видны в сети и какие у них открыты порты
+// (файл anycubic-scan.txt рядом с ботом). По нему видно, где принтер и включён ли на нём режим LAN:
+// у Anycubic в LAN-режиме открыты 18910 и 9883, у Bambu — 990, 8883, 6000. Не чаще раза в час.
+const PORTS = [18910, 9883, 990, 8883, 6000, 80, 443, 554, 7125, 8080];
+let surveyedAt = 0;
+const tcpOpen = (ip, port, ms = 700) => new Promise(ok => {
+  const s = net.connect({ host: ip, port });
+  const done = v => { s.destroy(); ok(v); };
+  s.setTimeout(ms, () => done(false)); s.once('connect', () => done(true)); s.once('error', () => done(false));
+});
+async function survey(nets, log) {
+  if (Date.now() - surveyedAt < 60 * 60e3) return;
+  surveyedAt = Date.now();
+  const rows = [];
+  for (const n of [...new Set(nets)]) {
+    const ips = Array.from({ length: 254 }, (_, i) => n + '.' + (i + 1));
+    for (let i = 0; i < ips.length; i += 64) {
+      await Promise.all(ips.slice(i, i + 64).map(async ip => {
+        const open = (await Promise.all(PORTS.map(p => tcpOpen(ip, p).then(o => (o ? p : 0))))).filter(Boolean);
+        if (open.length) rows.push({ ip, open });
+      }));
+    }
+  }
+  let arp = '';
+  try { arp = execFileSync('arp', ['-a'], { encoding: 'utf8', timeout: 10e3, windowsHide: true }); } catch (_) {}
+  const mac = ip => (arp.match(new RegExp('\\b' + ip.replace(/\./g, '\\.') + '\\s+([0-9a-f]{2}[-:][0-9a-f-:]{14})', 'i')) || [])[1] || '';
+  const guess = o => o.includes(18910) || o.includes(9883) ? 'похоже на Anycubic' : o.includes(990) || o.includes(6000) ? 'похоже на Bambu Lab' : '';
+  rows.sort((a, b) => +a.ip.split('.')[3] - +b.ip.split('.')[3]);
+  const txt = [`Проверка сети ${new Date().toLocaleString('ru-RU')}; сети: ${nets.join(', ')}`,
+    ...rows.map(r => `${r.ip}\t${mac(r.ip)}\tпорты ${r.open.join(',')}\t${guess(r.open)}`),
+    '', 'Все устройства из arp -a:', arp].join('\n');
+  try { writeFileSync(join(DIR0, 'anycubic-scan.txt'), txt); } catch (_) {}
+  log('Anycubic: в сети видно ' + rows.length + ' устройств с открытыми портами' + (rows.some(r => guess(r.open).includes('Anycubic')) ? ', есть похожее на Anycubic' : ', Anycubic среди них нет') + ' (подробно в anycubic-scan.txt)');
+}
+let DIR0 = '.';
 
 // ---------- маленький клиент MQTT 3.1.1 (только то, что нужно) ----------
 const str = s => { const b = Buffer.from(s, 'utf8'); const l = Buffer.alloc(2); l.writeUInt16BE(b.length); return Buffer.concat([l, b]); };
@@ -109,6 +148,7 @@ const pubPkt = (topic, obj) => pkt(0x30, Buffer.concat([str(topic), Buffer.from(
 export function startAnycubic({ fs, env, log, DIR }) {
   const rt = fs?.rt;
   if (!rt) return;
+  DIR0 = DIR;
   const file = join(DIR, 'anycubic.json');
   let cfg = {};
   try { cfg = JSON.parse(readFileSync(file, 'utf8')); } catch (_) {}
