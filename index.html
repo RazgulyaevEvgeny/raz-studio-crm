@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261107130000">
+<meta name="app-build" content="20261107131000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -5993,7 +5993,7 @@ async function kPrint(){
   try{
     let cropOk=0,cropErr='';
     await Promise.all([kLoadPdfLib(),kLoadPdfJs().catch(e=>{cropErr='pdf.js не загрузился'})]);
-    const {PDFDocument,rgb,degrees}=window.PDFLib;
+    const {PDFDocument,rgb}=window.PDFLib;
     const out=await PDFDocument.create();const pages=[];
     for(const k of sel){
       try{
@@ -6008,16 +6008,17 @@ async function kPrint(){
       }catch(e){console.warn('Накладная',k.code,e);kPrintFails.push(k)}
     }
     if(!pages.length)throw new Error('Kaspi не отдал ни одной накладной. Откройте их по ссылкам ниже.');
-    /* термоэтикетка 75×120 мм (вертикально): одна накладная на этикетку, во всю площадь;
-       если накладная вытянута в ширину, поворачиваем её, чтобы вышла крупнее */
+    /* термоэтикетка 75×120 мм: одна накладная на этикетку, во всю площадь.
+       Накладная Kaspi шире, чем выше, поэтому для неё страница 120×75 (альбомная) без поворота:
+       принтер этикеток печатает такую страницу поперёк ленты и сам ставит её на этикетку 75×120.
+       Если поворачивать накладную внутри PDF, драйвер в альбомном режиме поворачивает её обратно и обрезает. */
     if(kPer===0){
-      const mm=72/25.4,LW=75*mm,LH=120*mm,lm=2*mm;
+      const mm=72/25.4,lm=2*mm;
       pages.forEach(p=>{
-        const page=out.addPage([LW,LH]),aw=LW-2*lm,ah=LH-2*lm;
-        const s0=Math.min(aw/p.width,ah/p.height),s1=Math.min(aw/p.height,ah/p.width),rot=s1>s0*1.05,s=Math.min(rot?s1:s0,4);
-        const w=p.width*s,h=p.height*s;
-        if(rot){const bw=h,bh=w,x=(LW-bw)/2,y=(LH-bh)/2;page.drawPage(p,{x:x+bw,y,width:w,height:h,rotate:degrees(90)})}
-        else page.drawPage(p,{x:(LW-w)/2,y:(LH-h)/2,width:w,height:h});
+        const land=p.width>p.height,PW=(land?120:75)*mm,PH=(land?75:120)*mm;
+        const page=out.addPage([PW,PH]);
+        const s=Math.min((PW-2*lm)/p.width,(PH-2*lm)/p.height,4),w=p.width*s,h=p.height*s;
+        page.drawPage(p,{x:(PW-w)/2,y:(PH-h)/2,width:w,height:h});
       });
     }else{
     const W=595.28,H=841.89,per=kPer,cols=per===4?2:1,rows=per===1?1:2,cw=W/cols,ch=H/rows,m=10;
