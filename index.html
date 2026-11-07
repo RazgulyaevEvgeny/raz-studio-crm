@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261105140000">
+<meta name="app-build" content="20261107130000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1634,6 +1634,7 @@ body.home-fit:has(#p-home:not([hidden]) #pack.flat){padding-bottom:16px}
   .search input{min-height:38px;padding:0 32px 0 13px}
   .search svg{right:12px;width:14px;height:14px}
   .selwrap{flex:0 0 132px;min-width:0}
+  .ktools .selwrap{flex:0 0 auto}
   .selwrap .cs-btn,.selwrap select{min-height:38px;padding:0 26px 0 12px;font-size:12.5px;background-position:right 10px center}
   .chips{gap:5px}
   .chips .chip,.chip{min-height:30px;padding:0 10px;font-size:12.5px;gap:5px}
@@ -5792,7 +5793,7 @@ var K_STAGES=[['packing','Упаковка'],['handover','Передача'],['s
 var K_FIELDS=['code','state','status','total','created','completed','plannedDelivery','deliveryMode','isKaspiDelivery','assembled','preOrder','waybill','waybillNumber','transmitted','transmitPlan','returned','deliveryCost','customer','phone','town'];
 var kaspiSync={busy:false,at:0,tried:0,err:'',count:0,stats:null};
 var kaspiOrders=[],kaspiMeta={},kaspiLoaded=false,kaspiDbErr='',kaspiCol=null;
-var kTab='packing',kSel=new Set(),kHist={busy:false,msg:'',started:false},kBusy=new Set(),kCleanAsk=false,kPer=4,kPrintBusy=false,kPrintFails=[];
+var kTab='packing',kSel=new Set(),kHist={busy:false,msg:'',started:false},kBusy=new Set(),kCleanAsk=false,kPer=(()=>{try{const v=+localStorage.getItem('k-per');return [0,1,2,4].includes(v)&&localStorage.getItem('k-per')!==null?v:0}catch(e){return 0}})(),kPrintBusy=false,kPrintFails=[];
 
 const kDay=ms=>ms?ds(new Date(+ms)):'';
 /* выданные заказы Kaspi как заказы для прибыли и аналитики (в ведомости их нет):
@@ -5992,7 +5993,7 @@ async function kPrint(){
   try{
     let cropOk=0,cropErr='';
     await Promise.all([kLoadPdfLib(),kLoadPdfJs().catch(e=>{cropErr='pdf.js не загрузился'})]);
-    const {PDFDocument,rgb}=window.PDFLib;
+    const {PDFDocument,rgb,degrees}=window.PDFLib;
     const out=await PDFDocument.create();const pages=[];
     for(const k of sel){
       try{
@@ -6007,6 +6008,18 @@ async function kPrint(){
       }catch(e){console.warn('Накладная',k.code,e);kPrintFails.push(k)}
     }
     if(!pages.length)throw new Error('Kaspi не отдал ни одной накладной. Откройте их по ссылкам ниже.');
+    /* термоэтикетка 75×120 мм (вертикально): одна накладная на этикетку, во всю площадь;
+       если накладная вытянута в ширину, поворачиваем её, чтобы вышла крупнее */
+    if(kPer===0){
+      const mm=72/25.4,LW=75*mm,LH=120*mm,lm=2*mm;
+      pages.forEach(p=>{
+        const page=out.addPage([LW,LH]),aw=LW-2*lm,ah=LH-2*lm;
+        const s0=Math.min(aw/p.width,ah/p.height),s1=Math.min(aw/p.height,ah/p.width),rot=s1>s0*1.05,s=Math.min(rot?s1:s0,4);
+        const w=p.width*s,h=p.height*s;
+        if(rot){const bw=h,bh=w,x=(LW-bw)/2,y=(LH-bh)/2;page.drawPage(p,{x:x+bw,y,width:w,height:h,rotate:degrees(90)})}
+        else page.drawPage(p,{x:(LW-w)/2,y:(LH-h)/2,width:w,height:h});
+      });
+    }else{
     const W=595.28,H=841.89,per=kPer,cols=per===4?2:1,rows=per===1?1:2,cw=W/cols,ch=H/rows,m=10;
     let page=null;
     pages.forEach((p,i)=>{
@@ -6021,9 +6034,10 @@ async function kPrint(){
       const w=p.width*s,h=p.height*s;
       page.drawPage(p,{x:c*cw+(cw-w)/2,y:H-(r+1)*ch+(ch-h)/2,width:w,height:h});
     });
+    }
     const url=URL.createObjectURL(new Blob([await out.save()],{type:'application/pdf'}));
     if(win)win.location.href=url;
-    else{const a=document.createElement('a');a.href=url;a.download='nakladnye-kaspi.pdf';document.body.appendChild(a);a.click();a.remove()}
+    else{const a=document.createElement('a');a.href=url;a.download=kPer===0?'nakladnye-kaspi-75x120.pdf':'nakladnye-kaspi.pdf';document.body.appendChild(a);a.click();a.remove()}
     toast('Накладных на листах: '+pages.length+', увеличено: '+cropOk+(cropErr?' ('+cropErr+')':'')+(kPrintFails.length?', не скачалось: '+kPrintFails.length:''));
   }catch(e){if(win)win.close();toast((e&&e.message)||'Не получилось собрать накладные')}
   finally{kPrintBusy=false;render()}
@@ -6110,7 +6124,7 @@ function renderKaspiPage(){
   if(kTab==='handover'&&g.handover.length){
     const withW=g.handover.filter(k=>k.waybill);[...kSel].forEach(id=>{if(!withW.find(k=>k.id===id))kSel.delete(id)});
     tools=`<div class="ktools"><label class="kr-ck"><input type="checkbox" data-kall${withW.length&&kSel.size===withW.length?' checked':''}${withW.length?'':' disabled'}> Выбрать все</label>
-      <label class="selwrap"><select id="k-per" aria-label="Накладных на листе">${[[4,'4 на листе A4'],[2,'2 на листе A4'],[1,'1 на листе']].map(([v,l])=>`<option value="${v}"${kPer===v?' selected':''}>${l}</option>`).join('')}</select></label>
+      <label class="selwrap"><select id="k-per" aria-label="Накладных на листе">${[[0,'Этикетка 75×120'],[4,'4 на листе A4'],[2,'2 на листе A4'],[1,'1 на листе A4']].map(([v,l])=>`<option value="${v}"${kPer===v?' selected':''}>${l}</option>`).join('')}</select></label>
       <button class="btn primary sm" type="button" id="k-print" ${kSel.size&&!kPrintBusy?'':'disabled'}>${kPrintBusy?'Собираем…':'Распечатать накладные'+(kSel.size?' ('+kSel.size+')':'')}</button></div>`
       +(kPrintFails.length?`<div class="kclean"><span>Эти накладные Kaspi не отдал, откройте их в кабинете: ${kPrintFails.map(k=>`<a href="${esc(k.waybill)}" target="_blank" rel="noopener">№ ${esc(k.code)}</a>`).join(', ')}</span></div>`:'');
   }
@@ -6147,7 +6161,7 @@ $('p-kaspi').addEventListener('change',e=>{
   const t=e.target;
   if(t.matches('[data-ksel]')){t.checked?kSel.add(t.dataset.ksel):kSel.delete(t.dataset.ksel);render();return}
   if(t.matches('[data-kall]')){const ids=kGroups().handover.filter(k=>k.waybill).map(k=>k.id);kSel=t.checked?new Set(ids):new Set();render();return}
-  if(t.id==='k-per'){kPer=+t.value||4;return}
+  if(t.id==='k-per'){kPer=[0,1,2,4].includes(+t.value)?+t.value:0;try{localStorage.setItem('k-per',String(kPer))}catch(e){}return}
 });
 $('k-sync').addEventListener('click',()=>syncKaspiOrders(true));
 
