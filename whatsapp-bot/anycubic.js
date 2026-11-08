@@ -10,14 +10,21 @@
 // Адрес принтера бот находит сам (перебирает адреса своей сети), или берёт ANYCUBIC_IP из .env, если он там указан.
 // Найденный адрес и логин принтера запоминаются в anycubic.json рядом с ботом (в репозиторий не попадает).
 // На самом принтере должен быть включён режим LAN: Настройки → Сеть → «LAN mode» / «Режим локальной сети».
+//
+// Второй путь, без LAN (в режиме LAN у Anycubic не работает камера в приложении): через облако Anycubic, как это делает
+// Anycubic Slicer Next. Slicer Next, установленный на этом же компьютере, пишет свой ключ входа в журнал
+// %AppData%\AnycubicSlicerNext\log\debug_*.log — бот берёт его оттуда сам (ключ никуда, кроме облака Anycubic,
+// не уходит и в репозиторий не попадает) и раз в минуту спрашивает облако о принтере и текущей печати.
+// Если ключ устарел — достаточно открыть Slicer Next и войти в аккаунт заново.
 
 import tls from 'node:tls';
 import http from 'node:http';
+import https from 'node:https';
 import os from 'node:os';
 import net from 'node:net';
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const NAME = 'Anycubic Kobra X';
@@ -50,6 +57,45 @@ const ERR = {
 const errText = c => ERR[c] || 'Ошибка принтера, код ' + c + ': подробности в приложении Anycubic';
 
 const md5 = s => crypto.createHash('md5').update(s).digest('hex');
+
+// ---------- облако Anycubic (режим Slicer Next) ----------
+const CLOUD = 'https://cloud-universe.anycubic.com/p/p/workbench/api';
+const C_APP = 'f9b3528877c94d5c9c5af32245db46ef', C_SEC = '0cf75926606049a3937f56b0373b99fb', C_VER = 'V3.0.0';
+const CLOUD_EVERY = 60e3;       // как часто спрашиваем облако
+const JWT = /(?:accessToken\s*=\s*|id_token=)(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)/g;
+const jwtExp = t => { try { return +JSON.parse(Buffer.from(t.split('.')[1], 'base64url').toString('utf8')).exp * 1000 || 0; } catch (_) { return 0; } };
+// ключ входа из журнала Slicer Next: самый свежий журнал, последний ключ в нём
+function slicerToken(env) {
+  const dir = join(env.ANYCUBIC_SLICER_LOG || join(process.env.APPDATA || '', 'AnycubicSlicerNext', 'log'));
+  let files = [];
+  try { files = readdirSync(dir).filter(f => /^debug_.*\.log$/i.test(f)).map(f => ({ f: join(dir, f), t: statSync(join(dir, f)).mtimeMs })).sort((a, b) => b.t - a.t); } catch (_) { return { why: 'не нашёл Anycubic Slicer Next на этом компьютере' }; }
+  for (const { f } of files.slice(0, 5)) {
+    let txt = '';
+    try { const b = readFileSync(f); txt = b.subarray(Math.max(0, b.length - 64 * 1024 * 1024)).toString('latin1'); } catch (_) { continue; }
+    const all = [...txt.matchAll(JWT)].map(m => m[1]);
+    if (all.length) { const tok = all[all.length - 1]; return { tok, exp: jwtExp(tok) }; }
+  }
+  return { why: files.length ? 'Slicer Next не сохранил вход: откройте его и войдите в аккаунт Anycubic' : 'Slicer Next ещё ни разу не запускали' };
+}
+function cloudCall(path, { token, body, query } = {}) {
+  const ts = Date.now(), nonce = crypto.randomUUID();
+  const h = {
+    'Xx-Device-Type': 'pcf', 'Xx-Is-Cn': '1', 'Xx-Nonce': nonce, 'Xx-Timestamp': String(ts), 'Xx-Version': C_VER,
+    'Xx-Signature': md5(C_APP + ts + C_VER + C_SEC + nonce + C_APP), 'Content-Type': 'application/json', 'XX-LANGUAGE': 'US',
+  };
+  if (token) h['XX-Token'] = token;
+  const url = CLOUD + path + (query ? '?' + new URLSearchParams(query) : '');
+  const data = body ? JSON.stringify(body) : null;
+  return new Promise((ok, bad) => {
+    const rq = https.request(url, { method: data ? 'POST' : 'GET', headers: h, timeout: 15e3 }, r => {
+      let b = ''; r.setEncoding('utf8'); r.on('data', c => (b += c));
+      r.on('end', () => { try { ok(JSON.parse(b)); } catch (_) { bad(new Error('облако Anycubic ответило не JSON (' + r.statusCode + ')')); } });
+    });
+    rq.on('timeout', () => rq.destroy(new Error('облако Anycubic не отвечает')));
+    rq.on('error', bad);
+    rq.end(data || undefined);
+  });
+}
 
 function getJson(url, method = 'GET', timeout = 8000) {
   return new Promise((ok, bad) => {
@@ -273,6 +319,7 @@ export function startAnycubic({ fs, env, log, DIR }) {
   }
   async function loop() {
     for (;;) {
+      if (!cfg.cred && Date.now() - cloud.ok < 5 * 60e3) { await new Promise(f => setTimeout(f, SCAN_EVERY)); continue; } // облако работает — сеть не перебираем
       if (!cfg.cred && !(await findAndLogin())) { await push(); await new Promise(f => setTimeout(f, SCAN_EVERY)); continue; }
       await connect();
       await push();
@@ -282,11 +329,68 @@ export function startAnycubic({ fs, env, log, DIR }) {
     }
   }
 
+  // ---------- облако (без LAN) ----------
+  const cloud = { ok: 0, why: '', acc: '', said: '' };
+  const lanAlive = () => sock && st.seen && Date.now() - st.seen < SEEN_TTL;
+  const say = m => { if (m !== cloud.said) { cloud.said = m; log('Anycubic (облако):', m); } };
+  async function cloudLogin() {
+    const t = slicerToken(env);
+    if (!t.tok) { cloud.why = t.why; return false; }
+    if (t.exp && t.exp < Date.now()) { cloud.why = 'вход в Slicer Next устарел: откройте Slicer Next и войдите заново'; return false; }
+    if (cfg.cloud && cfg.cloud.acc === md5(t.tok) && cfg.cloud.token) return true;
+    const r = await cloudCall('/v3/public/loginWithAccessToken', { body: { device_type: 'pcf', access_token: t.tok } });
+    if (!r?.data?.token) { cloud.why = 'облако Anycubic не приняло вход (' + (r?.msg || r?.code || 'нет ответа') + '): откройте Slicer Next и войдите заново'; return false; }
+    cfg.cloud = { acc: md5(t.tok), token: r.data.token }; save();
+    say('вошёл в облако через Slicer Next');
+    return true;
+  }
+  async function cloudPoll() {
+    if (lanAlive()) return; // принтер и так слышно по локальной сети
+    if (!(await cloudLogin())) { say(cloud.why); if (!st.seen || Date.now() - st.seen >= SEEN_TTL) st.problem = cloud.why; return; }
+    const pr = await cloudCall('/work/printer/getPrinters', { token: cfg.cloud.token });
+    if (!Array.isArray(pr?.data)) { // ключ облака отозван — в следующий раз войдём заново
+      cfg.cloud = null; save(); cloud.why = 'облако Anycubic: ' + (pr?.msg || 'нет списка принтеров'); say(cloud.why); return;
+    }
+    const want = String(env.ANYCUBIC_NAME || '').toLowerCase();
+    const p = pr.data.find(x => want && String(x.name || '').toLowerCase().includes(want)) || pr.data.find(x => /kobra\s*x/i.test(x.model || x.name || '')) || pr.data[0];
+    if (!p) { cloud.why = 'в аккаунте Anycubic нет принтеров'; st.problem = cloud.why; say(cloud.why); return; }
+    cloud.ok = Date.now();
+    if (p.model) { const m = String(p.model); if (cfg.model !== m) { cfg.model = m; save(); } }
+    if (+p.device_status !== 1) { st.problem = 'принтер выключен или не в сети'; say('принтер не в сети'); return; }
+    let proj = null;
+    try {
+      const pj = await cloudCall('/work/project/getProjects', { token: cfg.cloud.token, query: { page: '1', limit: '10' } });
+      proj = (Array.isArray(pj?.data) ? pj.data : []).find(x => +x.printer_id === +p.id) || null;
+    } catch (_) {}
+    const now = Date.now();
+    if (!st.seen || now - st.seen >= SEEN_TTL) st.since = now;
+    st.seen = now; st.lastOnline = now; st.problem = '';
+    if (now - (cfg.lastOnline || 0) > 10 * 60e3) { cfg.lastOnline = now; save(); }
+    const ps = proj ? +proj.print_status : 0, ended = proj && +proj.end_time ? +proj.end_time * (+proj.end_time < 1e12 ? 1000 : 1) : 0;
+    const busy = [1, 4, 5, 6, 9, 10, 11].includes(ps);
+    if (busy) {
+      st.work = 'busy'; st.pstate = +proj.pause === 1 ? 'paused' : PRINT_STATUS[ps] || 'printing';
+      st.proj = { progress: proj.progress, remain_time: proj.remain_time, filename: proj.gcode_name || proj.name || '' };
+    } else {
+      st.work = 'free'; st.proj = {};
+      st.pstate = ps === 2 && ended && now - ended < 30 * 60e3 ? 'finished' : ps === 3 && ended && now - ended < 30 * 60e3 ? 'failed' : '';
+    }
+    st.code = 0;
+    say('на связи');
+    push();
+  }
+  (async () => {
+    for (;;) {
+      try { await cloudPoll(); } catch (e) { say(String(e?.message || e)); }
+      await new Promise(f => setTimeout(f, CLOUD_EVERY));
+    }
+  })();
+
   timer = setInterval(() => {
     if (sock) { try { sock.write(Buffer.from([0xC0, 0])); ['status', 'info'].forEach(ask); } catch (_) {} }
     push();
   }, ASK_EVERY);
   loop().catch(e => log('Anycubic:', e?.message || e));
-  log('Anycubic: слежу за принтером (по локальной сети)');
+  log('Anycubic: слежу за принтером (по локальной сети или через облако Slicer Next)');
   return { stop: () => { clearInterval(timer); sock?.destroy(); } };
 }
