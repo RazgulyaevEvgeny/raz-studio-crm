@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261109120000">
+<meta name="app-build" content="20261109200000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -2010,7 +2010,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   <!-- ГЛАВНАЯ -->
   <section id="p-home" class="page" style="gap:20px">
     <div class="ph">
-      <div><h1>Заказы студии</h1><p id="tag">Подключаемся к базе…</p></div>
+      <div><h1>Главная</h1><p id="tag">Подключаемся к базе…</p></div>
       <div class="btns"><button class="btn primary" type="button" data-new>Новый заказ</button></div>
     </div>
 
@@ -2022,6 +2022,9 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
     </div>
 
     <div id="hx-bar"></div>
+    <div class="hm-w" id="hm-w" aria-label="Коротко о главном"></div>
+    <div class="hm-money" id="hm-money"></div>
+    <div class="hm-seg" id="hm-seg" role="tablist" aria-label="Kaspi или оборудование"><button type="button" role="tab" data-hmseg="w-kaspi" aria-selected="true">Kaspi</button><button type="button" role="tab" data-hmseg="w-print" aria-selected="false">Оборудование</button></div>
     <div class="pack" id="pack"></div>
     <div class="home-grid">
       <div class="home-col">
@@ -3280,7 +3283,7 @@ function renderHome(){
   const tsOpen=ts.filter(x=>!x.done).length;
   const parts=[];
   if(ts.length)parts.push(`<div class="tsub"><span>Задачи</span><em>${tsOpen}${ts.length>tsOpen?' из '+ts.length:''}</em></div><div class="tasks">${ts.map(todayTask).join('')}</div>`);
-  const TODAY_LIM=innerWidth>=700?8:5;
+  const TODAY_LIM=innerWidth>=700?8:3;
   if(os.length){const lim=todayAllOrders?os.length:TODAY_LIM;
     parts.push(`<div class="tsub"><span>Заказы</span><em>${os.length}</em></div><div class="mini">${os.slice(0,lim).map(orderMini).join('')}</div>`
       +(os.length>TODAY_LIM?`<button class="done-tog" type="button" data-todaymore>${todayAllOrders?'Свернуть':'Показать ещё '+(os.length-TODAY_LIM)}</button>`:''))}
@@ -3289,6 +3292,7 @@ function renderHome(){
   $('w-today').innerHTML=parts.length?parts.join(''):`<div class="w-empty">На сегодня ни сроков, ни задач.</div>`;
   $('w-today-m').textContent=[os.length?os.length+' '+plural(os.length,'заказ','заказа','заказов'):'',ts.length?ts.length+' '+plural(ts.length,'дело','дела','дел'):''].filter(Boolean).join(', ')||'пусто';
   [['office','w-office-sum'],['supplies','w-supplies-sum'],['projects','w-projects-sum']].forEach(([k,id])=>{const b=$(id)&&$(id).querySelector('b');const m=$('w-'+k+'-m');if(m)m.textContent=b?b.textContent:''});
+  hmRender();
 }
 function renderOrders(){
   const base=orders.filter(o=>(!view.day||o.deadline===view.day));
@@ -3521,7 +3525,9 @@ async function delX(){try{await db.doc(xKind+'/'+xEditing).delete();closeX();toa
 /* ---------- раскладка главной ---------- */
 let packW=[];
 let packWide=[],packSide=[],packL=[];
+let hmEls=null,hmPlan=[],hmSegSel='w-kaspi';
 function initPack(){
+  hmEls={w:$('hm-w'),m:$('hm-money'),s:$('hm-seg')};
   packWide=[$('w-today').closest('.w'),$('boss-list').closest('.w')];packSide=[$('w-kaspi'),$('w-print')];
   packL=[packWide[0],...packSide,packWide[1]];packW=[...packL];
   ['anna','sasha','daulet'].forEach(x=>$('p-'+x).appendChild($('w-'+x)));
@@ -3543,7 +3549,7 @@ let packN=0;
 const MF_KEY='raz.home.open',MF_ALL=['w-req','w-anna','w-sasha','w-daulet','w-kaspi','w-print'];let mOpen=new Set();try{mOpen=new Set(JSON.parse(localStorage.getItem(MF_KEY)||'[]'))}catch(_){}
 const isPhone=()=>matchMedia('(max-width:600px)').matches;
 if(!isPhone())['w-anna','w-daulet','w-kaspi','w-print'].forEach(id=>{if(!mOpen.has('-'+id))mOpen.add(id)});
-const mfAlways=id=>!isPhone()&&['w-req','w-kaspi','w-print'].includes(id); /* на компьютере эти карточки всегда открыты */
+const mfAlways=id=>['w-kaspi','w-print','w-today-box'].includes(id)||(!isPhone()&&id==='w-req'); /* эти карточки всегда открыты (на телефоне Kaspi и оборудование переключаются сверху) */
 function mfApply(){packW.forEach(w=>{const o=mOpen.has(w.id)||mfAlways(w.id);w.classList.toggle('mopen',o);const h=w.querySelector(':scope>.w-h');if(h){h.setAttribute('aria-expanded',isPhone()||MF_ALL.includes(w.id)?String(o):'true')}})}
 function mfToggle(id,force){if(mfAlways(id))return;const o=force!=null?force:!mOpen.has(id);o?(mOpen.add(id),mOpen.delete('-'+id)):(mOpen.delete(id),mOpen.add('-'+id));try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff();if(id==='w-sasha')sashaTok();if(id==='w-daulet')daulTok()}
 document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h');if(!h||(!isPhone()&&!MF_ALL.includes(h.parentElement.id))||e.target.closest('a,button,select,input,.go'))return;
@@ -3557,19 +3563,46 @@ function packFit(){
 function packHome(){packLay();packFit()}
 function packLay(){
   const pack=$('pack');if(!pack||$('p-home').hidden||!packW.length)return;
-  const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=900?3:w>=700?2:1;mfApply();
-  if(packN===n)return;packN=n;if(!pack.previousElementSibling||pack.previousElementSibling.id!=='hx-bar')pack.before($('hx-bar'));pack.innerHTML='';pack.classList.remove('flat');packW.forEach(x=>x.style.gridColumn='');pack.style.setProperty('--cols',n);pack.dataset.n=n;
-  const mk=c=>{const d=document.createElement('div');d.className=c;return d};
-  if(n===1){const c=mk('pcol');pack.appendChild(c);packL.forEach(x=>c.appendChild(x));return} /* на телефоне первым «Сегодня» */
-  /* «Сегодня» — во всю ширину сразу под плитками сводки, выше всех виджетов */
-  const today=()=>{const d=mk('pfull');d.appendChild(packWide[0]);return d};
-  /* компьютер: всё на одном экране — слева «Сегодня» и Аня с Сашей, справа задачи с заявками и Kaspi с принтерами (на узком компьютере — одной колонкой) */
-  /* компьютер: ровная сетка рядами — карточки одного ряда одной высоты, без ступенек */
-  if(n>=3){pack.classList.add('flat');
-    const [today,tasks]=packWide,[kaspi,print]=packSide;
-    document.querySelector('#p-home .stats').appendChild($('hx-bar'));/* план продаж — пятая плитка в ряду сводки */
-    pack.append(today,tasks,kaspi,print);return}
-  const a=mk('pcol'),b=mk('pcol'),bot=mk('pleft');a.append(packSide[0]);b.appendChild(packSide[1]);packWide.slice(1).forEach(x=>bot.appendChild(x));pack.append(today(),a,b,bot);
+  const w=pack.clientWidth||$('p-home').clientWidth;const n=w>=700?2:1;mfApply();
+  if(packN===n)return;packN=n;pack.innerHTML='';pack.classList.remove('flat','hm2');packW.forEach(x=>x.style.gridColumn='');pack.dataset.n=n;
+  const mk=c=>{const d=document.createElement('div');d.className=c;return d},[today,tasks]=packWide,[kaspi,print]=packSide;
+  /* главная как у Apple: сверху виджеты, ниже «Сегодня»; на телефоне деньги одной карточкой и переключатель Kaspi / оборудование */
+  if(n===1){pack.style.setProperty('--cols',1);const c=mk('pcol');c.append(hmEls.w,today,hmEls.m,hmEls.s,kaspi,print,tasks);pack.appendChild(c);hmSegApply();return}
+  pack.classList.add('hm2');pack.style.removeProperty('--cols');
+  const a=mk('pcol hm-cl'),b=mk('pcol hm-cr');a.append(hmEls.w,today,kaspi,tasks);b.append(hmEls.m,print);pack.append(a,b);hmSegApply();
+}
+function hmSegApply(){if(!packSide.length)return;const one=packN===1;packSide.forEach(x=>x.classList.toggle('hm-off',one&&x.id!==hmSegSel));
+  hmEls&&hmEls.s.querySelectorAll('[data-hmseg]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.hmseg===hmSegSel)))}
+document.addEventListener('click',e=>{
+  const sg=e.target.closest('[data-hmseg]');if(sg){hmSegSel=sg.dataset.hmseg;hmSegApply();return}
+  const g=e.target.closest('[data-hmgo]');if(!g)return;const k=g.dataset.hmgo;
+  if(k==='today'){packWide[0].scrollIntoView({behavior:'smooth',block:'start'});return}
+  if(k==='tasks'){if(e.target.closest('[data-hmtask]')&&canWrite){mfToggle('w-boss',true);const f=$('boss-form');if(f.hidden)$('boss-add-btn').click()}else mfToggle('w-boss',true);packWide[1].scrollIntoView({behavior:'smooth',block:'start'});return}
+  if(k==='month'||k==='debt'){const st=document.querySelector('#p-home .stat[data-f="'+k+'"]');if(st)st.click()}
+});
+/* виджеты сверху главной и деньги карточками */
+function hmRender(){
+  if(!hmEls)return;
+  const ring=(r,w,c,p)=>`<circle cx="50" cy="50" r="${r}" fill="none" stroke="${c}" stroke-opacity=".2" stroke-width="${w}"/>`+(p>0?`<circle cx="50" cy="50" r="${r}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" pathLength="100" stroke-dasharray="${Math.min(100,p)} 100" transform="rotate(-90 50 50)"/>`:'');
+  const P=hmPlan||[],boss=(()=>{try{return isBoss()&&canWrite}catch(_){return false}})(),ym=curMonth();
+  const plan=P.length?`<button type="button" class="hm-c hm-plan" ${boss?'data-planedit':'data-go="analytics"'} title="${esc(P.map(x=>x.lbl+': '+money(x.fact)+' из '+money(x.goal)).join(', '))}"><span class="hm-l" style="--c:var(--danger)">План на ${esc(monthName(ym))}</span><span class="hm-pg"><svg viewBox="0 0 100 100" aria-hidden="true">${P.map((x,i)=>ring(i?27:41,i?13:14,x.c,x.pct)).join('')}</svg><span class="hm-pl">${P.map(x=>`<span style="color:${x.c}">${esc(x.lbl)} ${x.pct}%</span>`).join('')}</span></span></button>`
+    :`<button type="button" class="hm-c hm-plan" ${boss?'data-planedit':'data-go="analytics"'}><span class="hm-l" style="--c:var(--danger)">План на ${esc(monthName(ym))}</span><span class="hm-s">${boss?'Нажмите, чтобы задать план продаж':'План продаж не задан'}</span></button>`;
+  if(!loaded){hmEls.w.innerHTML=plan;hmEls.m.innerHTML='';return}
+  const t=todayStr(),{os,ts}=itemsOn(t),lateO=orders.filter(isOverdue),act=orders.filter(o=>!CLOSED.has(o.status));
+  const today=`<button type="button" class="hm-c hm-today" data-hmgo="today"><span class="hm-l">Сегодня</span><span class="hm-n"><b>${os.length}</b><small>${plural(os.length,'заказ сдать','заказа сдать','заказов сдать')}</small></span><span class="hm-f">${lateO.length?`<span class="hm-late">просрочено ${lateO.length}</span>`:''}${os.slice(0,2).map(o=>`<span>${esc(o.client||'')} · ${esc((ST[o.status]||ST.new).label)}</span>`).join('')||'<span>на сегодня сроков нет</span>'}</span></button>`;
+  const byS=STATUSES.filter(x=>!CLOSED.has(x.id)).map(x=>({l:x.label,c:`var(${x.c})`,v:act.filter(o=>o.status===x.id).length})).filter(x=>x.v);
+  const work=`<button type="button" class="hm-c" data-go="orders"><span class="hm-l" style="--c:var(--indigo,#5856d6)">В работе</span><span class="hm-n"><b>${act.length}</b><small>${plural(act.length,'заказ','заказа','заказов')}</small></span><span class="hm-bar">${byS.map(x=>`<i style="flex:${x.v};background:${x.c}"></i>`).join('')}</span><span class="hm-lg">${byS.map(x=>`<span><i style="background:${x.c}"></i>${esc(x.l)} ${x.v}</span>`).join('')}</span></button>`;
+  const later=x=>!x.done&&x.showFrom&&x.showFrom>t,bo=tasks.filter(x=>isBossBlock(x)&&!x.done&&!later(x)),bl=bo.filter(x=>x.date&&x.date<t).length,tsOpen=ts.filter(x=>!x.done&&!isBossBlock(x)).length;
+  const task=`<button type="button" class="hm-c" data-hmgo="tasks"><span class="hm-l" style="--c:var(--boss,#ff9500)">Задачи</span><span class="hm-n"><b>${bo.length}</b><small>${bo.length?plural(bo.length,'открыта','открыты','открыто'):'открытых нет'}</small></span><span class="hm-f">${bl?`<span class="hm-late">просрочено ${bl}</span>`:''}${tsOpen?`<span>дел на сегодня: ${tsOpen}</span>`:''}${canWrite?'<span class="hm-add" data-hmtask>+ Задача</span>':''}</span></button>`;
+  hmEls.w.innerHTML=plan+today+work+task;
+  /* деньги: прибыль, чистыми, долг клиентов */
+  const pr=[...orders,...kVirtualOrders()].filter(o=>inMonth(o,ym)).reduce((s,o)=>s+profitOf(o),0),offM=lsum('office',ym),supM=lsum('supplies',ym),net=pr-offM-supM;
+  const dl=orders.filter(o=>o.status!=='cancel'&&debtOf(o)>0),tot=dl.reduce((s,o)=>s+(+o.price||0),0),debt=dl.reduce((s,o)=>s+debtOf(o),0),paid=tot?Math.round((tot-debt)/tot*100):100;
+  const g=salesGrowth(),gr=g.all==null?'':(g.all>0?'↑ ':g.all<0?'↓ ':'')+Math.abs(g.all)+'% к прошлому месяцу';
+  const minus=[offM?'офис '+money(offM):'',supM?'закупки '+money(supM):''].filter(Boolean).join(' · ');
+  const pass=(cls,go,lab,right,val,bar)=>`<button type="button" class="hm-pass ${cls}" ${go}><span class="hm-pt"><span>${esc(lab)}</span><span>${esc(right)}</span></span><b>${esc(val)}</b>${bar!=null?`<span class="hm-pb"><i style="width:${bar}%"></i></span>`:''}</button>`;
+  hmEls.m.innerHTML=`<div class="hm-stack">${pass('p-or','data-hmgo="month"','Прибыль за '+monthName(ym),gr,money(pr))}${pass('p-gr','data-go="analytics"','Чистыми',minus||'расходов нет',money(net))}${pass('p-vi','data-hmgo="debt"','Долг клиентов',dl.length?dl.length+' '+plural(dl.length,'заказ','заказа','заказов')+' · оплачено '+paid+'%':'долгов нет',money(debt),dl.length?paid:null)}</div>`
+    +`<button type="button" class="hm-one" data-hmgo="month"><span class="hm-pt"><span>Прибыль за ${esc(monthName(ym))}</span><span>${esc(gr)}</span></span><b>${esc(money(pr))}</b><span class="hm-sub"><span><em>чистыми</em> ${esc(money(net))}</span><span><em>долг</em> ${esc(money(debt))}</span></span></button>`;
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 /* светлая / ночная тема: запоминается на этом устройстве */
@@ -7391,7 +7424,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261109120000">
+<link rel="stylesheet" href="glass.css?v=20261109200000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
@@ -7801,6 +7834,7 @@ function renderHomeBar(){
   const add=(lbl,c,fact,goal,days)=>{const pct=Math.round(fact/goal*100),rest=Math.max(0,goal-fact);P.push({lbl,c,fact,goal,pct,day:rest&&days?rest/days:0,rest})};
   if(+pl.studio>0)add('Студия','var(--blue)',orders.filter(o=>inMonth(o,ym)).reduce((s,o)=>s+(+o.price||0),0),+pl.studio,workDaysLeft());
   if(+pl.kaspi>0)add('Kaspi','#f14635',kaspiMonthSum(ym),+pl.kaspi,dLeft);
+  hmPlan=P;hmRender();
   const low=fx.stock?skLow():[];
   const lowRow=low.length?`<button type="button" class="hx-low" data-go="supplies"><b>Заканчивается на складе:</b> ${esc(low.slice(0,3).map(x=>x.name+(x.left!=null?' (на '+x.left+' дн.)':'')).join(', '))}${low.length>3?' и ещё '+(low.length-3):''}</button>`:'';
   const edit=isBoss()&&canWrite?`<button type="button" class="go hx-e" data-planedit>${P.length?'Изменить':'Задать план'}</button>`:'';
