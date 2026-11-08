@@ -1250,7 +1250,7 @@ body.home-fit:has(#p-home:not([hidden]) #pack.flat){padding-bottom:16px}
 .ty-row{display:flex;gap:8px;flex-wrap:wrap}
 .ty-b{align-self:flex-start;border:0;border-radius:999px;padding:9px 16px;font:600 14px var(--f);cursor:pointer;background:#fff;color:var(--pg,#00843b)}
 .ty-b.ghost{background:rgba(255,255,255,.16);color:#fff}
-.ty-test{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.ty-test .ty-b{padding:7px 12px;font-size:13px}
+.ty-test{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}.ty-test .ty-b{padding:7px 12px;font-size:13px;background:var(--blue,#4358ef);color:#fff}
 .ty-qr{width:180px;height:180px;background:#fff;border-radius:12px;padding:6px}.ty-qr svg{width:100%;height:100%;display:block}
 .bw-mute{grid-column:1/-1;margin-top:6px;font:600 12.5px/1.3 var(--fb);color:var(--muted)}
 #w-print .bw-mute{color:#ffd8a8}
@@ -6875,7 +6875,7 @@ function studioCards(){
     const bat=s.battery_percentage!=null?s.battery_percentage+'%':s.battery_state?{low:'батарея садится',middle:'батарея: средне',high:'батарея в норме'}[s.battery_state]||'':'';
     const lowB=(s.battery_percentage!=null&&+s.battery_percentage<=20)||s.battery_state==='low';
     const c=al?'--danger':stale?'--muted':on?'--ok':'--danger',l=al?'ДЫМ!':stale?'нет данных':on?'всё спокойно':'не в сети';
-    senH+=`<div class="bw-card${al?' alert':''}">${bwPIco(al?'err':on?'ok':'off',c)}<div class="bw-head"><b><small class="bw-brand">Smart Life</small>${esc(d.name||'Датчик')}</b><span class="bw-chip${al?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${bat?bwPStat('Батарея',bat):''}${s.smoke_sensor_value!=null?bwPStat('Дым',s.smoke_sensor_value+' ppm'):''}</div>${al?'<div class="bw-err">Сработал датчик дыма: проверьте мастерскую!</div>':lowB?'<div class="bw-err warn">Батарея датчика почти села: замените батарейку</div>':''}${d.category==='ywbj'||smoke!=null?`<div class="ty-row ty-test"><button class="ty-b ghost" data-ty="test">🔔 Проверить тревогу</button>${tRes?`<span class="bw-meta">${tRes}</span>`:''}</div>`:''}</div>`}
+    senH+=`<div class="bw-card${al?' alert':''}">${bwPIco(al?'err':on?'ok':'off',c)}<div class="bw-head"><b><small class="bw-brand">Smart Life</small>${esc(d.name||'Датчик')}</b><span class="bw-chip${al?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${bat?bwPStat('Батарея',bat):''}${s.smoke_sensor_value!=null?bwPStat('Дым',s.smoke_sensor_value+' ppm'):''}</div>${al?'<div class="bw-err">Сработал датчик дыма: проверьте мастерскую!</div>':lowB?'<div class="bw-err warn">Батарея датчика почти села: замените батарейку</div>':''}${d.category==='ywbj'||smoke!=null?`<div class="ty-row ty-test"><button class="ty-b" data-ty="test">🔔 Проверить тревогу</button>${tRes?`<span class="bw-meta">${tRes}</span>`:''}</div>`:''}</div>`}
   if(!sens.length){
     const lk=link.state==='qr'&&!old(link.at)?`<div class="ty-qr" id="ty-qr" data-qr="${esc(link.qr)}"></div><span class="bw-meta">Откройте Smart Life на телефоне → «+» вверху → «Сканировать» → наведите на этот QR-код и подтвердите вход. Код действует 5 минут.</span><button class="ty-b ghost" data-ty="cancel">Отмена</button>`
       :link.state==='wait'&&!old(link.at)?`<span class="bw-meta">Готовим QR-код… рабочий компьютер студии должен быть включён</span>`
