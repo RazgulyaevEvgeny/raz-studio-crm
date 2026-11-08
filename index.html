@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261108213000">
+<meta name="app-build" content="20261108220000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -318,7 +318,27 @@ button{cursor:pointer;border:0;background:none;transition:background-color .15s,
 .mrow .r{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
 .mrow .r b{font-size:13.5px}
 #w-print .go{text-decoration:none;white-space:nowrap;flex:none}
-#w-print .bw-list{display:flex;flex-direction:column;gap:8px}
+#w-print .bw-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}
+#w-print .bw-list>.bw-grp.wide,#w-print .bw-list>.bw-card{grid-column:1/-1}
+#w-print .bw-grp{display:flex;flex-direction:column;gap:8px;min-width:0}
+#w-print .bw-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;flex:1}
+#w-print .bw-grp.two .bw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#w-print .bw-grp .bw-sec{margin:4px 4px 0}
+#w-print .bw-grp:not(.wide) .bw-sec em{display:none}
+#w-print .bw-card{padding:12px 14px;gap:2px 12px}
+#w-print .bw-ring{width:56px;height:56px}#w-print .bw-ring b{font-size:16px}
+#w-print .bw-head{flex-wrap:wrap;gap:4px 8px}
+@media(max-width:600px){
+  #w-print .bw-card{padding:10px;gap:2px 8px;grid-template-columns:auto minmax(0,1fr);align-content:start}
+  #w-print .bw-ring{width:40px;height:40px;grid-row:span 1}#w-print .bw-ring b{font-size:12px}#w-print .bw-ring b small{font-size:8px}
+  #w-print .bw-ring.ico svg{width:18px;height:18px}
+  #w-print .bw-head{grid-column:2;align-self:center}#w-print .bw-head b{font-size:14px;line-height:1.15}
+  #w-print .bw-brand{font-size:9.5px}
+  #w-print .bw-chip{font-size:11.5px;padding:3px 8px}
+  #w-print .bw-info{grid-column:1/-1;gap:4px}#w-print .bw-meta{font-size:12px}
+  #w-print .bw-stat{padding:5px 8px}#w-print .bw-stat span{font-size:10.5px}#w-print .bw-stat em{font-size:13px}
+  #w-print .bw-err,#w-print .bw-mute{font-size:12px;padding:7px 9px}
+}
 .bw-card{background:var(--paper);border-radius:20px;padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;align-items:center;font-family:var(--f)}
 .bw-card.alert{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--danger) 55%,transparent)}
 .bw-ring{width:68px;height:68px;position:relative;grid-row:span 2;display:grid;place-items:center}
@@ -6877,10 +6897,10 @@ function renderPrinters(){
       return `<div class="bw-card${er?' alert':''}">${left}<div class="bw-head"><b><small class="bw-brand">${esc(p.brand||'')}</small>${esc(p.name)}</b><span class="bw-chip${live?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${info}</div>${p.muted?'<div class="bw-mute">🔕 тревога отключена вручную</div>':''}${er?`<div class="bw-err">${esc(er)}</div>`:hmTxt?`<div class="bw-err warn">${esc(hmTxt)}</div>`:''}</div>`;
     }).join(''):printFail?'':`<div class="bw-card"><span class="bw-meta">${esc(ERR[s.error]||'Принтеров нет')}</span></div>`);
     /* раздел виджета «Оборудование в студии»: заголовок + карточки */
-    const sec=(t,n,h)=>`<div class="bw-sec"><span>${t}</span>${n?`<em>${n}</em>`:''}</div>${h}`;
+    const sec=(t,n,h,cls)=>`<div class="bw-grp ${cls||''}"><div class="bw-sec"><span>${t}</span>${n?`<em>${n}</em>`:''}</div><div class="bw-grid">${h}</div></div>`;
     const SD=studioCards(),keepIn=document.activeElement&&document.activeElement.id==='ty-code'?document.activeElement.value:null;
     if(keepIn!==null)return; /* человек вводит код Smart Life — не перерисовываем под ним */
-    list.innerHTML=sec('3D принтеры',all.length?all.filter(p=>p.online).length+' из '+all.length+' в сети':'',prHtml)+sec('Камеры',SD.camN?SD.camOn+' из '+SD.camN+' в сети':'',SD.camH)+sec('Датчики',SD.sN?(SD.alarm?'тревога!':SD.sOn+' из '+SD.sN+' в сети'):'',SD.senH);
+    list.innerHTML=sec('3D принтеры',all.length?all.filter(p=>p.online).length+' из '+all.length+' в сети':'',prHtml,'wide two')+sec('Камеры',SD.camN?SD.camOn+' из '+SD.camN+' в сети':'',SD.camH)+sec('Датчики',SD.sN?(SD.alarm?'тревога!':SD.sOn+' из '+SD.sN+' в сети'):'',SD.senH,/ty-qr|ty-code/.test(SD.senH)?'wide':'');
     tyDrawQr();
     {const P=all,busy=P.filter(p=>p.online&&p.state&&PSTATE[String(p.state).toUpperCase()]?.busy).length,bad=P.filter(p=>p.online&&perrText(p.error,p.errorText)).length,on=P.filter(p=>p.online).length;
       rkFill('w-print-k',[[on+(P.length?'/'+P.length:''),'в сети'],[busy,'печатают'],[bad,'с ошибкой',bad>0]]);
