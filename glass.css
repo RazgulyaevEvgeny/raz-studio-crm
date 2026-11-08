@@ -100,7 +100,8 @@ html.dark .theme-pill .t-sun{display:none!important}
   html.dark .theme-fab .t-moon{display:block}
 }
 html.dark .logo{color:#fff}
-html.dark .nav .logo{color:var(--blue)}
+@media(min-width:1100px){html.dark .nav .logo{color:var(--blue)}}
+html.no-tr *{transition:none!important}
 
 /* ===== Kaspi и оборудование: тоже стекло, без сплошной заливки ===== */
 #w-kaspi,#w-print{color:var(--ink)}
