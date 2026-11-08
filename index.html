@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261109100000">
+<meta name="app-build" content="20261109103000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -3573,7 +3573,7 @@ function packLay(){
 }
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 /* светлая / ночная тема: запоминается на этом устройстве */
-document.addEventListener('click',e=>{if(!e.target.closest('[data-theme]'))return;const d=document.documentElement.classList.toggle('dark');try{localStorage.setItem('raz.theme',d?'dark':'light')}catch(_){}const m=document.querySelector('meta[name=theme-color]');if(m)m.content=d?'#0a0f25':'#e6edff'});
+document.addEventListener('click',e=>{if(!e.target.closest('[data-theme]'))return;const h=document.documentElement;h.classList.add('no-tr');setTimeout(()=>h.classList.remove('no-tr'),60);const d=h.classList.toggle('dark');try{localStorage.setItem('raz.theme',d?'dark':'light')}catch(_){}const m=document.querySelector('meta[name=theme-color]');if(m)m.content=d?'#0a0f25':'#e6edff'});
 
 /* ---------- прайс ---------- */
 function prSorted(){return [...prices].sort((a,b)=>(a.order??a.createdAt??0)-(b.order??b.createdAt??0))}
@@ -7391,7 +7391,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261109100000">
+<link rel="stylesheet" href="glass.css?v=20261109103000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
