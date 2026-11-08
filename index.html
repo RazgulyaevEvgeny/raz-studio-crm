@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261108200000">
+<meta name="app-build" content="20261108213000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1220,6 +1220,16 @@ body.home-fit:has(#p-home:not([hidden]) #pack.flat){padding-bottom:16px}
 #w-print .bw-chip{background:#fff}
 #w-print .bw-err,#w-print .bw-err.warn{background:#fff}
 #w-print .bw-note{color:#fff;opacity:.92}
+.bw-sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:8px 4px -2px;font:700 12.5px/1.2 var(--f);letter-spacing:.05em;text-transform:uppercase}
+.bw-sec:first-child{margin-top:0}.bw-sec em{font-style:normal;font-weight:600;letter-spacing:0;text-transform:none;opacity:.8}
+#w-print .bw-sec{color:#fff;opacity:.9}
+#w-print .bw-soon{opacity:.75}
+.ty-box{flex-direction:column;align-items:stretch;gap:8px}.ty-box .bw-err{margin-top:0}
+.ty-in{font:500 15px var(--fb);width:100%;min-height:42px;padding:0 12px;border-radius:12px;border:0;background:#fff;color:var(--ink)}
+.ty-row{display:flex;gap:8px;flex-wrap:wrap}
+.ty-b{align-self:flex-start;border:0;border-radius:999px;padding:9px 16px;font:600 14px var(--f);cursor:pointer;background:#fff;color:var(--pg,#00843b)}
+.ty-b.ghost{background:rgba(255,255,255,.16);color:#fff}
+.ty-qr{width:180px;height:180px;background:#fff;border-radius:12px;padding:6px}.ty-qr svg{width:100%;height:100%;display:block}
 .bw-mute{grid-column:1/-1;margin-top:6px;font:600 12.5px/1.3 var(--fb);color:var(--muted)}
 #w-print .bw-mute{color:#ffd8a8}
 #w-print .mf-x::before{border-color:#fff}
@@ -2092,9 +2102,9 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="tday-w" id="w-today"></div>
         </div>
         <div class="w" id="w-print">
-          <div class="w-h"><h2>3D принтеры <span class="c msum" id="w-print-m"></span></h2></div>
+          <div class="w-h"><h2>Оборудование в студии <span class="c msum" id="w-print-m"></span></h2></div>
           <div class="rk wk" id="w-print-k"></div>
-          <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем принтеры…</span></div></div>
+          <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем оборудование…</span></div></div>
           <div class="wfoot"><small class="bw-note" id="w-print-note"></small><a class="wlink" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">панель тревоги ↗</a></div>
         </div>
       </div>
@@ -6785,11 +6795,49 @@ const bwPStat=(l,v)=>`<div class="bw-stat"><span>${l}</span><em>${esc(v)}</em></
 /* Anycubic Kobra X: облака для него нет, его слушает бот на рабочем компьютере по сети студии (whatsapp-bot/anycubic.js)
    и кладёт сводку в Realtime Database sig/printers/anycubic — в том же виде, что и Bambu. Бот молчит больше 15 минут — данных нет. */
 let printS=null,printFail=false,acP,acOn=false;
+/* камера и датчики Smart Life: их тоже слушает бот на рабочем компьютере (whatsapp-bot/studio.js) → sig/studio */
+let stD;
 function acListen(){
   if(acOn)return;let r=null,u=null;try{r=rt();u=window.firebase&&firebase.auth&&firebase.auth().currentUser}catch(_){return} /* rt() объявлен ниже: до его строки просто ждём */
   if(!r||!u)return;acOn=true;
   r.ref('sig/printers/anycubic').on('value',x=>{acP=x.val()||null;renderPrinters()},()=>{acP=null;acOn=false});
+  r.ref('sig/studio').on('value',x=>{stD=x.val()||{};renderPrinters()},()=>{stD=undefined});
 }
+/* привязка Smart Life: код пользователя → бот просит QR → сканируют в приложении */
+let tyForm=false;
+async function tuyaLinkStart(){
+  const v=($('ty-code')||{}).value||'';if(!v.trim()){toast('Введите код пользователя из приложения');return}
+  try{await rt().ref('sig/studio/tuya/link').set({state:'wait',at:Date.now()});await rt().ref('sig/studio/tuya/req').set({userCode:v.trim(),at:Date.now()});tyForm=false;renderPrinters()}catch(e){toast('Не получилось: '+(e.message||e))}
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ty]');if(!b)return;e.preventDefault();e.stopPropagation();
+  const a=b.dataset.ty;if(a==='open'){tyForm=true;renderPrinters();setTimeout(()=>$('ty-code')&&$('ty-code').focus(),50)}else if(a==='go')tuyaLinkStart();else if(a==='cancel'){tyForm=false;try{rt().ref('sig/studio/tuya/link').set({state:'',at:Date.now()})}catch(_){}renderPrinters()}},true);
+function studioCards(){
+  const S=stD||{},cam=S.camera,ty=S.tuya||{},link=ty.link||{},devs=((ty.devices||{}).list)||[],old=t=>!t||Date.now()-t>15*6e4;
+  /* камера */
+  let camH,camOn=0,camN=0;
+  if(stD===undefined||!cam)camH=`<div class="bw-card bw-soon">${bwPIco('wait','--muted')}<div class="bw-head"><b><small class="bw-brand">Imou</small>Камера в мастерской</b><span class="bw-chip" style="--sc:var(--muted)">нет данных</span></div><div class="bw-info"><span class="bw-meta">ждём первую связь: камеру проверяет рабочий компьютер студии</span></div></div>`;
+  else{camN=1;const st=old(cam.at)?null:cam.online;if(st)camOn=1;const c=st===null?'--muted':st?'--ok':'--danger';
+    camH=`<div class="bw-card">${bwPIco(st?'ok':'off',c)}<div class="bw-head"><b><small class="bw-brand">${esc(cam.model||'Wi‑Fi камера')}</small>${esc(cam.name||'Камера')}</b><span class="bw-chip" style="--sc:var(${c})">${st===null?'нет данных':st?'в сети':'не в сети'}</span></div><div class="bw-info"><span class="bw-meta">${st===null?'рабочий компьютер студии не на связи':st?(cam.since?'включилась '+esc(printWhen(cam.since)):'работает')+' · смотреть в приложении Imou':esc(cam.problem||'')+(cam.lastOnline?', была в сети '+esc(printWhen(cam.lastOnline)):'')}</span></div></div>`}
+  /* датчики Smart Life */
+  const sens=devs.filter(d=>!/^(sp|dghsxj)$/.test(d.category)),stale=old((ty.devices||{}).at);
+  let alarm=0,sOn=0,senH='';
+  for(const d of sens){const s=d.status||{},smoke=['smoke_sensor_status','smoke_sensor_state'].map(k=>s[k]).find(v=>v!=null);
+    const al=smoke==='alarm'||smoke==='1'||smoke===true;const on=!stale&&d.online;if(on)sOn++;if(al&&!stale)alarm++;
+    const bat=s.battery_percentage!=null?s.battery_percentage+'%':s.battery_state?{low:'батарея садится',middle:'батарея: средне',high:'батарея в норме'}[s.battery_state]||'':'';
+    const lowB=(s.battery_percentage!=null&&+s.battery_percentage<=20)||s.battery_state==='low';
+    const c=al?'--danger':stale?'--muted':on?'--ok':'--danger',l=al?'ДЫМ!':stale?'нет данных':on?'всё спокойно':'не в сети';
+    senH+=`<div class="bw-card${al?' alert':''}">${bwPIco(al?'err':on?'ok':'off',c)}<div class="bw-head"><b><small class="bw-brand">Smart Life</small>${esc(d.name||'Датчик')}</b><span class="bw-chip${al?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${bat?bwPStat('Батарея',bat):''}${s.smoke_sensor_value!=null?bwPStat('Дым',s.smoke_sensor_value+' ppm'):''}</div>${al?'<div class="bw-err">Сработал датчик дыма: проверьте мастерскую!</div>':lowB?'<div class="bw-err warn">Батарея датчика почти села: замените батарейку</div>':''}</div>`}
+  if(!sens.length){
+    const lk=link.state==='qr'&&!old(link.at)?`<div class="ty-qr" id="ty-qr" data-qr="${esc(link.qr)}"></div><span class="bw-meta">Откройте Smart Life на телефоне → «+» вверху → «Сканировать» → наведите на этот QR-код и подтвердите вход. Код действует 5 минут.</span><button class="ty-b ghost" data-ty="cancel">Отмена</button>`
+      :link.state==='wait'&&!old(link.at)?`<span class="bw-meta">Готовим QR-код… рабочий компьютер студии должен быть включён</span>`
+      :tyForm?`<input id="ty-code" class="ty-in" placeholder="Код пользователя" autocomplete="off"><span class="bw-meta">Smart Life → «Профиль» → шестерёнка «Настройки» → «Аккаунт и безопасность» → «User Code»: скопируйте и вставьте сюда.</span><span class="ty-row"><button class="ty-b" data-ty="go">Получить QR-код</button><button class="ty-b ghost" data-ty="cancel">Отмена</button></span>`
+      :`${link.state==='error'?`<div class="bw-err">${esc(link.text||'Не получилось подключить')}</div>`:''}<button class="ty-b" data-ty="open">Подключить Smart Life</button>`;
+    senH=`<div class="bw-card ty">${bwPIco(link.state==='ok'?'wait':'off','--muted')}<div class="bw-head"><b><small class="bw-brand">Smart Life</small>Датчик дыма</b><span class="bw-chip" style="--sc:var(--muted)">${link.state==='ok'?'подключено':'не подключён'}</span></div><div class="bw-info ty-box">${link.state==='ok'?'<span class="bw-meta">Smart Life подключён, ждём первые данные датчика (до минуты)</span>':lk}</div></div>`}
+  return {camH,camOn,camN,senH,sOn,sN:sens.length,alarm};
+}
+const tyQrSvg={};
+function tyDrawQr(){const el=$('ty-qr');if(!el)return;const t=el.dataset.qr;if(tyQrSvg[t]){el.innerHTML=tyQrSvg[t];return}
+  loadQr().then(()=>{const q=qrcode(0,'M');q.addData(t);q.make();tyQrSvg[t]=q.createSvgTag({cellSize:5,margin:2,scalable:true});const e2=$('ty-qr');if(e2&&e2.dataset.qr===t)e2.innerHTML=tyQrSvg[t]}).catch(e=>{const e2=$('ty-qr');if(e2)e2.textContent=e.message})}
 function acPrinter(){
   if(acP===undefined)return null;
   const p=acP||{},stale=!p.at||Date.now()-p.at>15*6e4;
@@ -6809,7 +6857,7 @@ function renderPrinters(){
     const s=printS||{printers:[]},ac=acPrinter(),bambu=printFail?[]:(s.printers||[]).map(p=>({...p,brand:'Bambu Lab'})),all=[...bambu,...(ac?[ac]:[])];
     const ERR={noauth:'Вход в Bambu не выполнен',auth:'Вход в Bambu устарел, войдите заново',cloud:'Облако Bambu не ответило'};
     if(!printS&&!printFail&&!ac)return;
-    list.innerHTML=(printFail?'<div class="bw-card"><span class="bw-meta">Bambu Lab: нет связи с наблюдением, попробуем снова через минуту</span></div>':'')+(all.length?all.map(p=>{
+    const prHtml=(printFail?'<div class="bw-card"><span class="bw-meta">Bambu Lab: нет связи с наблюдением, попробуем снова через минуту</span></div>':'')+(all.length?all.map(p=>{
       const st=p.online&&p.state?PSTATE[String(p.state).toUpperCase()]:null;
       const er=p.online?perrText(p.error,p.errorText):'';
       const hm=p.online&&Array.isArray(p.hms)?p.hms:[];const hmTxt=hm.length?(hm.map(h=>h&&(h.text||h.ru)).filter(Boolean)[0]||'Есть предупреждения принтера: смотрите в Bambu Handy'):'';
@@ -6828,9 +6876,15 @@ function renderPrinters(){
       else{c='--ok';l='в сети';left=bwPIco('wait',c);info=`<span class="bw-meta">${p.since?'включился '+esc(printWhen(p.since)):'состояние печати пока неизвестно'}</span>`}
       return `<div class="bw-card${er?' alert':''}">${left}<div class="bw-head"><b><small class="bw-brand">${esc(p.brand||'')}</small>${esc(p.name)}</b><span class="bw-chip${live?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${info}</div>${p.muted?'<div class="bw-mute">🔕 тревога отключена вручную</div>':''}${er?`<div class="bw-err">${esc(er)}</div>`:hmTxt?`<div class="bw-err warn">${esc(hmTxt)}</div>`:''}</div>`;
     }).join(''):printFail?'':`<div class="bw-card"><span class="bw-meta">${esc(ERR[s.error]||'Принтеров нет')}</span></div>`);
+    /* раздел виджета «Оборудование в студии»: заголовок + карточки */
+    const sec=(t,n,h)=>`<div class="bw-sec"><span>${t}</span>${n?`<em>${n}</em>`:''}</div>${h}`;
+    const SD=studioCards(),keepIn=document.activeElement&&document.activeElement.id==='ty-code'?document.activeElement.value:null;
+    if(keepIn!==null)return; /* человек вводит код Smart Life — не перерисовываем под ним */
+    list.innerHTML=sec('3D принтеры',all.length?all.filter(p=>p.online).length+' из '+all.length+' в сети':'',prHtml)+sec('Камеры',SD.camN?SD.camOn+' из '+SD.camN+' в сети':'',SD.camH)+sec('Датчики',SD.sN?(SD.alarm?'тревога!':SD.sOn+' из '+SD.sN+' в сети'):'',SD.senH);
+    tyDrawQr();
     {const P=all,busy=P.filter(p=>p.online&&p.state&&PSTATE[String(p.state).toUpperCase()]?.busy).length,bad=P.filter(p=>p.online&&perrText(p.error,p.errorText)).length,on=P.filter(p=>p.online).length;
       rkFill('w-print-k',[[on+(P.length?'/'+P.length:''),'в сети'],[busy,'печатают'],[bad,'с ошибкой',bad>0]]);
-      $('w-print-m').textContent=bad?bad+' с ошибкой':busy?busy+' '+plural(busy,'печатает','печатают','печатают'):P.length?on+' из '+P.length+' в сети':''}
+      const SA=studioCards().alarm;$('w-print-m').textContent=SA?'ДЫМ!':bad?bad+' с ошибкой':busy?busy+' '+plural(busy,'печатает','печатают','печатают'):P.length?on+' из '+P.length+' в сети':''}
     note.textContent=printFail?'':[s.error&&(s.printers||[]).length?ERR[s.error]:'',s.pausedUntil?'тревога на паузе до '+bwPHM(s.pausedUntil):'',s.lastCheck?'Bambu: проверка '+printWhen(s.lastCheck):'автопроверка Bambu ещё не запускалась'].filter(Boolean).join(' · ');
   }catch(e){try{console.warn('printers',e)}catch(_){}}
   packHome();
