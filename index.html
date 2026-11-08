@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261107131000">
+<meta name="app-build" content="20261108150000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1141,6 +1141,13 @@ body.home-fit:has(#p-home:not([hidden]) #pack.flat){padding-bottom:16px}
 #w-kaspi .w-h h2 .c{overflow:hidden;text-overflow:ellipsis}
 #w-kaspi .go{text-decoration:none;white-space:nowrap;flex:none}
 #w-kaspi .kmark{width:30px;height:30px;flex:none;margin-right:-2px}
+/* окна заказов — тёмно-красные плитки, как тёмно-зелёные у 3D принтеров */
+#w-kaspi .kq{background:#b3200f;color:#fff;box-shadow:none}
+#w-kaspi .kq small{color:rgba(255,255,255,.8)}
+#w-kaspi .kq-r b{color:#fff}
+#w-kaspi .kq-st{background:#fff;color:var(--kr)}
+#w-kaspi .kq:hover{background:#9c1a0b;box-shadow:inset 0 0 0 2px rgba(255,255,255,.55)}
+#w-kaspi .kq:focus-visible{outline:2px solid #fff;outline-offset:2px}
 /* Принтеры: зелёная плитка Bambu Lab (оттенок темнее фирменного #00AE42, чтобы белый текст читался) */
 #w-print{--pg:#00843b;background:var(--pg);color:#fff}
 #w-print .w-h h2,#w-print .w-h h2 .c{color:#fff}
@@ -2086,7 +2093,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="w-h"><h2>3D принтеры <span class="c msum" id="w-print-m"></span></h2></div>
           <div class="rk wk" id="w-print-k"></div>
           <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем принтеры…</span></div></div>
-          <div class="wfoot"><small class="bw-note" id="w-print-note"></small><a class="wlink" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">вход в Bambu ↗</a></div>
+          <div class="wfoot"><small class="bw-note" id="w-print-note"></small><a class="wlink" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">панель тревоги ↗</a></div>
         </div>
       </div>
     </div>
@@ -6447,9 +6454,8 @@ function renderKaspiWidget(){
   if(kaspiDbErr){list.innerHTML=`<div class="w-empty">Нужно обновить правила базы Firestore (строка kaspi_orders). Подробности в разделе Kaspi.</div>`;$('w-kaspi-note').textContent='';return}
   const row=(k,st)=>`<button type="button" class="mrow kq" data-go="kaspi"><span class="kq-t"><b>${esc(kWhat(k))}</b><small>№ ${esc(k.code)}${k.transmitPlan&&st==='packing'?', передать до '+fmtDate(kDay(k.transmitPlan)):''}</small></span><span class="kq-r"><b>${money(k.total)}</b><span class="kq-st">${st==='packing'?'упаковать':'передать'}</span></span></button>`;
   const todo=[...g.packing.map(k=>row(k,'packing')),...g.handover.map(k=>row(k,'handover'))];
-  const kpA=kpAlerts(),kpR=kpReorders();
-  const cs=cnStats(),cnLine=cs.way.length||cs.ready.length?`<button type="button" class="mrow kq" data-go="kaspi" data-cngo="1"><span class="kq-t"><b>Из Китая: ${[cs.ready.length?'готово к выдаче '+cs.ready.length:'',cs.way.length?'едет '+cs.way.length:''].filter(Boolean).join(', ')}</b><small>${esc(cs.ready.length?'забрать: '+cs.ready.map(p=>p.title).slice(0,2).join(', '):'ближайшая ≈ '+fmtDate(cs.next.f.eta)+': '+(cs.next.p.title||'посылка'))}</small></span></button>`:'';
-  list.innerHTML=cnLine+(kpR.length?`<button type="button" class="mrow kq" data-go="kaspi" data-kpgo="reorder"><span class="kq-t"><b>Пора заказывать из Китая: ${kpR.length} ${plural(kpR.length,'товар','товара','товаров')}</b><small>${esc(kpR.slice(0,2).map(p=>p.name+' ~'+p.reorderQty+' шт').join(', '))}</small></span></button>`:'')+(kpA.length?`<button type="button" class="mrow kq" data-go="kaspi" data-kpalert><span class="kq-t"><b>У конкурентов дешевле: ${kpA.length} ${plural(kpA.length,'товар','товара','товаров')}</b><small>${esc(kpA.slice(0,2).map(p=>p.name).join(', '))}</small></span><span class="kq-r"><span class="kq-st">цены</span></span></button>`:'')+(todo.length?todo.slice(0,5).join(''):`<div class="w-empty">${kaspiSync.at?'Упаковывать сейчас нечего.':'Заказы с Kaspi подтянутся сюда сами.'}</div>`)
+  /* в виджете только заказы: Китай, «пора заказывать» и цены конкурентов живут в разделе Kaspi */
+  list.innerHTML=(todo.length?todo.slice(0,5).join(''):`<div class="w-empty">${kaspiSync.at?'Упаковывать сейчас нечего.':'Заказы с Kaspi подтянутся сюда сами.'}</div>`)
     +`<button type="button" class="kq-more" data-go="kaspi">${g.shipped.length?'В доставке '+g.shipped.length+', ждём '+money(g.shipped.reduce((s,k)=>s+kNet(k),0))+' · ':''}Все заказы Kaspi</button>`;
   const t=kaspiSync.at?new Date(kaspiSync.at):null;
   $('w-kaspi-note').textContent=kaspiSync.err?'⚠ '+kaspiSync.err:t?'Проверено в '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+', обновляется само каждые 10 минут.':'';
