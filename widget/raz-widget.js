@@ -14,7 +14,8 @@ async function RAZ_WIDGET(KEY, opts) {
   const K = /kas|кас/.test(kind) ? 'kaspi' : /task|зад/.test(kind) ? 'tasks' : /ord|вед|зак/.test(kind) ? 'orders' : /eq|обор|прин|print/.test(kind) ? 'equip' : 'all';
 
   /* ---------- цвета как в iOS (светлая и тёмная тема) ---------- */
-  const C = (l, d) => Color.dynamic(new Color(l), new Color(d));
+  // Всегда светлые (просьба Евгения 08.11): тёмный вариант не используем, даже если на iPhone тёмная тема
+  const C = (l) => new Color(l);
   const T = {
     bg: C('#FFFFFF', '#1C1C1E'), text: C('#000000', '#FFFFFF'), sub: C('#8E8E93', '#98989F'), line: C('#E5E5EA', '#38383A'),
     blue: C('#007AFF', '#0A84FF'), red: C('#FF3B30', '#FF453A'), orange: C('#FF9500', '#FF9F0A'), green: C('#34C759', '#30D158'),
