@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261109210000">
+<meta name="app-build" content="20261109213000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -7563,7 +7563,7 @@ async function openWidgets(renew){
   }catch(e){box().innerHTML='<p class="hint">Не получилось: '+esc(e.message||e)+'</p>';return}
   const pub=await r.ref('pub/'+wgtKey+'/at').get().then(x=>x.val()).catch(()=>null);
   const st=pub?(Date.now()-pub<20*6e4?'<b style="color:var(--ok,#34c759)">Сводка обновляется</b>, последний раз в '+new Date(pub).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'<b style="color:var(--warn,#ff9500)">Рабочий ПК давно не обновлял сводку</b> (последний раз '+new Date(pub).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+')')
-    :'<b style="color:var(--warn,#ff9500)">Сводки пока нет</b>: её делает бот на рабочем ПК. Если он включён, она появится в течение пары минут.';
+    :'<b style="color:var(--warn,#ff9500)">Сводки пока нет</b>: учёт отправит её через пару секунд после открытия этого окна.';
   const li=a=>'<ol class="wgt-ol">'+a.map(x=>'<li>'+x+'</li>').join('')+'</ol>';
   box().innerHTML=`<p class="hint">На экране телефона будут видны заказы Kaspi к отправке, задачи (просроченные красным), ведомость и принтеры. Нажатие открывает нужный раздел учёта. Денег и телефонов клиентов в виджетах нет. Бесплатно.</p>
     <p class="hint">${st}</p>
@@ -7572,9 +7572,62 @@ async function openWidgets(renew){
       <button class="btn primary" type="button" data-wgtcopy style="margin-top:6px">Скопировать скрипт</button><textarea id="wgt-code" readonly rows="3" style="margin-top:6px;width:100%;font:12px/1.4 ui-monospace,monospace;border-radius:12px;border:0;padding:8px;background:var(--paper);color:var(--ink)">${esc(wgtScript(wgtKey))}</textarea></div>
     <div class="sh-row" style="flex-direction:column;align-items:stretch;gap:4px"><b>3. Поставьте виджет на экран</b>${li(['Зажмите палец на пустом месте главного экрана, пока значки не задрожат.','Нажмите <b>«Изменить»</b> вверху слева → <b>«Добавить виджет»</b> (или «+»).','Найдите в списке <b>Scriptable</b>, выберите размер и нажмите <b>«Добавить виджет»</b>.','Нажмите на появившийся виджет (пока значки дрожат) → в строке <b>Script</b> выберите <b>Студия</b>.','В строке <b>Parameter</b> напишите, что показывать: <b>kaspi</b>, <b>tasks</b> (задачи), <b>orders</b> (ведомость) или <b>equip</b> (оборудование). Пусто — всё сразу.','Нажмите на пустое место — готово. Можно поставить несколько виджетов с разными словами.'])}</div>
     <div class="sh-row" style="flex-direction:column;align-items:stretch;gap:4px"><b>На экран блокировки</b>${li(['Зажмите палец на экране блокировки → <b>«Настроить»</b> → <b>«Экран блокировки»</b>.','Нажмите на поле виджетов под часами → <b>Scriptable</b> → выберите вид.','Нажмите на добавленный виджет → Script: <b>Студия</b>, Parameter: <b>kaspi</b>, <b>tasks</b>, <b>orders</b> или <b>equip</b>.'])}</div>
-    <p class="hint">Виджет обновляется примерно раз в 10–15 минут (так решает iPhone). Если скрипт попал к чужому человеку — смените ключ, старые виджеты перестанут работать.</p>
+    <p class="hint">Сводку для виджетов обновляет бот на рабочем ПК (круглосуточно), а ещё сам учёт, пока он открыт у вас или у Миланы. Виджет на iPhone перерисовывается примерно раз в 10–15 минут (так решает iPhone). Если скрипт попал к чужому человеку — смените ключ, старые виджеты перестанут работать.</p>
     <button class="btn danger" type="button" data-wgtnew>Сменить ключ</button>`;
 }
+/* Сводку для виджетов шлёт и сам учёт, пока он открыт (у руководителя или менеджера): данные уже в памяти,
+   лишних чтений Firestore нет. Тот же вид, что у бота на ПК (whatsapp-bot/widget.js) — кто свежее, тот и записал. */
+let wgtPubKey='',wgtLast='',wgtSent=0;
+function wgtSummary(){
+  const today=todayStr(),cut=(x,n)=>{x=String(x||'').replace(/\s+/g,' ').trim();return x.length>n?x.slice(0,n-1)+'…':x};
+  const kd=t=>{const d=new Date(+t);return isNaN(d)?'':d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+  /* Kaspi */
+  const ACT=['NEW','SIGN_REQUIRED','PICKUP','DELIVERY','KASPI_DELIVERY'];
+  const act=(kaspiOrders||[]).filter(k=>ACT.includes(k.state)&&!k.returned&&!['CANCELLED','CANCELLING','COMPLETED'].includes(k.status));
+  const shipped=k=>k.transmitted||((k.assembled||k.waybill)&&k.state!=='KASPI_DELIVERY');
+  const todo=act.filter(k=>!shipped(k)).sort((a,b)=>(+a.transmitPlan||+a.created||0)-(+b.transmitPlan||+b.created||0));
+  const what=k=>(k.items||[]).map(i=>cut(i.name||'товар',60)+(i.qty>1?' × '+i.qty:'')).join(', ')||'заказ '+k.code;
+  const kaspi=kaspiLoaded?{todo:todo.length,assemble:todo.filter(k=>!(k.assembled||k.waybill)).length,hand:todo.filter(k=>k.assembled||k.waybill).length,
+    today:todo.filter(k=>k.transmitPlan&&kd(k.transmitPlan)<=today).length,onWay:act.filter(shipped).length,at:Date.now(),err:0,
+    list:todo.slice(0,12).map(k=>({c:String(k.code||''),w:cut(what(k),90),s:k.assembled||k.waybill?'h':'a',p:+k.transmitPlan||0}))}:{err:1};
+  /* задачи — как блок «Задачи» на главной */
+  const open=tasks.filter(t=>!t.done),later=t=>t.showFrom&&t.showFrom>today;
+  const tl=open.filter(t=>isBossBlock(t)&&!later(t)).sort((a,b)=>String(a.date||'9').localeCompare(String(b.date||'9'))||String(a.time||'').localeCompare(String(b.time||'')));
+  /* ведомость */
+  const OPEN=['new','design','prod','ready'],ol=orders.filter(o=>OPEN.includes(o.status)&&!o.deletedAt).sort((a,b)=>String(a.deadline||'9').localeCompare(String(b.deadline||'9')));
+  const by={};for(const o of ol)by[o.status]=(by[o.status]||0)+1;
+  /* оборудование */
+  const one=(p,brand)=>{const st0=String(p.state||'').toUpperCase(),on=p.online!==false&&p.online!=null;
+    const st=!on?'off':(p.errorText||p.error)&&!['IDLE','FINISH'].includes(st0)?'err':['RUNNING','PRINTING'].includes(st0)?'print':['PAUSE','PAUSED'].includes(st0)?'pause':['PREPARE','SLICING'].includes(st0)?'prep':st0==='FAILED'?'err':st0==='FINISH'?'done':'idle';
+    const busy=['print','pause','prep'].includes(st),rem=busy&&p.remain!=null&&p.remain!==''?+p.remain:null;
+    return {n:cut(String(p.name||'Принтер').replace(/^Anycubic\s*/i,''),24),b:brand,st,pc:busy&&p.progress!=null&&p.progress!==''?Math.max(0,Math.min(100,Math.round(+p.progress))):null,
+      end:rem!=null?Math.round(((+p.updated||Date.now())+rem*6e4)/6e4)*6e4:null,e:st==='err'?cut(p.errorText||'ошибка',60):''}};
+  const el=[];if(printS&&!printFail)(printS.printers||[]).forEach(p=>el.push(one(p,'Bambu')));
+  if(acP){if(Date.now()-(+acP.at||0)<15*6e4)el.push(one(acP,'Anycubic'));else el.push({n:cut(String(acP.name||'Kobra X').replace(/^Anycubic\s*/i,''),24),b:'Anycubic',st:'off',pc:null,end:null,e:''})}
+  const S=stD||{},cam=S.camera,fresh=t=>t&&Date.now()-t<15*6e4,dv=(S.tuya||{}).devices||{},sens=(dv.list||[]).filter(d=>!/^(sp|dghsxj)$/.test(d.category));
+  let smoke=0,sOn=0;if(fresh(dv.at))for(const d of sens){const x=d.status||{},v=['smoke_sensor_status','smoke_sensor_state'].map(k=>x[k]).find(y=>y!=null);if(v==='alarm'||v==='1'||v===true)smoke++;if(d.online)sOn++}
+  return {v:1,kaspi,
+    tasks:{open:tl.length,late:tl.filter(t=>t.date&&t.date<today).length,today:open.filter(t=>!isBossBlock(t)&&t.date&&t.date<=today).length,
+      list:tl.slice(0,12).map(t=>({t:cut(t.title,80),d:t.date||'',tm:t.time||'',who:cut(t.who,20)}))},
+    orders:{open:ol.length,late:ol.filter(o=>o.deadline&&o.deadline<today&&o.status!=='ready').length,today:ol.filter(o=>o.deadline===today).length,by,
+      list:ol.slice(0,12).map(o=>({c:cut(o.client||'Без имени',30),w:cut(svcLabel(o.service,o),30),s:o.status,d:o.deadline||''}))},
+    equip:{list:el,cam:cam?(fresh(cam.at)?(cam.online?'on':'off'):'unk'):'',sens:sens.length,sOn,smoke,bambuErr:!printS||printFail}};
+}
+async function wgtPublish(){
+  try{
+    if(!wgtPubKey||!loaded||!tasksLoaded||document.hidden)return;
+    const r=rt();if(!r)return;
+    const d=wgtSummary(),j=JSON.stringify({...d,kaspi:{...d.kaspi,at:0}});
+    if(j===wgtLast&&Date.now()-wgtSent<10*6e4)return;
+    await r.ref('pub/'+wgtPubKey).set({...d,at:Date.now()});wgtLast=j;wgtSent=Date.now();
+  }catch(_){}
+}
+(function wgtStart(){
+  const go=()=>{const r=rt(),u=window.firebase&&firebase.auth&&firebase.auth().currentUser;if(!r||!u){setTimeout(go,3000);return}
+    r.ref('sig/widget/key').on('value',x=>{const k=String(x.val()||'');wgtPubKey=k.length>=24?k:'';wgtLast='';setTimeout(wgtPublish,1500)},()=>{});
+    setInterval(wgtPublish,2*6e4);document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(wgtPublish,1500)})};
+  setTimeout(go,4000);
+})();
 async function wgtCopy(){
   const t=wgtScript(wgtKey);
   try{await navigator.clipboard.writeText(t);toast('Скрипт скопирован. Теперь откройте Scriptable')}
