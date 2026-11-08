@@ -531,7 +531,7 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   if (!missing.length) extras = startExtras({ fs, env, log, notify, send, online: () => state.status === 'online' && !!sock, sock: () => sock, aiOn, DIR });
   // 3D-принтер Anycubic в мастерской: слушаем его по локальной сети и кладём состояние в учёт (виджет «3D принтеры»)
   if (!missing.length) { try { startAnycubic({ fs, env, log, DIR }); } catch (e) { log('Anycubic:', e?.message || e); } }
-  if (!missing.length) { try { startStudio({ fs, env, log, DIR }); } catch (e) { log('Оборудование:', e?.message || e); } }
+  if (!missing.length) { try { startStudio({ fs, env, log, DIR, alert: t => notify?.alert(t) }); } catch (e) { log('Оборудование:', e?.message || e); } }
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
   for (const f of ['brain.js', 'anna.js', 'notify.js', 'l7.js', 'extras.js', 'mockup.js', 'anycubic.js', 'studio.js', 'bot.js', '.env']) {
     watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
