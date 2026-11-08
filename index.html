@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261109200000">
+<meta name="app-build" content="20261109210000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -7318,7 +7318,9 @@ $('anna-ask').addEventListener('submit',async e=>{
 setInterval(()=>{if(!document.hidden&&!$('p-home').hidden)renderAnna()},60000);
 renderAnna();
 initPack();
-{const h=(location.hash||'').slice(1);go(['orders','kaspi','calendar','office','supplies','docs','projects','prices','analytics','anna','sasha','daulet'].includes(h)?h:'home')}
+{const h=(location.hash||'').slice(1);go(['orders','kaspi','calendar','office','supplies','docs','projects','prices','analytics','anna','sasha','daulet'].includes(h)?h:'home');
+ /* виджеты iPhone открывают учёт с #tasks / #equip — листаем главную к нужному блоку */
+ const sec={tasks:'boss-list',equip:'w-print-list'}[h];if(sec)setTimeout(()=>{const e=$(sec),c=e&&(e.closest('.mf,.card,.w,section')||e);if(c)c.scrollIntoView({behavior:'smooth',block:'start'})},700)}
 setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('input,select,textarea'))))render()},60000);
 </script>
 <style>
@@ -7336,6 +7338,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
 .sh-x{flex:none;width:44px;height:44px;border-radius:50%;background:var(--tile);font-size:22px;line-height:1}
 .sh p.hint{margin:0;color:var(--muted);font:400 14px/1.5 var(--fb)}
 .sh-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:var(--tile)}
+.wgt-ol{margin:6px 0 0;padding-left:20px;font:400 14px/1.5 var(--fb);color:var(--ink)}
 .sh-row .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .sh-row .t b{font:600 15px var(--f);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sh-row .t small{color:var(--muted);font:400 13px var(--fb)}
@@ -7528,6 +7531,55 @@ function purgeTrash(){
   trashOrders.filter(o=>Date.now()-o.deletedAt>TRASH_DAYS*864e5).forEach(o=>trashKill(o.id,true));
 }
 
+/* ---------- виджеты на экран iPhone (приложение Scriptable) ----------
+   Бот на рабочем ПК (whatsapp-bot/widget.js) раз в 2 минуты кладёт короткую сводку — Kaspi, задачи, ведомость,
+   оборудование, без денег и телефонов — в Realtime Database pub/<ключ>. Читать её можно только зная ключ.
+   Ключ создаётся здесь (sig/widget), а в телефон вставляется маленький скрипт-загрузчик: сам вид виджетов
+   он берёт из widget/raz-widget.js, поэтому обновления приходят без переустановки. */
+const WGT_LIB='https://razgulyaevevgeny.github.io/raz-studio-crm/widget/raz-widget.js';
+let wgtKey='';
+const wgtNewKey=()=>{const a=new Uint8Array(32);crypto.getRandomValues(a);const c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';return [...a].map(x=>c[x%c.length]).join('')};
+const wgtScript=k=>`// Учёт студии «Разгуляев» — виджеты: Kaspi, задачи, ведомость, оборудование.
+// Ключ ниже секретный: не пересылайте этот скрипт никому.
+const KEY = '${k}';
+const fm = FileManager.local(), lib = fm.joinPath(fm.documentsDirectory(), 'raz-widget-lib.js');
+let code = '';
+try { code = await new Request('${WGT_LIB}?t=' + Date.now()).loadString(); if (code.includes('RAZ_WIDGET')) fm.writeString(lib, code); else code = ''; } catch (e) {}
+if (!code && fm.fileExists(lib)) code = fm.readString(lib);
+if (!code) throw new Error('Нет интернета: виджет загрузится, когда связь появится');
+await new Function('KEY', code + '\\nreturn RAZ_WIDGET(KEY);')(KEY);
+`;
+async function openWidgets(renew){
+  sheet('Виджеты на iPhone','<p class="hint">Загружаем…</p>');
+  const r=rt();const box=()=>$('sh-body');
+  if(!r){box().innerHTML='<p class="hint">Нет связи с базой. Обновите страницу и попробуйте ещё раз.</p>';return}
+  try{
+    const cur=(await r.ref('sig/widget').get()).val()||{};
+    if(renew||!cur.key||cur.key.length<24){
+      const key=wgtNewKey();await r.ref('sig/widget').set({key,at:Date.now(),by:ROLE().name||''});
+      if(cur.key&&cur.key.length>=24)r.ref('pub/'+cur.key).remove().catch(()=>{});
+      wgtKey=key;if(renew)toast('Ключ сменён: вставьте новый скрипт в Scriptable')}
+    else wgtKey=cur.key;
+  }catch(e){box().innerHTML='<p class="hint">Не получилось: '+esc(e.message||e)+'</p>';return}
+  const pub=await r.ref('pub/'+wgtKey+'/at').get().then(x=>x.val()).catch(()=>null);
+  const st=pub?(Date.now()-pub<20*6e4?'<b style="color:var(--ok,#34c759)">Сводка обновляется</b>, последний раз в '+new Date(pub).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}):'<b style="color:var(--warn,#ff9500)">Рабочий ПК давно не обновлял сводку</b> (последний раз '+new Date(pub).toLocaleString('ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+')')
+    :'<b style="color:var(--warn,#ff9500)">Сводки пока нет</b>: её делает бот на рабочем ПК. Если он включён, она появится в течение пары минут.';
+  const li=a=>'<ol class="wgt-ol">'+a.map(x=>'<li>'+x+'</li>').join('')+'</ol>';
+  box().innerHTML=`<p class="hint">На экране телефона будут видны заказы Kaspi к отправке, задачи (просроченные красным), ведомость и принтеры. Нажатие открывает нужный раздел учёта. Денег и телефонов клиентов в виджетах нет. Бесплатно.</p>
+    <p class="hint">${st}</p>
+    <div class="sh-row" style="flex-direction:column;align-items:stretch;gap:4px"><b>1. Установите приложение</b>${li(['Откройте App Store, найдите <b>Scriptable</b> (бесплатное, значок — белые фигурные скобки на синем) и установите.'])}</div>
+    <div class="sh-row" style="flex-direction:column;align-items:stretch;gap:4px"><b>2. Вставьте скрипт</b>${li(['Нажмите кнопку <b>«Скопировать скрипт»</b> ниже.','Откройте Scriptable → <b>«+»</b> вверху справа.','Нажмите на пустой экран → <b>«Вставить»</b>.','Нажмите на название вверху (Untitled Script) и назовите <b>Студия</b>.','Нажмите <b>«Готово»</b> (Done) вверху слева.'])}
+      <button class="btn primary" type="button" data-wgtcopy style="margin-top:6px">Скопировать скрипт</button><textarea id="wgt-code" readonly rows="3" style="margin-top:6px;width:100%;font:12px/1.4 ui-monospace,monospace;border-radius:12px;border:0;padding:8px;background:var(--paper);color:var(--ink)">${esc(wgtScript(wgtKey))}</textarea></div>
+    <div class="sh-row" style="flex-direction:column;align-items:stretch;gap:4px"><b>3. Поставьте виджет на экран</b>${li(['Зажмите палец на пустом месте главного экрана, пока значки не задрожат.','Нажмите <b>«Изменить»</b> вверху слева → <b>«Добавить виджет»</b> (или «+»).','Найдите в списке <b>Scriptable</b>, выберите размер и нажмите <b>«Добавить виджет»</b>.','Нажмите на появившийся виджет (пока значки дрожат) → в строке <b>Script</b> выберите <b>Студия</b>.','В строке <b>Parameter</b> напишите, что показывать: <b>kaspi</b>, <b>tasks</b> (задачи), <b>orders</b> (ведомость) или <b>equip</b> (оборудование). Пусто — всё сразу.','Нажмите на пустое место — готово. Можно поставить несколько виджетов с разными словами.'])}</div>
+    <div class="sh-row" style="flex-direction:column;align-items:stretch;gap:4px"><b>На экран блокировки</b>${li(['Зажмите палец на экране блокировки → <b>«Настроить»</b> → <b>«Экран блокировки»</b>.','Нажмите на поле виджетов под часами → <b>Scriptable</b> → выберите вид.','Нажмите на добавленный виджет → Script: <b>Студия</b>, Parameter: <b>kaspi</b>, <b>tasks</b>, <b>orders</b> или <b>equip</b>.'])}</div>
+    <p class="hint">Виджет обновляется примерно раз в 10–15 минут (так решает iPhone). Если скрипт попал к чужому человеку — смените ключ, старые виджеты перестанут работать.</p>
+    <button class="btn danger" type="button" data-wgtnew>Сменить ключ</button>`;
+}
+async function wgtCopy(){
+  const t=wgtScript(wgtKey);
+  try{await navigator.clipboard.writeText(t);toast('Скрипт скопирован. Теперь откройте Scriptable')}
+  catch(_){const a=$('wgt-code');if(a){a.focus();a.select();try{document.execCommand('copy');toast('Скрипт скопирован')}catch(e){toast('Выделите текст в поле и скопируйте')}}}
+}
 /* ---------- сотрудники: кому открыт доступ к учёту ---------- */
 let staffReq=[],staffOk=new Set();
 async function openStaff(){
@@ -7545,7 +7597,7 @@ function renderStaff(){
     return `<div class="sh-row"><div class="t"><b>${esc(x.name||x.email)}</b><small>${esc(x.email)} · заходил ${f(x.at)}</small></div><button class="sw" type="button" role="switch" aria-checked="${on}" aria-label="Доступ для ${esc(x.email)}" data-staff="${esc(x.uid)}" ${me?'disabled':''}></button></div>`}).join('');
   const box=$('sh-body');if(!box)return;
   box.innerHTML=(rows||'<p class="hint">Пока никто не заходил.</p>')+
-    `<button class="btn soft" type="button" id="backup-btn" style="margin-top:8px">Скачать копию всей базы</button>`;
+    `<button class="btn soft" type="button" id="backup-btn" style="margin-top:8px">Скачать копию всей базы</button><button class="btn soft" type="button" data-wgt>📱 Виджеты на iPhone</button>`;
 }
 async function toggleStaff(uid){
   const x=staffReq.find(r=>r.uid===uid);if(!x)return;
@@ -7686,7 +7738,8 @@ function openMore(){
   const pills=[...document.querySelectorAll('.pills [data-go]')];
   const who=document.querySelector('.who-pill');
   sheet('Разделы',`<div class="more-g">${pills.map(p=>`<button type="button" class="${p.dataset.go===page?'on':''}" data-mgo="${p.dataset.go}">${(p.querySelector('.pi')||{outerHTML:''}).outerHTML}${esc((p.querySelector('.ls')||p.querySelector('.lf')||p).textContent.replace(/\d+$/,'').trim())}</button>`).join('')}</div>
-    <div class="sh-row" style="margin-top:6px"><div class="t"><b>${esc(who?who.textContent:'')}</b><small>${esc((firebase.auth().currentUser||{}).email||'')}</small></div><div class="a">${isBoss()?'<button class="btn white" type="button" data-mstaff>Сотрудники</button>':''}<button class="btn danger" type="button" data-mout>Выйти</button></div></div>`);
+    <div class="sh-row" style="margin-top:6px"><div class="t"><b>${esc(who?who.textContent:'')}</b><small>${esc((firebase.auth().currentUser||{}).email||'')}</small></div><div class="a">${isBoss()?'<button class="btn white" type="button" data-mstaff>Сотрудники</button>':''}<button class="btn danger" type="button" data-mout>Выйти</button></div></div>
+    ${isBoss()?'<button class="btn soft" type="button" data-wgt style="margin-top:6px">📱 Виджеты на iPhone</button>':''}`);
 }
 
 /* ---------- нет интернета или запись не прошла — говорим об этом прямо ---------- */
@@ -7708,6 +7761,9 @@ document.addEventListener('click',e=>{
   if(t.closest('.who-pill.adm')||t.closest('[data-mstaff]')){openStaff();return}
   const sw=t.closest('[data-staff]');if(sw){toggleStaff(sw.dataset.staff);return}
   if(t.closest('#backup-btn')){downloadBackup();return}
+  if(t.closest('[data-wgt]')){openWidgets();return}
+  if(t.closest('[data-wgtcopy]')){wgtCopy();return}
+  const wn=t.closest('[data-wgtnew]');if(wn){if(wn.dataset.sure){openWidgets(true)}else{wn.dataset.sure=1;wn.textContent='Точно? Старые виджеты перестанут работать'}return}
   const cf=t.closest('[data-clf]');if(cf){clView.f=cf.dataset.clf;render();return}
   const co=t.closest('[data-clopen]');if(co){view={f:'all',svc:'all',q:co.dataset.clopen,day:''};$('q').value=co.dataset.clopen;go('orders');return}
   if(t.closest('#cl-csv')){clientsCsv();return}
