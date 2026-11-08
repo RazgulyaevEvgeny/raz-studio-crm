@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4358ef">
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261108200000">
+<meta name="app-build" content="20261108210000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1220,6 +1220,10 @@ body.home-fit:has(#p-home:not([hidden]) #pack.flat){padding-bottom:16px}
 #w-print .bw-chip{background:#fff}
 #w-print .bw-err,#w-print .bw-err.warn{background:#fff}
 #w-print .bw-note{color:#fff;opacity:.92}
+.bw-sec{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:8px 4px -2px;font:700 12.5px/1.2 var(--f);letter-spacing:.05em;text-transform:uppercase}
+.bw-sec:first-child{margin-top:0}.bw-sec em{font-style:normal;font-weight:600;letter-spacing:0;text-transform:none;opacity:.8}
+#w-print .bw-sec{color:#fff;opacity:.9}
+#w-print .bw-soon{opacity:.75}
 .bw-mute{grid-column:1/-1;margin-top:6px;font:600 12.5px/1.3 var(--fb);color:var(--muted)}
 #w-print .bw-mute{color:#ffd8a8}
 #w-print .mf-x::before{border-color:#fff}
@@ -2092,9 +2096,9 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
           <div class="tday-w" id="w-today"></div>
         </div>
         <div class="w" id="w-print">
-          <div class="w-h"><h2>3D принтеры <span class="c msum" id="w-print-m"></span></h2></div>
+          <div class="w-h"><h2>Оборудование в студии <span class="c msum" id="w-print-m"></span></h2></div>
           <div class="rk wk" id="w-print-k"></div>
-          <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем принтеры…</span></div></div>
+          <div class="bw-list" id="w-print-list"><div class="bw-card"><span class="bw-meta">Проверяем оборудование…</span></div></div>
           <div class="wfoot"><small class="bw-note" id="w-print-note"></small><a class="wlink" id="w-print-go" href="https://bambu-watch.design-onegin.workers.dev/" target="_blank" rel="noopener">панель тревоги ↗</a></div>
         </div>
       </div>
@@ -6809,7 +6813,7 @@ function renderPrinters(){
     const s=printS||{printers:[]},ac=acPrinter(),bambu=printFail?[]:(s.printers||[]).map(p=>({...p,brand:'Bambu Lab'})),all=[...bambu,...(ac?[ac]:[])];
     const ERR={noauth:'Вход в Bambu не выполнен',auth:'Вход в Bambu устарел, войдите заново',cloud:'Облако Bambu не ответило'};
     if(!printS&&!printFail&&!ac)return;
-    list.innerHTML=(printFail?'<div class="bw-card"><span class="bw-meta">Bambu Lab: нет связи с наблюдением, попробуем снова через минуту</span></div>':'')+(all.length?all.map(p=>{
+    const prHtml=(printFail?'<div class="bw-card"><span class="bw-meta">Bambu Lab: нет связи с наблюдением, попробуем снова через минуту</span></div>':'')+(all.length?all.map(p=>{
       const st=p.online&&p.state?PSTATE[String(p.state).toUpperCase()]:null;
       const er=p.online?perrText(p.error,p.errorText):'';
       const hm=p.online&&Array.isArray(p.hms)?p.hms:[];const hmTxt=hm.length?(hm.map(h=>h&&(h.text||h.ru)).filter(Boolean)[0]||'Есть предупреждения принтера: смотрите в Bambu Handy'):'';
@@ -6828,6 +6832,10 @@ function renderPrinters(){
       else{c='--ok';l='в сети';left=bwPIco('wait',c);info=`<span class="bw-meta">${p.since?'включился '+esc(printWhen(p.since)):'состояние печати пока неизвестно'}</span>`}
       return `<div class="bw-card${er?' alert':''}">${left}<div class="bw-head"><b><small class="bw-brand">${esc(p.brand||'')}</small>${esc(p.name)}</b><span class="bw-chip${live?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${info}</div>${p.muted?'<div class="bw-mute">🔕 тревога отключена вручную</div>':''}${er?`<div class="bw-err">${esc(er)}</div>`:hmTxt?`<div class="bw-err warn">${esc(hmTxt)}</div>`:''}</div>`;
     }).join(''):printFail?'':`<div class="bw-card"><span class="bw-meta">${esc(ERR[s.error]||'Принтеров нет')}</span></div>`);
+    /* раздел виджета «Оборудование в студии»: заголовок + карточки */
+    const sec=(t,n,h)=>`<div class="bw-sec"><span>${t}</span>${n?`<em>${n}</em>`:''}</div>${h}`;
+    const soon=t=>`<div class="bw-card bw-soon">${bwPIco('wait','--muted')}<div class="bw-head"><b>${t}</b><span class="bw-chip" style="--sc:var(--muted)">скоро</span></div><div class="bw-info"><span class="bw-meta">подключаем к учёту</span></div></div>`;
+    list.innerHTML=sec('3D принтеры',all.length?all.filter(p=>p.online).length+' из '+all.length+' в сети':'',prHtml)+sec('Камеры','',soon('Wi‑Fi камера'))+sec('Датчики','',soon('Датчик дыма'));
     {const P=all,busy=P.filter(p=>p.online&&p.state&&PSTATE[String(p.state).toUpperCase()]?.busy).length,bad=P.filter(p=>p.online&&perrText(p.error,p.errorText)).length,on=P.filter(p=>p.online).length;
       rkFill('w-print-k',[[on+(P.length?'/'+P.length:''),'в сети'],[busy,'печатают'],[bad,'с ошибкой',bad>0]]);
       $('w-print-m').textContent=bad?bad+' с ошибкой':busy?busy+' '+plural(busy,'печатает','печатают','печатают'):P.length?on+' из '+P.length+' в сети':''}
