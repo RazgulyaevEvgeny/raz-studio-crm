@@ -1,0 +1,170 @@
+/* ===== Стиль «Стекло» (как в iOS): полупрозрачные карточки на мягком голубом фоне.
+   Две темы: светлая и ночная (html.dark). Переключатель — солнце/луна в меню.
+   Файл подключается последним и только перекрашивает существующие блоки. ===== */
+:root{
+  --blue:#3d5afe; --blue-d:#2f4ae6; --ink:#0b1230; --muted:#5a6182; --line:rgba(11,18,48,.09);
+  --paper:rgba(255,255,255,.78); --tile:rgba(255,255,255,.5); --tile-2:rgba(255,255,255,.78);
+  --g-bg:linear-gradient(170deg,#eef3ff 0%,#e3ebff 55%,#d9e4ff 100%);
+  --g-card:rgba(255,255,255,.52); --g-edge:rgba(255,255,255,.85); --g-hi:inset 0 1px 0 rgba(255,255,255,.95);
+  --g-sh:0 10px 28px rgba(40,60,140,.08); --g-row:rgba(255,255,255,.66); --g-row-edge:rgba(255,255,255,.92);
+  --g-panel:rgba(246,248,255,.86); --g-bar:rgba(255,255,255,.72); --g-faint:rgba(11,18,48,.07);
+  --g-kaspi:#f14635; --g-ok:#1f9d5a;
+}
+html.dark{
+  --blue:#6f86ff; --blue-d:#5b73f5; --ink:#eef1ff; --muted:rgba(214,221,255,.62); --line:rgba(255,255,255,.09);
+  --paper:rgba(255,255,255,.07); --tile:rgba(34,42,80,.5); --tile-2:rgba(58,68,112,.6);
+  --st-done:#9aa2c6; --danger:#ff5a5f; --ok:#34c76f; --st-ready:#34c76f; --st-prod:#ffab2e; --boss:#ffab2e;
+  --g-bg:linear-gradient(170deg,#0f1532 0%,#0a0f25 60%,#070b1c 100%);
+  --g-card:rgba(30,38,74,.55); --g-edge:rgba(255,255,255,.08); --g-hi:inset 0 1px 0 rgba(255,255,255,.07);
+  --g-sh:0 10px 30px rgba(0,0,0,.35); --g-row:rgba(255,255,255,.055); --g-row-edge:rgba(255,255,255,.07);
+  --g-panel:rgba(20,26,54,.92); --g-bar:rgba(22,28,58,.78); --g-faint:rgba(255,255,255,.09);
+  color-scheme:dark;
+}
+html{background:#e6edff}
+html.dark{background:#0a0f25}
+body{background:var(--g-bg) fixed;min-height:100vh;font-family:-apple-system,"SF Pro Text",var(--fb)}
+html.dark body{color:var(--ink)}
+
+/* стеклянные карточки */
+.w,.stat,#hx-bar>.hx,.kpi,.pf,.legal-row,.ph-card,.sk-card,
+.page>section:not(.page),.cal-wrap,.mcal,.of-card{
+  background:var(--g-card)!important;-webkit-backdrop-filter:blur(26px) saturate(170%);backdrop-filter:blur(26px) saturate(170%);
+  border:1px solid var(--g-edge);box-shadow:var(--g-hi),var(--g-sh)}
+.w,.stat,#hx-bar>.hx{border-radius:24px}
+@media(hover:hover){.stat:hover,.w.link:hover{background:var(--tile-2)!important}}
+.stat.on{box-shadow:var(--g-hi),inset 0 0 0 2px var(--sa),var(--g-sh)}
+
+/* строки внутри карточек: светлое стекло потолще */
+.mrow,.bw-card,.tday,.task,.btask,.kq,.w-empty,.an-say,.k3>div,.rk>.k,.reqbox,.dsec{
+  background:var(--g-row)!important;box-shadow:inset 0 0 0 1px var(--g-row-edge)}
+.mrow:hover{box-shadow:inset 0 0 0 2px var(--blue)}
+
+/* кнопки */
+.btn.primary,.fab{background:linear-gradient(180deg,#5b76ff,#3d5afe);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 16px rgba(61,90,254,.28)}
+.btn.primary:hover{background:linear-gradient(180deg,#506cff,#2f4ae6)}
+.btn.soft,.go,.btn.white{background:var(--g-row);box-shadow:inset 0 0 0 1px var(--g-row-edge)}
+.go:hover{background:var(--blue);color:#fff}
+.btn.outline{background:transparent}
+
+/* поля ввода */
+.fld input,.fld select,.fld textarea,.search input,input.in,select.in{background:var(--g-row);box-shadow:inset 0 0 0 1px var(--g-row-edge)}
+html.dark .fld input::placeholder,html.dark .fld textarea::placeholder{color:rgba(214,221,255,.4)}
+html.dark select option{background:#151b3a;color:#eef1ff}
+
+/* боковые окна, листы снизу, окна */
+.ed-panel,.sh,.dpick,.cs-pop,.menu-pop{background:var(--g-panel)!important;-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);border:1px solid var(--g-edge)}
+.ed{background:rgba(10,15,40,.18)}
+html.dark .ed{background:rgba(0,0,0,.35)}
+.toast{background:rgba(11,18,48,.9);color:#fff;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+html.dark .toast{background:rgba(238,241,255,.92);color:#0b1230}
+html.dark .tab[aria-selected="true"],html.dark .seg button[aria-pressed="true"],html.dark #an-tip{background:#eef1ff;color:#0b1230}
+
+/* меню слева на компьютере: плавающая стеклянная панель */
+@media(min-width:1100px){
+  body{padding-left:128px}
+  .nav .pills{left:12px;top:12px;bottom:12px;width:88px;border-radius:24px;background:var(--g-bar)!important;-webkit-backdrop-filter:blur(30px) saturate(170%);backdrop-filter:blur(30px) saturate(170%);border:1px solid var(--g-edge);box-shadow:var(--g-hi),var(--g-sh);padding:70px 8px 10px}
+  .nav .logo{left:34px;top:24px;width:44px;height:44px}
+  .nav .pills .pill{border-radius:14px}
+  .nav .pills .pill:hover{background:var(--g-row)}
+  .nav .pills .pill.on{background:var(--g-row);box-shadow:inset 0 0 0 1px var(--g-row-edge),0 4px 14px rgba(40,60,140,.1)}
+  .nav .pills .pill.on::before{display:none}
+  .nav .pills .theme-pill{order:90;margin-top:auto;min-height:50px}
+  .nav .pills .who-pill{order:91;margin-top:4px!important}
+  .nav .pills .logout{order:92}
+  #p-home .ph h1{font-size:30px}
+  #p-home .stat{min-height:118px}
+}
+/* телефон и планшет: пилюли разделов — стекло */
+.pill{background:var(--g-row);box-shadow:inset 0 0 0 1px var(--g-row-edge)}
+.pill.on{background:var(--blue)}
+@media(min-width:1100px){.nav .pills .pill{box-shadow:none;background:transparent}}
+
+/* нижнее меню телефона: плавающая стеклянная капсула */
+@media(max-width:560px){
+  .bnav{left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border-radius:30px;padding:6px 4px;background:var(--g-bar)!important;-webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);border:1px solid var(--g-edge);box-shadow:var(--g-hi),0 10px 30px rgba(20,30,90,.18)}
+  body{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+  .net-bar{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+}
+
+/* переключатель темы */
+.theme-pill .pi{display:block}
+.theme-pill .t-moon{display:none!important}
+html.dark .theme-pill .t-moon{display:inline!important}html.dark .theme-pill svg.t-moon{display:block!important}
+html.dark .theme-pill .t-sun{display:none!important}
+.theme-fab{display:none}
+@media(max-width:560px){
+  .theme-fab{display:grid;place-items:center;position:absolute;top:14px;right:16px;width:40px;height:40px;border-radius:50%;background:var(--g-row);box-shadow:inset 0 0 0 1px var(--g-row-edge),var(--g-sh);color:var(--ink);z-index:5}
+  .theme-fab svg{width:20px;height:20px}
+  .theme-fab .t-moon{display:none}
+  html.dark .theme-fab .t-sun{display:none}
+  html.dark .theme-fab .t-moon{display:block}
+}
+html.dark .logo{color:#fff}
+html.dark .nav .logo{color:var(--blue)}
+
+/* ===== Kaspi и оборудование: тоже стекло, без сплошной заливки ===== */
+#w-kaspi,#w-print{color:var(--ink)}
+#w-kaspi .w-h h2,#w-kaspi .w-h h2 .c,#w-print .w-h h2,#w-print .w-h h2 .c{color:var(--ink)}
+#w-kaspi .w-h h2 .c,#w-print .w-h h2 .c{color:var(--muted);opacity:1}
+#w-kaspi .kmark{width:28px;height:28px;padding:4px;border-radius:8px;background:var(--g-kaspi);box-sizing:border-box}
+#w-kaspi .rq-imp{background:var(--g-row);color:var(--ink);box-shadow:inset 0 0 0 1px var(--g-row-edge)}
+#w-kaspi .rq-imp:hover{background:var(--g-kaspi);color:#fff}
+#w-kaspi .go,#w-print .go{color:var(--blue)}
+#w-kaspi .w-empty{color:var(--muted)}
+#w-kaspi .bw-note,#w-print .bw-note{color:var(--muted);opacity:1}
+#w-kaspi .kq{color:var(--ink)}
+#w-kaspi .kq small{color:var(--muted)}
+#w-kaspi .kq-r b{color:var(--ink)}
+#w-kaspi .kq-st{background:color-mix(in srgb,var(--g-kaspi) 14%,transparent);color:var(--g-kaspi)}
+#w-kaspi .kq:hover{background:var(--tile-2)!important;box-shadow:inset 0 0 0 2px var(--g-kaspi)}
+#w-kaspi .wlink,#w-print .wlink{color:var(--blue)}
+#w-print .bw-card{color:var(--ink)}
+#w-print .bw-card.alert{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--danger) 55%,transparent)}
+#w-print .bw-brand,#w-print .bw-meta{color:var(--muted);opacity:1}
+#w-print .bw-sec{color:var(--muted)}
+#w-print .bw-stat{background:var(--g-faint)}
+#w-print .bw-chip{background:color-mix(in srgb,var(--sc) 14%,transparent);color:var(--sc)}
+#w-print .bmark{filter:none}
+html:not(.dark) #w-print .bmark{filter:invert(1) brightness(.2)}
+.rk.wk .k b{color:var(--ink)}.rk.wk .k span{color:var(--muted)}.rk.wk .k.hot b{color:var(--danger)}
+#w-print .bw-stat span{color:var(--muted)}
+#w-print .bw-stat em{color:var(--ink)}
+#w-print .bw-ring .bg{stroke:var(--g-faint)}
+#w-print .bw-ring .fg{stroke:var(--sc,var(--g-ok))}
+#w-print .bw-card.alert .bw-ring .fg{stroke:var(--danger)}
+#w-print .bw-ring b,#w-print .bw-ring b small{color:var(--ink)}
+#w-print .bw-ring.ico{background:var(--g-faint)}
+#w-print .bw-ring.ico svg{color:var(--sc,var(--g-ok))}
+#w-print .bw-err,#w-print .bw-err.warn{background:color-mix(in srgb,var(--danger) 10%,transparent)}
+#w-print .bw-mute{color:var(--st-prod)}
+#pack .w.mfold#w-kaspi .mf-x::before,#pack .w.mfold#w-print .mf-x::before{border-color:var(--muted)}
+#pack :is(#w-kaspi,#w-print) .mf-x{background:var(--g-row)}
+
+/* ===== инфографика в плитках сводки ===== */
+.ig{order:4;margin-top:auto;display:flex;flex-direction:column;gap:5px;font:500 11.5px/1.25 var(--fb);color:var(--muted);min-width:0}
+.ig-seg{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;background:var(--g-faint)}
+.ig-seg i{display:block;height:100%;min-width:3px}
+.ig-lg{display:flex;flex-wrap:wrap;gap:2px 10px;white-space:nowrap}
+.ig-lg span{display:inline-flex;align-items:center;gap:4px}
+.ig-lg i{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
+.stat .ig b,.stat .ig em{font:700 11.5px/1.25 var(--fb);letter-spacing:0;margin:0;color:var(--ink);white-space:nowrap}
+.stat .ig em.up{color:var(--ok)}.stat .ig em.dn{color:var(--danger)}
+.stat:has(.ig) small.net{display:none}
+.ig-cmp{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 8px;align-items:center}
+.ig-cmp .tr{display:flex;flex-direction:column;gap:2px}
+.ig-cmp .tr i{display:block;height:4px;border-radius:2px;min-width:2px}
+.ig-cmp .tr i.p{background:color-mix(in srgb,var(--muted) 55%,transparent)}
+.ig-cmp em{font-style:normal;font-weight:700;color:var(--ink)}
+.ig-cmp em.up{color:var(--ok)}.ig-cmp em.dn{color:var(--danger)}
+.stat .st-g{display:none}
+/* в плитках со своей инфографикой столбики не нужны */
+.stat:has(.ig) svg.spark{display:none}
+/* метка «сколько месяца прошло» в кольцах плана */
+.hx-d .hx-now{stroke:var(--ink);opacity:.7}
+
+/* телефон: всё то же, плитки сводки по две */
+@media(max-width:560px){
+  .ig-lg{gap:2px 8px}
+}
+.ig-lg{white-space:normal}.ig-lg span{white-space:nowrap}.ig-lg span:only-child{white-space:normal;display:block}
+#w-kaspi .kq-more{color:var(--blue)}
