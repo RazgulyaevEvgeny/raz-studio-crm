@@ -671,3 +671,20 @@ html.dark .hq-wx{background:linear-gradient(170deg,#1f3a66,#16294a)!important}
 .hq-wd .rng{position:relative;height:5px;border-radius:3px;background:rgba(0,0,0,.18)}
 .hq-wd .rng i{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#8fd3ff,#ffd166)}
 @media(max-width:699px){.hq-wd{grid-template-columns:64px 24px 36px 1fr 36px;font-size:14.5px}.hq-wt{font-size:46px}}
+/* погода на телефоне: компактно — строка с температурой и полоска из 7 дней */
+.hq-wstrip{display:none}
+@media(max-width:699px){
+  .hq-wx{padding:10px 12px!important;border-radius:18px!important}
+  .hq-wds{display:none}
+  .hq-wtop{align-items:center}
+  .hq-wtop>div{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+  .hq-wx .hq-l{display:none}
+  .hq-wt{font-size:28px;font-weight:400;margin:0}
+  .hq-wx .hq-sub{margin:0;font-size:12.5px}
+  .hq-wi{font-size:26px}
+  .hq-wstrip{display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:.5px solid rgba(255,255,255,.3)}
+  .hq-wstrip span{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1}
+  .hq-wstrip small{font:500 11px var(--f);color:rgba(255,255,255,.8)}
+  .hq-wstrip i{font-style:normal;font-size:15px;line-height:1.2}
+  .hq-wstrip b{font:600 12.5px var(--f)}
+}
