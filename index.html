@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261110150000">
+<meta name="app-build" content="20261110151500">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -3599,32 +3599,28 @@ function hmRender(){
   const later=x=>!x.done&&x.showFrom&&x.showFrom>t,bo=tasks.filter(x=>isBossBlock(x)&&!x.done&&!later(x)),bl=bo.filter(x=>x.date&&x.date<t).length,tsOpen=ts.filter(x=>!x.done&&!isBossBlock(x)).length;
   const task=`<button type="button" class="hm-c" data-hmgo="tasks"><span class="hm-l" style="--c:var(--boss,#ff9500)">Задачи</span><span class="hm-n"><b>${bo.length}</b><small>${bo.length?plural(bo.length,'открыта','открыты','открыто'):'открытых нет'}</small></span><span class="hm-f">${bl?`<span class="hm-late">просрочено ${bl}</span>`:''}${tsOpen?`<span>дел на сегодня: ${tsOpen}</span>`:''}${canWrite?'<span class="hm-add" data-hmtask>+ Задача</span>':''}</span></button>`;
   hmEls.w.innerHTML=plan+today+work+task;
-  /* вместо денег: студия сейчас, загрузка недели, готовые заказы */
-  hmEls.m.innerHTML=`<div class="hx-2"><div class="hx-c hx-now" id="hx-now">${hxNowHtml()}</div>${hxLoadHtml()}</div>${hxReadyHtml()}`;
+  /* вместо денег: погода на неделю, загрузка недели, готовые заказы */
+  hmEls.m.innerHTML=`<div class="hq-c hq-wx" id="hq-wx">${hxWxHtml()}</div>${hxLoadHtml()}${hxReadyHtml()}`;
   hxWeather();
 }
-/* график студии: пн–чт 11–19, пт 11–17, обед 13–14, сб–вс выходной */
-function hxNowHtml(){
-  const n=new Date(),wd=n.getDay(),min=n.getHours()*60+n.getMinutes(),open=11*60,close=wd===5?17*60:19*60,work=wd>=1&&wd<=5;
-  const hm=m=>{const h=Math.floor(m/60),mm=m%60;return (h?h+' ч ':'')+(mm||!h?mm+' мин':'')};
-  let big,sub,pct=0,st='';
-  if(work&&min>=open&&min<close){
-    if(min>=13*60&&min<14*60){big='Обед';sub='до 14:00, ещё '+hm(14*60-min);st='lunch'}
-    else{big=hm(close-min);sub='до конца дня, закрываемся в '+(close/60)+':00';st='open'}
-    pct=Math.round((min-open)/(close-open)*100)}
-  else if(work&&min<open){big='Закрыто';sub='откроемся в 11:00, через '+hm(open-min);st='closed'}
-  else{const nd=wd===5||wd===6?'в понедельник':wd===0?'завтра':'завтра';big=work?'Рабочий день окончен':'Выходной';sub='откроемся '+(wd===4&&!work?'':nd)+' в 11:00';st='closed'}
-  return `<span class="hx-l">Студия сейчас</span><b class="hx-big ${st}">${esc(big)}</b><small class="hx-sub">${esc(sub)}</small>${st==='open'||st==='lunch'?`<span class="hx-day"><i style="width:${pct}%"></i></span>`:''}<span class="hx-w" id="hx-w">${hxW?esc(hxW):''}</span>`;
+/* погода в Павлодаре на неделю (open-meteo: бесплатно, без ключа), обновляем раз в 30 мин */
+let hxWD=null,hxWAt=0;
+const hxIc=w=>w===0?'☀️':w<=2?'🌤':w===3?'☁️':w<=48?'🌫':w<=57?'🌦':w<=67?'🌧':w<=77?'🌨':w<=82?'🌧':w<=86?'🌨':'⛈';
+const hxWt=w=>w===0?'Ясно':w<=2?'Малооблачно':w===3?'Пасмурно':w<=48?'Туман':w<=57?'Морось':w<=67?'Дождь':w<=77?'Снег':w<=82?'Ливень':w<=86?'Снегопад':'Гроза';
+const hxT=v=>{const r=Math.round(v);return (r>0?'+':'')+r+'°'};
+function hxWxHtml(){
+  const d=hxWD;if(!d)return '<span class="hq-l">Погода · Павлодар</span><p class="hq-empty">Загружаем прогноз…</p>';
+  const c=d.current,D=d.daily,WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],lo=Math.min(...D.temperature_2m_min),hi=Math.max(...D.temperature_2m_max),sp=Math.max(1,hi-lo);
+  const days=D.time.slice(0,7).map((t,i)=>{const a=D.temperature_2m_min[i],b=D.temperature_2m_max[i];
+    return `<div class="hq-wd"><span class="d">${i?WD[new Date(t+'T12:00').getDay()]:'Сегодня'}</span><span class="i">${hxIc(+D.weather_code[i])}</span><span class="lo">${hxT(a)}</span><span class="rng"><i style="left:${((a-lo)/sp*100).toFixed(1)}%;right:${((hi-b)/sp*100).toFixed(1)}%"></i></span><span class="hi">${hxT(b)}</span></div>`}).join('');
+  return `<div class="hq-wtop"><div><span class="hq-l">Погода · Павлодар</span><b class="hq-wt">${hxT(c.temperature_2m)}</b><small class="hq-sub">${esc(hxWt(+c.weather_code))} · днём ${hxT(D.temperature_2m_max[0])}, ночью ${hxT(D.temperature_2m_min[0])}</small></div><span class="hq-wi">${hxIc(+c.weather_code)}</span></div><div class="hq-wds">${days}</div>`;
 }
-let hxW='',hxWAt=0;
 function hxWeather(){
   if(Date.now()-hxWAt<30*6e4)return;hxWAt=Date.now();
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=52.28&longitude=76.96&current=temperature_2m,weather_code&timezone=auto').then(r=>r.json()).then(d=>{
-    const c=d&&d.current;if(!c)return;const w=+c.weather_code;
-    const ic=w===0?'☀️':w<=2?'🌤':w===3?'☁️':w<=48?'🌫':w<=67?'🌧':w<=77?'🌨':w<=82?'🌧':w<=86?'🌨':'⛈';
-    hxW=`${ic} Павлодар ${Math.round(c.temperature_2m)>0?'+':''}${Math.round(c.temperature_2m)}°`;const el=$('hx-w');if(el)el.textContent=hxW}).catch(()=>{});
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=52.28&longitude=76.96&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=auto')
+    .then(r=>r.json()).then(d=>{if(!d||!d.current||!d.daily)return;hxWD=d;const el=$('hq-wx');if(el)el.innerHTML=hxWxHtml()}).catch(()=>{hxWAt=0});
 }
-setInterval(()=>{const el=$('hx-now');if(el&&!document.hidden)el.innerHTML=hxNowHtml()},30000);
+setInterval(()=>{if(!document.hidden)hxWeather()},5*6e4);
 /* загрузка недели: сколько заказов в работе в каждый день пн–сб (от начала работ до срока; просроченные и без срока — с сегодня) */
 function hxLoadHtml(){
   const n=new Date(),mon=new Date(n.getFullYear(),n.getMonth(),n.getDate()-((n.getDay()+6)%7)),t=todayStr();
@@ -3634,15 +3630,15 @@ function hxLoadHtml(){
   const mx=Math.max(4,...D.map(x=>x.v)),dueW=D.filter(x=>x.d>=t).reduce((a,x)=>a+x.due,0);
   const fut=D.filter(x=>x.d>=t),free=fut.length?fut.reduce((a,x)=>x.v<a.v?x:a):null;
   const col=v=>v>=8?'#ff3b30':v>=5?'#ff9500':'#34c759';
-  return `<button type="button" class="hx-c hx-load" data-go="orders"><span class="hx-l">Загрузка недели</span><span class="hx-bars">${D.map(x=>`<span class="${x.d===t?'td':''}${x.d<t?' past':''}" title="${x.v} в работе${x.due?', сдать '+x.due:''}"><em>${x.v||''}</em><i style="height:${Math.round(Math.max(5,x.v/mx*46))}px;background:${x.v?col(x.v):'var(--fill-2)'}"></i><small>${x.l}</small></span>`).join('')}</span><small class="hx-sub">в работе ${open.length} · сдать на неделе ${dueW}${late?` · <b class="late">просрочено ${late}</b>`:''}${free&&free.d!==t&&free.v<(fut[0]||{}).v?' · свободнее '+({Пн:'в пн',Вт:'во вт',Ср:'в ср',Чт:'в чт',Пт:'в пт',Сб:'в сб'})[free.l]:''}</small></button>`;
+  return `<button type="button" class="hq-c hq-load" data-go="orders"><span class="hq-l">Загрузка недели</span><span class="hq-bars">${D.map(x=>`<span class="${x.d===t?'td':''}${x.d<t?' past':''}" title="${x.v} в работе${x.due?', сдать '+x.due:''}"><em>${x.v||''}</em><i style="height:${Math.round(Math.max(5,x.v/mx*46))}px;background:${x.v?col(x.v):'var(--fill-2)'}"></i><small>${x.l}</small></span>`).join('')}</span><small class="hq-sub">в работе ${open.length} · сдать на неделе ${dueW}${late?` · <b class="late">просрочено ${late}</b>`:''}${free&&free.d!==t&&free.v<(fut[0]||{}).v?' · свободнее '+({Пн:'в пн',Вт:'во вт',Ср:'в ср',Чт:'в чт',Пт:'в пт',Сб:'в сб'})[free.l]:''}</small></button>`;
 }
 /* готово, ждут клиента: попадают сразу, как статус «Готов» */
 function hxReadyHtml(){
   const L=orders.filter(o=>o.status==='ready'&&!o.deletedAt).map(o=>({o,at:(o.statusAt&&o.statusAt.ready)||o.updatedAt||0})).sort((a,b)=>a.at-b.at);
   const ago=at=>{if(!at)return '';const d=Math.floor((Date.now()-at)/864e5);return d<=0?'готов сегодня':d===1?'готов вчера':'ждёт '+d+' '+plural(d,'день','дня','дней')};
   const rows=L.map(({o,at})=>{const wa=waLink(o.phone),r=(o.waSent&&o.waSent.remind)||0,d=at?Math.floor((Date.now()-at)/864e5):0;
-    return `<div class="hx-r"><span class="hx-rt"><span>${esc(o.client||'Без имени')}</span><small>${[at?`<span class="${d>=3?'late':''}">${esc(ago(at))}</span>`:'','№ '+esc(String(o.num||'')),r?'напомнили '+esc(printWhen(r)):''].filter(Boolean).join(' · ')}</small></span>${!wa?`<span class="hx-nop">нет телефона</span>`:canWrite?`<button type="button" class="hx-btn" data-hxrem="${esc(o.id)}">Напомнить</button>`:''}</div>`}).join('');
-  return `<div class="hx-c hx-list"><div class="hx-h"><span class="hx-l" style="--c:#34c759">Готово, ждут клиента</span><em>${L.length||''}</em></div>${L.length?`<div class="hx-rows">${rows}</div>`:'<p class="hx-empty">Все готовые заказы забрали</p>'}</div>`;
+    return `<div class="hq-r"><span class="hq-rt"><span>${esc(o.client||'Без имени')}</span><small>${[at?`<span class="${d>=3?'late':''}">${esc(ago(at))}</span>`:'','№ '+esc(String(o.num||'')),r?'напомнили '+esc(printWhen(r)):''].filter(Boolean).join(' · ')}</small></span>${!wa?`<span class="hq-nop">нет телефона</span>`:canWrite?`<button type="button" class="hq-btn" data-hxrem="${esc(o.id)}">Напомнить</button>`:''}</div>`}).join('');
+  return `<div class="hq-c hq-list"><div class="hq-h"><span class="hq-l" style="--c:#34c759">Готово, ждут клиента</span><em>${L.length||''}</em></div>${L.length?`<div class="hq-rows">${rows}</div>`:'<p class="hq-empty">Все готовые заказы забрали</p>'}</div>`;
 }
 /* «Напомнить»: Аня сама пишет клиенту «Напоминаем вам…» (задание remind боту). Первое нажатие спрашивает, второе отправляет */
 document.addEventListener('click',async e=>{const b=e.target.closest('[data-hxrem]');if(!b||b.disabled)return;
@@ -7508,7 +7504,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261110150000">
+<link rel="stylesheet" href="glass.css?v=20261110151500">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
