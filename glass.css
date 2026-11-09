@@ -578,3 +578,37 @@ html.dark #w-sasha{background:linear-gradient(160deg,#3a3a3c,#2c2c2e 45%,#242426
 #w-anna input::placeholder,#w-sasha input::placeholder,#w-daulet input::placeholder{color:rgba(60,60,67,.6)!important}
 #w-anna,#w-sasha,#w-daulet{--g-row:rgba(255,255,255,.16);--g-row-edge:transparent;--paper:rgba(255,255,255,.16);--tile:rgba(255,255,255,.12);--tile-2:rgba(255,255,255,.2);--fill:rgba(255,255,255,.16);--sep:rgba(255,255,255,.22);--ink:#fff;--muted:rgba(255,255,255,.75)}
 #w-anna .btn.primary,#w-sasha .btn.primary,#w-daulet .btn.primary{background:#fff!important;color:var(--ab)!important;box-shadow:none!important}
+
+/* ======================================================================
+   Деньги на главной как в «Акциях»: прибыль, график к прошлому месяцу, строки
+   ====================================================================== */
+.hm-stack,.hm-one{display:none!important}
+.hm-st{--hm-g:#34c759;background:var(--g-card);border-radius:22px;padding:6px;display:flex;flex-direction:column}
+.hm-st-top{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;padding:12px 12px 8px;border-radius:16px}
+.hm-st-top:active{transform:scale(.99)}
+.hm-st-l{font:600 13px var(--f);color:var(--muted)}
+.hm-st-v{display:flex;align-items:baseline;gap:10px;margin-top:2px}
+.hm-st-v b{font:700 34px/1.1 var(--f);letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.hm-st-v em{font:600 14px var(--f);font-style:normal;padding:2px 8px;border-radius:6px}
+.hm-st-v em.up{color:#248a3d;background:rgba(52,199,89,.15)}
+.hm-st-v em.dn{color:#d70015;background:rgba(255,59,48,.13)}
+html.dark .hm-st-v em.up{color:#30d158}html.dark .hm-st-v em.dn{color:#ff453a}
+.hm-st-g{width:100%;height:84px;margin-top:10px;overflow:visible}
+.hm-st-g .cv{fill:none;stroke:var(--hm-g);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.hm-st-g .pv{fill:none;stroke:var(--muted);stroke-opacity:.45;stroke-width:1.5;stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+.hm-st-g .dot{fill:var(--hm-g);stroke:var(--g-card);stroke-width:2;vector-effect:non-scaling-stroke}
+.hm-st-x{display:flex;justify-content:space-between;align-items:center;margin-top:4px;font:500 11.5px var(--f);color:var(--muted)}
+.hm-st-x .lg{display:flex;align-items:center;gap:5px}
+.hm-st-x .lg i{display:inline-block;width:12px;height:2px;border-radius:1px;background:var(--hm-g)}
+.hm-st-x .lg i.b{background:none;border-top:1.5px dashed var(--muted);opacity:.7;margin-left:6px}
+.hm-rows{background:var(--g-row);border-radius:16px;overflow:hidden;margin-top:4px}
+.hm-r{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:12px;padding:10px 12px;position:relative}
+.hm-r+.hm-r::before{content:"";position:absolute;top:0;left:52px;right:0;height:.5px;background:var(--sep)}
+.hm-r:hover{background:var(--fill)}
+.hm-ri{flex:none;width:28px;height:28px;border-radius:7px;background:var(--c);color:#fff;display:grid;place-items:center;font:700 15px/1 var(--f);font-style:normal}
+.hm-rt{flex:1;min-width:0;display:flex;flex-direction:column;font:400 15.5px/1.25 var(--f);color:var(--ink)}
+.hm-rt small{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-r b{font:600 15.5px var(--f);font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+.hm-r b.neg{color:var(--danger)}
+.hm-chev{width:7px;height:7px;border-right:2px solid var(--muted);border-top:2px solid var(--muted);transform:rotate(45deg);opacity:.5;flex:none;margin-right:2px}
+@media(max-width:699px){.hm-st-v b{font-size:30px}.hm-st-g{height:64px}}
