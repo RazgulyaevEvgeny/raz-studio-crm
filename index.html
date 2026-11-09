@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261110151500">
+<meta name="app-build" content="20261110153000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -3613,7 +3613,7 @@ function hxWxHtml(){
   const c=d.current,D=d.daily,WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],lo=Math.min(...D.temperature_2m_min),hi=Math.max(...D.temperature_2m_max),sp=Math.max(1,hi-lo);
   const days=D.time.slice(0,7).map((t,i)=>{const a=D.temperature_2m_min[i],b=D.temperature_2m_max[i];
     return `<div class="hq-wd"><span class="d">${i?WD[new Date(t+'T12:00').getDay()]:'Сегодня'}</span><span class="i">${hxIc(+D.weather_code[i])}</span><span class="lo">${hxT(a)}</span><span class="rng"><i style="left:${((a-lo)/sp*100).toFixed(1)}%;right:${((hi-b)/sp*100).toFixed(1)}%"></i></span><span class="hi">${hxT(b)}</span></div>`}).join('');
-  return `<div class="hq-wtop"><div><span class="hq-l">Погода · Павлодар</span><b class="hq-wt">${hxT(c.temperature_2m)}</b><small class="hq-sub">${esc(hxWt(+c.weather_code))} · днём ${hxT(D.temperature_2m_max[0])}, ночью ${hxT(D.temperature_2m_min[0])}</small></div><span class="hq-wi">${hxIc(+c.weather_code)}</span></div><div class="hq-wds">${days}</div>`;
+  return `<div class="hq-wtop"><div><span class="hq-l">Погода · Павлодар</span><b class="hq-wt">${hxT(c.temperature_2m)}</b><small class="hq-sub">${esc(hxWt(+c.weather_code))} · днём ${hxT(D.temperature_2m_max[0])}, ночью ${hxT(D.temperature_2m_min[0])}</small></div><span class="hq-wi">${hxIc(+c.weather_code)}</span></div><div class="hq-wds">${days}</div><div class="hq-wstrip">${D.time.slice(0,7).map((t,i)=>`<span><small>${i?WD[new Date(t+'T12:00').getDay()]:'Сег'}</small><i>${hxIc(+D.weather_code[i])}</i><b>${hxT(D.temperature_2m_max[i])}</b></span>`).join('')}</div>`;
 }
 function hxWeather(){
   if(Date.now()-hxWAt<30*6e4)return;hxWAt=Date.now();
@@ -7504,7 +7504,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261110151500">
+<link rel="stylesheet" href="glass.css?v=20261110153000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
