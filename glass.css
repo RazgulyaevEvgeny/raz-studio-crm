@@ -653,3 +653,6 @@ button.hx-c{cursor:pointer}button.hx-c:active{transform:scale(.98)}
 @media(max-width:699px){.hx-2{gap:10px}.hx-c{padding:12px 13px;border-radius:20px}.hx-big{font-size:24px}.hx-bars{height:76px;gap:4px}}
 .hx-rt>span:first-child{font:400 15.5px/1.25 var(--f)!important;color:var(--ink)}
 .hx-bars em{position:static}
+button.hx-btn{all:unset;box-sizing:border-box;flex:none;cursor:pointer;font:600 13.5px var(--f);color:#fff;background:#34c759;padding:7px 12px;border-radius:999px}
+button.hx-btn.ask{background:#ff9500}
+button.hx-btn.sent{background:var(--fill-2);color:var(--muted)}

@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261110143000">
+<meta name="app-build" content="20261110150000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -3637,16 +3637,19 @@ function hxLoadHtml(){
   return `<button type="button" class="hx-c hx-load" data-go="orders"><span class="hx-l">Загрузка недели</span><span class="hx-bars">${D.map(x=>`<span class="${x.d===t?'td':''}${x.d<t?' past':''}" title="${x.v} в работе${x.due?', сдать '+x.due:''}"><em>${x.v||''}</em><i style="height:${Math.round(Math.max(5,x.v/mx*46))}px;background:${x.v?col(x.v):'var(--fill-2)'}"></i><small>${x.l}</small></span>`).join('')}</span><small class="hx-sub">в работе ${open.length} · сдать на неделе ${dueW}${late?` · <b class="late">просрочено ${late}</b>`:''}${free&&free.d!==t&&free.v<(fut[0]||{}).v?' · свободнее '+({Пн:'в пн',Вт:'во вт',Ср:'в ср',Чт:'в чт',Пт:'в пт',Сб:'в сб'})[free.l]:''}</small></button>`;
 }
 /* готово, ждут клиента: попадают сразу, как статус «Готов» */
-let hxRem={};try{hxRem=JSON.parse(localStorage.getItem('raz.hxrem')||'{}')}catch(_){}
 function hxReadyHtml(){
   const L=orders.filter(o=>o.status==='ready'&&!o.deletedAt).map(o=>({o,at:(o.statusAt&&o.statusAt.ready)||o.updatedAt||0})).sort((a,b)=>a.at-b.at);
   const ago=at=>{if(!at)return '';const d=Math.floor((Date.now()-at)/864e5);return d<=0?'готов сегодня':d===1?'готов вчера':'ждёт '+d+' '+plural(d,'день','дня','дней')};
-  const rows=L.map(({o,at})=>{const wa=waLink(o.phone),r=hxRem[o.id],d=at?Math.floor((Date.now()-at)/864e5):0;
-    const txt=`Здравствуйте${o.client?', '+o.client:''}! Ваш заказ № ${o.num||''} готов, можно забирать. Студия брендирования Разгуляев, ул. Абая 115а (пн–чт 11–19, пт 11–17). На карте: https://2gis.kz/pavlodar/firm/70000001103891578`;
-    return `<div class="hx-r"><span class="hx-rt"><span>${esc(o.client||'Без имени')}</span><small>${[at?`<span class="${d>=3?'late':''}">${esc(ago(at))}</span>`:'','№ '+esc(String(o.num||'')),r?'напомнили '+esc(printWhen(r)):''].filter(Boolean).join(' · ')}</small></span>${wa?`<a class="hx-btn" href="${esc(wa+'?text='+encodeURIComponent(txt))}" target="_blank" rel="noopener" data-hxrem="${esc(o.id)}">Напомнить</a>`:`<span class="hx-nop">нет телефона</span>`}</div>`}).join('');
+  const rows=L.map(({o,at})=>{const wa=waLink(o.phone),r=(o.waSent&&o.waSent.remind)||0,d=at?Math.floor((Date.now()-at)/864e5):0;
+    return `<div class="hx-r"><span class="hx-rt"><span>${esc(o.client||'Без имени')}</span><small>${[at?`<span class="${d>=3?'late':''}">${esc(ago(at))}</span>`:'','№ '+esc(String(o.num||'')),r?'напомнили '+esc(printWhen(r)):''].filter(Boolean).join(' · ')}</small></span>${!wa?`<span class="hx-nop">нет телефона</span>`:canWrite?`<button type="button" class="hx-btn" data-hxrem="${esc(o.id)}">Напомнить</button>`:''}</div>`}).join('');
   return `<div class="hx-c hx-list"><div class="hx-h"><span class="hx-l" style="--c:#34c759">Готово, ждут клиента</span><em>${L.length||''}</em></div>${L.length?`<div class="hx-rows">${rows}</div>`:'<p class="hx-empty">Все готовые заказы забрали</p>'}</div>`;
 }
-document.addEventListener('click',e=>{const a=e.target.closest('[data-hxrem]');if(!a)return;hxRem[a.dataset.hxrem]=Date.now();try{localStorage.setItem('raz.hxrem',JSON.stringify(hxRem))}catch(_){}setTimeout(()=>{try{hmRender()}catch(_){}},400)});
+/* «Напомнить»: Аня сама пишет клиенту «Напоминаем вам…» (задание remind боту). Первое нажатие спрашивает, второе отправляет */
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-hxrem]');if(!b||b.disabled)return;
+  if(!b.classList.contains('ask')){b.classList.add('ask');b.textContent='Отправить?';clearTimeout(b._t);b._t=setTimeout(()=>{b.classList.remove('ask');b.textContent='Напомнить'},4000);return}
+  clearTimeout(b._t);b.disabled=true;const o=orders.find(x=>x.id===b.dataset.hxrem);
+  try{await waNotify(b.dataset.hxrem,'remind');b.classList.remove('ask');b.classList.add('sent');b.textContent='Отправлено';toast('Аня напомнит клиенту'+(o&&o.client?' '+o.client:'')+' в WhatsApp')}
+  catch(_){b.disabled=false;b.classList.remove('ask');b.textContent='Напомнить'}});
 let packT;addEventListener('resize',()=>{clearTimeout(packT);packT=setTimeout(packHome,120)});
 /* светлая / ночная тема: запоминается на этом устройстве */
 document.addEventListener('click',e=>{if(!e.target.closest('[data-theme]'))return;const h=document.documentElement;h.classList.add('no-tr');setTimeout(()=>h.classList.remove('no-tr'),60);const d=h.classList.toggle('dark');try{localStorage.setItem('raz.theme',d?'dark':'light')}catch(_){}const m=document.querySelector('meta[name=theme-color]');if(m)m.content=d?'#0a0f25':'#e6edff'});
@@ -7505,7 +7508,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261110143000">
+<link rel="stylesheet" href="glass.css?v=20261110150000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>

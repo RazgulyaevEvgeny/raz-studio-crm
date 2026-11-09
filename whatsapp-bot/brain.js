@@ -21,6 +21,8 @@ const NOTICES = {
   link:    'У вас оформлен заказ № {num}. Отслеживать его можно здесь:\n{link}',
   prod:   'Ваш заказ № {num} принят в работу. Мы напишем, когда всё будет готово.',
   ready:  'Ваш заказ № {num} готов, можно забирать. Спасибо, что выбрали нас!',
+  // напоминание о готовом заказе: только по кнопке «Напомнить» на главной учёта (правило Евгения 09.11), сама Аня не шлёт
+  remind: 'Напоминаем вам: заказ № {num} готов, можно забирать. Студия брендирования Разгуляев, ул. Абая 115а (пн–чт 11–19, пт 11–17). На карте: https://2gis.kz/pavlodar/firm/70000001103891578',
 };
 // Страница заказа для клиента на сайте учёта (order.html), ключ после # — длинный случайный
 export const ORDER_PAGE = 'https://razgulyaevevgeny.github.io/raz-studio-crm/order.html#';
@@ -267,12 +269,13 @@ export async function prepareNotice(fs, orderId, event) {
   // link — менеджер нажал в ведомости «отправить ссылку»: шлём каждый раз, без отметки «уже отправлено».
   // Сами при создании заказа ссылку не шлём (created пропускаем — его могла поставить старая открытая вкладка учёта)
   if (event === 'created') return { skipped: 'ссылка только по кнопке' };
-  const kind = event === 'delay' ? 'delay' : event === 'link' ? 'link' : o.status;
+  if (event === 'remind' && o.status !== 'ready') return { skipped: 'заказ уже не «Готов»' };
+  const kind = event === 'delay' ? 'delay' : event === 'link' ? 'link' : event === 'remind' ? 'remind' : o.status;
   let tpl = NOTICES[kind];
   if (!tpl) return { skipped: 'статус без уведомления' };
   const key = kind === 'delay' ? 'delay_' + o.deadline : kind;
   const sent = o.waSent && typeof o.waSent === 'object' ? o.waSent : {};
-  if (sent[key] && kind !== 'link') return { skipped: 'уже отправлено' };
+  if (sent[key] && kind !== 'link' && kind !== 'remind') return { skipped: 'уже отправлено' }; // ссылку и напоминание шлём на каждое нажатие
   let link = '';
   if (kind === 'link') {
     link = await ensureOrderPage(fs, orderId, o).catch(e => { console.log(new Date().toLocaleString('ru-RU'), 'Страница заказа не обновилась:', e?.message || e); return ''; });
