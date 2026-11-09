@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261109213000">
+<meta name="app-build" content="20261109223000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -3170,11 +3170,11 @@ function bossRow(t){const b=bossParts(t),id=esc(t.id),open=openBoss.has(t.id)||e
   const nc=(t.comments||[]).length,nf=(t.files||[]).length;
   const icons=(nc?`<span title="Комментарии">${CM_ICON}${nc}</span>`:'')+(nf?`<span title="Файлы">${CLIP_ICON}${nf}</span>`:'')+(t.desc?'<span class="bt-d" title="Есть описание">≡</span>':'');
   return `<div class="btask${open?' open':''}${t.done?' done':''}${now?' now':''}" style="--sc:var(${b.st.c})">
-    <button type="button" class="bt-h" data-btog="${id}" aria-expanded="${open}">
+    <div class="bt-row">${`<button class="rchk" type="button" data-bdone="${id}" aria-pressed="${!!t.done}" aria-label="${t.done?'Вернуть в работу':'Выполнено'}" ${canWrite?'':'disabled'}><i></i></button>`}<button type="button" class="bt-h" data-btog="${id}" aria-expanded="${open}">
       <span class="bt-t"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${isAnyaTask(t)?ANYA_TAG:isMgrTask(t)?'<span class="tsrc">от менеджера</span>':''}${esc(t.title)}</b>
         <small><span class="bt-st">${esc(b.st.label.toLowerCase())}</span>${dl?` · <span class="${b.late?'late':''}">${esc(dl)}</span>`:''}${t.who?' · кому: '+esc(t.who):''}</small></span>
       ${icons?`<span class="bt-i">${icons}</span>`:''}<span class="bt-x">${CHEV}</span>
-    </button>
+    </button></div>
     ${open?`<div class="bt-b">${b.meta.length?`<small class="bt-m${b.late?' late':''}">${esc(b.meta.join(', '))}</small>`:''}
       <div class="bt-acts">${b.sel}<span style="flex:1"></span>${b.att}${b.del}</div>${b.ted}${nf?b.files:''}${b.cmBox}</div>`:''}</div>`;
 }
@@ -3187,7 +3187,7 @@ function todayTask(t){
   const meta=boss?[b.st.label.toLowerCase(),t.date?(t.done?'до '+fmtDate(t.date):relWord(t.date)):'',t.who]:[t.time,t.who];
   const nf=(t.files||[]).length,nc=(t.comments||[]).length;
   const icons=(nc?`<span>${CM_ICON}${nc}</span>`:'')+(nf?`<span>${CLIP_ICON}${nf}</span>`:'');
-  const lead=boss?`<span class="tday-dot" style="--dc:var(${b.st.c})" title="${esc(b.st.label)}"></span>`
+  const lead=boss?`<button class="rchk" type="button" data-bdone="${id}" aria-pressed="${!!t.done}" aria-label="${t.done?'Вернуть в работу':'Выполнено'}" ${canWrite?'':'disabled'}><i></i></button>`
     :`<button class="chk" type="button" data-tdone="${id}" aria-pressed="${!!t.done}" aria-label="${t.done?'Вернуть в работу':'Отметить выполненной'}" ${canWrite?'':'disabled'}>${CHECK}</button>`;
   let body='';
   if(open){
@@ -3549,7 +3549,7 @@ let packN=0;
 const MF_KEY='raz.home.open',MF_ALL=['w-req','w-anna','w-sasha','w-daulet','w-kaspi','w-print'];let mOpen=new Set();try{mOpen=new Set(JSON.parse(localStorage.getItem(MF_KEY)||'[]'))}catch(_){}
 const isPhone=()=>matchMedia('(max-width:600px)').matches;
 if(!isPhone())['w-anna','w-daulet','w-kaspi','w-print'].forEach(id=>{if(!mOpen.has('-'+id))mOpen.add(id)});
-const mfAlways=id=>['w-kaspi','w-print','w-today-box'].includes(id)||(!isPhone()&&id==='w-req'); /* эти карточки всегда открыты (на телефоне Kaspi и оборудование переключаются сверху) */
+const mfAlways=id=>['w-kaspi','w-print','w-today-box','w-boss'].includes(id)||(!isPhone()&&id==='w-req'); /* эти карточки всегда открыты (на телефоне Kaspi и оборудование переключаются сверху) */
 function mfApply(){packW.forEach(w=>{const o=mOpen.has(w.id)||mfAlways(w.id);w.classList.toggle('mopen',o);const h=w.querySelector(':scope>.w-h');if(h){h.setAttribute('aria-expanded',isPhone()||MF_ALL.includes(w.id)?String(o):'true')}})}
 function mfToggle(id,force){if(mfAlways(id))return;const o=force!=null?force:!mOpen.has(id);o?(mOpen.add(id),mOpen.delete('-'+id)):(mOpen.delete(id),mOpen.add('-'+id));try{localStorage.setItem(MF_KEY,JSON.stringify([...mOpen]))}catch(_){}mfApply();if(o&&id==='w-anna')annaPuff();if(id==='w-sasha')sashaTok();if(id==='w-daulet')daulTok()}
 document.addEventListener('click',e=>{const h=e.target.closest('#pack .w>.w-h');if(!h||(!isPhone()&&!MF_ALL.includes(h.parentElement.id))||e.target.closest('a,button,select,input,.go'))return;
@@ -3567,9 +3567,9 @@ function packLay(){
   if(packN===n)return;packN=n;pack.innerHTML='';pack.classList.remove('flat','hm2');packW.forEach(x=>x.style.gridColumn='');pack.dataset.n=n;
   const mk=c=>{const d=document.createElement('div');d.className=c;return d},[today,tasks]=packWide,[kaspi,print]=packSide;
   /* главная как у Apple: сверху виджеты, ниже «Сегодня»; на телефоне деньги одной карточкой и переключатель Kaspi / оборудование */
-  if(n===1){pack.style.setProperty('--cols',1);const c=mk('pcol');c.append(hmEls.w,today,hmEls.m,hmEls.s,kaspi,print,tasks);pack.appendChild(c);hmSegApply();return}
+  if(n===1){pack.style.setProperty('--cols',1);const c=mk('pcol');c.append(hmEls.w,today,tasks,hmEls.m,hmEls.s,kaspi,print);pack.appendChild(c);hmSegApply();return}
   pack.classList.add('hm2');pack.style.removeProperty('--cols');
-  const a=mk('pcol hm-cl'),b=mk('pcol hm-cr');a.append(hmEls.w,today,kaspi,tasks);b.append(hmEls.m,print);pack.append(a,b);hmSegApply();
+  const a=mk('pcol hm-cl'),b=mk('pcol hm-cr');a.append(hmEls.w,today,kaspi,print);b.append(hmEls.m,tasks);pack.append(a,b);hmSegApply();
 }
 function hmSegApply(){if(!packSide.length)return;const one=packN===1;packSide.forEach(x=>x.classList.toggle('hm-off',one&&x.id!==hmSegSel));
   hmEls&&hmEls.s.querySelectorAll('[data-hmseg]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.hmseg===hmSegSel)))}
@@ -5453,6 +5453,10 @@ async function setBossStatus(id,st){
   catch(er){toast(handleWriteError(er));render()}
 }
 document.addEventListener('change',e=>{const s=e.target.closest('[data-tstat]');if(s)setBossStatus(s.dataset.tstat,s.value)});
+/* кружок как в «Напоминаниях»: одно нажатие — задача выполнена, ещё одно — снова в работе */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-bdone]');if(!b||b.disabled)return;e.preventDefault();e.stopPropagation();
+  const t=tasks.find(x=>x.id===b.dataset.bdone);if(!t)return;const row=b.closest('.btask,.tday');if(row)row.classList.toggle('done',!t.done);b.setAttribute('aria-pressed',String(!t.done));
+  setTimeout(()=>setBossStatus(t.id,t.done?'accepted':'done'),t.done?0:350)},true);
 $('e-add').onclick=addExpense;
 ['e-title','e-amount'].forEach(id=>$(id).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addExpense()}}));
 $('f-price').addEventListener('input',()=>{if(edTab==='cost')renderCost()});
@@ -7427,7 +7431,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261109200000">
+<link rel="stylesheet" href="glass.css?v=20261109223000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
