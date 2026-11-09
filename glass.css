@@ -688,3 +688,44 @@ html.dark .hq-wx{background:linear-gradient(170deg,#1f3a66,#16294a)!important}
   .hq-wstrip i{font-style:normal;font-size:15px;line-height:1.2}
   .hq-wstrip b{font:600 12.5px var(--f)}
 }
+
+/* ======================================================================
+   ПК: вместо боковой панели — плавающие вкладки сверху, как в iPadOS 18
+   ====================================================================== */
+.nav .pills .nv-more{display:none}
+@media(min-width:1100px){
+  body{padding-left:28px!important;padding-right:28px!important;padding-top:78px!important}
+  .nav .logo{left:28px!important;top:14px!important;height:44px!important}
+  .nav .logo svg{height:44px!important}
+  .nav .pills{left:0!important;right:0!important;margin:0 auto!important;top:14px!important;bottom:auto!important;width:fit-content!important;max-width:calc(100% - 520px);height:auto!important;flex-direction:row!important;align-items:center;padding:4px!important;border-radius:999px!important;border:0!important;
+    background:rgba(242,242,247,.88)!important;-webkit-backdrop-filter:blur(30px) saturate(180%)!important;backdrop-filter:blur(30px) saturate(180%)!important;box-shadow:0 6px 24px rgba(0,0,0,.10),0 0 0 .5px rgba(0,0,0,.06)!important;gap:2px!important;z-index:50;overflow:visible}
+  html.dark .nav .pills{background:rgba(44,44,46,.88)!important;box-shadow:0 6px 24px rgba(0,0,0,.5),0 0 0 .5px rgba(255,255,255,.1)!important}
+  .nav .pills .pill{position:relative;min-height:36px!important;padding:0 15px!important;border-radius:999px!important;font:500 14px var(--f)!important;gap:6px!important;color:var(--ink)!important;white-space:nowrap;flex:none}
+  .nav .pills .pill .pi{display:none!important}
+  .nav .pills .pill:hover{background:rgba(0,0,0,.05)!important}
+  html.dark .nav .pills .pill:hover{background:rgba(255,255,255,.08)!important}
+  .nav .pills .pill.on{background:#fff!important;color:#000!important;font-weight:600!important;box-shadow:0 2px 8px rgba(0,0,0,.12)!important}
+  html.dark .nav .pills .pill.on{background:#636366!important;color:#fff!important}
+  .nav .pills [data-go]:not([data-go=home]):not([data-go=orders]):not([data-go=kaspi]):not([data-go=calendar]):not([data-go=analytics]){display:none!important}
+  .nav .pills .pill .n:not(.hot):not(.req){display:none!important}
+  .nav .pills .pill .n.hot,.nav .pills .pill .n.req{position:static!important;margin:0 0 0 2px!important}
+  .nav .pills .nv-more{display:inline-flex!important;align-items:center;gap:3px!important}
+  .nv-dot{position:absolute;top:6px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--danger)}
+  .nv-dot[hidden]{display:none}
+  /* справа: тема, кто вошёл, выход */
+  .nav .pills .theme-pill{position:fixed!important;right:28px;top:16px;width:40px;min-height:40px!important;height:40px;padding:0!important;margin:0!important;border-radius:50%!important;background:var(--fill)!important;font-size:0!important;justify-content:center}
+  .nav .pills .theme-pill .pi{display:block!important;width:20px!important;height:20px!important;padding:0!important;background:none!important;color:var(--ink)!important;box-shadow:none!important}
+  .nav .pills .who-pill{position:fixed!important;right:76px;top:16px;min-height:40px!important;line-height:40px;margin:0!important;padding:0 14px!important;background:var(--fill)!important;box-shadow:none!important;font:500 13.5px/40px var(--f)!important;color:var(--ink)!important;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+  .nav .pills .who-pill .wt{display:none}
+  .nav .pills .logout{display:none!important}
+}
+@media(min-width:1100px){
+  .nav .pills .theme-pill,.nav .pills .who-pill{display:none!important}
+  .theme-fab{display:grid!important;place-items:center;position:fixed!important;top:16px!important;right:28px!important;width:40px;height:40px;border-radius:50%;background:var(--fill)!important;box-shadow:none!important;color:var(--ink);z-index:50}
+  .theme-fab svg{width:20px;height:20px}
+  .theme-fab .t-moon{display:none}
+  html.dark .theme-fab .t-sun{display:none}
+  html.dark .theme-fab .t-moon{display:block}
+  .more-g button{display:flex!important;align-items:center!important;text-align:left}
+}
+@media(min-width:1100px){.nav .pills,.theme-fab{z-index:30!important}}
