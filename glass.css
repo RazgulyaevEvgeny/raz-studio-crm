@@ -338,7 +338,7 @@ html.dark .toast{background:rgba(58,58,60,.92)!important;color:#fff!important}
 /* раскладка: слева виджеты, «Сегодня», Kaspi, задачи; справа деньги и оборудование */
 #pack.hm2{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:20px;align-items:start}
 #pack.hm2 .pcol{gap:20px}
-#pack :is(#w-kaspi,#w-print,#w-today-box) .mf-x{display:none!important}
+#pack :is(#w-kaspi,#w-print,#w-today-box,#w-boss) .mf-x{display:none!important}
 #pack :is(#w-kaspi,#w-print,#w-today-box)>.w-h{cursor:default}
 
 /* виджеты */
@@ -450,3 +450,36 @@ html.dark .toast{background:rgba(58,58,60,.92)!important;color:#fff!important}
 /* оборудование в правой колонке: разделы одним списком сверху вниз */
 #pack.hm2 #w-print .bw-list{grid-template-columns:minmax(0,1fr)}
 #pack.hm2 #w-print .bw-grp.two .bw-grid{grid-template-columns:minmax(0,1fr)}
+
+/* ======================================================================
+   Белый фон без свечения; задачи списком как в «Напоминаниях»
+   ====================================================================== */
+:root{--g-bg:#fff;--g-card:#f5f5f7;--g-edge:transparent;--g-hi:none;--g-sh:none;--g-row:#fff;--g-row-edge:rgba(0,0,0,.05)}
+html.dark{--g-bg:#000;--g-card:#1c1c1e;--g-edge:transparent;--g-hi:none;--g-sh:none;--g-row:#2c2c2e;--g-row-edge:rgba(255,255,255,.06)}
+html,body{background:var(--g-bg)!important}
+.w,.stat,.kpi,.pf,.hm-c{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.hm-c{box-shadow:none!important}
+.hm-today{box-shadow:none!important}
+.hm-pass,.hm-one{box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+@media(min-width:1100px){.nav .pills{background:#f5f5f7!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}html.dark .nav .pills{background:#1c1c1e!important}}
+@media(max-width:560px){.bnav{background:rgba(255,255,255,.88)!important}html.dark .bnav{background:rgba(28,28,30,.88)!important}}
+
+/* задачи: список с кружками, как в «Напоминаниях» */
+#pack .tasks{display:flex;flex-direction:column;gap:0!important;background:var(--g-row);border-radius:12px;overflow:hidden}
+#pack .tasks>.btask,#pack .tasks>.task,#pack .tasks>.tday{background:none!important;box-shadow:none!important;border-radius:0!important;position:relative}
+#pack .tasks>*+*::before{content:"";position:absolute;top:0;left:46px;right:0;height:.5px;background:var(--sep);z-index:1}
+.bt-row{display:flex;align-items:center;min-width:0}
+.bt-row .bt-h{flex:1;min-width:0;padding-left:4px!important}
+.rchk,#pack .chk{all:unset;box-sizing:border-box;flex:none;width:24px;height:24px;margin:0 8px 0 12px;border-radius:50%;border:1.6px solid color-mix(in srgb,var(--muted) 70%,transparent);display:grid;place-items:center;cursor:pointer;transition:border-color .2s,transform .3s var(--spring)}
+.rchk i{width:14px;height:14px;border-radius:50%;background:var(--sc,var(--blue));transform:scale(0);transition:transform .35s var(--spring)}
+.rchk:active,#pack .chk:active{transform:scale(.85)}
+.rchk[aria-pressed="true"]{border-color:var(--sc,var(--blue))}
+.rchk[aria-pressed="true"] i{transform:scale(1)}
+.rchk:disabled{cursor:default;opacity:.5}
+#pack .chk svg{width:14px;height:14px;opacity:0;color:var(--blue)}
+#pack .chk[aria-pressed="true"]{border-color:var(--blue);background:var(--blue)}
+#pack .chk[aria-pressed="true"] svg{opacity:1;color:#fff}
+.btask.done .bt-t b,.tday.done .tday-t b{color:var(--muted);text-decoration:none}
+.btask .bt-t b{font:400 16px/1.3 var(--fb)!important}
+.btask .bt-x{opacity:.45}
+.tday .tday-dot{display:none}
