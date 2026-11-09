@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261109235000">
+<meta name="app-build" content="20261110093000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -4547,7 +4547,7 @@ $('inv-print').addEventListener('click',invPrint);$('inv-pdf').addEventListener(
 $('inv-close').addEventListener('click',()=>{$('inv').hidden=true});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('inv').hidden){e.stopPropagation();$('inv').hidden=true}else if(!$('ived').hidden){e.stopPropagation();closeIv()}else if(!$('bh').hidden){e.stopPropagation();$('bh').hidden=true}},true);
 /* ---------- аналитика ---------- */
-let anPer='3m';
+let anPer='month';
 /* выбранный месяц: «Этот месяц» или любой из списка «Выбрать месяц» */
 const anYM=()=>anPer==='month'?curMonth():anPer.startsWith('m:')?anPer.slice(2):'';
 const AN_PER=[['month','Месяц'],['3m','3 месяца'],['year','Год'],['all','Всё время']];
@@ -4712,7 +4712,7 @@ function anHero({os,rev,prof,net,from,to,ym0,perTxt,svc,wd}){
   document.addEventListener('click',e=>{const b=e.target.closest('[data-anper]');if(b){anPer=b.dataset.anper;renderAnalytics();return}
     const st=e.target.closest('[data-anstep]');if(st){const cur=anYM()||curMonth(),[y,m]=cur.split('-').map(Number),d=new Date(y,m-1+(+st.dataset.anstep),1),ym=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(ym>curMonth())return;anPer=ym===curMonth()?'month':'m:'+ym;renderAnalytics();return}
     const tb=e.target.closest('[data-antab]');if(tb){const [g]=tb.dataset.antab.split(':');document.querySelectorAll(`[data-antab^="${g}:"]`).forEach(x=>x.setAttribute('aria-selected',String(x===tb)));document.querySelectorAll(`[data-anpane^="${g}:"]`).forEach(x=>x.hidden=x.dataset.anpane!==tb.dataset.antab)}});
-  document.addEventListener('change',e=>{if(e.target.id==='an-month'){anPer=e.target.value?'m:'+e.target.value:'3m';renderAnalytics()}});}
+  document.addEventListener('change',e=>{if(e.target.id==='an-month'){anPer=e.target.value?'m:'+e.target.value:'month';renderAnalytics()}});}
 
 /* ---------- заявки с сайта топперов ---------- */
 const REQ_ST={new:{l:'Новая',c:'--danger'},accepted:{l:'Подтверждена',c:'--ok'},rejected:{l:'Отклонена',c:'--muted'}};
@@ -7466,7 +7466,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261109235000">
+<link rel="stylesheet" href="glass.css?v=20261110093000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
