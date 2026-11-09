@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261110140000">
+<meta name="app-build" content="20261110143000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -3625,15 +3625,16 @@ function hxWeather(){
     hxW=`${ic} Павлодар ${Math.round(c.temperature_2m)>0?'+':''}${Math.round(c.temperature_2m)}°`;const el=$('hx-w');if(el)el.textContent=hxW}).catch(()=>{});
 }
 setInterval(()=>{const el=$('hx-now');if(el&&!document.hidden)el.innerHTML=hxNowHtml()},30000);
-/* загрузка недели: сколько заказов сдавать по дням пн–сб */
+/* загрузка недели: сколько заказов в работе в каждый день пн–сб (от начала работ до срока; просроченные и без срока — с сегодня) */
 function hxLoadHtml(){
   const n=new Date(),mon=new Date(n.getFullYear(),n.getMonth(),n.getDate()-((n.getDay()+6)%7)),t=todayStr();
   const open=orders.filter(o=>isOpen(o)&&!o.deletedAt),late=open.filter(isOverdue).length;
-  const D=['Пн','Вт','Ср','Чт','Пт','Сб'].map((l,i)=>{const d=ds(new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i));return {l,d,v:open.filter(o=>o.deadline===d).length}});
-  const mx=Math.max(4,...D.map(x=>x.v)),tot=D.reduce((a,x)=>a+x.v,0);
+  const busy=(o,d)=>{const a=o.deadlineFrom||o.receivedAt||t,b=o.deadline&&o.deadline>=t?o.deadline:t;return a<=d&&d<=b};
+  const D=['Пн','Вт','Ср','Чт','Пт','Сб'].map((l,i)=>{const d=ds(new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i));return {l,d,v:open.filter(o=>busy(o,d)).length,due:open.filter(o=>o.deadline===d).length}});
+  const mx=Math.max(4,...D.map(x=>x.v)),dueW=D.filter(x=>x.d>=t).reduce((a,x)=>a+x.due,0);
   const fut=D.filter(x=>x.d>=t),free=fut.length?fut.reduce((a,x)=>x.v<a.v?x:a):null;
-  const col=v=>v>=5?'#ff3b30':v>=3?'#ff9500':'#34c759';
-  return `<button type="button" class="hx-c hx-load" data-go="calendar"><span class="hx-l">Загрузка недели</span><span class="hx-bars">${D.map(x=>`<span class="${x.d===t?'td':''}${x.d<t?' past':''}"><i style="height:${Math.round(Math.max(5,x.v/mx*46))}px;background:${x.v?col(x.v):'var(--fill-2)'}"></i><em>${x.v||''}</em><small>${x.l}</small></span>`).join('')}</span><small class="hx-sub">${tot} ${plural(tot,'заказ','заказа','заказов')} к сдаче${late?` · <b class="late">просрочено ${late}</b>`:''}${free&&free.d!==t?' · свободнее '+({Пн:'в пн',Вт:'во вт',Ср:'в ср',Чт:'в чт',Пт:'в пт',Сб:'в сб'})[free.l]:''}</small></button>`;
+  const col=v=>v>=8?'#ff3b30':v>=5?'#ff9500':'#34c759';
+  return `<button type="button" class="hx-c hx-load" data-go="orders"><span class="hx-l">Загрузка недели</span><span class="hx-bars">${D.map(x=>`<span class="${x.d===t?'td':''}${x.d<t?' past':''}" title="${x.v} в работе${x.due?', сдать '+x.due:''}"><em>${x.v||''}</em><i style="height:${Math.round(Math.max(5,x.v/mx*46))}px;background:${x.v?col(x.v):'var(--fill-2)'}"></i><small>${x.l}</small></span>`).join('')}</span><small class="hx-sub">в работе ${open.length} · сдать на неделе ${dueW}${late?` · <b class="late">просрочено ${late}</b>`:''}${free&&free.d!==t&&free.v<(fut[0]||{}).v?' · свободнее '+({Пн:'в пн',Вт:'во вт',Ср:'в ср',Чт:'в чт',Пт:'в пт',Сб:'в сб'})[free.l]:''}</small></button>`;
 }
 /* готово, ждут клиента: попадают сразу, как статус «Готов» */
 let hxRem={};try{hxRem=JSON.parse(localStorage.getItem('raz.hxrem')||'{}')}catch(_){}
@@ -7504,7 +7505,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261110140000">
+<link rel="stylesheet" href="glass.css?v=20261110143000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
