@@ -564,3 +564,17 @@ html.dark .csmenu,html.dark .cs-pop,html.dark .menu-pop{background:rgba(44,44,46
 /* внутри окна: услуги и быстрые кнопки серыми капсулами, карточки серым блоком */
 .ed-panel .legal-row{background:var(--tile)!important}
 .sh{background:#f2f2f7!important}html.dark .sh{background:#1c1c1e!important}
+
+/* ======================================================================
+   Боты (Аня, Маркетолог, Даулет): цветные карточки как виджеты iOS,
+   белый текст на системном цвете — не сливаются с белым фоном
+   ====================================================================== */
+#w-anna,#w-sasha,#w-daulet{border:0!important;box-shadow:0 1px 2px rgba(0,0,0,.06),0 8px 24px -8px rgba(0,0,0,.25)!important;border-radius:22px!important}
+#w-anna{--ab:#007aff;background:linear-gradient(160deg,#2b8cff,#007aff 45%,#0062d6)!important}
+#w-sasha{--ab:#2c2c2e;background:linear-gradient(160deg,#48484a,#2c2c2e 45%,#1c1c1e)!important}
+#w-daulet{--ab:#e0352b;background:linear-gradient(160deg,#ff5f55,#ff3b30 45%,#d70015)!important}
+html.dark #w-sasha{background:linear-gradient(160deg,#3a3a3c,#2c2c2e 45%,#242426)!important;box-shadow:0 0 0 .5px rgba(255,255,255,.12)!important}
+#w-anna input,#w-sasha input,#w-daulet input,#w-anna textarea,#w-sasha textarea,#w-daulet textarea{background:rgba(255,255,255,.95)!important;color:#000!important;border-radius:10px}
+#w-anna input::placeholder,#w-sasha input::placeholder,#w-daulet input::placeholder{color:rgba(60,60,67,.6)!important}
+#w-anna,#w-sasha,#w-daulet{--g-row:rgba(255,255,255,.16);--g-row-edge:transparent;--paper:rgba(255,255,255,.16);--tile:rgba(255,255,255,.12);--tile-2:rgba(255,255,255,.2);--fill:rgba(255,255,255,.16);--sep:rgba(255,255,255,.22);--ink:#fff;--muted:rgba(255,255,255,.75)}
+#w-anna .btn.primary,#w-sasha .btn.primary,#w-daulet .btn.primary{background:#fff!important;color:var(--ab)!important;box-shadow:none!important}
