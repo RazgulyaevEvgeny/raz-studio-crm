@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261109223000">
+<meta name="app-build" content="20261109233000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -2202,23 +2202,27 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   </section>
   <section id="p-analytics" class="page" style="gap:16px" hidden>
     <div class="ph"><div><h1>Аналитика</h1><p id="an-sub">Сколько заработали, что заказывают чаще и когда.</p></div><button class="btn outline" type="button" id="xim-btn" hidden>Загрузить из Excel</button></div>
-    <div class="an-bar"><div class="chips an-per" id="an-per" role="group" aria-label="Период"></div><select id="an-month" class="chip an-mon" aria-label="Выбрать месяц"></select></div>
-    <div class="an-kpis" id="an-kpis"></div>
-    <div class="w an-wide"><div class="w-h"><h2 id="an-dyn-h">Выручка</h2><span class="c" id="an-dyn-c"></span></div><div class="cols" id="an-dyn"></div><p class="an-note" id="an-dyn-n"></p></div>
-    <div class="w an-wide" id="an-wk-w" hidden><div class="w-h"><h2>Продажи по неделям</h2><span class="c" id="an-wk-c"></span></div><div class="hbars" id="an-wk"></div><p class="an-note" id="an-wk-n"></p></div>
-    <div class="agrid">
-      <div class="w"><div class="w-h"><h2>Услуги</h2><span class="c">по выручке</span></div><div class="hbars" id="an-svc"></div></div>
-      <div class="w"><div class="w-h"><h2>Позиции заказов</h2><span class="c">по выручке</span></div><div class="hbars" id="an-items"></div></div>
-      <div class="w"><div class="w-h"><h2>Откуда заказы</h2></div><div class="hbars" id="an-src"></div></div>
-      <div class="w"><div class="w-h"><h2>Модели топперов</h2><span class="c">по количеству, из заявок</span></div><div class="hbars" id="an-top"></div></div>
-      <div class="w"><div class="w-h"><h2>Цвета топперов</h2><span class="c">шт</span></div><div class="hbars" id="an-col"></div></div>
-      <div class="w"><div class="w-h"><h2>Товары Kaspi</h2><span class="c">продано, шт</span></div><div class="hbars" id="an-kaspi"></div></div>
-      <div class="w"><div class="w-h"><h2>Лучшие клиенты</h2><span class="c">по выручке</span></div><div class="hbars" id="an-cli"></div></div>
-      <div class="w"><div class="w-h"><h2>Дни недели</h2><span class="c">заказы и заявки</span></div><div class="cols wd" id="an-wd"></div><p class="an-note" id="an-wd-n"></p></div>
-      <div class="w"><div class="w-h"><h2>Время суток</h2><span class="c">когда приходят</span></div><div class="cols hr" id="an-hr"></div><p class="an-note" id="an-hr-n"></p></div>
-      <div class="w"><div class="w-h"><h2>Кто ведёт заказы</h2><span class="c">по выручке</span></div><div class="hbars" id="an-own"></div></div>
-      <div class="w"><div class="w-h"><h2>Расходы</h2><span class="c">офис и закупки, без Kaspi</span></div><div class="hbars" id="an-exp"></div></div>
-      <div class="w"><div class="w-h"><h2>Закупки Kaspi</h2><span class="c">отдельно от расходов</span></div><div class="hbars" id="an-kbuy"></div><p class="an-note" id="an-kbuy-n"></p></div>
+    <div class="an-bar"><div class="an-seg" id="an-per" role="group" aria-label="Период"></div><div class="an-step" id="an-step"><button type="button" data-anstep="-1" aria-label="Предыдущий месяц">‹</button><b id="an-step-l"></b><button type="button" data-anstep="1" aria-label="Следующий месяц">›</button></div><select id="an-month" class="chip an-mon" aria-label="Выбрать месяц" hidden></select></div>
+    <div class="w an-hero"><div class="an-ht" id="an-ht"></div><div class="cols" id="an-dyn"></div><p class="an-note" id="an-dyn-n"></p><span hidden><span id="an-dyn-h"></span><span id="an-dyn-c"></span></span></div>
+    <div class="an-hl-w"><h2 class="an-sh">Основное</h2><div class="an-hl" id="an-hl"></div></div>
+    <div class="an-grid">
+      <div class="w an-box"><div class="w-h"><h2>Деньги</h2></div><div class="an-kpis" id="an-kpis"></div></div>
+      <div class="w an-box"><div class="w-h"><h2>Что продаём</h2></div><div class="an-tabs" data-antabs="sell"><button type="button" data-antab="sell:0" aria-selected="true">Услуги</button><button type="button" data-antab="sell:1" aria-selected="false">Позиции</button><button type="button" data-antab="sell:2" aria-selected="false">Kaspi</button><button type="button" data-antab="sell:3" aria-selected="false">Топперы</button></div>
+        <div data-anpane="sell:0"><div class="hbars" id="an-svc"></div></div>
+        <div data-anpane="sell:1" hidden><div class="hbars" id="an-items"></div></div>
+        <div data-anpane="sell:2" hidden><div class="hbars" id="an-kaspi"></div><p class="an-note">продано, шт</p></div>
+        <div data-anpane="sell:3" hidden><div class="hbars" id="an-top"></div><h3 class="an-sub3">Цвета</h3><div class="hbars" id="an-col"></div></div></div>
+      <div class="w an-box"><div class="w-h"><h2>Клиенты</h2></div><div class="an-tabs" data-antabs="cli"><button type="button" data-antab="cli:0" aria-selected="true">Лучшие</button><button type="button" data-antab="cli:1" aria-selected="false">Откуда</button><button type="button" data-antab="cli:2" aria-selected="false">Кто ведёт</button></div>
+        <div data-anpane="cli:0"><div class="hbars" id="an-cli"></div></div>
+        <div data-anpane="cli:1" hidden><div class="hbars" id="an-src"></div></div>
+        <div data-anpane="cli:2" hidden><div class="hbars" id="an-own"></div></div></div>
+      <div class="w an-box"><div class="w-h"><h2>Когда заказывают</h2></div><div class="an-tabs" data-antabs="when"><button type="button" data-antab="when:0" aria-selected="true">Дни недели</button><button type="button" data-antab="when:1" aria-selected="false">Время суток</button></div>
+        <div data-anpane="when:0"><div class="cols wd" id="an-wd"></div><p class="an-note" id="an-wd-n"></p></div>
+        <div data-anpane="when:1" hidden><div class="cols hr" id="an-hr"></div><p class="an-note" id="an-hr-n"></p></div></div>
+      <div class="w an-box" id="an-wk-w" hidden><div class="w-h"><h2>По неделям</h2><span class="c" id="an-wk-c"></span></div><div class="hbars" id="an-wk"></div><p class="an-note" id="an-wk-n"></p></div>
+      <div class="w an-box"><div class="w-h"><h2>Расходы</h2></div><div class="an-tabs" data-antabs="exp"><button type="button" data-antab="exp:0" aria-selected="true">Офис и закупки</button><button type="button" data-antab="exp:1" aria-selected="false">Закупки Kaspi</button></div>
+        <div data-anpane="exp:0"><div class="hbars" id="an-exp"></div></div>
+        <div data-anpane="exp:1" hidden><div class="hbars" id="an-kbuy"></div><p class="an-note" id="an-kbuy-n"></p></div></div>
     </div>
     <div id="pay-box"></div>
   </section>
@@ -4546,7 +4550,7 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(!$('inv').
 let anPer='3m';
 /* выбранный месяц: «Этот месяц» или любой из списка «Выбрать месяц» */
 const anYM=()=>anPer==='month'?curMonth():anPer.startsWith('m:')?anPer.slice(2):'';
-const AN_PER=[['month','Этот месяц'],['3m','3 месяца'],['year','12 месяцев'],['all','Всё время']];
+const AN_PER=[['month','Месяц'],['3m','3 месяца'],['year','Год'],['all','Всё время']];
 function anRange(){
   const t=new Date(),y=t.getFullYear(),m=t.getMonth();
   if(anPer==='month')return [ds(new Date(y,m,1)),todayStr()];
@@ -4570,7 +4574,7 @@ function topN(map,n){const a=[...map.entries()].map(([l,o])=>({l,...o})).sort((a
 function bump(map,k,v,extra){const o=map.get(k)||{v:0,n:0,x:0};o.v+=v;o.n++;if(extra)o.x+=extra;map.set(k,o);return o}
 function renderAnalytics(){
   $('xim-btn').hidden=!canWrite||isMgr();
-  $('an-per').innerHTML=AN_PER.map(([id,l])=>`<button type="button" class="chip${anPer===id?' on':''}" data-anper="${id}">${l}</button>`).join('');
+  $('an-per').innerHTML=AN_PER.map(([id,l])=>{const on=anPer===id||(id==='month'&&anPer.startsWith('m:'));return `<button type="button" data-anper="${id}" aria-pressed="${on}">${l}</button>`}).join('');
   const [from,to]=anRange(),inR=d=>d&&d>=from&&d<=to,ym0=anYM();
   {const ms=[...new Set([...orders,...kVirtualOrders()].filter(o=>o.status!=='cancel').map(o=>receivedOf(o).slice(0,7)).filter(Boolean))].sort().reverse();
    if(ym0&&!ms.includes(ym0))ms.unshift(ym0);
@@ -4584,7 +4588,7 @@ function renderAnalytics(){
   const exp=expL.reduce((s,x)=>s+(+x.amount||0),0),net=prof-exp;
   const perTxt=anPer==='all'?'за всё время':ym0?'за '+monthName(ym0):anPer==='3m'?'за 3 месяца':'за 12 месяцев';
   $('an-sub').textContent='Данные '+perTxt+' по дате получения заказа. Отменённые заказы не считаются.';
-  const k=(t,v,sm,cls='')=>`<div class="kpi"><span>${t}</span><b class="${cls}">${v}</b><small>${sm}</small></div>`;
+  const k=(t,v,sm,cls='')=>`<div class="kpi"><span>${t}<small>${sm}</small></span><b class="${cls}">${v}</b></div>`;
   /* чистыми с заказов: выручка минус себестоимость (расходы и товары заказа) и комиссия Kaspi; офис и закупки не вычитаем */
   const profSt=os.filter(o=>!o.virtual).reduce((s,o)=>s+profitOf(o),0),profK=prof-profSt;
   $('an-kpis').innerHTML=k('Выручка',money(rev),os.length+' '+plural(os.length,'заказ','заказа','заказов'))
@@ -4667,7 +4671,36 @@ function renderAnalytics(){
   /* закупки Kaspi отдельно: в расходы не входят */
   const kb=new Map();kbL.forEach(x=>bump(kb,x.title||'Без названия',+x.amount||0));
   $('an-kbuy').innerHTML=hbars(topN(kb,8).map(r=>({...r,s:r.n+' '+plural(r.n,'закупка','закупки','закупок')})));
+  anHero({os,rev,prof,net,exp,from,to,ym0,perTxt,svc,wd});
   $('an-kbuy-n').textContent=kbT?'Всего '+money(kbT)+' '+perTxt+'. Эти деньги уже в себестоимости товаров Kaspi, поэтому в расходы и «После офиса и закупок» не входят.':'';
+}
+
+/* аналитика как у Apple: крупная цифра сверху и «Основное» — короткие выводы простыми словами */
+function anShift(d,k){const [y,m,dd]=d.split('-').map(Number),last=new Date(y,m-1+k+1,0).getDate();return ds(new Date(y,m-1+k,Math.min(dd,last)))}
+function anHero({os,rev,prof,net,from,to,ym0,perTxt,svc,wd}){
+  const st=$('an-step');const mon=!!ym0;st.hidden=!mon;
+  if(mon){const [y,m]=ym0.split('-').map(Number);$('an-step-l').textContent=MONTHS_FULL[m-1]+(y!==new Date().getFullYear()?' '+y:'');st.querySelector('[data-anstep="1"]').disabled=ym0>=curMonth()}
+  const days=Math.max(1,Math.round((new Date(to)-new Date(from==='0000-00-00'?((orders.map(receivedOf).filter(Boolean).sort()[0])||to):from))/864e5)+1);
+  const avg=ym0?money(rev/days)+' в день':money(rev/Math.max(1,Math.round(days/30.4)))+' в месяц';
+  $('an-ht').innerHTML=`<span class="an-hl-l">Выручка</span><b class="an-big">${esc(money(rev))}</b><span class="an-hs">в среднем ${esc(avg)} · ${esc(perTxt)}</span>`;
+  /* сравнение с тем же отрезком раньше: месяц с прошлым месяцем, 3 месяца с 3 предыдущими */
+  const k=anPer==='3m'?3:anPer==='year'?12:anPer==='all'?0:1;
+  const H=[];
+  const pct=(a,b)=>b?Math.round((a-b)/b*100):null;
+  const bars=(a,b,la,lb,c)=>{const mx=Math.max(a,b,1);return `<span class="an-cmp"><span><i style="width:${(b/mx*100).toFixed(1)}%"></i><em>${esc(lb)}</em></span><span><i style="width:${(a/mx*100).toFixed(1)}%;background:${c}"></i><em>${esc(la)}</em></span></span>`};
+  if(k){const pf=anShift(from,-k),pt=anShift(to,-k),inP=d=>d&&d>=pf&&d<=pt;
+    const po=[...orders,...kVirtualOrders()].filter(o=>o.status!=='cancel'&&inP(receivedOf(o))),prev=po.reduce((s,o)=>s+(+o.price||0),0);
+    const plab=k===1?'за '+monthName(pf.slice(0,7)):'раньше';
+    const g=pct(rev,prev);
+    if(g!=null)H.push({c:'#ff9500',t:'Выручка',x:g>=0?`Выручка выросла на ${g}% по сравнению с тем же отрезком ${k===1?'прошлого месяца':'раньше'}.`:`Выручка меньше на ${Math.abs(g)}%, чем в тот же отрезок ${k===1?'прошлого месяца':'раньше'}.`,v:bars(rev,prev,money(rev),money(prev),'#ff9500')});
+    const ac=os.length?rev/os.length:0,pa=po.length?prev/po.length:0,ga=pct(ac,pa);
+    if(ga!=null&&os.length)H.push({c:'#34c759',t:'Средний чек',x:ga>=0?`Средний чек вырос на ${ga}%: сейчас ${money(ac)} на заказ.`:`Средний чек снизился на ${Math.abs(ga)}%: сейчас ${money(ac)} на заказ.`,v:bars(ac,pa,money(ac),money(pa),'#34c759')});}
+  const top=[...svc.entries()].sort((a,b)=>b[1].v-a[1].v)[0];
+  if(top&&rev)H.push({c:'#007aff',t:'Главная услуга',x:`Больше всего приносит «${top[0]}»: ${Math.round(top[1].v/rev*100)}% выручки.`});
+  const WDF=['понедельник','вторник','среду','четверг','пятницу','субботу','воскресенье'],wm=wd.indexOf(Math.max(...wd));
+  if(wd.some(Boolean))H.push({c:'#af52de',t:'Активный день',x:`Чаще всего заказывают в ${WDF[wm]}.`});
+  if(rev&&prof)H.push({c:net>=0?'#30b0c7':'#ff3b30',t:'Остаётся',x:`С каждых 100 ₸ выручки остаётся ${Math.round(prof/rev*100)} ₸ чистыми${net<0?', но офис и закупки пока съедают больше':''}.`});
+  $('an-hl').innerHTML=H.length?H.slice(0,4).map(h=>`<div class="an-h1" style="--c:${h.c}"><span class="an-h1-t">${esc(h.t)}</span><p>${esc(h.x)}</p>${h.v||''}</div>`).join(''):'<div class="an-empty">За этот период данных пока мало.</div>';
 }
 /* подсказка у столбиков и полосок */
 {const tip=document.createElement('div');tip.id='an-tip';tip.hidden=true;document.body.appendChild(tip);
@@ -4676,7 +4709,9 @@ function renderAnalytics(){
   document.addEventListener('pointerdown',e=>{const el=e.target.closest&&e.target.closest('#p-analytics [data-tip]');if(el){const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top)}else tip.hidden=true});
   document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('#p-analytics [data-tip]');if(el){const r=el.getBoundingClientRect();show(el,r.left+r.width/2,r.top)}});
   document.addEventListener('scroll',()=>{tip.hidden=true},{passive:true});
-  document.addEventListener('click',e=>{const b=e.target.closest('[data-anper]');if(b){anPer=b.dataset.anper;renderAnalytics()}});
+  document.addEventListener('click',e=>{const b=e.target.closest('[data-anper]');if(b){anPer=b.dataset.anper;renderAnalytics();return}
+    const st=e.target.closest('[data-anstep]');if(st){const cur=anYM()||curMonth(),[y,m]=cur.split('-').map(Number),d=new Date(y,m-1+(+st.dataset.anstep),1),ym=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');if(ym>curMonth())return;anPer=ym===curMonth()?'month':'m:'+ym;renderAnalytics();return}
+    const tb=e.target.closest('[data-antab]');if(tb){const [g]=tb.dataset.antab.split(':');document.querySelectorAll(`[data-antab^="${g}:"]`).forEach(x=>x.setAttribute('aria-selected',String(x===tb)));document.querySelectorAll(`[data-anpane^="${g}:"]`).forEach(x=>x.hidden=x.dataset.anpane!==tb.dataset.antab)}});
   document.addEventListener('change',e=>{if(e.target.id==='an-month'){anPer=e.target.value?'m:'+e.target.value:'3m';renderAnalytics()}});}
 
 /* ---------- заявки с сайта топперов ---------- */
@@ -7431,7 +7466,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261109223000">
+<link rel="stylesheet" href="glass.css?v=20261109233000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
