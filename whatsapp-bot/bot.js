@@ -34,6 +34,7 @@ import { startL7 } from './l7.js';
 import { rememberPhoto, warmUp } from './mockup.js';
 import { startAnycubic } from './anycubic.js';
 import { startStudio } from './studio.js';
+import { startBambuLan } from './bambu.js';
 import { startWidget } from './widget.js';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
@@ -532,11 +533,13 @@ ${state.status === 'online' ? `<p>Подключён с ${new Date(state.since).
   if (!missing.length) extras = startExtras({ fs, env, log, notify, send, online: () => state.status === 'online' && !!sock, sock: () => sock, aiOn, DIR });
   // 3D-принтер Anycubic в мастерской: слушаем его по локальной сети и кладём состояние в учёт (виджет «3D принтеры»)
   if (!missing.length) { try { startAnycubic({ fs, env, log, DIR }); } catch (e) { log('Anycubic:', e?.message || e); } }
-  if (!missing.length) { try { startStudio({ fs, env, log, DIR }); } catch (e) { log('Оборудование:', e?.message || e); } }
+  // принтеры Bambu Lab по сети студии (облако Bambu не пускает панель тревоги): bambu.js → sig/printers/bambu
+  if (!missing.length) { try { startBambuLan({ fs, env, log, DIR }); } catch (e) { log('Bambu (сеть):', e?.message || e); } }
+  if (!missing.length) { try { startStudio({ fs, env, log, DIR, alert: t => notify?.alert(t) }); } catch (e) { log('Оборудование:', e?.message || e); } }
   // виджеты на экран iPhone (Scriptable): короткая сводка в /pub/<ключ>, см. widget.js
   if (!missing.length) { try { startWidget({ fs, env, idToken: () => botToken(env), log }); } catch (e) { log('Виджеты:', e?.message || e); } }
   // Обновили бота или настройки — перезапускаемся, start.bat поднимет новую версию через 10 секунд
-  for (const f of ['brain.js', 'anna.js', 'notify.js', 'l7.js', 'extras.js', 'mockup.js', 'anycubic.js', 'studio.js', 'bot.js', '.env']) {
+  for (const f of ['brain.js', 'anna.js', 'notify.js', 'l7.js', 'extras.js', 'mockup.js', 'anycubic.js', 'studio.js', 'bambu.js', 'bot.js', '.env']) {
     watchFile(join(DIR, f), { interval: 5000 }, (cur, prev) => {
       if (cur.mtimeMs !== prev.mtimeMs) { log('Файл ' + f + ' изменился, перезапускаюсь'); process.exit(0); }
     });

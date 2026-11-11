@@ -11,7 +11,12 @@
 //   1) в учёте вводят «код пользователя» из приложения → sig/studio/tuya/req = { userCode, at }
 //   2) бот просит у Tuya QR-код и кладёт его в sig/studio/tuya/qr — учёт его показывает
 //   3) QR сканируют приложением Smart Life, бот получает доступ и хранит его в tuya.json рядом с ботом (в git не попадает)
-//   4) раз в минуту бот спрашивает облако о устройствах → sig/studio/tuya/devices
+//   4) раз в 30 секунд бот спрашивает облако о устройствах → sig/studio/tuya/devices
+//
+// Тревога при дыме: громкое критическое уведомление Bark на iPhone (через воркер bambu-watch, как у принтеров,
+// ключ воркера лежит рядом с ботом в alarm.json, в git не попадает) + сообщение в Telegram команде.
+// Пока дым не пропал — повтор каждые 3 минуты. Ещё в Telegram: датчик пропал со связи, села батарея.
+// Проверка из учёта: кнопка «Проверить тревогу» → sig/studio/tuya/test = { at }, ответ бота → sig/studio/tuya/testDone = { req, ok, at }.
 
 import net from 'node:net';
 import os from 'node:os';
@@ -20,7 +25,11 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const EVERY = 60e3;
+const EVERY = 60e3, TUYA_EVERY = 30e3;
+const ALARM_URL = 'https://bambu-watch.design-onegin.workers.dev/api/alarm';
+const SMOKE_REPEAT = 3 * 60e3, OFFLINE_WARN = 30 * 60e3;
+const isSmoke = s => { const v = ['smoke_sensor_status', 'smoke_sensor_state'].map(k => s?.[k]).find(x => x != null); return v === 'alarm' || v === '1' || v === true; };
+const lowBattery = s => (s?.battery_percentage != null && +s.battery_percentage <= 20) || s?.battery_state === 'low';
 const T_CLIENT = 'HA_3y9q4ak7g4ephrvke', T_SCHEMA = 'haauthorize', T_LOGIN = 'https://apigw.iotbing.com';
 
 const tcpOpen = (ip, port, ms = 1500) => new Promise(ok => {
@@ -52,7 +61,7 @@ function gcmDec(b64, key) {
   return Buffer.concat([d.update(body), d.final()]).toString('utf8');
 }
 
-export function startStudio({ fs, env, log, DIR }) {
+export function startStudio({ fs, env, log, DIR, alert }) {
   const rt = fs?.rt;
   if (!rt) return;
   const file = join(DIR, 'tuya.json');
@@ -161,6 +170,65 @@ export function startStudio({ fs, env, log, DIR }) {
     const key = JSON.stringify(out);
     if (key !== lastDev || Date.now() - lastDevAt > 5 * 60e3) { lastDev = key; lastDevAt = Date.now(); await put('sig/studio/tuya/devices', { list: out }); }
     say('tuya', 'Smart Life: на связи, устройств ' + out.length);
+    await watchSensors(out);
+  }
+
+  // ---------- тревога ----------
+  let alarmKey = String(env.ALARM_TOKEN || '').trim();
+  if (!alarmKey) try { alarmKey = String(JSON.parse(readFileSync(join(DIR, 'alarm.json'), 'utf8')).token || '').trim(); } catch (_) {}
+  async function bark(title, body, critical = true) {
+    if (!alarmKey) { say('barkK', 'Тревога: нет alarm.json рядом с ботом, звонок на телефон не отправлен'); return false; }
+    try {
+      const r = await fetch(ALARM_URL, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: JSON.stringify({ token: alarmKey, title, body, critical }), signal: AbortSignal.timeout(15e3) });
+      const j = await r.json().catch(() => ({}));
+      if (!j.ok) log('Тревога: телефон не принял (' + r.status + ')');
+      return !!j.ok;
+    } catch (e) { log('Тревога: не дозвонился до воркера: ' + (e?.message || e)); return false; }
+  }
+  const tgSay = t => { try { return alert?.(t); } catch (_) {} };
+  async function watchSensors(list) {
+    const now = Date.now();
+    cfg.sens = cfg.sens || {};
+    let changed = false;
+    for (const d of list) {
+      const st = d.status || {}, name = d.name || 'Датчик', w = cfg.sens[d.id] || (cfg.sens[d.id] = {});
+      if (d.category === 'ywbj' || 'smoke_sensor_status' in st || 'smoke_sensor_state' in st) {
+        const smoke = d.online && isSmoke(st);
+        if (smoke && !w.smoke) {
+          w.smoke = now; w.bark = now; changed = true;
+          log('ДЫМ! Сработал датчик ' + name);
+          await bark('🔥 ДЫМ в мастерской!', 'Сработал датчик «' + name + '». Срочно проверьте студию!');
+          await tgSay('🔥 ДЫМ! Сработал датчик «' + name + '» в студии. Срочно проверьте мастерскую!');
+        } else if (smoke && now - (w.bark || 0) >= SMOKE_REPEAT && !st.muffling) {
+          w.bark = now; changed = true;
+          await bark('🔥 Дым всё ещё есть', 'Датчик «' + name + '» продолжает тревогу уже ' + Math.round((now - w.smoke) / 60e3) + ' мин.');
+        } else if (!smoke && w.smoke && d.online) {
+          log('Дым пропал: ' + name);
+          await bark('✅ Дыма больше нет', 'Датчик «' + name + '» успокоился.', false);
+          await tgSay('✅ Датчик «' + name + '» успокоился: дыма больше нет.');
+          w.smoke = 0; changed = true;
+        }
+      }
+      if (lowBattery(st) && now - (w.bat || 0) > 24 * 36e5) { w.bat = now; changed = true; await tgSay('🔋 У датчика «' + name + '» садится батарея' + (st.battery_percentage != null ? ' (' + st.battery_percentage + '%)' : '') + '. Замените, иначе он не предупредит о дыме.'); }
+      if (!d.online) {
+        if (!w.off) { w.off = now; changed = true; }
+        else if (!w.offSaid && now - w.off > OFFLINE_WARN) { w.offSaid = now; changed = true; await tgSay('⚠️ Датчик «' + name + '» не на связи уже ' + Math.round((now - w.off) / 60e3) + ' мин. Проверьте Wi‑Fi и батарею: пока он офлайн, о дыме он не предупредит.'); }
+      } else if (w.off) {
+        if (w.offSaid) await tgSay('✅ Датчик «' + name + '» снова на связи.');
+        w.off = 0; w.offSaid = 0; changed = true;
+      }
+    }
+    if (changed) save();
+  }
+  let lastTest = 0;
+  async function testAlarm() {
+    const t = rt.get('sig/studio/tuya/test');
+    if (!t?.at || +t.at <= lastTest || Date.now() - +t.at > 5 * 60e3) return;
+    lastTest = +t.at;
+    const ok = await bark('🔔 Проверка тревоги дыма', 'Так придёт тревога, если сработает датчик дыма в студии.');
+    await tgSay('🔔 Проверка: так придёт сообщение, если сработает датчик дыма в студии.');
+    await put('sig/studio/tuya/testDone', { req: +t.at, ok });
+    log('Тревога: проверка из учёта, телефон ' + (ok ? 'принял' : 'НЕ принял'));
   }
   async function tuyaTick() {
     if (tuyaBusy) return;
@@ -177,10 +245,13 @@ export function startStudio({ fs, env, log, DIR }) {
     } finally { tuyaBusy = false; }
   }
 
-  rt.on(p => { if (String(p).startsWith('/studio/tuya/req') || p === '/') setTimeout(tuyaTick, 100); });
-  const tick = async () => { try { await checkCamera(); } catch (e) { say('camE', 'Камера: ' + (e?.message || e)); } await tuyaTick(); };
-  setTimeout(tick, 5000);
-  const timer = setInterval(tick, EVERY);
+  rt.on(p => {
+    if (String(p).startsWith('/studio/tuya/req') || p === '/') setTimeout(tuyaTick, 100);
+    if (String(p).startsWith('/studio/tuya/test') || p === '/') setTimeout(() => testAlarm().catch(e => log('Тревога: ' + (e?.message || e))), 100);
+  });
+  const tick = async () => { try { await checkCamera(); } catch (e) { say('camE', 'Камера: ' + (e?.message || e)); } };
+  setTimeout(tick, 5000); setTimeout(tuyaTick, 6000);
+  const timer = setInterval(tick, EVERY), timer2 = setInterval(tuyaTick, TUYA_EVERY);
   log('Оборудование: слежу за камерой и датчиками Smart Life');
-  return { stop: () => clearInterval(timer) };
+  return { stop: () => { clearInterval(timer); clearInterval(timer2); } };
 }
