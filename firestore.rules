@@ -29,6 +29,7 @@ service cloud.firestore {
     match /supplies/{id} { allow read, write: if staff(); }
     match /office/{id}   { allow read, write: if staff(); }
     match /projects/{id} { allow read, write: if staff(); }
+    match /equipment/{id} { allow read, write: if staff(); }
     match /prices/{id}   { allow read, write: if staff(); }
     match /tasks/{id}    { allow read, write: if staff(); }
     match /blobs/{id}    { allow read, write: if staff(); }

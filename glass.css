@@ -248,7 +248,7 @@ html.dark .seg button[aria-pressed="true"],html.dark .tab[aria-selected="true"]{
 [data-go="home"],[data-mgo="home"]{--ic:#007aff}[data-go="orders"],[data-mgo="orders"]{--ic:#5856d6}
 [data-go="kaspi"],[data-mgo="kaspi"]{--ic:#f14635}[data-go="calendar"],[data-mgo="calendar"]{--ic:#ff9500}
 [data-go="office"],[data-mgo="office"]{--ic:#00c7be}[data-go="supplies"],[data-mgo="supplies"]{--ic:#a2845e}
-[data-go="clients"],[data-mgo="clients"]{--ic:#30b0c7}[data-go="docs"],[data-mgo="docs"]{--ic:#8e8e93}
+[data-go="equip"],[data-mgo="equip"]{--ic:#636366}[data-go="clients"],[data-mgo="clients"]{--ic:#30b0c7}[data-go="docs"],[data-mgo="docs"]{--ic:#8e8e93}
 [data-go="projects"],[data-mgo="projects"]{--ic:#af52de}[data-go="prices"],[data-mgo="prices"]{--ic:#ffb800}
 [data-go="analytics"],[data-mgo="analytics"]{--ic:#32ade6}[data-go="anna"],[data-mgo="anna"]{--ic:#34c759}
 [data-go="sasha"],[data-mgo="sasha"]{--ic:#ff2d55}[data-go="daulet"],[data-mgo="daulet"]{--ic:#5e5ce6}
