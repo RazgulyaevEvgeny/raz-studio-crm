@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261111190000">
+<meta name="app-build" content="20261111200000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -8446,7 +8446,7 @@ function eqDetailHtml(e,x){
 /* ---------- задачи обслуживания ---------- */
 const eqTid=(e,w,due)=>('eq_'+e.id+'_'+w.id+'_'+due.replace(/-/g,'')).slice(0,140);
 function eqTaskData(e,w,due){const ev=+w.every||30;
-  return {kind:'boss',status:'new',title:w.title+' — '+e.name,date:due,showFrom:eqAdd(due,-3),who:'',
+  return {kind:'boss',status:'new',title:w.title+' — '+e.name,date:due,showFrom:due,who:'',
     desc:'Обслуживание оборудования, повторяется каждые '+ev+' дн. Отметьте «Выполнено» — следующая задача появится сама.',
     equip:{id:e.id,w:w.id},done:false,doneAt:null,createdAt:Date.now()}}
 /* привести задачи станка к его графику: у каждой работы одна открытая задача на ближайший срок */
@@ -8459,7 +8459,9 @@ async function eqSyncTasks(e,removeStale){
   }catch(er){console.warn('equip tasks',er)}
 }
 let eqSyncT=null;
-function eqSyncAll(){clearTimeout(eqSyncT);eqSyncT=setTimeout(()=>{if(!equipLoaded||!tasksLoaded||!canWrite){if(!equipLoaded||!tasksLoaded)eqSyncAll();return}eqCatchDone();equip.forEach(e=>eqSyncTasks(e,false))},2500)}
+function eqSyncAll(){clearTimeout(eqSyncT);eqSyncT=setTimeout(()=>{if(!equipLoaded||!tasksLoaded||!canWrite){if(!equipLoaded||!tasksLoaded)eqSyncAll();return}eqCatchDone();equip.forEach(e=>eqSyncTasks(e,false));
+  /* задачи обслуживания показываем ровно в свой день, не раньше (раньше ставили за 3 дня) */
+  for(const t of tasks)if(t.equip&&!t.done&&t.date&&t.showFrom!==t.date)db.doc('tasks/'+t.id).update({showFrom:t.date}).catch(()=>{})},2500)}
 setInterval(eqSyncAll,60000);
 /* работа сделана: из оборудования или из «Задач» (fromTask — id задачи, которую уже отметили) */
 async function eqWorkDone(eid,wid,fromTask,day){
