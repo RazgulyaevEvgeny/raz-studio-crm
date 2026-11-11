@@ -182,14 +182,14 @@ html:not(.dark) #w-print .bmark{filter:invert(1) brightness(.2)}
   --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter",system-ui,"Segoe UI",Roboto,sans-serif;
   --fb:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter",system-ui,"Segoe UI",Roboto,sans-serif;
   --blue:#007aff; --blue-d:#0062cc;
-  --st-new:#007aff; --st-design:#af52de; --st-prod:#ff9500; --st-ready:#34c759; --st-done:#8e8e93; --st-cancel:#ff3b30;
+  --st-new:#007aff; --st-agree:#30b0c7; --st-design:#af52de; --st-prod:#ff9500; --st-ready:#34c759; --st-done:#8e8e93; --st-cancel:#ff3b30;
   --danger:#ff3b30; --ok:#34c759; --boss:#ff9500; --task:#af52de;
   --spring:cubic-bezier(.32,.72,0,1); --ease:cubic-bezier(.32,.72,0,1);
   --fill:rgba(118,118,128,.12); --fill-2:rgba(118,118,128,.2); --sep:rgba(60,60,67,.18);
 }
 html.dark{
   --blue:#0a84ff; --blue-d:#409cff;
-  --st-new:#0a84ff; --st-design:#bf5af2; --st-prod:#ff9f0a; --st-ready:#30d158; --st-done:#98989d; --st-cancel:#ff453a;
+  --st-new:#0a84ff; --st-agree:#40c8e0; --st-design:#bf5af2; --st-prod:#ff9f0a; --st-ready:#30d158; --st-done:#98989d; --st-cancel:#ff453a;
   --danger:#ff453a; --ok:#30d158; --boss:#ff9f0a; --task:#bf5af2;
   --fill:rgba(118,118,128,.24); --fill-2:rgba(118,118,128,.32); --sep:rgba(84,84,88,.6);
 }

@@ -65,7 +65,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .t-cmt svg{flex:none;width:18px;height:18px;margin-top:2px}
 
 /* строчка прогресса: пять узелков, пройденные стежки прошиты */
-.seam{list-style:none;margin:22px -4px 0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
+.seam{list-style:none;margin:22px -4px 0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
 .knot{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px}
 .knot::before{content:"";position:absolute;top:10px;left:calc(50% + 12px);right:calc(-50% + 12px);height:0;border-top:2px dashed rgba(255,255,255,.35)}
 .knot:last-child::before{display:none}
@@ -80,6 +80,7 @@ button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:poin
 .knot.cur .dot::before{content:"";position:absolute;inset:-7px;border-radius:50%;border:2px solid rgba(255,255,255,.55);animation:pulse 2.2s ease-out 3}
 @keyframes pulse{from{transform:scale(.7);opacity:1}to{transform:scale(1.35);opacity:0}}
 .knot span{font:600 11.5px/1.2 var(--f);opacity:.6;padding:0 2px;hyphens:manual}
+@media (max-width:420px){.knot span{font-size:10.5px;padding:0}}
 .knot.done span,.knot.cur span{opacity:1}
 .knot.cur span{font-weight:800}
 
@@ -243,10 +244,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
 <script>
 (function(){
   var PROJECT='raz-studio-5a486', KEY='AIzaSyCNpsnF-9swN11uS2L22-w9cXF45G54Hj0', PHONE='77064230226';
-  var STEPS=[['new','Оформлен'],['design','В разработке'],['prod','В производстве'],['ready','Готов'],['done','Выдан']];
+  var STEPS=[['new','Оформлен'],['agree','Согласование'],['design','В разработке'],['prod','В производстве'],['ready','Готов'],['done','Выдан']];
   // на «строчке» колонки узкие: мягкий перенос внутри длинных слов
-  var SEAM={design:'В раз\u00ADработке',prod:'В произ\u00ADводстве'};
-  var NOTE={new:'Заказ принят. Менеджер проверит детали и запустит его в работу.',design:'Готовим макет и согласовываем его с вами.',prod:'Изготавливаем ваш заказ.',ready:'Всё готово, ждём вас в студии.',done:'Заказ у вас. Спасибо, что выбрали нас!',cancel:'Заказ больше не в работе. Если это ошибка, напишите нам.'};
+  var SEAM={agree:'Согла\u00ADсование',design:'В раз\u00ADработке',prod:'В произ\u00ADводстве'};
+  var NOTE={new:'Заказ принят. Менеджер проверит детали и запустит его в работу.',agree:'Согласовываем с вами детали заказа.',design:'Готовим макет и согласовываем его с вами.',prod:'Изготавливаем ваш заказ.',ready:'Всё готово, ждём вас в студии.',done:'Заказ у вас. Спасибо, что выбрали нас!',cancel:'Заказ больше не в работе. Если это ошибка, напишите нам.'};
   var MON=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
   var token=function(){return (location.hash||'').replace(/^#/,'').replace(/[^\w-]/g,'')};
   var $=function(id){return document.getElementById(id)};
