@@ -16,7 +16,7 @@ const TICK = 2 * 60e3;          // как часто пересобираем с
 const KASPI_EVERY = 5 * 60e3;   // Kaspi — раз в 5 минут, как уведомления в Telegram
 const FULL_EVERY = 60 * 60e3;   // задачи и заказы целиком — раз в час
 const BEAT = 10 * 60e3;         // даже без изменений обновляем время, чтобы виджет видел, что ПК на связи
-const OPEN = ['new', 'design', 'prod', 'ready'];
+const OPEN = ['new', 'agree', 'design', 'prod', 'ready'];
 const KASPI_ACTIVE = ['NEW', 'SIGN_REQUIRED', 'PICKUP', 'DELIVERY', 'KASPI_DELIVERY'];
 
 const kzDay = (t = Date.now()) => new Date(+t + 5 * 3600e3).toISOString().slice(0, 10);

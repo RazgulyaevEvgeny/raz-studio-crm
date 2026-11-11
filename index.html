@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261111200000">
+<meta name="app-build" content="20261111210000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -208,7 +208,7 @@
 :root{
   --blue:#4358ef; --blue-d:#3346d8; --sky:#7d8cff; --ink:#0a0b14; --paper:#ffffff;
   --tile:#f2f3f9; --tile-2:#e4e6f4; --muted:#5b5f7b; --line:#e3e5f1;
-  --st-new:#4358ef; --st-design:#8a5cf0; --st-prod:#e58a00; --st-ready:#1f9d5a; --st-done:#5b5f7b; --st-cancel:#e5484d;
+  --st-new:#4358ef; --st-agree:#0e9bb5; --st-design:#8a5cf0; --st-prod:#e58a00; --st-ready:#1f9d5a; --st-done:#5b5f7b; --st-cancel:#e5484d;
   --boss:#e58a00; --task:#8a5cf0;
   --danger:#e5484d; --ok:#1f9d5a;
   --f:"Inter Tight","Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -2754,7 +2754,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
 
 <script>
 const STATUSES=[
-  {id:'new',label:'Новый',c:'--st-new'},{id:'design',label:'Разработка',c:'--st-design'},{id:'prod',label:'Производство',c:'--st-prod'},
+  {id:'new',label:'Новый',c:'--st-new'},{id:'agree',label:'Согласование',c:'--st-agree'},{id:'design',label:'Разработка',c:'--st-design'},{id:'prod',label:'Производство',c:'--st-prod'},
   {id:'ready',label:'Готов',c:'--st-ready'},{id:'done',label:'Выдан',c:'--st-done'},{id:'cancel',label:'Отменён',c:'--st-cancel'}
 ];
 const ST=Object.fromEntries(STATUSES.map(s=>[s.id,s]));
@@ -7687,7 +7687,7 @@ function wgtSummary(){
   const open=tasks.filter(t=>!t.done),later=t=>t.showFrom&&t.showFrom>today;
   const tl=open.filter(t=>isBossBlock(t)&&!later(t)).sort((a,b)=>String(a.date||'9').localeCompare(String(b.date||'9'))||String(a.time||'').localeCompare(String(b.time||'')));
   /* ведомость */
-  const OPEN=['new','design','prod','ready'],ol=orders.filter(o=>OPEN.includes(o.status)&&!o.deletedAt).sort((a,b)=>String(a.deadline||'9').localeCompare(String(b.deadline||'9')));
+  const OPEN=['new','agree','design','prod','ready'],ol=orders.filter(o=>OPEN.includes(o.status)&&!o.deletedAt).sort((a,b)=>String(a.deadline||'9').localeCompare(String(b.deadline||'9')));
   const by={};for(const o of ol)by[o.status]=(by[o.status]||0)+1;
   /* оборудование */
   const one=(p,brand)=>{const st0=String(p.state||'').toUpperCase(),on=p.online!==false&&p.online!=null;

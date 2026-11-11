@@ -29,7 +29,7 @@ async function RAZ_WIDGET(KEY, opts) {
     equip: { title: 'Оборудование', icon: 'printer.fill', c: T.green, url: CRM + '#equip' },
     all: { title: 'Студия', icon: 'square.grid.2x2.fill', c: T.indigo, url: CRM },
   };
-  const ST = { new: ['Новый', T.blue], design: ['Разработка', T.purple], prod: ['Производство', T.orange], ready: ['Готов', T.green] };
+  const ST = { new: ['Новый', T.blue], agree: ['Согласование', T.teal], design: ['Разработка', T.purple], prod: ['Производство', T.orange], ready: ['Готов', T.green] };
 
   /* ---------- данные (последнюю удачную сводку храним на телефоне — без интернета покажем её) ---------- */
   let D = opts.data || null, offline = false;

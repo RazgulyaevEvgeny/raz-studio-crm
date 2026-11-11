@@ -9,16 +9,19 @@ import { makeMockup, lastPhoto, describe as mockupText, ITEMS as MOCKUP_ITEMS, S
 
 const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 const WD_FULL = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
-const OPEN = ['new', 'design', 'prod', 'ready'];
+const OPEN = ['new', 'agree', 'design', 'prod', 'ready'];
 const HISTORY = 40;                        // сколько последних сообщений чата хранить и показывать ИИ
 export const PAUSE_AFTER_MANAGER = 30;     // минут: бот молчит в чате, где только что писал менеджер
 
 // Тексты уведомлений клиенту. {num} — номер заказа.
-// Правило Евгения (19.10): пишем клиенту только «принят в работу» (статус «Производство», без сроков) и «готов».
-// На «Новый», «Макет», «Выдан», «Отменён» и перенос срока уведомлений нет.
+// Правило Евгения (19.10, 11.11): пишем клиенту «оформлен заказ + ссылка» (статус «Согласование»),
+// «принят в работу» (статус «Производство», без сроков) и «готов».
+// На «Новый», «Разработка», «Выдан», «Отменён» и перенос срока уведомлений нет.
 const NOTICES = {
-  // ссылку на страницу заказа шлём только по кнопке в ведомости (правило Евгения 20.10), без состава заказа
-  link:    'У вас оформлен заказ № {num}. Отслеживать его можно здесь:\n{link}',
+  // статус «Согласование»: всегда со «Здравствуйте» и сразу со ссылкой на страницу заказа (правило Евгения 11.11)
+  agree:   'У вас оформлен заказ № {num}. Отслеживать его можно здесь:\n{link}',
+  // кнопка-самолётик «Ссылка» в ведомости: без приветствия, по имени (правило Евгения 11.11)
+  link:    'Ваш заказ № {num} можно отслеживать по ссылке:\n{link}',
   prod:   'Ваш заказ № {num} принят в работу. Мы напишем, когда всё будет готово.',
   ready:  'Ваш заказ № {num} готов, можно забирать. Спасибо, что выбрали нас!',
   // напоминание о готовом заказе: только по кнопке «Напомнить» на главной учёта (правило Евгения 09.11), сама Аня не шлёт
@@ -277,7 +280,7 @@ export async function prepareNotice(fs, orderId, event) {
   const sent = o.waSent && typeof o.waSent === 'object' ? o.waSent : {};
   if (sent[key] && kind !== 'link' && kind !== 'remind') return { skipped: 'уже отправлено' }; // ссылку и напоминание шлём на каждое нажатие
   let link = '';
-  if (kind === 'link') {
+  if (kind === 'link' || kind === 'agree') {
     link = await ensureOrderPage(fs, orderId, o).catch(e => { console.log(new Date().toLocaleString('ru-RU'), 'Страница заказа не обновилась:', e?.message || e); return ''; });
     if (!link) return { skipped: 'страница заказа недоступна' };
   }
@@ -289,7 +292,9 @@ export async function prepareNotice(fs, orderId, event) {
     link,
   };
   const talked = talkedRecently(chat?.messages || []);
-  const lead = view.client ? (talked ? NOTICE_AGAIN : NOTICE_HELLO) : (talked ? '' : NOTICE_HELLO.replace(', {client}', ''));
+  // «Согласование» — всегда здороваемся; ссылка по кнопке — никогда не здороваемся, только имя
+  const hello = kind === 'agree' ? true : kind === 'link' ? false : !talked;
+  const lead = view.client ? (hello ? NOTICE_HELLO : NOTICE_AGAIN) : (hello ? NOTICE_HELLO.replace(', {client}', '') : '');
   const body = lead === NOTICE_AGAIN ? tpl.charAt(0).toLowerCase() + tpl.slice(1) : tpl;
   const text = (lead + body).replace(/\{(\w+)\}/g, (_, k) => view[k] ?? '');
   return { text, phone, key, sent };
@@ -734,7 +739,7 @@ async function runTool(name, input, { fs, phone, chat }) {
   if (name === 'get_client_orders') {
     const orders = phone ? (await openOrders(fs)).filter(o => normPhone(o.phone) === phone) : [];
     if (!orders.length) return { orders: [], note: 'Открытых заказов на этот номер не найдено. Возможно, заказ оформлен на другой номер — уточни имя или номер заказа и позови менеджера.' };
-    const ST = { new: 'принят, ждёт работы', design: 'готовим макет', prod: 'в производстве', ready: 'готов, можно забирать' };
+    const ST = { new: 'принят, ждёт работы', agree: 'согласовываем детали', design: 'готовим макет', prod: 'в производстве', ready: 'готов, можно забирать' };
     return {
       orders: orders.map(o => ({
         num: String(o.num || '').padStart(3, '0'), service: SERVICE_NAMES[o.service] || o.customService || o.service,
