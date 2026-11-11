@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261111120000">
+<meta name="app-build" content="20261111150000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -6954,13 +6954,15 @@ const bwPIco=(k,c)=>`<div class="bw-ring ico" style="--sc:var(${c})">${bwPICO[k]
 const bwPStat=(l,v)=>`<div class="bw-stat"><span>${l}</span><em>${esc(v)}</em></div>`;
 /* Anycubic Kobra X: облака для него нет, его слушает бот на рабочем компьютере по сети студии (whatsapp-bot/anycubic.js)
    и кладёт сводку в Realtime Database sig/printers/anycubic — в том же виде, что и Bambu. Бот молчит больше 15 минут — данных нет. */
-let printS=null,printFail=false,acP,acOn=false;
+let printS=null,printFail=false,acP,acOn=false,bwLan;
 /* камера и датчики Smart Life: их тоже слушает бот на рабочем компьютере (whatsapp-bot/studio.js) → sig/studio */
 let stD;
 function acListen(){
   if(acOn)return;let r=null,u=null;try{r=rt();u=window.firebase&&firebase.auth&&firebase.auth().currentUser}catch(_){return} /* rt() объявлен ниже: до его строки просто ждём */
   if(!r||!u)return;acOn=true;
   r.ref('sig/printers/anycubic').on('value',x=>{acP=x.val()||null;renderPrinters()},()=>{acP=null;acOn=false});
+  /* Bambu по сети студии (whatsapp-bot/bambu.js): облако Bambu с 11.11.2026 не пускает панель тревоги */
+  r.ref('sig/printers/bambu').on('value',x=>{bwLan=x.val()||null;renderPrinters()},()=>{bwLan=null});
   r.ref('sig/studio').on('value',x=>{stD=x.val()||{};renderPrinters()},()=>{stD=undefined});
 }
 /* привязка Smart Life: код пользователя → бот просит QR → сканируют в приложении */
@@ -7015,10 +7017,13 @@ async function loadPrinters(){
 function renderPrinters(){
   const list=$('w-print-list'),note=$('w-print-note');if(!list)return;
   try{
-    const s=printS||{printers:[]},ac=acPrinter(),bambu=printFail?[]:(s.printers||[]).map(p=>({...p,brand:'Bambu Lab'})),all=[...bambu,...(ac?[ac]:[])];
+    const s0=printS||{printers:[]},lan=bwLan&&bwLan.at&&Date.now()-bwLan.at<10*6e4&&Array.isArray(bwLan.list)&&bwLan.list.length?bwLan:null,viaLan=!!lan&&(printFail||!s0.ok);
+    /* облако Bambu не ответило панели, а бот видит принтеры по сети студии — показываем их */
+    const s=viaLan?{...s0,ok:true,error:null,printers:lan.list,now:lan.at,lastCheck:lan.at}:s0;
+    const ac=acPrinter(),bambu=printFail&&!viaLan?[]:(s.printers||[]).map(p=>({...p,brand:'Bambu Lab'})),all=[...bambu,...(ac?[ac]:[])];
     const ERR={noauth:'Вход в Bambu не выполнен',auth:'Вход в Bambu устарел, войдите заново',cloud:'Облако Bambu не ответило'};
-    if(!printS&&!printFail&&!ac)return;
-    const prHtml=(printFail?'<div class="bw-card"><span class="bw-meta">Bambu Lab: нет связи с наблюдением, попробуем снова через минуту</span></div>':'')+(all.length?all.map(p=>{
+    if(!printS&&!printFail&&!ac&&!lan)return;
+    const prHtml=(printFail&&!viaLan?'<div class="bw-card"><span class="bw-meta">Bambu Lab: нет связи с наблюдением, попробуем снова через минуту</span></div>':'')+(all.length?all.map(p=>{
       const st=p.online&&p.state?PSTATE[String(p.state).toUpperCase()]:null;
       const er=p.online?perrText(p.error,p.errorText):'';
       const hm=p.online&&Array.isArray(p.hms)?p.hms:[];const hmTxt=hm.length?(hm.map(h=>h&&(h.text||h.ru)).filter(Boolean)[0]||'Есть предупреждения принтера: смотрите в Bambu Handy'):'';
@@ -7034,9 +7039,9 @@ function renderPrinters(){
       }
       else if(st){c=er||st.k==='FAILED'?'--danger':st.c;l=st.l;left=bwPIco(er||st.k==='FAILED'?'err':'ok',c);
         info=`<span class="bw-meta">${st.k==='FINISH'?'печать завершена, ':''}${p.since?'включился '+esc(printWhen(p.since)):'готов к печати'}</span>`}
-      else{c='--ok';l='в сети';left=bwPIco('wait',c);info=`<span class="bw-meta">${p.since?'включился '+esc(printWhen(p.since)):'состояние печати пока неизвестно'}</span>`}
+      else{c='--ok';l='в сети';left=bwPIco('wait',c);info=`<span class="bw-meta">${p.note?esc(p.note):p.since?'включился '+esc(printWhen(p.since)):'состояние печати пока неизвестно'}</span>`}
       return `<div class="bw-card${er?' alert':''}">${left}<div class="bw-head"><b><small class="bw-brand">${esc(p.brand||'')}</small>${esc(p.name)}</b><span class="bw-chip${live?' live':''}" style="--sc:var(${c})">${l}</span></div><div class="bw-info">${info}</div>${er?`<div class="bw-err">${esc(er)}</div>`:hmTxt?`<div class="bw-err warn">${esc(hmTxt)}</div>`:''}</div>`;
-    }).join(''):printFail?'':`<div class="bw-card"><span class="bw-meta">${esc(ERR[s.error]||'Принтеров нет')}</span></div>`);
+    }).join(''):printFail&&!viaLan?'':`<div class="bw-card"><span class="bw-meta">${esc(ERR[s.error]||'Принтеров нет')}</span></div>`);
     /* раздел виджета «Оборудование в студии»: заголовок + карточки */
     const sec=(t,n,h,cls)=>`<div class="bw-grp ${cls||''}"><div class="bw-sec"><span>${t}</span>${n?`<em>${n}</em>`:''}</div><div class="bw-grid">${h}</div></div>`;
     const SD=studioCards(),keepIn=document.activeElement&&document.activeElement.id==='ty-code'?document.activeElement.value:null;
@@ -7046,7 +7051,7 @@ function renderPrinters(){
     {const P=all,busy=P.filter(p=>p.online&&p.state&&PSTATE[String(p.state).toUpperCase()]?.busy).length,bad=P.filter(p=>p.online&&perrText(p.error,p.errorText)).length,on=P.filter(p=>p.online).length;
       rkFill('w-print-k',[[on+(P.length?'/'+P.length:''),'в сети'],[busy,'печатают'],[bad,'с ошибкой',bad>0]]);
       const SA=studioCards().alarm;$('w-print-m').textContent=SA?'ДЫМ!':bad?bad+' с ошибкой':busy?busy+' '+plural(busy,'печатает','печатают','печатают'):P.length?on+' из '+P.length+' в сети':''}
-    note.textContent=printFail?'':[s.error&&(s.printers||[]).length?ERR[s.error]:'',s.lastCheck?'Bambu: проверка '+printWhen(s.lastCheck):'автопроверка Bambu ещё не запускалась'].filter(Boolean).join(' · ');
+    note.textContent=viaLan?'Bambu: по сети студии, '+printWhen(lan.at):printFail?'':[s.error&&(s.printers||[]).length?ERR[s.error]:'',s.lastCheck?'Bambu: проверка '+printWhen(s.lastCheck):'автопроверка Bambu ещё не запускалась'].filter(Boolean).join(' · ');
   }catch(e){try{console.warn('printers',e)}catch(_){}}
   packHome();
 }
