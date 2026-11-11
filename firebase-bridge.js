@@ -85,7 +85,7 @@
      Удаление в этих коллекциях — заглушка {_del:true}, чтобы другие устройства узнали об удалении.
      Раз в 30 дней (и на новом устройстве) — полная загрузка: на случай, если что-то записали в обход.
      Старые выданные заказы поэтому из базы не перечитываются: учёт берёт их из копии на устройстве. */
-  const SYNCED = new Set(['orders', 'tasks', 'prices', 'projects', 'requests', 'office', 'supplies', 'kaspi_orders']);
+  const SYNCED = new Set(['orders', 'tasks', 'prices', 'projects', 'requests', 'office', 'supplies', 'kaspi_orders', 'equipment']);
   const FULL_EVERY = 30 * 864e5, OVERLAP = 10 * 60e3, HIDE_AFTER = 60e3;
   const TS = () => firebase.firestore.FieldValue.serverTimestamp();
   const colName = d => String(d.path || '').split('/')[0];

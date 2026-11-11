@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261111150000">
+<meta name="app-build" content="20261111190000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -195,7 +195,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=20261028"></script>
-<script src="firebase-bridge.js?v=20261030150000"></script>
+<script src="firebase-bridge.js?v=20261111190000"></script>
 </head>
 <body>
 <title>Заказы RAZ Brand Studio</title>
@@ -1989,6 +1989,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
       <button class="pill" type="button" data-go="calendar"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Календарь <span class="n hot" id="n-late" hidden>0</span></button>
       <button class="pill" type="button" data-go="office"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/></svg><span class="lf">Расходы офиса</span><span class="ls">Расходы</span></button>
       <button class="pill" type="button" data-go="supplies"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Закупки</button>
+      <button class="pill" type="button" data-go="equip"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5a2.1 2.1 0 0 0 3 3l5.9-5.9a4 4 0 0 0 5.3-5.3l-2.5 2.5-2.6-.4-.4-2.6z"/></svg>Оборудование</button>
       <button class="pill" type="button" data-go="clients"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Клиенты</button>
       <button class="pill" type="button" data-go="docs"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Документы</button>
       <button class="pill" type="button" data-go="projects"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Проекты</button>
@@ -2157,6 +2158,11 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   </section>
   <section id="p-office" class="page" style="gap:16px" hidden></section>
   <section id="p-supplies" class="page" style="gap:16px" hidden></section>
+  <!-- ОБОРУДОВАНИЕ -->
+  <section id="p-equip" class="page" style="gap:16px" hidden>
+    <div class="ph"><div><h1>Оборудование</h1><p id="eq-sub"></p></div><div class="btns"><button class="btn primary" type="button" data-eqnew>Добавить оборудование</button></div></div>
+    <div class="eq-wrap" id="eq-wrap"><div class="eq-left" id="eq-left"></div><div class="eq-card eq-det" id="eq-det"></div></div>
+  </section>
   <!-- КЛИЕНТЫ -->
   <section id="p-clients" class="page" style="gap:16px" hidden>
     <div class="ph">
@@ -2983,7 +2989,7 @@ const MGR_LIMITS=false;const mgrLimited=()=>MGR_LIMITS&&isMgr();
 function applyRoleWrite(){canWrite=baseWrite&&!(mgrLimited()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
 function go(p,opts={}){
   page=p;applyRoleWrite();
-  ['home','orders','kaspi','calendar','office','supplies','docs','projects','prices','analytics','clients','anna','sasha','daulet'].forEach(x=>$('p-'+x).hidden=x!==p);
+  ['home','orders','kaspi','calendar','office','supplies','equip','docs','projects','prices','analytics','clients','anna','sasha','daulet'].forEach(x=>$('p-'+x).hidden=x!==p);
   document.querySelectorAll('.pills [data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===p));
   if(p==='calendar'){selDay=opts.day||selDay||todayStr();const [y,m]=selDay.split('-').map(Number);calY=y;calM=m-1}
   render();
@@ -3177,7 +3183,7 @@ function bossRow(t){const b=bossParts(t),id=esc(t.id),open=openBoss.has(t.id)||e
   const icons=(nc?`<span title="Комментарии">${CM_ICON}${nc}</span>`:'')+(nf?`<span title="Файлы">${CLIP_ICON}${nf}</span>`:'')+(t.desc?'<span class="bt-d" title="Есть описание">≡</span>':'');
   return `<div class="btask${open?' open':''}${t.done?' done':''}${now?' now':''}" style="--sc:var(${b.st.c})">
     <div class="bt-row">${`<button class="rchk" type="button" data-bdone="${id}" aria-pressed="${!!t.done}" aria-label="${t.done?'Вернуть в работу':'Выполнено'}" ${canWrite?'':'disabled'}><i></i></button>`}<button type="button" class="bt-h" data-btog="${id}" aria-expanded="${open}">
-      <span class="bt-t"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${isAnyaTask(t)?ANYA_TAG:isMgrTask(t)?'<span class="tsrc">от менеджера</span>':''}${esc(t.title)}</b>
+      <span class="bt-t"><b>${now?'<span class="tnow">на сегодня</span>':''}${b.tm?`<span class="ttm">${CLOCK_ICON}${esc(b.tm)}</span>`:''}${t.equip?'<span class="tsrc">обслуживание</span>':isAnyaTask(t)?ANYA_TAG:isMgrTask(t)?'<span class="tsrc">от менеджера</span>':''}${esc(t.title)}</b>
         <small><span class="bt-st">${esc(b.st.label.toLowerCase())}</span>${dl?` · <span class="${b.late?'late':''}">${esc(dl)}</span>`:''}${t.who?' · кому: '+esc(t.who):''}</small></span>
       ${icons?`<span class="bt-i">${icons}</span>`:''}<span class="bt-x">${CHEV}</span>
     </button></div>
@@ -3385,6 +3391,7 @@ function render(){
   if(page==='office'||page==='supplies')renderLedger(page);
   if(page==='docs')renderDocsPage();
   if(page==='projects')renderProjects();
+  if(page==='equip'&&window.renderEquip)renderEquip();
   if(page==='prices')renderPrices();
   if(page==='analytics')renderAnalytics();
   if(window.extRender)extRender(); /* клиенты, примеры работ, корзина, нижнее меню — в отдельном скрипте ниже */
@@ -5524,7 +5531,7 @@ document.addEventListener('input',e=>{const ta=e.target.closest&&e.target.closes
 document.addEventListener('input',e=>{const w=e.target.closest('[data-tted]');if(!w)return;ttDraft={id:w.dataset.tted,from:w.querySelector('[data-ttf]').value,to:w.querySelector('[data-ttt]').value}});
 async function setBossStatus(id,st){
   const t=tasks.find(x=>x.id===id);if(!t||!canWrite)return;
-  try{await db.doc('tasks/'+id).update({status:st,done:st==='done',doneAt:st==='done'?Date.now():null,updatedAt:Date.now()});toast('Статус: '+BS[st].label)}
+  try{await db.doc('tasks/'+id).update({status:st,done:st==='done',doneAt:st==='done'?Date.now():null,updatedAt:Date.now()});if(st==='done'&&t.equip&&window.equipTaskDone)equipTaskDone(t);else toast('Статус: '+BS[st].label)}
   catch(er){toast(handleWriteError(er));render()}
 }
 document.addEventListener('change',e=>{const s=e.target.closest('[data-tstat]');if(s)setBossStatus(s.dataset.tstat,s.value)});
@@ -5777,7 +5784,7 @@ document.addEventListener('click',e=>{
   if(t.closest('[data-nvmore]')){openMore();return}
   const g=t.closest('[data-go]');
   if(g){if(g.dataset.f){view={f:g.dataset.f,svc:'all',q:'',day:''};$('q').value=''}go(g.dataset.go);return}
-  if(t.closest('[data-new]')){if(t.closest('.fab')&&mgrLimited()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&page==='docs'){openIv('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
+  if(t.closest('[data-new]')){if(t.closest('.fab')&&mgrLimited()&&MGR_LOCKED.includes(page))return;if(t.closest('.fab')&&page==='prices'){openQ('new');return}if(t.closest('.fab')&&page==='projects'){openP('new');return}if(t.closest('.fab')&&page==='equip'&&window.openEq){openEq('new');return}if(t.closest('.fab')&&page==='docs'){openIv('new');return}if(t.closest('.fab')&&(page==='office'||page==='supplies')){openX(page,'new');return}openEditor('new');return}
   const op=t.closest('[data-open]');if(op){openEditor(op.dataset.open);return}
   const dn=t.closest('[data-tdone]');if(dn){toggleTask(dn.dataset.tdone);return}
   const td=t.closest('[data-tdel]');if(td&&mgrLimited()&&(x=>x&&x.kind==='boss'&&!isMgrTask(x))(tasks.find(x=>x.id===td.dataset.tdel))){toast('Удалять эту задачу может только руководитель');return}
@@ -7513,7 +7520,7 @@ setInterval(()=>{const a=document.activeElement;if(loaded&&!(a&&(a.matches('inpu
   .sh{border-radius:28px 28px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))}
 }
 </style>
-<link rel="stylesheet" href="glass.css?v=20261110170000">
+<link rel="stylesheet" href="glass.css?v=20261111190000">
 <nav class="bnav" id="bnav" aria-label="Разделы">
   <button type="button" data-bgo="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Главная</button>
   <button type="button" data-bgo="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>Ведомость<span class="n" data-src="n-req|n-all" hidden></span></button>
@@ -8226,6 +8233,330 @@ document.addEventListener('input',e=>{const t=e.target;if(!(t instanceof Element
   if(t.matches('[data-ofq]')){kpo.rows[+t.dataset.ofq].qty=Math.max(1,+t.value||1);offerPreview()}
 });
 document.addEventListener('change',e=>{const t=e.target;if(t instanceof Element&&t.matches('[data-ofp]')){kpo.rows[+t.dataset.ofp].pid=t.value;offerPreview()}});
+</script>
+<!-- ===== ОБОРУДОВАНИЕ: учёт станков, обслуживание по графику, окупаемость ===== -->
+<style>
+.eq-wrap{display:grid;grid-template-columns:minmax(300px,410px) minmax(0,1fr);gap:18px;align-items:start}
+.eq-left{display:flex;flex-direction:column;gap:12px;min-width:0}
+.eq-card{background:var(--g-card,var(--paper));-webkit-backdrop-filter:blur(26px) saturate(170%);backdrop-filter:blur(26px) saturate(170%);border:1px solid var(--g-edge,transparent);box-shadow:var(--g-hi,none),var(--g-sh,none);border-radius:24px;padding:18px;min-width:0}
+.eq-sum{display:flex;gap:16px;align-items:center}
+.eq-cap{font:700 12px var(--f);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.eq-big{font:800 24px/1.15 var(--f);letter-spacing:-.03em;margin-top:6px}
+.eq-big small{font:500 14px var(--fb,var(--f));color:var(--muted);letter-spacing:0}
+.eq-mut{color:var(--muted);font-size:13px}
+.eq-list{padding:6px 0;overflow:hidden}
+.eq-row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;text-align:left;border-radius:0;min-width:0}
+.eq-row+.eq-row{border-top:1px solid var(--line)}
+.eq-row:hover{background:var(--g-row,var(--tile))}
+.eq-row.on{background:color-mix(in srgb,var(--blue) 10%,transparent)}
+.eq-row .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.eq-row .t b{font:600 15px var(--f);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eq-row .t small{font-size:12.5px;color:var(--muted)}
+.eq-row .gt{color:var(--muted);font-size:20px;line-height:1}
+.eq-ico{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:#fff;flex:none;background:var(--c,#8e8e93)}
+.eq-ico svg{width:58%;height:58%}
+.eq-ico.lg{width:64px;height:64px;border-radius:17px}
+.eq-tag{display:inline-flex;align-items:center;gap:4px;font:600 12px var(--f);padding:3px 9px;border-radius:999px;white-space:nowrap;align-self:flex-start}
+.eq-tag.red{background:rgba(255,59,48,.13);color:#e0261b}.eq-tag.or{background:rgba(255,149,0,.15);color:#c25e00}
+.eq-tag.gr{background:rgba(52,199,89,.15);color:#1f8a43}.eq-tag.bl{background:color-mix(in srgb,var(--blue) 12%,transparent);color:var(--blue)}
+.eq-tag.gy{background:var(--tile);color:var(--muted)}
+html.dark .eq-tag.red{color:#ff6b62}html.dark .eq-tag.or{color:#ffb340}html.dark .eq-tag.gr{color:#4cd471}
+.eq-ring{flex:none;display:block}
+.eq-ring .bg{stroke:var(--line)}
+.eq-ring text{fill:var(--ink);font-family:var(--f);font-weight:800}
+.eq-det{display:flex;flex-direction:column;gap:14px;padding:22px}
+.eq-hd{display:flex;gap:16px;align-items:center}
+.eq-hd h2{margin:0;font:800 24px/1.15 var(--f);letter-spacing:-.03em}
+.eq-nums{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:12px;align-items:center}
+.eq-tile{background:var(--g-row,var(--tile));box-shadow:inset 0 0 0 1px var(--g-row-edge,transparent);border-radius:16px;padding:12px 14px;min-width:0}
+.eq-tile b{display:block;font:800 20px/1.2 var(--f);letter-spacing:-.02em;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eq-tile b.ok{color:var(--ok)}
+.eq-box{background:var(--g-row,var(--tile));box-shadow:inset 0 0 0 1px var(--g-row-edge,transparent);border-radius:16px;overflow:hidden}
+.eq-line{display:flex;align-items:center;gap:12px;padding:12px 14px;min-width:0}
+.eq-line+.eq-line{border-top:1px solid var(--line)}
+.eq-line .t{flex:1;min-width:0}
+.eq-line .t b{display:block;font:600 15px var(--f)}
+.eq-line .t small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.eq-h3{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px}
+.eq-h3 h3{margin:0;font:800 19px var(--f);letter-spacing:-.02em}
+.eq-tick{width:28px;height:28px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--muted) 55%,transparent);display:grid;place-items:center;color:#fff;transition:background .2s}
+.eq-tick.late{box-shadow:inset 0 0 0 2px #ff3b30}
+.eq-tick:hover:not(:disabled){box-shadow:inset 0 0 0 2px var(--ok)}
+.eq-tick.on{background:var(--ok);box-shadow:none}
+.eq-tick svg{width:15px;height:15px;opacity:0}.eq-tick.on svg{opacity:1}
+.eq-sw{position:relative;flex:none;width:52px;height:30px;border-radius:999px;background:var(--tile-2);transition:background .2s}
+.eq-sw::after{content:'';position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s var(--ease)}
+.eq-sw[aria-checked=true]{background:#34c759}.eq-sw[aria-checked=true]::after{transform:translateX(22px)}
+.eq-sw:disabled{opacity:.6}
+.eq-back{display:none;align-self:flex-start;color:var(--blue);font:600 16px var(--f);padding:4px 0}
+.eq-empty{text-align:center;padding:34px 20px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.eq-empty b{font:800 20px var(--f)}
+.eq-chips .chip{min-height:34px}
+.eq-tag.mb{display:none}
+/* редактор */
+.eq-g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.eq-cols{display:flex;flex-wrap:wrap;gap:8px}
+.eq-cols button{width:32px;height:32px;border-radius:50%;background:var(--c)}
+.eq-cols button[aria-pressed=true]{box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--c)}
+.eq-types{display:flex;flex-wrap:wrap;gap:6px}
+.eq-types button{display:inline-flex;align-items:center;gap:7px;min-height:40px;padding:0 14px 0 8px;border-radius:999px;background:var(--tile);font:600 13.5px var(--f)}
+.eq-types button i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:#8e8e93;color:#fff}.eq-types button i svg{width:16px;height:16px}
+.eq-types button[aria-pressed=true]{background:var(--blue);color:#fff}
+.eq-wk{display:grid;grid-template-columns:minmax(0,1fr) 92px 150px 36px;gap:8px;align-items:center}
+.eq-wk input{border:0;background:var(--tile);border-radius:12px;min-height:42px;padding:9px 12px;width:100%;min-width:0;font:inherit;color:inherit}
+.eq-wk .x{width:36px;height:36px;border-radius:50%;color:var(--danger);font-size:20px}
+.eq-wkh{display:grid;grid-template-columns:minmax(0,1fr) 92px 150px 36px;gap:8px;font:600 12px var(--f);color:var(--muted)}
+@media(max-width:900px){
+  .eq-wrap{grid-template-columns:minmax(0,1fr)}
+  .eq-wrap .eq-det{display:none}
+  .eq-wrap.det .eq-left{display:none}.eq-wrap.det .eq-det{display:flex}
+  .eq-back{display:block}
+}
+@media(max-width:600px){
+  .eq-det{padding:16px}
+  .eq-nums{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .eq-nums .eq-ring{grid-column:1/-1;justify-self:center}
+  .eq-tile{padding:10px 11px}.eq-tile b{font-size:15px;white-space:normal;overflow:visible}
+  .eq-tag.dk{display:none}.eq-tag.mb{display:inline-flex;margin-top:6px}
+  .eq-hd h2{font-size:21px}.eq-ico.lg{width:52px;height:52px;border-radius:14px}
+  .eq-big{font-size:20px}
+  .eq-wk{grid-template-columns:76px minmax(0,1fr) 36px}
+  .eq-wk [data-wt]{grid-column:1/-1}
+  .eq-wkh{display:none}
+  .eq-wk{padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .eq-g2{grid-template-columns:1fr}
+}
+</style>
+<div class="ed" id="eqd" hidden>
+  <div class="ed-back" data-eqclose></div>
+  <form class="ed-panel" id="eq-form" novalidate>
+    <div class="ed-head"><h2 id="eq-h">Оборудование</h2><button class="x" type="button" data-eqclose aria-label="Закрыть">×</button></div>
+    <div class="ed-body">
+      <div class="fld"><label for="eq-name">Название *</label><input id="eq-name" autocomplete="off" placeholder="Например: Bambu Lab Красный"></div>
+      <div class="fld"><span class="lb">Что это</span><div class="eq-types" id="eq-types" role="group"></div></div>
+      <div class="fld"><span class="lb">Цвет значка</span><div class="eq-cols" id="eq-cols" role="group"></div></div>
+      <div class="eq-g2">
+        <div class="fld"><label for="eq-price">Сколько стоило</label><div class="suffix"><input id="eq-price" type="number" min="0" step="1" inputmode="numeric" placeholder="0"><span>₸</span></div></div>
+        <div class="fld"><label for="eq-bought">Когда купили</label><input id="eq-bought" type="date"></div>
+      </div>
+      <div class="fld"><span class="lb">На каких услугах зарабатывает</span><div class="svc-pick" id="eq-svcs" role="group"></div>
+        <span class="hint">Учёт сам сложит прибыль с заказов этих услуг (кроме отменённых), начиная с даты покупки. Если одна услуга стоит у нескольких станков, прибыль делится между ними поровну.</span></div>
+      <div class="fld"><label for="eq-base">Заработано до учёта (вручную)</label><div class="suffix"><input id="eq-base" type="number" min="0" step="1" inputmode="numeric" placeholder="0"><span>₸</span></div>
+        <span class="hint">Для старого оборудования: сколько оно принесло до того, как заказы стали вести в учёте. Прибавится к подсчёту.</span></div>
+      <div class="fld"><span class="lb">Обслуживание</span>
+        <div class="eq-wkh"><span>Что делать</span><span>Каждые, дн</span><span class="d">Последний раз</span><span></span></div>
+        <div id="eq-works" style="display:flex;flex-direction:column;gap:8px"></div>
+        <button class="btn soft sm" type="button" id="eq-wadd" style="align-self:flex-start">+ Добавить работу</button>
+        <span class="hint">В строке: что делать, каждые сколько дней и когда делали последний раз. Каждая работа сама появится в «Задачах» к нужному дню. Отметили «Выполнено» — следующая встанет через заданное число дней.</span></div>
+      <div class="fld"><label for="eq-notes">Заметки</label><textarea id="eq-notes" placeholder="Серийный номер, где купили, гарантия до…"></textarea></div>
+      <div class="err" id="eq-err" hidden></div>
+    </div>
+    <div class="ed-foot"><div id="eq-del"></div><div class="r"><button class="btn soft sm" type="button" data-eqclose>Отмена</button><button class="btn primary sm" type="submit" id="eq-save">Сохранить</button></div></div>
+  </form>
+</div>
+<script>
+/* ---------- Оборудование ----------
+   Коллекция equipment: {name,type,color,price,bought,svcs:[услуги],base,paidOff,notes,works:[{id,title,every,last}],log:[{w,title,at,by}]}
+   Заработок = прибыль заказов выбранных услуг (с даты покупки, без отменённых; общая услуга делится поровну) + base.
+   Обслуживание: по каждой работе в «Задачах» лежит одна открытая задача (kind:'boss', equip:{id,w}) с id eq_<станок>_<работа>_<срок>.
+   Отметили выполненной (тут или в «Задачах») — у работы обновляется last, и создаётся задача на следующий срок. */
+let equip=[],equipLoaded=false,eqSel=null,eqDetail=false,eqFilter='all',eqEditing=null,eqDraft=null,eqAskDel=false,eqBusy=new Set();
+const EQ_COLORS=['#ff3b30','#ff9500','#ffcc00','#34c759','#30b0c7','#007aff','#5856d6','#af52de','#ff2d55','#8e8e93'];
+const EQ_SVG=p=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const EQ_TYPES=[
+  {id:'p3d',label:'3D-принтер',i:EQ_SVG('<path d="M4 3h16v18H4z"/><path d="M4 8h16M10 8v4l2 2 2-2V8M8 18h8"/>')},
+  {id:'printer',label:'Принтер',i:EQ_SVG('<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>')},
+  {id:'cutter',label:'Плоттер',i:EQ_SVG('<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/>')},
+  {id:'embr',label:'Вышивальная',i:EQ_SVG('<path d="M19 3L5 17M17 3h4v4"/><path d="M5 17c-2 2-1 4 1 4s3-1 3-3-3-3-4-1z"/>')},
+  {id:'press',label:'Пресс',i:EQ_SVG('<rect x="3" y="15" width="18" height="5" rx="1.5"/><path d="M5 11h14v2H5zM12 4v7M8 4h8"/>')},
+  {id:'laser',label:'Лазер',i:EQ_SVG('<path d="M12 2v8M12 14v.01M5 21h14M8 21l4-7 4 7"/><path d="M9 6l3 4 3-4"/>')},
+  {id:'other',label:'Другое',i:EQ_SVG('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>')}
+];
+const EQT=Object.fromEntries(EQ_TYPES.map(t=>[t.id,t]));
+const EQ_CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const eqUid=()=>Math.random().toString(36).slice(2,9);
+const eqAdd=(s,n)=>{const [y,m,d]=s.split('-').map(Number);return ds(new Date(y,m-1,d+n))};
+const eqDue=w=>eqAdd(w.last||todayStr(),Math.max(1,+w.every||30));
+const eqIco=(e,cls='')=>`<span class="eq-ico ${cls}" style="--c:${esc(e.color||'#8e8e93')}">${(EQT[e.type]||EQT.other).i}</span>`;
+const eqLong=s=>{if(!s)return '';const [y,m,d]=s.split('-').map(Number);return d+' '+MONTHS_GEN[m-1]+(y!==new Date().getFullYear()?' '+y:'')};
+function eqDueTag(due){const n=dayDiff(due);
+  if(n<0)return ['red','просрочено '+(-n)+' дн'];if(n===0)return ['red','сегодня'];if(n===1)return ['or','завтра'];if(n<=3)return ['or','через '+n+' дн'];return ['gr','через '+n+' дн']}
+function eqRing(v,s,w,fs){const r=(s-w)/2,C=2*Math.PI*r,f=Math.max(0,Math.min(v,100))/100,col=v>=100?'#34c759':v>=50?'#ff9500':'#ff3b30';
+  return `<svg class="eq-ring" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" aria-hidden="true"><circle class="bg" cx="${s/2}" cy="${s/2}" r="${r}" fill="none" stroke-width="${w}"/>${f?`<circle cx="${s/2}" cy="${s/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${(C*f).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 ${s/2} ${s/2})"/>`:''}<text x="50%" y="50%" dy=".35em" text-anchor="middle" font-size="${fs}">${v>=100?'✓':v+'%'}</text></svg>`}
+/* сколько заработал станок */
+function eqShare(){const m={};equip.forEach(e=>(e.svcs||[]).forEach(s=>m[s]=(m[s]||0)+1));return m}
+function eqOrders(e){const sv=new Set(e.svcs||[]);if(!sv.size)return [];
+  return orders.filter(o=>o.status!=='cancel'&&sv.has(o.service)&&(!e.bought||(receivedOf(o)||'9')>=e.bought))}
+function eqStat(e,share){share=share||eqShare();
+  const fromOrders=Math.round(eqOrders(e).reduce((s,o)=>s+Math.max(0,profitOf(o))/(share[o.service]||1),0));
+  const earned=fromOrders+(+e.base||0),price=+e.price||0;
+  const pct=e.paidOff?100:price?Math.min(999,Math.floor(earned/price*100)):0;
+  return {fromOrders,earned,price,pct,left:e.paidOff?0:Math.max(0,price-earned),over:Math.max(0,earned-price),ok:!!e.paidOff||(price>0&&earned>=price)}}
+const eqNext=e=>(e.works||[]).map(w=>({w,due:eqDue(w)})).sort((a,b)=>a.due.localeCompare(b.due))[0]||null;
+const eqNeeds=e=>{const n=eqNext(e);return !!n&&dayDiff(n.due)<=3};
+
+function renderEquip(){
+  const share=eqShare(),all=equip.slice().sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const st=new Map(all.map(e=>[e.id,eqStat(e,share)]));
+  const tot=all.reduce((s,e)=>s+(+e.price||0),0),earn=all.reduce((s,e)=>{const x=st.get(e.id);return s+(e.paidOff?(+e.price||0):Math.min(x.earned,+e.price||0))},0);
+  const okN=all.filter(e=>st.get(e.id).ok).length,need=all.reduce((s,e)=>s+(e.works||[]).filter(w=>dayDiff(eqDue(w))<=0).length,0);
+  $('eq-sub').textContent=!equipLoaded?'Загружаю…':all.length?`${all.length} ед. на ${money(tot)} · окупилось ${okN} из ${all.length}${need?' · работ на сегодня: '+need:''}`:'Станки студии: сколько стоят, когда обслуживать и окупились ли.';
+  const wrap=$('eq-wrap');
+  if(equipLoaded&&!all.length){wrap.classList.remove('det');$('eq-left').innerHTML=`<div class="eq-card eq-empty"><b>Добавьте первое оборудование</b><span class="eq-mut">Впишите станок, его цену и что с ним нужно делать (смазать, почистить, поменять ремень). Работы сами появятся в «Задачах» в нужный день.</span>${canWrite?'<button class="btn primary sm" type="button" data-eqnew>Добавить оборудование</button>':''}</div>`;$('eq-det').innerHTML='';$('eq-det').hidden=true;return}
+  $('eq-det').hidden=false;
+  const cur=(all.find(e=>e.id===eqSel)||all[0]||{}).id||null;
+  const list=all.filter(e=>eqFilter==='all'||(eqFilter==='need'?eqNeeds(e):!st.get(e.id).ok));
+  const tp=tot?Math.min(100,Math.floor(earn/tot*100)):0;
+  const sum=`<div class="eq-card eq-sum">${eqRing(tp,74,8,18)}<div style="min-width:0"><div class="eq-cap">Окупаемость всего оборудования</div><div class="eq-big">${money(earn)} <small>из ${money(tot)}</small></div><div class="eq-mut" style="margin-top:3px">${tot-earn>0?'ещё нужно заработать '+money(tot-earn):'всё окупилось'}</div></div></div>`;
+  const nNeed=all.filter(eqNeeds).length,nNot=all.filter(e=>!st.get(e.id).ok).length;
+  const chips=`<div class="chips eq-chips">${[['all','Все',all.length],['need','Нужно обслужить',nNeed],['not','Не окупились',nNot]].map(([k,l,n])=>`<button class="chip${eqFilter===k?' on':''}" type="button" data-eqf="${k}">${l} <em>${n}</em></button>`).join('')}</div>`;
+  const rows=list.map(e=>{const x=st.get(e.id),nx=eqNext(e),tg=nx?eqDueTag(nx.due):null;
+    return `<button class="eq-row${e.id===cur?' on':''}" type="button" data-eqopen="${esc(e.id)}">${eqIco(e)}<span class="t"><b>${esc(e.name)}</b><small>${money(x.price)} · ${e.paidOff?'окупилось (вручную)':x.ok?'окупилось':'осталось '+money(x.left)}</small>${tg?`<span class="eq-tag ${tg[0]}" style="margin-top:4px">🔧 ${esc(tg[1])}</span>`:''}</span>${eqRing(x.pct,44,5,11)}<span class="gt">›</span></button>`}).join('');
+  $('eq-left').innerHTML=sum+chips+`<div class="eq-card eq-list">${rows||'<div class="eq-mut" style="padding:18px;text-align:center">Здесь пусто — всё в порядке.</div>'}</div>`;
+  wrap.classList.toggle('det',eqDetail&&!!cur);
+  const e=all.find(x=>x.id===cur);$('eq-det').innerHTML=e?eqDetailHtml(e,st.get(e.id)):'';
+}
+function eqDetailHtml(e,x){
+  const t=EQT[e.type]||EQT.other,id=esc(e.id);
+  const works=(e.works||[]).map(w=>({w,due:eqDue(w)})).sort((a,b)=>a.due.localeCompare(b.due));
+  const wl=works.length?`<div class="eq-box">${works.map(({w,due})=>{const tg=eqDueTag(due),busy=eqBusy.has(e.id+':'+w.id);
+    return `<div class="eq-line"><button class="eq-tick${dayDiff(due)<=0?' late':''}${busy?' on':''}" type="button" data-eqdone="${id}" data-w="${esc(w.id)}" aria-label="Сделано: ${esc(w.title)}" ${canWrite&&!busy?'':'disabled'}>${EQ_CHECK}</button>
+      <span class="t"><b>${esc(w.title)}</b><small>🔁 каждые ${+w.every||30} дн${w.last?' · последний раз '+esc(eqLong(w.last)):''}</small><span class="eq-tag ${tg[0]} mb">${esc(tg[1])}</span></span><span class="eq-tag ${tg[0]} dk">${esc(tg[1])}</span></div>`}).join('')}</div>`
+    :`<div class="eq-box"><div class="eq-line"><span class="t"><small>Работ пока нет. Нажмите «+ Работа» и впишите, что и как часто делать: например, «Смазать оси» каждые 30 дней.</small></span></div></div>`;
+  const svc=(e.svcs||[]).map(s=>`<span class="eq-tag bl">${esc((SV[s]||{label:s}).label)}</span>`).join(' ');
+  const os=eqOrders(e).sort((a,b)=>String(receivedOf(b)).localeCompare(String(receivedOf(a)))),n=os.length;
+  const log=(e.log||[]).slice(-5).reverse();
+  return `<button class="eq-back" type="button" data-eqback>‹ Всё оборудование</button>
+  <div class="eq-hd">${eqIco(e,'lg')}<div style="flex:1;min-width:0"><h2>${esc(e.name)}</h2><div class="eq-mut" style="margin-top:3px">${esc(t.label)}${e.bought?' · куплен '+esc(eqLong(e.bought)):''}</div></div>${canWrite?`<button class="btn soft sm" type="button" data-eqedit="${id}">Изменить</button>`:''}</div>
+  <div class="eq-nums">${eqRing(x.pct,92,9,22)}
+    <div class="eq-tile"><div class="eq-cap">Стоимость</div><b>${money(x.price)}</b></div>
+    <div class="eq-tile"><div class="eq-cap">Заработал</div><b class="${x.ok?'ok':''}">${e.paidOff&&!x.earned?'—':money(x.earned)}</b></div>
+    <div class="eq-tile"><div class="eq-cap">${x.ok?'Сверх цены':'Осталось'}</div><b>${x.ok?(x.over?'+'+money(x.over):'окупилось'):money(x.left)}</b></div></div>
+  <div class="eq-box"><div class="eq-line"><span class="t"><b>Окупилось — отметить вручную</b><small>Для старого оборудования, когда заработок раньше не считали</small></span><button class="eq-sw" type="button" role="switch" aria-checked="${!!e.paidOff}" data-eqpaid="${id}" aria-label="Окупилось" ${canWrite?'':'disabled'}></button></div></div>
+  <div class="eq-h3"><h3>Обслуживание</h3>${canWrite?`<button class="btn soft sm" type="button" data-eqedit="${id}" data-wnew="1">+ Работа</button>`:''}</div>
+  ${wl}
+  <div class="eq-mut">Нажали кружок — работа отмечена, а в «Задачах» сама встанет следующая через заданный срок.</div>
+  ${log.length?`<div class="eq-h3"><h3>Что делали</h3></div><div class="eq-box">${log.map(l=>`<div class="eq-line"><span class="t"><b>${esc(l.title)}</b><small>${esc(eqLong(ds(new Date(l.at))))}${l.by?' · '+esc(l.by):''}</small></span></div>`).join('')}</div>`:''}
+  <div class="eq-h3"><h3>Откуда считается заработок</h3></div>
+  <div class="eq-box"><div class="eq-line" style="flex-wrap:wrap;gap:8px"><span class="eq-mut">Услуги в заказах:</span>${svc||'<span class="eq-tag gy">не выбраны</span>'}${canWrite?` <button class="eq-tag gy" type="button" data-eqedit="${id}">изменить</button>`:''}</div>
+    <div class="eq-line"><span class="t"><small>${n?`Прибыль с ${n} ${n%10===1&&n%100!==11?'заказа':'заказов'}${e.bought?' с '+esc(eqLong(e.bought)):''}: <b style="display:inline;font-size:13px">${money(x.fromOrders)}</b>`:'Заказов с этими услугами пока нет'}${+e.base?` · вписано вручную: <b style="display:inline;font-size:13px">${money(+e.base)}</b>`:''}</small></span></div></div>
+  ${e.notes?`<div class="eq-box"><div class="eq-line"><span class="t"><small style="white-space:pre-wrap">${esc(e.notes)}</small></span></div></div>`:''}`;
+}
+
+/* ---------- задачи обслуживания ---------- */
+const eqTid=(e,w,due)=>('eq_'+e.id+'_'+w.id+'_'+due.replace(/-/g,'')).slice(0,140);
+function eqTaskData(e,w,due){const ev=+w.every||30;
+  return {kind:'boss',status:'new',title:w.title+' — '+e.name,date:due,showFrom:eqAdd(due,-3),who:'',
+    desc:'Обслуживание оборудования, повторяется каждые '+ev+' дн. Отметьте «Выполнено» — следующая задача появится сама.',
+    equip:{id:e.id,w:w.id},done:false,doneAt:null,createdAt:Date.now()}}
+/* привести задачи станка к его графику: у каждой работы одна открытая задача на ближайший срок */
+async function eqSyncTasks(e,removeStale){
+  if(!db||!canWrite||!tasksLoaded||!e)return;
+  const want=new Map((e.works||[]).filter(w=>w.title).map(w=>{const due=eqDue(w);return [eqTid(e,w,due),{w,due}]}));
+  try{
+    if(removeStale)for(const t of tasks)if(t.equip&&t.equip.id===e.id&&!t.done&&!want.has(t.id))await db.doc('tasks/'+t.id).delete();
+    for(const [id,x] of want)if(!tasks.find(t=>t.id===id))await db.doc('tasks/'+id).set(eqTaskData(e,x.w,x.due));
+  }catch(er){console.warn('equip tasks',er)}
+}
+let eqSyncT=null;
+function eqSyncAll(){clearTimeout(eqSyncT);eqSyncT=setTimeout(()=>{if(!equipLoaded||!tasksLoaded||!canWrite){if(!equipLoaded||!tasksLoaded)eqSyncAll();return}eqCatchDone();equip.forEach(e=>eqSyncTasks(e,false))},2500)}
+setInterval(eqSyncAll,60000);
+/* работа сделана: из оборудования или из «Задач» (fromTask — id задачи, которую уже отметили) */
+async function eqWorkDone(eid,wid,fromTask,day){
+  const e=equip.find(x=>x.id===eid);if(!e||!db||!canWrite)return;const w=(e.works||[]).find(x=>x.id===wid);if(!w)return;
+  const key=eid+':'+wid;if(eqBusy.has(key))return;eqBusy.add(key);render();
+  const today=day&&day<=todayStr()?day:todayStr(),now=Date.now(),by=ROLE().name||'';
+  const works=e.works.map(x=>x.id===wid?{...x,last:today}:x);
+  try{
+    await db.doc('equipment/'+eid).update({works,log:[...(e.log||[]),{w:wid,title:w.title,at:now,by}].slice(-40),updatedAt:now});
+    for(const t of tasks)if(t.equip&&t.equip.id===eid&&t.equip.w===wid&&!t.done&&t.id!==fromTask)await db.doc('tasks/'+t.id).update({status:'done',done:true,doneAt:now,updatedAt:now});
+    const ne={...e,works};await eqSyncTasks(ne,false);
+    toast(fromTask?'Следующий раз — '+eqLong(eqDue({...w,last:today})):'Отмечено. Следующий раз — '+eqLong(eqDue({...w,last:today})));
+  }catch(er){toast(handleWriteError(er))}
+  finally{eqBusy.delete(key);render()}
+}
+window.equipTaskDone=t=>{if(t&&t.equip&&t.equip.id)eqWorkDone(t.equip.id,t.equip.w,t.id)};
+/* задачу обслуживания закрыли где-то ещё (в «Задачах», в Telegram у Ани) — тоже считаем работу сделанной */
+function eqCatchDone(){for(const e of equip)for(const w of (e.works||[])){const t=tasks.find(x=>x.id===eqTid(e,w,eqDue(w)));
+  if(t&&t.done&&!eqBusy.has(e.id+':'+w.id))eqWorkDone(e.id,w.id,t.id,t.doneAt?ds(new Date(t.doneAt)):'')}}
+
+/* ---------- редактор ---------- */
+function openEq(id,opts={}){
+  const e=id==='new'?{type:'p3d',color:EQ_COLORS[5],works:[],svcs:[]}:equip.find(x=>x.id===id);if(!e)return;
+  eqEditing=id;eqAskDel=false;
+  eqDraft={type:e.type||'other',color:e.color||EQ_COLORS[9],svcs:[...(e.svcs||[])],works:(e.works||[]).map(w=>({...w}))};
+  if(opts.wnew||id==='new'&&!eqDraft.works.length)eqDraft.works.push({id:eqUid(),title:'',every:30,last:todayStr()});
+  $('eq-h').textContent=id==='new'?'Новое оборудование':e.name;
+  $('eq-name').value=e.name||'';$('eq-price').value=e.price??'';$('eq-bought').value=e.bought||'';$('eq-base').value=e.base||'';$('eq-notes').value=e.notes||'';
+  $('eq-err').hidden=true;eqRenderForm();$('eqd').hidden=false;document.querySelector('#eqd .ed-body').scrollTop=0;
+  setTimeout(()=>{if(id==='new')$('eq-name').focus();else if(opts.wnew){const ins=document.querySelectorAll('#eq-works [data-wt]');const l=ins[ins.length-1];if(l){l.scrollIntoView({block:'center'});l.focus()}}},60);
+}
+function closeEq(){$('eqd').hidden=true;eqEditing=null;eqDraft=null}
+function eqRenderForm(){const d=eqDraft;
+  $('eq-types').innerHTML=EQ_TYPES.map(t=>`<button type="button" data-eqtype="${t.id}" aria-pressed="${d.type===t.id}"><i style="background:${esc(d.color)}">${t.i}</i>${t.label}</button>`).join('');
+  $('eq-cols').innerHTML=EQ_COLORS.map(c=>`<button type="button" data-eqcol="${c}" style="--c:${c}" aria-pressed="${d.color===c}" aria-label="Цвет"></button>`).join('');
+  $('eq-svcs').innerHTML=SERVICES.filter(s=>s.id!=='kaspi').map(s=>`<button type="button" data-eqsvc="${s.id}" aria-pressed="${d.svcs.includes(s.id)}">${esc(s.label)}</button>`).join('');
+  eqRenderWorks();
+  $('eq-del').innerHTML=eqEditing==='new'||!canWrite?'':eqAskDel?`<span class="err">Удалить?</span> <button class="btn danger solid sm" type="button" data-eqdel="yes">Удалить</button> <button class="btn soft sm" type="button" data-eqdel="no">Нет</button>`:`<button class="btn danger sm" type="button" data-eqdel="ask">Удалить</button>`;
+}
+function eqRenderWorks(){
+  $('eq-works').innerHTML=eqDraft.works.map((w,i)=>`<div class="eq-wk"><input data-wt="${i}" value="${esc(w.title)}" placeholder="Например: смазать оси" aria-label="Что делать"><input data-we="${i}" type="number" min="1" step="1" inputmode="numeric" value="${esc(w.every)}" aria-label="Каждые сколько дней"><input class="d" data-wl="${i}" type="date" value="${esc(w.last||'')}" aria-label="Последний раз делали"><button class="x" type="button" data-wrm="${i}" aria-label="Убрать работу">×</button></div>`).join('')||'<span class="eq-mut">Работ нет.</span>';
+}
+async function saveEq(ev){ev.preventDefault();if(!db||!canWrite)return;
+  const name=$('eq-name').value.trim();if(!name){showErr('eq-err','Впишите название.');$('eq-name').focus();return}
+  const works=eqDraft.works.map(w=>({id:w.id||eqUid(),title:String(w.title||'').trim(),every:Math.max(1,Math.round(+w.every||30)),last:w.last||todayStr()})).filter(w=>w.title);
+  const now=Date.now(),d={name,type:eqDraft.type,color:eqDraft.color,price:Math.max(0,+$('eq-price').value||0),bought:$('eq-bought').value||'',svcs:eqDraft.svcs,
+    base:Math.max(0,+$('eq-base').value||0),works,notes:$('eq-notes').value.trim(),updatedAt:now};
+  const btn=$('eq-save');btn.disabled=true;
+  try{let id=eqEditing;
+    if(id==='new'){const ref=db.collection('equipment').doc();id=ref.id;await ref.set({...d,paidOff:false,log:[],createdAt:now})}
+    else await db.doc('equipment/'+id).update(d);
+    const old=equip.find(x=>x.id===id)||{};await eqSyncTasks({...old,...d,id},true);
+    eqSel=id;closeEq();render();toast('Сохранено')}
+  catch(er){showErr('eq-err',handleWriteError(er))}
+  finally{btn.disabled=false}
+}
+async function delEq(){const id=eqEditing;if(!id||id==='new')return;
+  try{for(const t of tasks)if(t.equip&&t.equip.id===id&&!t.done)await db.doc('tasks/'+t.id).delete();
+    await db.doc('equipment/'+id).delete();closeEq();eqDetail=false;toast('Оборудование удалено')}
+  catch(er){showErr('eq-err',handleWriteError(er))}
+}
+$('eq-form').addEventListener('submit',saveEq);
+$('eq-wadd').onclick=()=>{eqDraft.works.push({id:eqUid(),title:'',every:30,last:todayStr()});eqRenderWorks();const ins=document.querySelectorAll('#eq-works [data-wt]');ins[ins.length-1].focus()};
+$('eqd').addEventListener('input',ev=>{const t=ev.target;if(!eqDraft)return;
+  if(t.dataset.wt!=null)eqDraft.works[+t.dataset.wt].title=t.value;
+  if(t.dataset.we!=null)eqDraft.works[+t.dataset.we].every=t.value;
+  if(t.dataset.wl!=null)eqDraft.works[+t.dataset.wl].last=t.value});
+$('eqd').addEventListener('click',ev=>{const t=ev.target.closest('button,[data-eqclose]');if(!t||!eqDraft&&!t.matches('[data-eqclose]'))return;
+  if(t.matches('[data-eqclose]')){closeEq();return}
+  if(t.dataset.eqtype){eqDraft.type=t.dataset.eqtype;eqRenderForm();return}
+  if(t.dataset.eqcol){eqDraft.color=t.dataset.eqcol;eqRenderForm();return}
+  if(t.dataset.eqsvc){const s=t.dataset.eqsvc,i=eqDraft.svcs.indexOf(s);i<0?eqDraft.svcs.push(s):eqDraft.svcs.splice(i,1);t.setAttribute('aria-pressed',String(i<0));return}
+  if(t.dataset.wrm!=null){eqDraft.works.splice(+t.dataset.wrm,1);eqRenderWorks();return}
+  if(t.dataset.eqdel==='ask'){eqAskDel=true;eqRenderForm();return}
+  if(t.dataset.eqdel==='no'){eqAskDel=false;eqRenderForm();return}
+  if(t.dataset.eqdel==='yes'){delEq();return}
+});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!$('eqd').hidden)closeEq()});
+/* ---------- нажатия на странице ---------- */
+document.addEventListener('click',ev=>{const t=ev.target.closest('[data-eqopen],[data-eqback],[data-eqf],[data-eqnew],[data-eqedit],[data-eqdone],[data-eqpaid]');if(!t||!$('p-equip').contains(t))return;
+  if(t.dataset.eqopen){eqSel=t.dataset.eqopen;eqDetail=true;renderEquip();if(matchMedia('(max-width:900px)').matches)try{window.scrollTo({top:0})}catch(_){}return}
+  if(t.matches('[data-eqback]')){eqDetail=false;renderEquip();return}
+  if(t.dataset.eqf){eqFilter=t.dataset.eqf;renderEquip();return}
+  if(t.matches('[data-eqnew]')){openEq('new');return}
+  if(t.dataset.eqedit){openEq(t.dataset.eqedit,{wnew:!!t.dataset.wnew});return}
+  if(t.dataset.eqdone){t.classList.add('on');eqWorkDone(t.dataset.eqdone,t.dataset.w);return}
+  if(t.dataset.eqpaid){const e=equip.find(x=>x.id===t.dataset.eqpaid);if(!e||!canWrite)return;const v=!e.paidOff;t.setAttribute('aria-checked',String(v));
+    db.doc('equipment/'+e.id).update({paidOff:v,updatedAt:Date.now()}).then(()=>toast(v?'Отмечено: окупилось':'Отметка снята, считаем по заказам')).catch(er=>{toast(handleWriteError(er));render()});return}
+});
+/* подключение к базе: ждём, пока основной скрипт откроет базу */
+(async function eqListen(){
+  for(let i=0;i<120&&!db;i++)await new Promise(r=>setTimeout(r,500));
+  if(!db){equipLoaded=true;return}
+  db.collection('equipment').onSnapshot(snap=>{equip=snap.docs.map(d=>({id:d.id,...d.data()}));equipLoaded=true;render();eqSyncAll();
+    if(eqEditing&&eqEditing!=='new'&&!equip.find(x=>x.id===eqEditing)){closeEq();toast('Это оборудование удалили')}},
+    er=>{equipLoaded=true;try{console.warn('equipment',er)}catch(_){}$('eq-sub').textContent='Нет доступа к разделу: опубликуйте новые правила базы (firestore.rules).';});
+})();
 </script>
 <div id="upd-bar" hidden style="position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:200;background:#4358ef;color:#fff;border-radius:999px;padding:8px 8px 8px 18px;display:flex;gap:12px;align-items:center;font:600 14px 'Inter Tight',Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(67,88,239,.35);max-width:calc(100% - 24px)">
 <span>Вышла новая версия сайта</span><button type="button" onclick="location.reload()" style="border:0;border-radius:999px;background:#fff;color:#4358ef;font:inherit;padding:8px 14px;cursor:pointer">Обновить</button></div>
