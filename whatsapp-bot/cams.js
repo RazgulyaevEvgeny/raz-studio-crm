@@ -167,7 +167,7 @@ export function startCams({ fs, env, log, DIR }) {
   // ---------- поиск камер в сети студии ----------
   let scanAt = 0, hosts = [];
   async function scan() {
-    if (Date.now() - scanAt < 5 * 60e3 && hosts.length) return hosts;
+    if (Date.now() - scanAt < 2 * 60e3 && hosts.length) return hosts;
     scanAt = Date.now();
     const skip = new Set(String(env.STUDIO_SKIP_IPS || '').split(',').map(s => s.trim()).filter(Boolean));
     const given = String(env.CAMERA_IPS || '').split(',').map(s => s.trim()).filter(Boolean); // адреса из .env проверяем всегда
@@ -176,15 +176,21 @@ export function startCams({ fs, env, log, DIR }) {
     const nets = myNets();
     for (const n of nets) for (let i = 2; i < 255; i++) ips.push(n + '.' + i);
     ips = [...new Set([...given, ...ips.filter(ip => !skip.has(ip) && !/\.(0|1|255)$/.test(ip) && nets.some(n => ip.startsWith(n + '.')))])];
+    // камеры Imou/Dahua по Wi‑Fi иногда отвечают с задержкой или на время пропадают: ждём дольше,
+    // смотрим и порт видео 554, и служебный порт Dahua 37777, а найденные раньше адреса проверяем всегда
     const found = [];
     for (let i = 0; i < ips.length; i += 50) {
       const part = ips.slice(i, i + 50);
-      const hits = await Promise.all(part.map(ip => tcpOpen(ip, 554, 800)));
+      const hits = await Promise.all(part.map(async ip => (await tcpOpen(ip, 554, 2000)) || (await tcpOpen(ip, 37777, 1500))));
       part.forEach((ip, k) => { if (hits[k]) found.push(ip); });
     }
-    hosts = found;
-    say('scan', 'Камеры: в сети студии видео отдают ' + (found.length ? found.join(', ') : 'ни одного устройства'));
-    return found;
+    const seen = cfg.seen || (cfg.seen = []);
+    let add = false;
+    for (const ip of found) if (!seen.includes(ip)) { seen.push(ip); add = true; }
+    if (add) { cfg.seen = seen.slice(-10); save(); }
+    hosts = [...new Set([...found, ...cfg.seen, ...Object.values(cfg.ip)])].filter(ip => ip && !skip.has(ip));
+    say('scan', 'Камеры: в сети студии на связи ' + (found.length ? found.join(', ') : 'ни одной камеры') + (hosts.length > found.length ? ' (раньше видел ' + hosts.filter(h => !found.includes(h)).join(', ') + ' — пробую и их)' : ''));
+    return hosts;
   }
   const rtsp = (ip, code, hd) => `rtsp://admin:${encodeURIComponent(code)}@${ip}:554/cam/realmonitor?channel=1&subtype=${hd ? 0 : 1}`;
   // пробуем взять один кадр: подходит ли код к этой камере
@@ -279,10 +285,10 @@ export function startCams({ fs, env, log, DIR }) {
         const all = await scan();
         const used = new Set([...cams.values()].map(x => x.ip));
         for (const c of todo) {
-          let ip = cfg.ip[c.name] && all.includes(cfg.ip[c.name]) && !used.has(cfg.ip[c.name]) ? cfg.ip[c.name] : '';
+          let ip = cfg.ip[c.name] && !used.has(cfg.ip[c.name]) && !(await probe(ff, cfg.ip[c.name], c.code)) ? cfg.ip[c.name] : '';
           let why = '';
           if (!ip) {
-            for (const h of all.filter(h => !used.has(h))) {
+            for (const h of all.filter(h => !used.has(h) && h !== cfg.ip[c.name])) {
               const r = await probe(ff, h, c.code);
               if (!r) { ip = h; break; }
               if (r === 'auth') why = 'код не подошёл ни к одной камере';
@@ -317,8 +323,8 @@ export function startCams({ fs, env, log, DIR }) {
     for (const p of [cam.proc, cam.hd?.proc]) if (p) try { p.kill(); } catch (_) {}
     cam.proc = null; if (cam.hd) cam.hd.proc = null;
   }
-  // камеры без ответа (не найдены) пробуем снова раз в 5 минут
-  setInterval(() => { for (const cam of [...cams.values()]) if (cam.stopped && !cam.proc) cams.delete(cam.id); }, 5 * 60e3);
+  // камеры без ответа (не найдены) пробуем снова раз в минуту
+  setInterval(() => { for (const cam of [...cams.values()]) if (cam.stopped && !cam.proc) cams.delete(cam.id); }, 60e3);
 
   // ---------- веб-сервер кадров (только на этом компьютере) ----------
   const keyBuf = Buffer.from(cfg.key);
