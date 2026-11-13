@@ -59,7 +59,7 @@ const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
-  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', icBg:'', icFg:'',
+  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
   auto:'', autoFrom:0 }, o);
 const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
@@ -224,7 +224,7 @@ TV.CSS = `
 .f .pic{display:block;flex:1 1 auto;min-height:120px;border-radius:26px;background:#e5e5ea center/cover no-repeat}
 .f .pic.contain{background-size:contain;background-color:transparent}
 .ic{width:80px;height:80px;border-radius:22px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}.top .ic{margin-right:22px}.ic svg{width:44px;height:44px}
-.top{display:flex;align-items:center;font-size:28px;font-weight:600;color:var(--fg2);min-height:80px}
+.top{display:flex;align-items:center;font-size:34px;font-weight:600;color:var(--fg2);min-height:80px}
 .num{display:inline-block;font-family:"Inter Tight",Inter,system-ui,sans-serif;font-weight:800;letter-spacing:-.045em;line-height:.92;font-variant-numeric:tabular-nums;font-size:150px;color:var(--fg)}
 .num small{font-size:.38em;letter-spacing:-.01em;margin-left:8px;opacity:.6}.num .pl{font-size:.5em;opacity:1;margin-left:0}
 .hero .num{font-size:250px}
@@ -232,12 +232,12 @@ TV.CSS = `
 .h.long{font-size:52px}.hero .h{font-size:120px}.hero .h.long{font-size:92px}
 .t{font-family:"Inter Tight",Inter,system-ui,sans-serif;font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.08;color:var(--fg)}
 .num+.t,.h+.t{margin-top:18px}
-.cap{font-size:27px;color:var(--fg2);font-weight:500;line-height:1.35;margin-top:14px}
+.cap{font-size:32px;color:var(--fg2);font-weight:500;line-height:1.35;margin-top:14px}
 .f[data-fg] .cap,.f[data-fg] .top{color:var(--fg);opacity:.8}
 /* размеры */
 .f.sb-s .num{font-size:96px}.f.sb-m .num{font-size:150px}.f.sb-l .num{font-size:210px}.f.sb-xl .num{font-size:280px}
 .f.sb-s .h{font-size:44px}.f.sb-m .h{font-size:64px}.f.sb-l .h{font-size:92px}.f.sb-xl .h{font-size:124px}
-.f.sx-s .t{font-size:32px}.f.sx-s .cap,.f.sx-s .li{font-size:22px}.f.sx-l .t{font-size:56px}.f.sx-l .cap,.f.sx-l .li{font-size:34px}.f.sx-xl .t{font-size:70px}.f.sx-xl .cap,.f.sx-xl .li{font-size:42px}
+.f.sx-s .t{font-size:32px}.f.sx-s .cap,.f.sx-s .li{font-size:26px}.f.sx-l .t{font-size:56px}.f.sx-l .cap,.f.sx-l .li{font-size:38px}.f.sx-xl .t{font-size:70px}.f.sx-xl .cap,.f.sx-xl .li{font-size:46px}
 .flag{display:flex;height:20px;width:150px;border-radius:6px;overflow:hidden}.flag i{flex:1}.flag i:nth-child(2){box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
 .sw{width:120px;height:120px;border-radius:30px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
 .deco{position:absolute!important;z-index:0!important;right:-60px;top:-50px;width:440px;opacity:.13;color:#fff;animation:tvspin 60s linear infinite}@keyframes tvspin{to{transform:rotate(360deg)}}
@@ -275,7 +275,7 @@ TV.CSS += `
    фон — чистый чёрный с едва заметным цветным свечением; карточки — «материал» #1c1c1e с тонкой светлой гранью;
    текст — белый и два уровня серого как в iOS (60% и 30%); цветные карточки — мягкие градиенты; фото — с плавной вуалью */
 .dark{background:#000!important;color:#fff;--ink:#fff;--tile:#1c1c1e;--tile2:#2c2c2e;--mute:rgba(235,235,245,.6);
-  --l2:rgba(235,235,245,.6);--l3:rgba(235,235,245,.3);--card:#1c1c1e;--card2:#161618;--edge:rgba(255,255,255,.07)}
+  --l2:rgba(235,235,245,.68);--l3:rgba(235,235,245,.3);--card:#1c1c1e;--card2:#161618;--edge:rgba(255,255,255,.07)}
 .dark .bgfx i{opacity:1}
 .dark .bgfx i:nth-child(1){background:radial-gradient(circle,rgba(10,132,255,.16),rgba(10,132,255,0) 62%)}
 .dark .bgfx i:nth-child(2){background:radial-gradient(circle,rgba(94,92,230,.14),rgba(94,92,230,0) 62%)}
@@ -286,8 +286,8 @@ TV.CSS += `
 .dark .f.st-plain{background:#1c1c1e;background:linear-gradient(180deg,#202022 0%,#18181a 100%)}
 .dark .f.st-white{background:#2c2c2e;background:linear-gradient(180deg,#323234 0%,#28282a 100%)}
 .dark .f.st-dark{background:#000;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.12)}
-.dark .f.st-blue{background:#0a84ff;background:linear-gradient(155deg,#3d9bff 0%,#0a7aff 38%,#0058d6 100%);--fg2:rgba(255,255,255,.78)}
-.dark .f.st-kaspi{background:#f14635;background:linear-gradient(155deg,#ff6a5b 0%,#f2402f 40%,#c8241a 100%);--fg2:rgba(255,255,255,.8)}
+.dark .f.st-blue{background:#0a84ff;background:linear-gradient(155deg,#3d9bff 0%,#0a7aff 38%,#0058d6 100%);--fg2:rgba(255,255,255,.85)}
+.dark .f.st-kaspi{background:#f14635;background:linear-gradient(155deg,#ff6a5b 0%,#f2402f 40%,#c8241a 100%);--fg2:rgba(255,255,255,.86)}
 .dark .f.st-custom{background-image:linear-gradient(155deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,0) 45%,rgba(0,0,0,.22) 100%)!important}
 .dark .f.st-blue,.dark .f.st-kaspi,.dark .f.st-custom{box-shadow:inset 0 1.5px 0 rgba(255,255,255,.22),inset 0 0 0 1.5px rgba(255,255,255,.08)}
 .dark .f.light-bg{--fg:#1d1d1f;--fg2:rgba(0,0,0,.55)}
@@ -370,14 +370,17 @@ TV.factHTML = (f, hero, idx) => {
   else if (vis === 'insta') visual = `<div class="insta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg></div>`;
   const icB = f.icBg ? (TV.col(f.icBg) || f.icBg) : col;
   const icon = (f.icon && !vis) ? `<span class="ic${f.icBg || f.icFg ? ' ic-set' : ''}" style="background:${esc(icB)};${f.icFg ? `color:${esc(f.icFg)};` : ''}">${TV.icon(f.icon)}</span>` : '';
-  const cl = f.cLabel ? `color:${esc(f.cLabel)};opacity:1;` : '';
-  const labelRow = (icon || f.label) ? `<div class="top" style="${icon ? '' : 'min-height:0;'}${cl}">${icon}${esc(f.label)}</div>` : '';
+  /* прозрачность текста: '' — авто; число 10..100 — текст сплошным цветом с этой непрозрачностью */
+  const op = k => (f[k] === '' || f[k] == null) ? null : Math.max(0, Math.min(100, +f[k])) / 100;
+  const tone = (c, o, solid) => (c || o != null) ? `color:${c ? esc(c) : 'var(--fg)'};opacity:${o != null ? o : 1};` : '';
+  const cl = tone(f.cLabel, op('oLabel'));
+  const labelRow = (icon || f.label) ? `<div class="top" style="${icon ? '' : 'min-height:0;'}">${icon}${f.label ? `<span class="lt" style="${cl}">${esc(f.label)}</span>` : ''}</div>` : '';
   const pic = !photoTop ? '' : f.photoFit === 'contain' ? `<div class="pic contain"><i class="pb" data-img="${esc(f.photo)}"></i><span class="pw"><img class="ps" alt="" data-img="${esc(f.photo)}"></span></div>` : `<div class="pic" data-img="${esc(f.photo)}"></div>`;
   const top = photoTop ? labelRow + pic : vis ? visual + labelRow : labelRow;
 
   let body = '';
   if (f.big) {
-    const ncol = f.cBig ? ` style="color:${esc(f.cBig)}"` : f.numColor ? ` style="color:${col}"` : '';
+    const ncol = ` style="${f.cBig ? `color:${esc(f.cBig)};` : f.numColor ? `color:${col};` : ''}${op('oBig') != null ? `opacity:${op('oBig')};` : ''}"`;
     if (isNum(f.big)) {
       const val = TV.value(f);
       body += `<div class="num" data-to="${val}" data-plus="${f.plus?1:''}" data-unit="${esc(f.unit)}"${ncol}>${val.toLocaleString('ru-RU')}${f.plus?'<small class="pl">+</small>':''}${f.unit?`<small>${esc(f.unit)}</small>`:''}</div>`;
@@ -385,9 +388,9 @@ TV.factHTML = (f, hero, idx) => {
       body += `<div class="h${String(f.big).length > 12 ? ' long' : ''}"${ncol}>${esc(f.big)}${f.unit?` <small style="font-size:.5em;opacity:.6">${esc(f.unit)}</small>`:''}</div>`;
     }
   }
-  if (f.title) body += `<div class="t"${f.cTitle ? ` style="color:${esc(f.cTitle)}"` : ''}>${esc(f.title)}</div>`;
-  if (f.caption) body += `<div class="cap"${f.cCap ? ` style="color:${esc(f.cCap)};opacity:1"` : ''}>${esc(f.caption)}</div>`;
-  if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1};${f.cList ? 'color:' + esc(f.cList) : ''}"><span class="ic" style="background:${TV.col(LIST_COLORS[i%LIST_COLORS.length])}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
+  if (f.title) body += `<div class="t" style="${f.cTitle ? `color:${esc(f.cTitle)};` : ''}${op('oTitle') != null ? `opacity:${op('oTitle')};` : ''}">${esc(f.title)}</div>`;
+  if (f.caption) body += `<div class="cap" style="${tone(f.cCap, op('oCap'))}">${esc(f.caption)}</div>`;
+  if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1};${f.cList ? 'color:' + esc(f.cList) + ';' : ''}${op('oList') != null ? 'opacity:' + op('oList') : ''}"><span class="ic" style="background:${TV.col(LIST_COLORS[i%LIST_COLORS.length])}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
 
   const deco = (colored && !bgPhoto && f.visual === 'tag') ? TAG : '';
   const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div><div class="shade"></div>` : '';
