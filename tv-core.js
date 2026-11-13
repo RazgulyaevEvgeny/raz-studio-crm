@@ -124,7 +124,7 @@ TV.hydrate = (root) => root.querySelectorAll('[data-img]').forEach(el => {
 
 /* ---------- стили ---------- */
 TV.CSS = `
-.bgfx{position:absolute;inset:0;z-index:0;overflow:hidden}
+.bgfx{position:absolute;top:0;right:0;bottom:0;left:0;z-index:0;overflow:hidden}
 .bgfx i{position:absolute;width:1300px;height:1300px;border-radius:50%;will-change:transform}
 .bgfx i:nth-child(1){left:-300px;top:-500px;background:radial-gradient(circle,rgba(0,122,255,.20),rgba(0,122,255,0) 65%);animation:tvd1 38s ease-in-out infinite alternate}
 .bgfx i:nth-child(2){right:-400px;top:-300px;background:radial-gradient(circle,rgba(175,82,222,.16),rgba(175,82,222,0) 65%);animation:tvd2 46s ease-in-out infinite alternate}
@@ -134,16 +134,13 @@ TV.CSS = `
 @keyframes tvd3{to{transform:translate(480px,-340px) scale(1.2)}}@keyframes tvd4{to{transform:translate(-620px,-260px) scale(1.05)}}
 .nofx .bgfx{display:none}
 
-.scene{position:absolute;left:72px;right:72px;top:192px;bottom:112px;display:grid;gap:28px;z-index:2;pointer-events:none;--sp:1;--st:.18s;--from:translateY(60px) scale(.94);--to:translateY(-40px) scale(.97);--ease:cubic-bezier(.2,1.25,.3,1)}
+.scene{position:absolute;left:72px;right:72px;top:192px;bottom:112px;display:-webkit-box;display:flex;flex-direction:row;z-index:2;pointer-events:none;--sp:1;--st:.18s;--from:translateY(60px) scale(.94);--to:translateY(-40px) scale(.97);--ease:cubic-bezier(.2,1.25,.3,1)}
 .scene .f{opacity:0;transform:var(--from);transition:opacity calc(.7s * var(--sp)) ease,transform calc(.7s * var(--sp)) ease}
 .scene.on .f{opacity:1;transform:none;transition:opacity calc(.9s * var(--sp)) ease,transform calc(1.1s * var(--sp)) var(--ease)}
 .scene.out .f{opacity:0;transform:var(--to)}
-.scene.on .f:nth-child(2){transition-delay:var(--st)}.scene.on .f:nth-child(3){transition-delay:calc(var(--st) * 2)}.scene.on .f:nth-child(4){transition-delay:calc(var(--st) * 3)}
-.scene.out .f:nth-child(2){transition-delay:calc(var(--st) * .4)}.scene.out .f:nth-child(3){transition-delay:calc(var(--st) * .8)}.scene.out .f:nth-child(4){transition-delay:calc(var(--st) * 1.2)}
-.scene.on .ic,.scene.on .sw,.scene.on .insta{animation:tvpop calc(.8s * var(--sp)) cubic-bezier(.2,1.6,.4,1) both;animation-delay:calc(.45s * var(--sp))}
-.scene.on .f:nth-child(2) .ic,.scene.on .f:nth-child(2) .sw,.scene.on .f:nth-child(2) .insta{animation-delay:calc(.45s * var(--sp) + var(--st))}
-.scene.on .f:nth-child(3) .ic,.scene.on .f:nth-child(3) .sw,.scene.on .f:nth-child(3) .insta{animation-delay:calc(.45s * var(--sp) + var(--st) * 2)}
-.scene.on .f:nth-child(4) .ic,.scene.on .f:nth-child(4) .sw,.scene.on .f:nth-child(4) .insta{animation-delay:calc(.45s * var(--sp) + var(--st) * 3)}
+.scene.on .f{transition-delay:calc(var(--st) * var(--i,0))}
+.scene.out .f{transition-delay:calc(var(--st) * .4 * var(--i,0))}
+.scene.on .ic,.scene.on .sw,.scene.on .insta{animation:tvpop calc(.8s * var(--sp)) cubic-bezier(.2,1.6,.4,1) both;animation-delay:calc(.45s * var(--sp) + var(--st) * var(--i,0))}
 .scene.on .li .ic{animation-delay:calc(.5s * var(--sp) + var(--n,0) * .12s)}
 @keyframes tvpop{0%{transform:scale(0) rotate(-20deg)}100%{transform:none}}
 /* варианты анимации */
@@ -158,15 +155,19 @@ TV.CSS = `
 .an-none{--sp:0.001;--st:0s}
 .an-none .ic,.an-none .sw,.an-none .insta{animation:none!important}
 
-/* раскладки */
-.g1{grid-template-columns:1fr}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
-.g12{grid-template-columns:1.25fr 1fr;grid-template-rows:1fr 1fr}.g12 .f:first-child{grid-row:span 2}
-.g21{grid-template-columns:1fr 1.25fr;grid-template-rows:1fr 1fr}.g21 .f:nth-child(3){grid-column:2;grid-row:1 / span 2}
-.g4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
-
+/* раскладки: только flex — работает и в старых браузерах приставок */
+.scene>.f,.scene>.col{flex:1 1 0;min-width:0}
+.scene>*+*{margin-left:28px}
+.scene>.big{flex:1.25 1 0}
+.col{display:flex;flex-direction:column;min-height:0}
+.col>.f{flex:1 1 0;min-height:0}
+.col>*+*{margin-top:28px}
 /* карточка */
-.f{--fg:#1d1d1f;--fg2:#8e8e93;background:rgba(255,255,255,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95),0 14px 40px rgba(40,60,140,.08);border-radius:40px;padding:48px 50px;display:flex;flex-direction:column;justify-content:space-between;gap:24px;position:relative;overflow:hidden;color:var(--fg);min-height:0;min-width:0}
+.f{--fg:#1d1d1f;--fg2:#8e8e93;background:rgba(255,255,255,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95),0 14px 40px rgba(40,60,140,.08);border-radius:40px;padding:48px 50px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;color:var(--fg);min-height:0;min-width:0}
 .f>*{position:relative;z-index:1}
+.f>.bgph,.f>.shade,.f>.deco{position:absolute}
+.f .fb{margin-top:24px}
+.ft .top+.pic,.ft .flag+.top,.ft .sw+.top,.ft .insta+.top{margin-top:20px}
 .f.st-white{background:#fff}
 .f.st-blue{background:#007aff;--fg:#fff;--fg2:rgba(255,255,255,.86)}
 .f.st-kaspi{background:#f14635;--fg:#fff;--fg2:rgba(255,255,255,.88)}
@@ -180,15 +181,15 @@ TV.CSS = `
 .f.al-center{text-align:center;align-items:center}.f.al-center .top{justify-content:center}.f.al-center .li{justify-content:center}
 .f.al-right{text-align:right;align-items:flex-end}.f.al-right .top{justify-content:flex-end}
 /* фото */
-.f .bgph{position:absolute;inset:0;z-index:0;background:#d1d1d6 center/cover no-repeat}
+.f .bgph{position:absolute;top:0;right:0;bottom:0;left:0;z-index:0;background:#d1d1d6 center/cover no-repeat}
 .f .bgph.kb{animation:tvkb 24s ease-in-out infinite alternate}
 @keyframes tvkb{from{transform:scale(1)}to{transform:scale(1.12) translate(-2%,-1%)}}
-.f .shade{position:absolute;inset:0;z-index:0;background:linear-gradient(to top,rgba(0,0,0,var(--dim)),rgba(0,0,0,calc(var(--dim) * .35)))}
+.f .shade{position:absolute;top:0;right:0;bottom:0;left:0;z-index:0;background:linear-gradient(to top,rgba(0,0,0,var(--dim)),rgba(0,0,0,calc(var(--dim) * .35)))}
 .f.has-bg{--fg:#fff;--fg2:rgba(255,255,255,.88)}
-.f .pic{flex:1 1 auto;min-height:120px;border-radius:26px;background:#e5e5ea center/cover no-repeat}
+.f .pic{display:block;flex:1 1 auto;min-height:120px;border-radius:26px;background:#e5e5ea center/cover no-repeat}
 .f .pic.contain{background-size:contain;background-color:transparent}
-.ic{width:80px;height:80px;border-radius:22px;display:grid;place-items:center;color:#fff;flex:none}.ic svg{width:44px;height:44px}
-.top{display:flex;align-items:center;gap:22px;font-size:28px;font-weight:600;color:var(--fg2);min-height:80px}
+.ic{width:80px;height:80px;border-radius:22px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}.top .ic{margin-right:22px}.ic svg{width:44px;height:44px}
+.top{display:flex;align-items:center;font-size:28px;font-weight:600;color:var(--fg2);min-height:80px}
 .num{display:inline-block;font-family:"Inter Tight",Inter,system-ui,sans-serif;font-weight:800;letter-spacing:-.045em;line-height:.92;font-variant-numeric:tabular-nums;font-size:150px;color:var(--fg)}
 .num small{font-size:.38em;letter-spacing:-.01em;margin-left:8px;opacity:.6}.num .pl{font-size:.5em;opacity:1;margin-left:0}
 .hero .num{font-size:250px}
@@ -205,10 +206,10 @@ TV.CSS = `
 .flag{display:flex;height:20px;width:150px;border-radius:6px;overflow:hidden}.flag i{flex:1}.flag i:nth-child(2){box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
 .sw{width:120px;height:120px;border-radius:30px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
 .deco{position:absolute!important;z-index:0!important;right:-60px;top:-50px;width:440px;opacity:.13;color:#fff;animation:tvspin 60s linear infinite}@keyframes tvspin{to{transform:rotate(360deg)}}
-.list{display:flex;flex-direction:column;gap:16px;margin-top:20px}
-.li{display:flex;align-items:center;gap:20px;font-size:32px;font-weight:600}
-.li .ic{width:60px;height:60px;border-radius:17px}.li .ic svg{width:32px;height:32px}
-.insta{width:96px;height:96px;border-radius:26px;background:linear-gradient(45deg,#ffcc00,#ff2d55,#af52de);display:grid;place-items:center;color:#fff}.insta svg{width:54px;height:54px}
+.list{display:flex;flex-direction:column;margin-top:20px}.li+.li{margin-top:16px}
+.li{display:flex;align-items:center;font-size:32px;font-weight:600}
+.li .ic{width:60px;height:60px;border-radius:17px;margin-right:20px}.li .ic svg{width:32px;height:32px}
+.insta{width:96px;height:96px;border-radius:26px;background:linear-gradient(45deg,#ffcc00,#ff2d55,#af52de);display:flex;align-items:center;justify-content:center;color:#fff}.insta svg{width:54px;height:54px}
 `;
 TV.injectCSS = () => { if (document.getElementById('tv-core-css')) return; const s = document.createElement('style'); s.id = 'tv-core-css'; s.textContent = TV.CSS; document.head.appendChild(s); };
 
@@ -267,15 +268,21 @@ TV.factHTML = (f, hero) => {
 
   const deco = (colored && !bgPhoto && f.visual === 'tag') ? TAG : '';
   const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div><div class="shade"></div>` : '';
-  const inner = photoTop ? `<div style="display:flex;flex-direction:column;gap:20px;flex:1 1 auto;min-height:0">${top}</div><div>${body}</div>` : (f.list && !top) ? body : (top ? `<div>${top}</div>` : '<div></div>') + `<div>${body}</div>`;
+  const inner = photoTop ? `<div class="ft" style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0">${top}</div><div class="fb">${body}</div>` : (f.list && !top) ? body : (top ? `<div class="ft">${top}</div>` : '<div></div>') + `<div class="fb">${body}</div>`;
   return `<div class="${cls.join(' ')}"${f.fg ? ' data-fg' : ''} style="${style}">${bg}${deco}${inner}</div>`;
 };
 TV.sceneHTML = (sc) => {
   const L = TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3, sp = (TV.SPEEDS[sc.speed] || TV.SPEEDS.normal)[1];
   const heroIdx = sc.layout === 'g12' ? 0 : sc.layout === 'g21' ? 2 : sc.layout === 'g1' ? 0 : -1;
-  return `<section class="scene ${sc.layout} an-${TV.ANIMS[sc.anim] ? sc.anim : 'spring'}" style="--sp:${sc.anim === 'none' ? 0.001 : sp};--st:${sc.stagger === false || sc.anim === 'none' ? '0s' : (0.18 * sp).toFixed(2) + 's'}">${(sc.facts||[]).slice(0, L.n).map((f,i) => TV.factHTML(f, i === heroIdx)).join('')}</section>`;
+  const cards = (sc.facts||[]).slice(0, L.n).map((f,i) => TV.factHTML(f, i === heroIdx).replace('<div class="f ', `<div style="--i:${i}" class="f `));
+  const c = (arr, big) => `<div class="col${big ? ' big' : ''}">${arr.join('')}</div>`;
+  let inner;
+  if (sc.layout === 'g12') inner = c([cards[0]], true) + c([cards[1], cards[2]]);
+  else if (sc.layout === 'g21') inner = c([cards[0], cards[1]]) + c([cards[2]], true);
+  else if (sc.layout === 'g4') inner = c([cards[0], cards[2]]) + c([cards[1], cards[3]]);
+  else inner = cards.join('');
+  return `<section class="scene ${sc.layout} an-${TV.ANIMS[sc.anim] ? sc.anim : 'spring'}" style="--sp:${sc.anim === 'none' ? 0.001 : sp};--st:${sc.stagger === false || sc.anim === 'none' ? '0s' : (0.18 * sp).toFixed(2) + 's'}">${inner}</section>`;
 };
-
 TV.countUp = (el) => {
   const to = +el.dataset.to, plus = !!el.dataset.plus, unit = el.dataset.unit;
   const tail = (plus ? '<small class="pl">+</small>' : '') + (unit ? `<small>${unit}</small>` : '');
