@@ -70,13 +70,15 @@
   #ov li{margin:6px 0 6px 18px}
   #ov code{background:#f2f2f7;padding:1px 6px;border-radius:6px}
   .legacy .scene .f{opacity:1!important;transform:none!important}
+  .dark .pill{background:rgba(44,44,46,.66);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07)}
+  .dark .lbl2 b{color:#f5f5f7}
 </style>
 <script>
 /* диагностика для старых приставок: ошибки видно внизу экрана, сводка уходит в журнал воркера */
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611132203"></script>
+<script src="tv-core.js?v=202611132208"></script>
 </head>
 <body>
 <div id="stage">
@@ -152,38 +154,48 @@ async function weather(){try{const r=await fetch(`https://api.open-meteo.com/v1/
   const j=await r.json();setWx(j.current.temperature_2m,j.current.weather_code)}catch(e){}}
 weather();setInterval(weather,15*60*1000);
 
-/* ===== МУЗЫКА: «Моя волна» Яндекс Музыки через воркер ym-wave ===== */
-const YM = {
-  worker: 'https://ym-wave.design-onegin.workers.dev', // воркер ym-wave в Cloudflare (пусто = демо)
-  key: 'XRcl7HslUDmN3WPNqWABNaI5', // тот же TV_KEY, что задан в воркере
-  volume: 0.6,           // громкость 0…1
-};
-const audio = new Audio(); audio.volume = YM.volume; audio.preload = 'auto';
-let queue = [], cur = null, batch = '', lastId = '';
+/* ===== МУЗЫКА: Яндекс Музыка через воркер ym-wave; что играть — выбирается в админке ===== */
+const YM = TV.YM;
+const MOOD_NAMES = { all:'Любое', calm:'Спокойное', fun:'Весёлое', active:'Бодрое', sad:'Грустное' };
+let MUSIC = TV.normalizeMusic(null);
+const audio = new Audio(); audio.volume = MUSIC.vol / 100; audio.preload = 'auto';
+let queue = [], cur = null, batch = '', lastId = '', needTap = false, busy = false, gen = 0;
 function showTrack(t){ document.getElementById('title').textContent=t.title; document.getElementById('artist').textContent=t.artist;
   const a=document.getElementById('art'); if(t.cover){a.src=t.cover;a.style.display='block'}else a.style.display='none'; }
-const api = (p,o) => fetch(`${YM.worker}${p}${p.includes('?')?'&':'?'}k=${encodeURIComponent(YM.key)}`, o).then(r=>r.json());
-const fb = (type, extra={}) => api('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,batchId:batch,...extra})}).catch(()=>{});
-async function refill(){ const j=await api('/wave'+(lastId?`?last=${lastId}`:'')); batch=j.batchId||batch; queue.push(...(j.tracks||[])); }
-function workTime(){ return true } // музыка играет всё время, пока включён экран
+function showStation(){ document.getElementById('station').textContent = MUSIC.st === 'user:onyourwave' ? 'Моя волна · ' + (MOOD_NAMES[MUSIC.mood] || '') : (MUSIC.name || 'Яндекс Музыка'); }
+const api = (p,o) => fetch(`${YM.worker}${p}${p.indexOf('?')>=0?'&':'?'}k=${encodeURIComponent(YM.key)}`, o).then(r=>r.json());
+const fb = (type, extra) => api('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({type:type,batchId:batch,st:MUSIC.st},extra||{}))}).catch(()=>{});
+async function refill(){
+  const q = '/wave?st=' + encodeURIComponent(MUSIC.st) + '&mood=' + MUSIC.mood + '&div=' + MUSIC.div + '&lang=' + MUSIC.lang + (lastId ? '&last=' + lastId : '');
+  const j = await api(q); batch = j.batchId || batch; queue.push.apply(queue, j.tracks || []);
+}
 async function playNext(){
+  if (busy) return; busy = true; const my = ++gen;
   try{
-    if(!workTime()){ audio.pause(); setTimeout(playNext,60000); return; }
     if(queue.length<2) await refill();
     cur=queue.shift(); if(!cur) throw 0; lastId=cur.id;
-    const {url}=await api('/url?id='+cur.id); audio.src=url; showTrack(cur);
-    await audio.play(); fb('trackStarted',{trackId:cur.id,albumId:cur.albumId});
+    const r=await api('/url?id='+cur.id); if (my !== gen) return;
+    audio.src=r.url; showTrack(cur);
+    try { await audio.play(); needTap = false; fb('trackStarted',{trackId:cur.id,albumId:cur.albumId}); }
+    catch (e) { needTap = true; document.getElementById('artist').textContent = 'Нажмите любую кнопку на пульте, чтобы включить звук'; }
   }catch(e){ setTimeout(playNext,5000); }
+  finally { busy = false; }
 }
 audio.addEventListener('ended',()=>{ if(cur) fb('trackFinished',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.duration||0)}); playNext(); });
-audio.addEventListener('error',()=>setTimeout(playNext,2000));
+audio.addEventListener('error',()=>{ if (audio.src) setTimeout(playNext,2000); });
 // если приставка не дала включить звук без нажатия — первое нажатие любой кнопки пульта запустит музыку
-['keydown','click'].forEach(ev=>addEventListener(ev,()=>{ if(audio.paused&&YM.worker&&workTime()) audio.play().catch(()=>{}) }));
-if(YM.worker){ fb('radioStarted'); playNext(); }
-else { // демо без воркера
-  const D=[['Aruarian Dance','Nujabes'],['Kerala','Bonobo'],['Sunday Morning','Maroon 5'],['Strangers in the Night','Frank Sinatra']];
-  let i=0; const n=()=>{const[t,a]=D[i++%D.length];showTrack({title:t,artist:a})}; n(); setInterval(n,45000);
+['keydown','click'].forEach(ev=>addEventListener(ev,()=>{ if(audio.paused&&audio.src) audio.play().then(()=>{ if(needTap&&cur){ needTap=false; showTrack(cur); fb('trackStarted',{trackId:cur.id,albumId:cur.albumId}); } }).catch(()=>{}) }));
+/* настройки музыки из админки: станция/настроение — с новой очереди, громкость — сразу, «следующий трек» — по кнопке */
+function applyMusic(m){
+  const n = TV.normalizeMusic(m), o = MUSIC; MUSIC = n; showStation();
+  audio.volume = n.vol / 100;
+  if (n.st !== o.st || n.mood !== o.mood || n.div !== o.div || n.lang !== o.lang) { queue = []; lastId = ''; batch = ''; fb('radioStarted'); busy = false; playNext(); return; }
+  if (n.skip && n.skip !== o.skip) { if (cur) fb('skip',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.currentTime||0)}); busy = false; playNext(); }
 }
+showStation();
+let musicStarted = false;
+function startMusic(){ if (musicStarted || !YM.worker) return; musicStarted = true; fb('radioStarted'); playNext(); }
+setTimeout(startMusic, 4000); // если база не ответила — играем с настройками по умолчанию
 
 // ===== факты: из базы CRM (раздел pub/<ключ>), живое обновление; без базы — данные по умолчанию =====
 TV.injectCSS();
@@ -194,6 +206,7 @@ function applySettings(){
   const st = document.getElementById('stage');
   st.classList.toggle('nofx', !DATA.fx);
   st.classList.toggle('lite', DATA.lite); TV.LITE = DATA.lite;
+  st.classList.toggle('dark', DATA.theme === 'dark'); document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
   const pills = document.querySelectorAll('header .pill');
   if (pills[0]) pills[0].style.display = DATA.show.music ? '' : 'none';
   if (pills[1]) pills[1].style.display = DATA.show.weather ? '' : 'none';
@@ -221,7 +234,7 @@ build();
   const cfg = window.FIREBASE_CONFIG; if (!cfg || !cfg.databaseURL || !window.EventSource) return;
   const url = cfg.databaseURL.replace(/\/$/, '') + '/pub/' + TV.KEY + '.json';
   let last = '';
-  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite }); if (j === last) return; last = j; DATA = TV.normalize(d); build(); };
+  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme }); if (j === last) return; last = j; DATA = TV.normalize(d); build(); };
   try {
     const es = new EventSource(url);
     const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
