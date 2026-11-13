@@ -145,7 +145,7 @@
   .seg.full.sg3{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
   .seg.full.sg3 button{height:30px;flex:none}
   .seg.sm button{height:30px;font-size:13px;padding:0 8px}
-  .colrow{display:flex;align-items:center;gap:10px}
+  .colrow{display:flex;align-items:center;gap:10px}.colrow+.colrow{margin-top:6px}
   .colrow input[type=color]{width:46px;height:34px;border:0;padding:0;background:none;border-radius:8px;cursor:pointer}
   .linkbtn{font-size:13px;font-weight:600;color:var(--blue)}
   .phbox{display:flex;gap:12px;align-items:center}
@@ -156,6 +156,7 @@
   .hint{font-size:12.5px;color:var(--mute);line-height:1.4}
   .settings{display:flex;flex-direction:column;gap:10px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}.chips button{height:30px;padding:0 12px;border-radius:99px;background:var(--tile);font-size:13px;font-weight:600}.chips button.on{background:var(--blue);color:#fff}
+  .settings input[type=color]{width:40px;height:30px;border:0;padding:0;background:none;cursor:pointer}
   #musicbox select{width:100%;border:0;background:var(--tile);border-radius:10px;height:38px;padding:0 10px;font-weight:600}
   .settings h4{font:700 13px var(--T);letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
   .settings .row2{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600}
@@ -192,6 +193,8 @@
       <span class="hint" style="margin-top:-6px">Без тяжёлых эффектов — для слабых ТВ-приставок</span>
       <label class="row2">Переливы на фоне <button class="sw2" id="fx" type="button"></button></label>
       <h4 style="margin-top:4px">Сверху на экране</h4>
+      <div class="row2">Фон плашек <span style="display:flex;align-items:center;gap:8px"><input type="color" id="pbg"><button type="button" class="linkbtn" data-preset="bg">авто</button></span></div>
+      <div class="row2">Текст плашек <span style="display:flex;align-items:center;gap:8px"><input type="color" id="pfg"><button type="button" class="linkbtn" data-preset="fg">авто</button></span></div>
       <label class="row2">Что играет <button class="sw2" data-show="music" type="button"></button></label>
       <label class="row2">Погода <button class="sw2" data-show="weather" type="button"></button></label>
       <label class="row2">Часы и дата <button class="sw2" data-show="clock" type="button"></button></label>
@@ -254,7 +257,7 @@ $('stage').innerHTML = '<div class="bgfx"><i></i><i></i><i></i><i></i></div><div
 function fitPv(){ $('stage').style.transform = 'scale(' + ($('pv').clientWidth / 1920) + ')'; }
 new ResizeObserver(fitPv).observe($('pv'));
 function preview(animate){
-  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.theme === 'dark' ? 'rgba(44,44,46,.66)' : '');
+  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? 'rgba(44,44,46,.66)' : ''));
   $('stage').querySelectorAll('[data-p]').forEach(i => i.style.display = D.show[i.dataset.p] ? '' : 'none');
   const s = D.screens[sel]; if (!s) { $('pvs').innerHTML = ''; return; }
   $('pvs').innerHTML = TV.sceneHTML(s);
@@ -321,11 +324,14 @@ function renderBar(){
 /* ---------- общие настройки ---------- */
 $('sec').oninput = () => { D.slideSec = Math.max(5, Math.min(300, +$('sec').value || 20)); markDirty(); };
 $('theme').onclick = e => { const b = e.target.closest('[data-th]'); if (!b) return; D.theme = b.dataset.th; markDirty(); renderSettings(); preview(false); };
+$('pbg').oninput = () => { D.pill.bg = $('pbg').value; markDirty(); preview(false); };
+$('pfg').oninput = () => { D.pill.fg = $('pfg').value; markDirty(); preview(false); };
+document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { D.pill[b.dataset.preset] = ''; markDirty(); renderSettings(); preview(false); });
 $('lite').onclick = () => { D.lite = !D.lite; markDirty(); renderSettings(); preview(true); };
 $('fx').onclick = () => { D.fx = !D.fx; markDirty(); renderSettings(); preview(false); };
 document.querySelectorAll('[data-show]').forEach(b => b.onclick = () => { const k = b.dataset.show; D.show[k] = !D.show[k]; markDirty(); renderSettings(); preview(false); });
 function renderSettings(){
-  $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx); $('lite').classList.toggle('on', D.lite); [...$('theme').children].forEach(b => b.classList.toggle('on', b.dataset.th === D.theme));
+  $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx); $('lite').classList.toggle('on', D.lite); $('pbg').value = D.pill.bg || '#ffffff'; $('pfg').value = D.pill.fg || '#1d1d1f'; [...$('theme').children].forEach(b => b.classList.toggle('on', b.dataset.th === D.theme));
   document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', !!D.show[b.dataset.show]));
 }
 
@@ -362,7 +368,9 @@ function factForm(f, k){
     <details data-sec="look" ${o('look', true)}><summary>Оформление</summary><div class="in">
       <div class="fld"><span>Фон карточки</span>${seg('style', f.style, Object.entries(TV.STYLES), 'sg3 sm')}</div>
       ${f.style==='custom' ? `<div class="colrow"><input type="color" data-f="bg" value="${esc(f.bg)}"><span class="hint">Свой цвет фона</span></div>` : ''}
-      <div class="fld"><span>Цвет текста</span><div class="colrow"><input type="color" data-f="fg" value="${esc(f.fg || '#1d1d1f')}">${f.fg ? '<button type="button" class="linkbtn" data-act="fgreset">Сбросить на авто</button>' : '<span class="hint">сейчас авто: подбирается под фон</span>'}</div></div>
+      <div class="fld"><span>Цвет текста</span>
+        ${[['fg','Весь текст'],['cLabel','Подпись сверху'],['cBig','Крупное'],['cTitle','Заголовок'],['cCap','Пояснение'],['cList','Пункты списка']].map(([k,t]) => `<div class="colrow"><input type="color" data-f="${k}" value="${esc(f[k] || (k==='fg' ? '#1d1d1f' : f.fg || '#1d1d1f'))}"><span style="flex:1;font-size:13.5px;font-weight:600">${t}</span>${f[k] ? `<button type="button" class="linkbtn" data-reset="${k}">авто</button>` : '<span class="hint">авто</span>'}</div>`).join('')}
+      </div>
       <label class="fld"><span>Сверху карточки</span><select data-f="visual">${VIS.map(([v,t]) => `<option value="${v}" ${f.visual===v?'selected':''}>${t}</option>`).join('')}</select></label>
       ${f.visual==='swatch' ? `<div class="colrow"><input type="color" data-f="swatch" value="${esc(f.swatch||'#ffffff')}"><span class="hint">Цвет образца</span></div>` : ''}
       ${['flag-it','swatch','insta'].includes(f.visual) ? '' : `<div class="look">
@@ -408,15 +416,16 @@ $('facts').addEventListener('input', e => {
   if (k === 'dim') t.previousElementSibling.textContent = 'Затемнение для читаемости текста: ' + t.value + '%';
   markDirty(); preview(false); renderList();
 });
-$('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (e.target.dataset.f === 'fg' || e.target.dataset.f === 'bg') renderFacts(); });
+$('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList'].includes(e.target.dataset.f)) renderFacts(); });
 $('facts').addEventListener('click', e => {
+  const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
   const sg = e.target.closest('[data-seg] button'), col = e.target.closest('[data-color]'), act = e.target.closest('[data-act]');
   if (sg) { factOf(sg)[sg.parentElement.dataset.seg] = sg.dataset.v; change(); return; }
   if (col) { factOf(col).color = col.dataset.color; change(); return; }
   if (!act || act.dataset.act === 'upload') return;
   const f = factOf(act), k = +act.closest('.fe').dataset.k;
   if (act.dataset.act === 'clear') { D.screens[sel].facts[k] = TV.F({}); change(); }
-  if (act.dataset.act === 'fgreset') { f.fg = ''; change(); }
+
   if (act.dataset.act === 'nophoto') { f.photo = ''; change(); }
   if (act.dataset.act === 'icon') iconPop(act, f);
 });
@@ -515,7 +524,7 @@ $('save').onclick = async () => {
   if (demo) { markClean('Демо: не сохранено в базу'); toast('В демо-режиме база недоступна'); return; }
   $('save').disabled = true;
   try {
-    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, show: D.show, screens: D.screens, upd: Date.now() })));
+    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, pill: D.pill, show: D.show, screens: D.screens, upd: Date.now() })));
     const used = collectImgs();
     knownImgs.forEach(id => { if (!used.has(id)) { db.ref('pub/' + TV.IMG + id).remove().catch(() => {}); knownImgs.delete(id); } });
     markClean(); toast('Сохранено — экран обновится через пару секунд');

@@ -56,7 +56,7 @@ const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
-  sizeBig:'auto', sizeText:'m', align:'left', valign:'between',
+  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'',
   auto:'', autoFrom:0 }, o);
 const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
@@ -113,7 +113,7 @@ TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.a
 TV.normalize = (d) => {
   if (!d || !Array.isArray(d.screens)) d = JSON.parse(JSON.stringify(TV.DEFAULT));
   const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
-  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'dark' ? 'dark' : 'light', show,
+  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'dark' ? 'dark' : 'light', pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
     screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
       const src = s.facts || []; sc.facts = [0,1,2,3].map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
 };
@@ -253,11 +253,11 @@ const LIST_COLORS = ['purple','indigo','orange','red','blue','green','teal','pin
 const LIST_ICONS = { 'dtf':'printer','вышив':'needle','3d':'cube','накле':'car','авто':'car','вывес':'sign','таблич':'sign','топпер':'cup','футбол':'shirt' };
 const listIcon = t => { const l = t.toLowerCase(); for (const k in LIST_ICONS) if (l.includes(k)) return LIST_ICONS[k]; return 'check'; };
 
-TV.factHTML = (f, hero) => {
+TV.factHTML = (f, hero, idx) => {
   const col = TV.COLORS[f.color] || TV.COLORS.blue;
   const bgPhoto = f.photo && f.photoMode === 'bg';
   const cls = ['f', 'st-' + (TV.STYLES[f.style] ? f.style : 'plain')];
-  let style = '';
+  let style = idx != null ? `--i:${idx};` : '';
   if (hero) cls.push('hero');
   if (f.style === 'custom') { style += `background:${esc(f.bg)};`; if (isLight(f.bg)) cls.push('light-bg'); }
   const colored = ['blue','kaspi','dark'].includes(f.style) || (f.style === 'custom' && !isLight(f.bg)) || bgPhoto;
@@ -278,13 +278,14 @@ TV.factHTML = (f, hero) => {
   else if (vis === 'swatch') visual = `<div class="sw" style="background:${esc(f.swatch||'#fff')}"></div>`;
   else if (vis === 'insta') visual = `<div class="insta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg></div>`;
   const icon = (f.icon && !vis) ? `<span class="ic" style="background:${col}">${TV.icon(f.icon)}</span>` : '';
-  const labelRow = (icon || f.label) ? `<div class="top"${icon ? '' : ' style="min-height:0"'}>${icon}${esc(f.label)}</div>` : '';
+  const cl = f.cLabel ? `color:${esc(f.cLabel)};opacity:1;` : '';
+  const labelRow = (icon || f.label) ? `<div class="top" style="${icon ? '' : 'min-height:0;'}${cl}">${icon}${esc(f.label)}</div>` : '';
   const pic = photoTop ? `<div class="pic ${f.photoFit === 'contain' ? 'contain' : ''}" data-img="${esc(f.photo)}"></div>` : '';
   const top = photoTop ? labelRow + pic : vis ? visual + labelRow : labelRow;
 
   let body = '';
   if (f.big) {
-    const ncol = f.numColor ? ` style="color:${col}"` : '';
+    const ncol = f.cBig ? ` style="color:${esc(f.cBig)}"` : f.numColor ? ` style="color:${col}"` : '';
     if (isNum(f.big)) {
       const val = TV.value(f);
       body += `<div class="num" data-to="${val}" data-plus="${f.plus?1:''}" data-unit="${esc(f.unit)}"${ncol}>${val.toLocaleString('ru-RU')}${f.plus?'<small class="pl">+</small>':''}${f.unit?`<small>${esc(f.unit)}</small>`:''}</div>`;
@@ -292,9 +293,9 @@ TV.factHTML = (f, hero) => {
       body += `<div class="h${String(f.big).length > 12 ? ' long' : ''}"${ncol}>${esc(f.big)}${f.unit?` <small style="font-size:.5em;opacity:.6">${esc(f.unit)}</small>`:''}</div>`;
     }
   }
-  if (f.title) body += `<div class="t">${esc(f.title)}</div>`;
-  if (f.caption) body += `<div class="cap">${esc(f.caption)}</div>`;
-  if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1}"><span class="ic" style="background:${TV.COLORS[LIST_COLORS[i%LIST_COLORS.length]]}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
+  if (f.title) body += `<div class="t"${f.cTitle ? ` style="color:${esc(f.cTitle)}"` : ''}>${esc(f.title)}</div>`;
+  if (f.caption) body += `<div class="cap"${f.cCap ? ` style="color:${esc(f.cCap)};opacity:1"` : ''}>${esc(f.caption)}</div>`;
+  if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1};${f.cList ? 'color:' + esc(f.cList) : ''}"><span class="ic" style="background:${TV.COLORS[LIST_COLORS[i%LIST_COLORS.length]]}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
 
   const deco = (colored && !bgPhoto && f.visual === 'tag') ? TAG : '';
   const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div><div class="shade"></div>` : '';
@@ -304,7 +305,7 @@ TV.factHTML = (f, hero) => {
 TV.sceneHTML = (sc) => {
   const L = TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3, sp = (TV.SPEEDS[sc.speed] || TV.SPEEDS.normal)[1];
   const heroIdx = sc.layout === 'g12' ? 0 : sc.layout === 'g21' ? 2 : sc.layout === 'g1' ? 0 : -1;
-  const cards = (sc.facts||[]).slice(0, L.n).map((f,i) => TV.factHTML(f, i === heroIdx).replace('<div class="f ', `<div style="--i:${i}" class="f `));
+  const cards = (sc.facts||[]).slice(0, L.n).map((f,i) => TV.factHTML(f, i === heroIdx, i));
   const c = (arr, big) => `<div class="col${big ? ' big' : ''}">${arr.join('')}</div>`;
   let inner;
   if (sc.layout === 'g12') inner = c([cards[0]], true) + c([cards[1], cards[2]]);
