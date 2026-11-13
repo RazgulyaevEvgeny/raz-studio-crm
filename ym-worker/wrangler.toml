@@ -1,0 +1,7 @@
+name = "ym-wave"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+# Секреты не храним в этом файле. Задать один раз:
+#   npx wrangler secret put YM_TOKEN
+#   npx wrangler secret put TV_KEY
