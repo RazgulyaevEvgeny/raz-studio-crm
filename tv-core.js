@@ -40,7 +40,7 @@ TV.ICONS = {
 TV.icon = (name, size) => TV.ICONS[name] ? `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"${size?` width="${size}" height="${size}"`:''}>${TV.ICONS[name]}</svg>` : '';
 
 /* ---------- данные по умолчанию (пока в базе ничего нет) ---------- */
-const F = (o) => Object.assign({ style:'plain', icon:'', color:'blue', label:'', big:'', unit:'', plus:false, numColor:false, title:'', caption:'', visual:'', swatch:'#ffffff', list:'' }, o);
+const F = (o) => Object.assign({ style:'plain', icon:'', color:'blue', label:'', big:'', unit:'', plus:false, numColor:false, title:'', caption:'', visual:'', swatch:'#ffffff', list:'', auto:'', autoFrom:0 }, o);
 TV.DEFAULT = { slideSec: 20, screens: [
   { on:true, layout:'g12', facts:[
     F({style:'blue', label:'Спасибо, что выбираете нас', big:'1500', plus:true, title:'заказов студии выполнено', visual:'tag'}),
@@ -75,6 +75,10 @@ TV.DEFAULT = { slideSec: 20, screens: [
     F({visual:'insta', big:'@raz.brandstudio', numColor:true, color:'blue', caption:'Смотрите наши работы в Instagram'}),
     F({style:'blue', icon:'plus', big:'Есть идея?', caption:'Расскажите — придумаем и сделаем. А если это подарок, сделаем с особой любовью'}) ]},
 ]};
+TV.AUTO = {};
+TV.AUTO_SRC = { orders:'Выданные заказы студии', kaspi:'Продажи Kaspi', clients:'Клиенты студии' };
+/* число на экране: стартовое + рост живого счётчика из учёта с момента включения */
+TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.auto && TV.AUTO[f.auto] != null ? Math.max(0, +TV.AUTO[f.auto] - (+f.autoFrom || 0)) : 0; return b + v; };
 TV.newFact = () => F({icon:'sparkle', color:'blue', label:'Новый факт', big:'100', title:'чего-нибудь крутого'});
 
 /* ---------- стили карточек ---------- */
@@ -144,7 +148,8 @@ TV.factHTML = (f) => {
   let body = '';
   if (f.big) {
     if (isNum(f.big)) {
-      body += `<div class="num" data-to="${String(f.big).replace(/\s/g,'')}" data-plus="${f.plus?1:''}" data-unit="${esc(f.unit)}"${f.numColor?` style="color:${col}"`:''}>${Number(String(f.big).replace(/\s/g,'')).toLocaleString('ru-RU')}${f.plus?'<small class="pl">+</small>':''}${f.unit?`<small>${esc(f.unit)}</small>`:''}</div>`;
+      const val = TV.value(f);
+      body += `<div class="num" data-to="${val}" data-plus="${f.plus?1:''}" data-unit="${esc(f.unit)}"${f.numColor?` style="color:${col}"`:''}>${val.toLocaleString('ru-RU')}${f.plus?'<small class="pl">+</small>':''}${f.unit?`<small>${esc(f.unit)}</small>`:''}</div>`;
     } else {
       body += `<div class="h${String(f.big).length > 12 ? ' sm' : ''}"${f.numColor?` style="color:${col}"`:''}>${esc(f.big)}${f.unit?` <small style="font-size:.5em;opacity:.6">${esc(f.unit)}</small>`:''}</div>`;
     }

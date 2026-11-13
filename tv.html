@@ -245,7 +245,7 @@ build();
   const cfg = window.FIREBASE_CONFIG; if (!cfg || !cfg.databaseURL || !window.EventSource) return;
   const url = cfg.databaseURL.replace(/\/$/, '') + '/pub/' + TV.KEY + '.json';
   let last = '';
-  const apply = (d) => { const j = JSON.stringify(d); if (!d || j === last) return; last = j; DATA = TV.normalize(d); build(); };
+  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; const j = JSON.stringify({ s: d.screens, n: d.slideSec }); if (j === last) return; last = j; DATA = TV.normalize(d); build(); };
   try {
     const es = new EventSource(url);
     const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
