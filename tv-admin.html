@@ -247,6 +247,8 @@ function factForm(f, k){
       <label class="chk ${TV.isNum(f.big)?'':'hide'}"><input type="checkbox" data-f="plus" ${f.plus?'checked':''}>«+» после числа</label>
       <label class="chk"><input type="checkbox" data-f="numColor" ${f.numColor?'checked':''}>Крупное — цветом</label>
     </div>
+    <label class="fld ${TV.isNum(f.big)?'':'hide'}" data-autobox><span>Прибавлять живой счётчик из учёта</span><select data-f="auto"><option value="">Нет, число как есть</option>${Object.entries(TV.AUTO_SRC).map(([k,t]) => `<option value="${k}" ${f.auto===k?'selected':''}>${t}${TV.AUTO[k]!=null?' (сейчас '+TV.AUTO[k]+')':''}</option>`).join('')}</select>
+      ${f.auto ? `<span style="font-weight:500">На экране: ${TV.value(f).toLocaleString('ru-RU')} — растёт с каждым новым ${f.auto==='clients'?'клиентом':'заказом'}</span>` : ''}</label>
     <label class="fld"><span>Заголовок</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="например: стирок выдерживает принт"></label>
     <label class="fld"><span>Пояснение мелко</span><textarea data-f="caption" placeholder="одна короткая фраза">${esc(f.caption)}</textarea></label>
     <button class="more" data-act="more">${f.list ? 'Список' : '+ Список пунктов'}</button>
@@ -260,6 +262,8 @@ $('facts').addEventListener('input', e => {
   const f = factOf(t);
   f[k] = t.type === 'checkbox' ? t.checked : t.value;
   if (k === 'big') t.closest('.fe').querySelector('[data-f=plus]').closest('.chk').classList.toggle('hide', !TV.isNum(t.value));
+  if (k === 'big') t.closest('.fe').querySelector('[data-autobox]').classList.toggle('hide', !TV.isNum(t.value));
+  if (k === 'auto') { f.autoFrom = f.auto && TV.AUTO[f.auto] != null ? +TV.AUTO[f.auto] : 0; renderFacts(); }
   if (k === 'visual') { renderFacts(); }
   markDirty(); preview(false); renderList();
 });
@@ -303,7 +307,7 @@ addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.retur
 $('save').onclick = async () => {
   if (demo) { markClean('Демо: не сохранено в базу'); toast('В демо-режиме база недоступна'); return; }
   $('save').disabled = true;
-  try { await db.ref('pub/' + TV.KEY).set(JSON.parse(JSON.stringify({ ...D, upd: Date.now() }))); markClean(); toast('Сохранено — экран обновится через пару секунд'); }
+  try { await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, screens: D.screens, upd: Date.now() }))); markClean(); toast('Сохранено — экран обновится через пару секунд'); }
   catch (e) { $('save').disabled = false; toast('Не сохранилось: ' + (e.code || e.message)); }
 };
 
@@ -317,7 +321,7 @@ renderAll(true);
   auth.onAuthStateChanged(async u => {
     if (!u) { $('auth').classList.remove('hide'); return; }
     $('auth').classList.add('hide');
-    try { const v = (await db.ref('pub/' + TV.KEY).get()).val(); if (v) { D = TV.normalize(v); sel = 0; renderAll(true); } markClean(v ? 'Сохранено' : 'В базе пусто — показаны факты по умолчанию'); if (!v) $('save').disabled = false; }
+    try { const v = (await db.ref('pub/' + TV.KEY).get()).val(); TV.AUTO = (v && v.auto) || {}; if (v && v.screens) { D = TV.normalize(v); sel = 0; renderAll(true); } markClean(v && v.screens ? 'Сохранено' : 'В базе пусто — показаны факты по умолчанию'); if (!(v && v.screens)) $('save').disabled = false; }
     catch (e) { toast('Нет доступа к базе: ' + (e.code || e.message)); }
   });
   $('authf').onsubmit = async e => { e.preventDefault(); $('aerr').textContent = '';
