@@ -101,6 +101,30 @@ TV.newFact = () => F({icon:'sparkle', color:'blue', label:'Новый факт',
 TV.newScreen = () => S({ facts:[TV.newFact(), TV.newFact(), TV.newFact(), TV.newFact()] });
 
 TV.AUTO = {};
+/* фон экрана: цвет основы и 4 пятна свечения; '' — как задумано темой; a — яркость свечения в % */
+TV.BG_DEF = {
+  light: { base:'#ffffff', c:['#007aff','#af52de','#ff2d55','#30b0c7'], al:[.20,.16,.11,.16] },
+  dark:  { base:'#000000', c:['#0a84ff','#5e5ce6','#bf5af2','#40c8e0'], al:[.16,.14,.08,.08] } };
+TV.BG_PRESETS = [
+  { n:'Как задумано', bg:{ base:'', c:['','','',''], a:100 } },
+  { n:'Закат', bg:{ base:'', c:['#ff9f0a','#ff375f','#bf5af2','#ff453a'], a:120 } },
+  { n:'Океан', bg:{ base:'', c:['#0a84ff','#40c8e0','#5e5ce6','#64d2ff'], a:130 } },
+  { n:'Изумруд', bg:{ base:'', c:['#30d158','#40c8e0','#0a84ff','#30d158'], a:110 } },
+  { n:'Kaspi', bg:{ base:'', c:['#ff453a','#ff9f0a','#ff375f','#ff453a'], a:110 } },
+  { n:'Ночь', bg:{ base:'#05060a', c:['#5e5ce6','#0a84ff','#bf5af2','#5e5ce6'], a:160 } },
+  { n:'Без свечения', bg:{ base:'', c:['','','',''], a:0 } } ];
+TV.normBg = b => { b = b || {}; const c = Array.isArray(b.c) ? b.c : []; return { base: b.base || '', c: [0,1,2,3].map(i => c[i] || ''), a: b.a == null ? 100 : Math.max(0, Math.min(300, +b.a || 0)) }; };
+const rgba = (hex, a) => { const h = String(hex).replace('#',''); return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${Math.max(0, Math.min(1, a)).toFixed(3)})`; };
+TV.bgApply = (stage, bg, theme) => {
+  const b = TV.normBg(bg), D = TV.BG_DEF[theme === 'light' ? 'light' : 'dark'];
+  if (b.base) stage.style.setProperty('background', b.base, 'important'); else stage.style.removeProperty('background');
+  const blobs = stage.querySelectorAll('.bgfx i');
+  for (let i = 0; i < blobs.length && i < 4; i++) {
+    const custom = b.c[i] || b.a !== 100;
+    blobs[i].style.background = custom ? `radial-gradient(circle,${rgba(b.c[i] || D.c[i], D.al[i] * b.a / 100)},${rgba(b.c[i] || D.c[i], 0)} 62%)` : '';
+  }
+  return b.base;
+};
 /* музыка: воркер ym-wave и настройки по умолчанию */
 TV.YM = { worker: 'https://ym-wave.design-onegin.workers.dev', key: 'XRcl7HslUDmN3WPNqWABNaI5' };
 TV.normalizeMusic = (m) => { m = m || {}; return {
@@ -116,7 +140,7 @@ TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.a
 TV.normalize = (d) => {
   if (!d || !Array.isArray(d.screens)) d = JSON.parse(JSON.stringify(TV.DEFAULT));
   const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
-  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'light' ? 'light' : 'dark', pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
+  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'light' ? 'light' : 'dark', bg: TV.normBg(d.bg), pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
     screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
       const src = s.facts || []; sc.facts = [0,1,2,3].map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
 };

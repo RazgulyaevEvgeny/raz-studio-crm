@@ -194,6 +194,12 @@
       <label class="row2">Лёгкий режим для приставки <button class="sw2" id="lite" type="button"></button></label>
       <span class="hint" style="margin-top:-6px">Без тяжёлых эффектов — для слабых ТВ-приставок</span>
       <label class="row2">Переливы на фоне <button class="sw2" id="fx" type="button"></button></label>
+      <h4 style="margin-top:4px">Фон экрана</h4>
+      <div class="chips" id="bgpre"></div>
+      <div class="row2">Основа <span style="display:flex;align-items:center;gap:8px"><input type="color" id="bgbase"><button type="button" class="linkbtn" data-bgreset="base">авто</button></span></div>
+      <div class="row2">Свечение <span style="display:flex;align-items:center;gap:6px" id="bgcols"></span></div>
+      <label class="row2">Яркость свечения <span style="display:flex;align-items:center;gap:8px"><input type="range" id="bga" min="0" max="300" step="10" style="width:110px"><b id="bgav" style="width:44px;text-align:right;font-size:13px"></b></span></label>
+      <span class="hint" style="margin-top:-6px">4 цветных пятна медленно плывут по фону. Клик по кружку — выбрать цвет, двойной клик — вернуть «авто».</span>
       <h4 style="margin-top:4px">Сверху на экране</h4>
       <div class="row2">Фон плашек <span style="display:flex;align-items:center;gap:8px"><input type="color" id="pbg"><button type="button" class="linkbtn" data-preset="bg">авто</button></span></div>
       <div class="row2">Текст плашек <span style="display:flex;align-items:center;gap:8px"><input type="color" id="pfg"><button type="button" class="linkbtn" data-preset="fg">авто</button></span></div>
@@ -259,7 +265,7 @@ $('stage').innerHTML = '<div class="bgfx"><i></i><i></i><i></i><i></i></div><div
 function fitPv(){ $('stage').style.transform = 'scale(' + ($('pv').clientWidth / 1920) + ')'; }
 new ResizeObserver(fitPv).observe($('pv'));
 function preview(animate){
-  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); TV.THEME = D.theme; $('pv').style.background = D.theme === 'dark' ? '#000' : ''; $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? '#1c1c1e' : ''));
+  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); TV.THEME = D.theme; TV.bgApply($('stage'), D.bg, D.theme); $('pv').style.background = D.theme === 'dark' ? '#000' : ''; $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? '#1c1c1e' : ''));
   $('stage').querySelectorAll('[data-p]').forEach(i => i.style.display = D.show[i.dataset.p] ? '' : 'none');
   const s = D.screens[sel]; if (!s) { $('pvs').innerHTML = ''; return; }
   $('pvs').innerHTML = TV.sceneHTML(s);
@@ -332,7 +338,22 @@ document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { D.pi
 $('lite').onclick = () => { D.lite = !D.lite; markDirty(); renderSettings(); preview(true); };
 $('fx').onclick = () => { D.fx = !D.fx; markDirty(); renderSettings(); preview(false); };
 document.querySelectorAll('[data-show]').forEach(b => b.onclick = () => { const k = b.dataset.show; D.show[k] = !D.show[k]; markDirty(); renderSettings(); preview(false); });
+/* фон экрана */
+const bgTheme = () => TV.BG_DEF[D.theme === 'light' ? 'light' : 'dark'];
+$('bgpre').innerHTML = TV.BG_PRESETS.map((p, i) => `<button type="button" data-bgp="${i}">${p.n}</button>`).join('');
+$('bgcols').innerHTML = [0,1,2,3].map(i => `<input type="color" data-bgc="${i}" style="width:30px;height:30px;padding:0;border:0;border-radius:50%;cursor:pointer" title="Пятно ${i+1}">`).join('');
+$('bgpre').onclick = e => { const b = e.target.closest('[data-bgp]'); if (!b) return; D.bg = TV.normBg(JSON.parse(JSON.stringify(TV.BG_PRESETS[+b.dataset.bgp].bg))); markDirty(); renderSettings(); preview(false); };
+$('bgbase').oninput = () => { D.bg.base = $('bgbase').value; markDirty(); preview(false); };
+document.querySelectorAll('[data-bgreset]').forEach(b => b.onclick = () => { D.bg.base = ''; markDirty(); renderSettings(); preview(false); });
+$('bgcols').addEventListener('input', e => { const i = e.target.dataset.bgc; if (i == null) return; D.bg.c[+i] = e.target.value; markDirty(); preview(false); });
+$('bgcols').addEventListener('dblclick', e => { const i = e.target.dataset.bgc; if (i == null) return; e.preventDefault(); D.bg.c[+i] = ''; markDirty(); renderSettings(); preview(false); });
+$('bga').oninput = () => { D.bg.a = +$('bga').value; $('bgav').textContent = D.bg.a + '%'; markDirty(); preview(false); };
+function renderBg(){ D.bg = TV.normBg(D.bg); const T = bgTheme();
+  $('bgbase').value = D.bg.base || T.base; $('bga').value = D.bg.a; $('bgav').textContent = D.bg.a + '%';
+  document.querySelectorAll('[data-bgc]').forEach(x => { const i = +x.dataset.bgc; x.value = D.bg.c[i] || T.c[i]; x.style.outline = D.bg.c[i] ? '2px solid var(--blue)' : ''; });
+  document.querySelectorAll('[data-bgp]').forEach(b => b.classList.toggle('on', JSON.stringify(TV.normBg(TV.BG_PRESETS[+b.dataset.bgp].bg)) === JSON.stringify(D.bg))); }
 function renderSettings(){
+  renderBg();
   $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx); $('lite').classList.toggle('on', D.lite); $('pbg').value = D.pill.bg || '#ffffff'; $('pfg').value = D.pill.fg || '#1d1d1f'; [...$('theme').children].forEach(b => b.classList.toggle('on', b.dataset.th === D.theme));
   document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', !!D.show[b.dataset.show]));
 }
@@ -528,7 +549,7 @@ $('save').onclick = async () => {
   if (demo) { markClean('Демо: не сохранено в базу'); toast('В демо-режиме база недоступна'); return; }
   $('save').disabled = true;
   try {
-    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, pill: D.pill, show: D.show, screens: D.screens, upd: Date.now() })));
+    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), pill: D.pill, show: D.show, screens: D.screens, upd: Date.now() })));
     const used = collectImgs();
     knownImgs.forEach(id => { if (!used.has(id)) { db.ref('pub/' + TV.IMG + id).remove().catch(() => {}); knownImgs.delete(id); } });
     markClean(); toast('Сохранено — экран обновится через пару секунд');

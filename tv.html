@@ -71,6 +71,8 @@
   #ov code{background:#f2f2f7;padding:1px 6px;border-radius:6px}
   .legacy .scene .f{opacity:1!important;transform:none!important}
   /* тёмная тема iOS: шапка — плашки-«материал», музыка как Live Activity, белый логотип */
+  #toast{position:absolute;left:50%;bottom:120px;z-index:8;transform:translateX(-50%) translateY(20px);opacity:0;transition:opacity .25s,transform .25s;background:rgba(28,28,30,.92);color:#fff;font:600 30px Inter,system-ui,sans-serif;padding:20px 40px;border-radius:999px;box-shadow:0 20px 60px rgba(0,0,0,.4),inset 0 0 0 1.5px rgba(255,255,255,.08)}
+  #toast.on{opacity:1;transform:translateX(-50%)}
   .dark #stage{background:#000}
   .dark .logo{color:#fff}
   .dark .pill{background:#1c1c1e;background:linear-gradient(180deg,#202022,#18181a);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07),inset 0 1.5px 0 rgba(255,255,255,.06);border-radius:30px}
@@ -184,10 +186,11 @@ async function refill(){
   const q = '/wave?st=' + encodeURIComponent(MUSIC.st) + '&mood=' + MUSIC.mood + '&div=' + MUSIC.div + '&lang=' + MUSIC.lang + (lastId ? '&last=' + lastId : '');
   const j = await api(q); batch = j.batchId || batch; queue.push.apply(queue, j.tracks || []);
 }
-async function playNext(){
+async function playNext(back){
   if (busy) return; busy = true; const my = ++gen;
   try{
     if(queue.length<2) await refill();
+    if (cur && !back) { played.push(cur); if (played.length > 30) played.shift(); }
     cur=queue.shift(); if(!cur) throw 0; lastId=cur.id;
     const r=await api('/url?id='+cur.id); if (my !== gen) return;
     audio.src=r.url; showTrack(cur);
@@ -199,6 +202,18 @@ async function playNext(){
 audio.addEventListener('ended',()=>{ if(cur) fb('trackFinished',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.duration||0)}); playNext(); });
 audio.addEventListener('error',()=>{ if (audio.src) setTimeout(playNext,2000); });
 // если приставка не дала включить звук без нажатия — первое нажатие любой кнопки пульта запустит музыку
+// пульт: → следующий трек, ← предыдущий; любая другая кнопка — просто включить звук, если приставка его не пустила
+const played = []; let keyT = 0;
+function toast(t){ let el = document.getElementById('toast'); if (!el) { el = document.createElement('div'); el.id = 'toast'; document.getElementById('stage').appendChild(el); }
+  el.textContent = t; el.className = 'on'; clearTimeout(el._t); el._t = setTimeout(() => { el.className = ''; }, 1800); }
+function prevTrack(){ if (!played.length) { audio.currentTime = 0; return; } if (cur) queue.unshift(cur); const p = played.pop(); queue.unshift(p); cur = null; busy = false; gen++; playNext(true); }
+function nextTrack(){ if (cur) fb('skip',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.currentTime||0)}); busy = false; gen++; playNext(); }
+addEventListener('keydown', e => {
+  const k = e.key || '', c = e.keyCode;
+  const right = k === 'ArrowRight' || k === 'MediaTrackNext' || c === 39 || c === 22 || c === 176, left = k === 'ArrowLeft' || k === 'MediaTrackPrevious' || c === 37 || c === 21 || c === 177;
+  if ((right || left) && audio.src && !needTap) { e.preventDefault(); const now = Date.now(); if (now - keyT < 700) return; keyT = now;
+    if (right) { toast('Следующий трек  ›'); nextTrack(); } else { toast('‹  Предыдущий трек'); if ((audio.currentTime || 0) > 8) audio.currentTime = 0; else prevTrack(); } }
+});
 ['keydown','click'].forEach(ev=>addEventListener(ev,()=>{ if(audio.paused&&audio.src) audio.play().then(()=>{ if(needTap&&cur){ needTap=false; showTrack(cur); fb('trackStarted',{trackId:cur.id,albumId:cur.albumId}); } }).catch(()=>{}) }));
 /* настройки музыки из админки: станция/настроение — с новой очереди, громкость — сразу, «следующий трек» — по кнопке */
 function applyMusic(m){
@@ -221,7 +236,8 @@ function applySettings(){
   const st = document.getElementById('stage');
   st.classList.toggle('nofx', !DATA.fx);
   st.classList.toggle('lite', DATA.lite); TV.LITE = DATA.lite;
-  st.classList.toggle('dark', DATA.theme === 'dark'); TV.THEME = DATA.theme; document.documentElement.classList.toggle('dark', DATA.theme === 'dark'); document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
+  st.classList.toggle('dark', DATA.theme === 'dark'); TV.THEME = DATA.theme; document.documentElement.classList.toggle('dark', DATA.theme === 'dark');
+  const base = TV.bgApply(st, DATA.bg, DATA.theme); if (base) document.body.style.background = base; document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
   const pills = document.querySelectorAll('header .pill');
   for (let i = 0; i < pills.length; i++) { pills[i].style.background = DATA.pill.bg || ''; pills[i].style.color = DATA.pill.fg || ''; pills[i].querySelectorAll('b,.clock,.temp,.lbl2,.track small,.track span').forEach(x => x.style.color = DATA.pill.fg || ''); }
   if (pills[0]) pills[0].style.display = DATA.show.music ? '' : 'none';
@@ -250,7 +266,7 @@ build();
   const cfg = window.FIREBASE_CONFIG; if (!cfg || !cfg.databaseURL || !window.EventSource) return;
   const url = cfg.databaseURL.replace(/\/$/, '') + '/pub/' + TV.KEY + '.json';
   let last = '';
-  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill }); if (j === last) return; last = j; DATA = TV.normalize(d); build(); };
+  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg }); if (j === last) return; last = j; DATA = TV.normalize(d); build(); };
   try {
     const es = new EventSource(url);
     const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
