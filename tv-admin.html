@@ -169,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611140100"></script>
+<script src="tv-core.js?v=202611140120"></script>
 </head>
 <body>
 <div class="bar">
@@ -373,6 +373,10 @@ function factForm(f, k){
       <div class="fld"><span>Цвет текста</span>
         ${[['fg','Весь текст'],['cLabel','Подпись сверху'],['cBig','Крупное'],['cTitle','Заголовок'],['cCap','Пояснение'],['cList','Пункты списка']].map(([k,t]) => `<div class="colrow"><input type="color" data-f="${k}" value="${esc(f[k] || (k==='fg' ? '#1d1d1f' : f.fg || '#1d1d1f'))}"><span style="flex:1;font-size:13.5px;font-weight:600">${t}</span>${f[k] ? `<button type="button" class="linkbtn" data-reset="${k}">авто</button>` : '<span class="hint">авто</span>'}</div>`).join('')}
       </div>
+      <div class="fld"><span>Непрозрачность текста</span>
+        ${[['oLabel','Подпись сверху',60],['oBig','Крупное',100],['oTitle','Заголовок',100],['oCap','Пояснение',65],['oList','Пункты списка',100]].map(([k,t,d]) => `<div class="colrow"><span style="width:150px;font-size:13.5px;font-weight:600">${t}</span><input type="range" min="10" max="100" step="5" data-f="${k}" value="${f[k] === '' || f[k] == null ? d : f[k]}" style="flex:1"><b style="width:52px;text-align:right;font-size:13.5px">${f[k] === '' || f[k] == null ? 'авто' : f[k] + '%'}</b>${f[k] === '' || f[k] == null ? '<span style="width:34px"></span>' : `<button type="button" class="linkbtn" data-reset="${k}" style="width:34px">авто</button>`}</div>`).join('')}
+        <span class="hint">100% — сплошной цвет. «Авто» — как задумано темой.</span>
+      </div>
       <label class="fld"><span>Сверху карточки</span><select data-f="visual">${VIS.map(([v,t]) => `<option value="${v}" ${f.visual===v?'selected':''}>${t}</option>`).join('')}</select></label>
       ${f.visual==='swatch' ? `<div class="colrow"><input type="color" data-f="swatch" value="${esc(f.swatch||'#ffffff')}"><span class="hint">Цвет образца</span></div>` : ''}
       ${['flag-it','swatch','insta'].includes(f.visual) ? '' : `<div class="look">
@@ -417,10 +421,11 @@ $('facts').addEventListener('input', e => {
   if (k === 'big') t.closest('.fe').querySelectorAll('[data-numonly]').forEach(x => x.classList.toggle('hide', !TV.isNum(t.value)));
   if (k === 'auto') { f.autoFrom = f.auto && TV.AUTO[f.auto] != null ? +TV.AUTO[f.auto] : 0; renderFacts(); }
   if (k === 'visual') renderFacts();
+  if (/^o[A-Z]/.test(k) && t.type === 'range') t.nextElementSibling.textContent = t.value + '%';
   if (k === 'dim') t.previousElementSibling.textContent = 'Затемнение для читаемости текста: ' + t.value + '%';
   markDirty(); preview(false); renderList();
 });
-$('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList','icBg','icFg'].includes(e.target.dataset.f)) renderFacts(); });
+$('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList','icBg','icFg','oLabel','oBig','oTitle','oCap','oList'].includes(e.target.dataset.f)) renderFacts(); });
 $('facts').addEventListener('click', e => {
   const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
   const sg = e.target.closest('[data-seg] button'), col = e.target.closest('[data-color]'), act = e.target.closest('[data-act]');
