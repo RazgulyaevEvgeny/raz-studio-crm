@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261111210000">
+<meta name="app-build" content="20261113160000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1990,6 +1990,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
       <button class="pill" type="button" data-go="office"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/></svg><span class="lf">Расходы офиса</span><span class="ls">Расходы</span></button>
       <button class="pill" type="button" data-go="supplies"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Закупки</button>
       <button class="pill" type="button" data-go="equip"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5a2.1 2.1 0 0 0 3 3l5.9-5.9a4 4 0 0 0 5.3-5.3l-2.5 2.5-2.6-.4-.4-2.6z"/></svg>Оборудование</button>
+      <button class="pill" type="button" data-go="cams"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13.5" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3"/></svg>Камеры</button>
       <button class="pill" type="button" data-go="clients"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Клиенты</button>
       <button class="pill" type="button" data-go="docs"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Документы</button>
       <button class="pill" type="button" data-go="projects"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Проекты</button>
@@ -2162,6 +2163,11 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
   <section id="p-equip" class="page" style="gap:16px" hidden>
     <div class="ph"><div><h1>Оборудование</h1><p id="eq-sub"></p></div><div class="btns"><button class="btn primary" type="button" data-eqnew>Добавить оборудование</button></div></div>
     <div class="eq-wrap" id="eq-wrap"><div class="eq-left" id="eq-left"></div><div class="eq-card eq-det" id="eq-det"></div></div>
+  </section>
+  <!-- КАМЕРЫ -->
+  <section id="p-cams" class="page" style="gap:16px" hidden>
+    <div class="ph"><div><h1>Камеры</h1><p id="cm-sub"></p></div></div>
+    <div class="cm-grid" id="cm-grid"></div>
   </section>
   <!-- КЛИЕНТЫ -->
   <section id="p-clients" class="page" style="gap:16px" hidden>
@@ -2989,7 +2995,7 @@ const MGR_LIMITS=false;const mgrLimited=()=>MGR_LIMITS&&isMgr();
 function applyRoleWrite(){canWrite=baseWrite&&!(mgrLimited()&&(MGR_LOCKED.includes(page)||pEditing||qEditing));const f=document.querySelector('.fab');if(f)f.hidden=!canWrite}
 function go(p,opts={}){
   page=p;applyRoleWrite();
-  ['home','orders','kaspi','calendar','office','supplies','equip','docs','projects','prices','analytics','clients','anna','sasha','daulet'].forEach(x=>$('p-'+x).hidden=x!==p);
+  ['home','orders','kaspi','calendar','office','supplies','equip','cams','docs','projects','prices','analytics','clients','anna','sasha','daulet'].forEach(x=>$('p-'+x).hidden=x!==p);
   document.querySelectorAll('.pills [data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===p));
   if(p==='calendar'){selDay=opts.day||selDay||todayStr();const [y,m]=selDay.split('-').map(Number);calY=y;calM=m-1}
   render();
@@ -3392,6 +3398,7 @@ function render(){
   if(page==='docs')renderDocsPage();
   if(page==='projects')renderProjects();
   if(page==='equip'&&window.renderEquip)renderEquip();
+  if(page==='cams'&&window.renderCams)renderCams();
   if(page==='prices')renderPrices();
   if(page==='analytics')renderAnalytics();
   if(window.extRender)extRender(); /* клиенты, примеры работ, корзина, нижнее меню — в отдельном скрипте ниже */
@@ -6970,7 +6977,7 @@ function acListen(){
   r.ref('sig/printers/anycubic').on('value',x=>{acP=x.val()||null;renderPrinters()},()=>{acP=null;acOn=false});
   /* Bambu по сети студии (whatsapp-bot/bambu.js): облако Bambu с 11.11.2026 не пускает панель тревоги */
   r.ref('sig/printers/bambu').on('value',x=>{bwLan=x.val()||null;renderPrinters()},()=>{bwLan=null});
-  r.ref('sig/studio').on('value',x=>{stD=x.val()||{};renderPrinters()},()=>{stD=undefined});
+  r.ref('sig/studio').on('value',x=>{stD=x.val()||{};renderPrinters();if(page==='cams'&&window.renderCams)renderCams()},()=>{stD=undefined});
 }
 /* привязка Smart Life: код пользователя → бот просит QR → сканируют в приложении */
 let tyForm=false;
@@ -6986,7 +6993,7 @@ function studioCards(){
   let camH,camOn=0,camN=0;
   if(stD===undefined||!cam)camH=`<div class="bw-card bw-soon">${bwPIco('wait','--muted')}<div class="bw-head"><b><small class="bw-brand">Imou</small>Камера в мастерской</b><span class="bw-chip" style="--sc:var(--muted)">нет данных</span></div><div class="bw-info"><span class="bw-meta">ждём первую связь: камеру проверяет рабочий компьютер студии</span></div></div>`;
   else{camN=1;const st=old(cam.at)?null:cam.online;if(st)camOn=1;const c=st===null?'--muted':st?'--ok':'--danger';
-    camH=`<div class="bw-card">${bwPIco(st?'ok':'off',c)}<div class="bw-head"><b><small class="bw-brand">${esc(cam.model||'Wi‑Fi камера')}</small>${esc(cam.name||'Камера')}</b><span class="bw-chip" style="--sc:var(${c})">${st===null?'нет данных':st?'в сети':'не в сети'}</span></div><div class="bw-info"><span class="bw-meta">${st===null?'рабочий компьютер студии не на связи':st?(cam.since?'включилась '+esc(printWhen(cam.since)):'работает')+' · смотреть в приложении Imou':esc(cam.problem||'')+(cam.lastOnline?', была в сети '+esc(printWhen(cam.lastOnline)):'')}</span></div></div>`}
+    camH=`<div class="bw-card">${bwPIco(st?'ok':'off',c)}<div class="bw-head"><b><small class="bw-brand">${esc(cam.model||'Wi‑Fi камера')}</small>${esc(cam.name||'Камера')}</b><span class="bw-chip" style="--sc:var(${c})">${st===null?'нет данных':st?'в сети':'не в сети'}</span></div><div class="bw-info"><span class="bw-meta">${st===null?'рабочий компьютер студии не на связи':st?(cam.since?'включилась '+esc(printWhen(cam.since)):'работает')+' · смотреть во вкладке «Камеры»':esc(cam.problem||'')+(cam.lastOnline?', была в сети '+esc(printWhen(cam.lastOnline)):'')}</span></div></div>`}
   /* датчики Smart Life */
   const sens=devs.filter(d=>!/^(sp|dghsxj)$/.test(d.category)),stale=old((ty.devices||{}).at);
   let alarm=0,sOn=0,senH='';
@@ -8558,6 +8565,114 @@ document.addEventListener('click',ev=>{const t=ev.target.closest('[data-eqopen],
   db.collection('equipment').onSnapshot(snap=>{equip=snap.docs.map(d=>({id:d.id,...d.data()}));equipLoaded=true;render();eqSyncAll();
     if(eqEditing&&eqEditing!=='new'&&!equip.find(x=>x.id===eqEditing)){closeEq();toast('Это оборудование удалили')}},
     er=>{equipLoaded=true;try{console.warn('equipment',er)}catch(_){}$('eq-sub').textContent='Нет доступа к разделу: опубликуйте новые правила базы (firestore.rules).';});
+})();
+</script>
+<!-- КАМЕРЫ: живая картинка с камер Imou. Кадры отдаёт бот на рабочем компьютере (whatsapp-bot/cams.js) через бесплатный туннель
+     Cloudflare; в базе (sig/studio/cams) лежат только адрес туннеля, ключ и список камер — видео мимо Firebase. -->
+<style>
+.cm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:14px}
+.cm-t{position:relative;border-radius:22px;overflow:hidden;background:#0b0d14;aspect-ratio:16/9;cursor:zoom-in;box-shadow:0 1px 0 var(--line),0 18px 40px -26px rgba(10,11,20,.55);-webkit-tap-highlight-color:transparent}
+.cm-t img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.cm-t .cm-n{position:absolute;left:12px;bottom:10px;right:12px;color:#fff;font:700 15px/1.2 var(--f);text-shadow:0 1px 3px rgba(0,0,0,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm-t .cm-tm{position:absolute;right:12px;top:10px;color:#fff;font:600 12px/1 var(--fb);font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.cm-live{position:absolute;left:12px;top:10px;display:inline-flex;align-items:center;gap:6px;padding:4px 9px 4px 8px;border-radius:999px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#fff;font:700 11px/1 var(--f);letter-spacing:.04em;text-transform:uppercase}
+.cm-live i{width:8px;height:8px;border-radius:50%;background:#ff3b30;animation:cmPulse 1.6s infinite}
+.cm-live.off i{background:#9aa0b8;animation:none}
+@keyframes cmPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.cm-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px;text-align:center;color:#c9ccdc;font:500 14px/1.4 var(--fb)}
+.cm-ph b{color:#fff;font:700 16px var(--f)}
+.cm-spin{width:26px;height:26px;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:#fff;animation:cmSpin .9s linear infinite}
+@keyframes cmSpin{to{transform:rotate(360deg)}}
+.cm-help{background:var(--paper);border-radius:22px;padding:18px 20px;box-shadow:0 1px 0 var(--line);font:500 15px/1.5 var(--fb)}
+.cm-help h3{margin:0 0 6px;font:700 18px var(--f)}
+.cm-help ol{margin:8px 0 0;padding-left:22px}.cm-help li{margin:4px 0}
+.cm-help code{background:var(--tile);border-radius:6px;padding:1px 6px;font:600 13px ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.cm-full{position:fixed;inset:0;z-index:120;background:#000;display:flex;align-items:center;justify-content:center}
+.cm-full[hidden]{display:none}
+.cm-full img{max-width:100%;max-height:100%;object-fit:contain}
+.cm-full .cm-x{position:absolute;right:calc(14px + env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;z-index:2}
+.cm-full .cm-n{position:absolute;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));color:#fff;font:700 16px var(--f);text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.cm-full .cm-live{top:calc(18px + env(safe-area-inset-top,0px));left:calc(16px + env(safe-area-inset-left,0px))}
+.cm-full .cm-tm{position:absolute;right:calc(70px + env(safe-area-inset-right,0px));top:calc(30px + env(safe-area-inset-top,0px));color:#fff;font:600 13px var(--fb);font-variant-numeric:tabular-nums}
+body:has(.cm-full:not([hidden])) .bnav{display:none}
+@media (max-width:760px){.cm-grid{gap:10px}.cm-t{border-radius:16px}.cm-t .cm-n{font-size:14px}}
+</style>
+<div class="cm-full" id="cm-full" hidden><img id="cm-fimg" alt=""><span class="cm-live" id="cm-flive"><i></i>В эфире</span><span class="cm-n" id="cm-fn"></span>
+  <button class="cm-x" type="button" data-cmclose aria-label="Закрыть"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+<script>
+(function(){
+const PC='рабочий компьютер студии';
+const L={}; /* id → {run, after, at, url(последний кадр), fail} */
+let full=null; /* открытая на весь экран камера */
+const D=()=>{try{return (stD&&stD.cams)||null}catch(_){return null}};
+const arr=v=>Array.isArray(v)?v:v?Object.values(v):[];
+let lastKey='';
+const fresh=t=>t&&Date.now()-t<15*6e4;
+const pad=n=>String(n).padStart(2,'0');
+const tm=t=>{const d=new Date(t);return `${pad(d.getDate())}.${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function watching(){return typeof page!=='undefined'&&page==='cams'&&!document.hidden}
+async function loop(id,hd){
+  const k=hd?'hd:'+id:id;const st=L[k]||(L[k]={});if(st.run)return;st.run=true;
+  while(st.run){
+    const d=D();if(!d||!d.url||!d.key||!(hd?full===id:watching())){st.run=false;break}
+    try{
+      const r=await fetch(`${d.url}/cam/${id}.jpg?k=${encodeURIComponent(d.key)}${st.after?'&after='+encodeURIComponent(st.after):''}${hd?'&hd=1':''}`,{cache:'no-store'});
+      if(!r.ok){st.fail=(st.fail||0)+1;await sleep(Math.min(5000,800*st.fail));continue}
+      const seq=r.headers.get('X-Seq')||'',at=+r.headers.get('X-At')||Date.now();
+      const u=URL.createObjectURL(await r.blob());
+      const im=new Image();im.src=u;try{await im.decode()}catch(_){}
+      const old=st.url;st.url=u;st.after=seq;st.at=at;st.fail=0;
+      paint(id,hd);
+      if(old)setTimeout(()=>URL.revokeObjectURL(old),3000);
+    }catch(e){st.fail=(st.fail||0)+1;paint(id,hd);await sleep(Math.min(6000,1000*st.fail))}
+  }
+}
+function paint(id,hd){
+  const st=L[hd?'hd:'+id:id]||{};
+  if(hd){if(full!==id)return;if(st.url)$('cm-fimg').src=st.url;else if(L[id]&&L[id].url)$('cm-fimg').src=L[id].url;
+    const live=st.at&&Date.now()-st.at<10e3;$('cm-flive').classList.toggle('off',!live);$('cm-flive').lastChild.textContent=live?'В эфире':'Подключаюсь';return}
+  const t=document.querySelector(`.cm-t[data-cam="${id}"]`);if(!t)return;
+  const img=t.querySelector('img');if(st.url&&img.getAttribute('src')!==st.url){img.src=st.url;img.hidden=false;const ph=t.querySelector('.cm-ph');if(ph)ph.remove()}
+  const live=st.at&&Date.now()-st.at<10e3,lv=t.querySelector('.cm-live');
+  if(lv){lv.classList.toggle('off',!live);lv.lastChild.textContent=live?'В эфире':st.url?'Нет связи':'Подключаюсь'}
+}
+function help(d){
+  if(d===undefined)return `<div class="cm-help"><div class="cm-spin" style="border-color:var(--line);border-top-color:var(--blue)"></div></div>`;
+  if(!d)return `<div class="cm-help"><h3>Камеры ещё не подключены</h3>Чтобы камеры показывались здесь, на ${PC} нужна новая версия бота. Как только она будет там, тут появится подсказка, что делать дальше.</div>`;
+  if(!fresh(d.at))return `<div class="cm-help"><h3>Нет связи с ${PC}</h3>Камеры показывает бот на рабочем компьютере. Похоже, компьютер выключен или нет интернета (последняя связь ${esc(tm(d.at))}). Включите компьютер — картинка появится сама.</div>`;
+  if(d.need==='codes')return `<div class="cm-help"><h3>Остался один шаг: коды камер</h3>Коды в чат не пишите — только в файл на рабочем компьютере:
+    <ol><li>На рабочем компьютере нажмите <b>Win + R</b>, вставьте <code>notepad C:\\RAZ\\whatsapp-bot\\cameras.txt</code> и нажмите <b>Enter</b>.</li>
+    <li>В строке каждой камеры после знака <b>=</b> впишите код с наклейки на камере (снизу или сзади: <b>Safety Code</b> или <b>SC</b>, 8 латинских букв).</li>
+    <li>Если наклейки нет или код не подошёл — впишите пароль камеры из приложения Imou Life.</li>
+    <li>Нажмите <b>Ctrl + S</b> и закройте Блокнот. Через полминуты камеры появятся здесь.</li></ol></div>`;
+  return '';
+}
+function renderCams(){
+  const g=$('cm-grid');if(!g)return;
+  const d=stD===undefined?undefined:D();
+  const list=d?arr(d.list):[];
+  const h=help(d);
+  const ok=d&&fresh(d.at)&&!d.need;
+  $('cm-sub').textContent=!ok?'Живая картинка с камер мастерской':!d.url?'Подключаюсь к камерам…':list.length+' '+(list.length===1?'камера':list.length<5?'камеры':'камер')+' · нажмите на камеру, чтобы открыть на весь экран';
+  const tiles=ok?list.map(c=>{const st=L[c.id]||{};const ar=c.w&&c.h?`style="aspect-ratio:${c.w}/${c.h}"`:'';
+    if(c.problem&&!st.url)return `<div class="cm-t" ${ar} data-cam="${esc(c.id)}"><div class="cm-ph"><b>${esc(c.name)}</b>${esc(c.problem)}${/код/.test(c.problem)?'<br>Проверьте код в файле cameras.txt на рабочем компьютере':''}</div></div>`;
+    return `<div class="cm-t" ${ar} data-cam="${esc(c.id)}" data-cmopen="${esc(c.id)}" role="button" aria-label="${esc(c.name)} на весь экран">
+      <img alt="" ${st.url?`src="${st.url}"`:'hidden'}>${st.url?'':`<div class="cm-ph"><div class="cm-spin"></div>${d.url?'Подключаюсь к камере…':'Открываю связь с '+PC+'…'}</div>`}
+      <span class="cm-live off"><i></i>${st.url?'Нет связи':'Подключаюсь'}</span><span class="cm-n">${esc(c.name)}</span></div>`}).join(''):'';
+  const key=h+'|'+(ok?1:0)+'|'+(d&&d.url?1:0)+'|'+JSON.stringify(list.map(c=>[c.id,c.name,c.problem,c.w,c.h]));
+  if(key!==lastKey||!g.firstChild){lastKey=key;g.innerHTML=h+(tiles||'')}
+  if(ok)list.forEach(c=>{paint(c.id);if(!c.problem||L[c.id])loop(c.id)});
+}
+window.renderCams=renderCams;
+function openFull(id){const d=D(),c=d&&arr(d.list).find(x=>x.id===id);if(!c)return;
+  full=id;$('cm-fn').textContent=c.name;$('cm-fimg').removeAttribute('src');if(L[id]&&L[id].url)$('cm-fimg').src=L[id].url;$('cm-full').hidden=false;paint(id,true);loop(id,true)}
+function closeFull(){const s=L['hd:'+full];if(s)s.run=false;full=null;$('cm-full').hidden=true}
+document.addEventListener('click',e=>{const o=e.target.closest('[data-cmopen]');if(o){openFull(o.dataset.cmopen);return}if(e.target.closest('[data-cmclose]'))closeFull()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('cm-full').hidden){e.stopPropagation();closeFull()}},true);
+/* ушли со вкладки или свернули — кадры не качаем; вернулись — сразу продолжаем */
+document.addEventListener('visibilitychange',()=>{if(watching())renderCams()});
+setInterval(()=>{if(watching()){const d=D();if(d)arr(d.list).forEach(c=>paint(c.id))}},1000);
 })();
 </script>
 <div id="upd-bar" hidden style="position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:200;background:#4358ef;color:#fff;border-radius:999px;padding:8px 8px 8px 18px;display:flex;gap:12px;align-items:center;font:600 14px 'Inter Tight',Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(67,88,239,.35);max-width:calc(100% - 24px)">
