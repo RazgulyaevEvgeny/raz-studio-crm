@@ -70,15 +70,30 @@
   #ov li{margin:6px 0 6px 18px}
   #ov code{background:#f2f2f7;padding:1px 6px;border-radius:6px}
   .legacy .scene .f{opacity:1!important;transform:none!important}
-  .dark .pill{background:rgba(44,44,46,.66);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07)}
-  .dark .lbl2 b{color:#f5f5f7}
+  /* тёмная тема iOS: шапка — плашки-«материал», музыка как Live Activity, белый логотип */
+  .dark #stage{background:#000}
+  .dark .logo{color:#fff}
+  .dark .pill{background:#1c1c1e;background:linear-gradient(180deg,#202022,#18181a);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07),inset 0 1.5px 0 rgba(255,255,255,.06);border-radius:30px}
+  .dark .lbl2{color:rgba(235,235,245,.6)}
+  .dark .lbl2 b{color:#fff}
+  .dark .clock,.dark .temp{color:#fff;font-weight:600}
+  .dark .music{border-radius:999px;padding:0 40px 0 16px}
+  .dark .cover{width:72px;height:72px;border-radius:999px;background:linear-gradient(135deg,#ff375f,#bf5af2 55%,#5e5ce6)}
+  .dark #art{border-radius:999px!important}
+  .dark .track small{color:#ff375f;letter-spacing:.08em;font-size:15px}
+  .dark .track b{color:#fff}
+  .dark .track span{color:rgba(235,235,245,.6)}
+  .dark .pager i{background:rgba(255,255,255,.16)}
+  .dark .pager i.on::after{background:#fff}
+  .dark .foot{color:rgba(235,235,245,.3)}
+  .dark .demo{color:#ff9f0a}
 </style>
 <script>
 /* диагностика для старых приставок: ошибки видно внизу экрана, сводка уходит в журнал воркера */
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611140010"></script>
+<script src="tv-core.js?v=202611140100"></script>
 </head>
 <body>
 <div id="stage">
@@ -206,7 +221,7 @@ function applySettings(){
   const st = document.getElementById('stage');
   st.classList.toggle('nofx', !DATA.fx);
   st.classList.toggle('lite', DATA.lite); TV.LITE = DATA.lite;
-  st.classList.toggle('dark', DATA.theme === 'dark'); document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
+  st.classList.toggle('dark', DATA.theme === 'dark'); TV.THEME = DATA.theme; document.documentElement.classList.toggle('dark', DATA.theme === 'dark'); document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
   const pills = document.querySelectorAll('header .pill');
   for (let i = 0; i < pills.length; i++) { pills[i].style.background = DATA.pill.bg || ''; pills[i].style.color = DATA.pill.fg || ''; pills[i].querySelectorAll('b,.clock,.temp,.lbl2,.track small,.track span').forEach(x => x.style.color = DATA.pill.fg || ''); }
   if (pills[0]) pills[0].style.display = DATA.show.music ? '' : 'none';

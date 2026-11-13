@@ -70,6 +70,7 @@
   .pv .stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#fff}
   .pv .ph{position:absolute;left:72px;right:72px;top:48px;height:104px;display:flex;align-items:center;justify-content:space-between;z-index:3}
   .pv .ph .logo{height:88px;color:#007aff}
+  .pv .stage.dark .ph .logo{color:#fff}.pv .stage.dark{background:#000}.pv .stage.dark .ph .pl i{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07)}
   .pv .ph .pl{display:flex;gap:16px}.pv .ph .pl i{display:block;height:104px;border-radius:26px;background:rgba(255,255,255,.66);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.9),0 10px 30px rgba(40,60,140,.07)}
   .replay{position:absolute;right:14px;bottom:14px;z-index:5;background:rgba(255,255,255,.9);box-shadow:0 2px 10px rgba(0,0,0,.12)}
   .pv .static .f,.pv .static .ic,.pv .static .sw,.pv .static .insta{transition:none!important;animation:none!important}
@@ -168,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611140010"></script>
+<script src="tv-core.js?v=202611140100"></script>
 </head>
 <body>
 <div class="bar">
@@ -258,7 +259,7 @@ $('stage').innerHTML = '<div class="bgfx"><i></i><i></i><i></i><i></i></div><div
 function fitPv(){ $('stage').style.transform = 'scale(' + ($('pv').clientWidth / 1920) + ')'; }
 new ResizeObserver(fitPv).observe($('pv'));
 function preview(animate){
-  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? 'rgba(44,44,46,.66)' : ''));
+  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); TV.THEME = D.theme; $('pv').style.background = D.theme === 'dark' ? '#000' : ''; $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? '#1c1c1e' : ''));
   $('stage').querySelectorAll('[data-p]').forEach(i => i.style.display = D.show[i.dataset.p] ? '' : 'none');
   const s = D.screens[sel]; if (!s) { $('pvs').innerHTML = ''; return; }
   $('pvs').innerHTML = TV.sceneHTML(s);
