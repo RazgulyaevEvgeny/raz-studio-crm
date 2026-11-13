@@ -1,13 +1,21 @@
-/* tv-core.js — общий движок экрана: стили карточек, иконки, данные по умолчанию и отрисовка.
+/* tv-core.js — общий движок экрана: стили карточек, анимации, иконки, данные по умолчанию и отрисовка.
    Используется и экраном (tv.html), и админкой (tv-admin.html) для предпросмотра. */
 (function(){
 const TV = window.TV = {};
 
-/* Где лежат факты: Realtime Database CRM, раздел pub/<ключ> (читать может любой, кто знает ключ; писать — только сотрудники) */
+/* Где лежат факты: Realtime Database CRM, раздел pub/<ключ> (читать может любой, кто знает ключ; писать — только сотрудники).
+   Фото лежат отдельно, каждое в pub/<IMG><id>, чтобы экран не скачивал их заново при каждом изменении текста. */
 TV.KEY = 'tvfacts_DdZ6xJoCLMkvw8lKZPyGDcoAOB1JNmrA';
+TV.IMG = 'tvimg_IGPD6hxdYWcGBs0gb8OsEg_';
+TV.DB = () => (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.databaseURL || '').replace(/\/$/, '');
 
 TV.COLORS = { blue:'#007aff', indigo:'#5856d6', purple:'#af52de', pink:'#ff2d55', red:'#ff3b30', orange:'#ff9500', yellow:'#ffcc00', green:'#34c759', teal:'#30b0c7', gray:'#8e8e93', black:'#1d1d1f' };
 TV.COLOR_NAMES = { blue:'Синий', indigo:'Индиго', purple:'Фиолетовый', pink:'Розовый', red:'Красный', orange:'Оранжевый', yellow:'Жёлтый', green:'Зелёный', teal:'Бирюзовый', gray:'Серый', black:'Чёрный' };
+
+TV.LAYOUTS = { g1:{n:1,t:'Одна на весь экран'}, g2:{n:2,t:'Две равные'}, g3:{n:3,t:'Три равные'}, g12:{n:3,t:'Большая слева + две'}, g21:{n:3,t:'Две + большая справа'}, g4:{n:4,t:'Четыре (2×2)'} };
+TV.ANIMS = { spring:'Пружина снизу', up:'Плавно снизу', fade:'Растворение', left:'Слева направо', right:'Справа налево', zoom:'Увеличение', flip:'Переворот', drop:'Падение сверху', none:'Без анимации' };
+TV.SPEEDS = { slow:['Медленно',1.7], normal:['Обычно',1], fast:['Быстро',.55] };
+TV.STYLES = { plain:'Стекло', white:'Белая', blue:'Синяя', kaspi:'Kaspi', dark:'Тёмная', custom:'Свой цвет' };
 
 TV.ICONS = {
   needle:'<path d="M14 4l6 6M4 20 15.5 8.5"/><circle cx="18.5" cy="5.5" r="2.5"/>',
@@ -36,52 +44,85 @@ TV.ICONS = {
   bolt:'<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
   trophy:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>',
   camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  phone:'<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+  percent:'<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  fire:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3.2.3 1.2 1.2 2.2 2.5 2.7z"/>',
+  smile:'<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
 };
-TV.icon = (name, size) => TV.ICONS[name] ? `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"${size?` width="${size}" height="${size}"`:''}>${TV.ICONS[name]}</svg>` : '';
+TV.icon = (name) => TV.ICONS[name] ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${TV.ICONS[name]}</svg>` : '';
 
-/* ---------- данные по умолчанию (пока в базе ничего нет) ---------- */
-const F = (o) => Object.assign({ style:'plain', icon:'', color:'blue', label:'', big:'', unit:'', plus:false, numColor:false, title:'', caption:'', visual:'', swatch:'#ffffff', list:'', auto:'', autoFrom:0 }, o);
-TV.DEFAULT = { slideSec: 20, screens: [
-  { on:true, layout:'g12', facts:[
+/* ---------- значения по умолчанию ---------- */
+const F = (o) => Object.assign({
+  style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
+  big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
+  visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
+  sizeBig:'auto', sizeText:'m', align:'left', valign:'between',
+  auto:'', autoFrom:0 }, o);
+const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
+TV.F = F;
+TV.DEFAULT = { slideSec: 20, fx: true, show: { music:true, weather:true, clock:true }, screens: [
+  S({ layout:'g12', facts:[
     F({style:'blue', label:'Спасибо, что выбираете нас', big:'1500', plus:true, title:'заказов студии выполнено', visual:'tag'}),
     F({style:'kaspi', icon:'bag', label:'Наш магазин на Kaspi', big:'2000', plus:true, caption:'заказов доставили по всему Казахстану'}),
-    F({icon:'users', color:'green', label:'Клиенты', big:'900', plus:true, caption:'возвращаются к нам снова'}) ]},
-  { on:true, layout:'g12', facts:[
+    F({icon:'users', color:'green', label:'Клиенты', big:'900', plus:true, caption:'возвращаются к нам снова'}) ]}),
+  S({ layout:'g12', facts:[
     F({style:'blue', icon:'calendar', label:'Наша история', big:'С февраля 2025', caption:'а всё началось с одной вышивальной машинки', visual:'tag'}),
     F({icon:'star', color:'purple', label:'Хиты студии', title:'Чаще всего заказывают DTF-принты и вышивку'}),
-    F({icon:'gift', color:'pink', label:'Любимые заказы', title:'Подарки', caption:'Нет ничего приятнее, чем видеть, как ваш подарок радует других'}) ]},
-  { on:true, layout:'g3', facts:[
+    F({icon:'gift', color:'pink', label:'Любимые заказы', title:'Подарки', caption:'Нет ничего приятнее, чем видеть, как ваш подарок радует других'}) ]}),
+  S({ facts:[
     F({icon:'needle', color:'indigo', label:'Вышивка', big:'200', unit:'км', title:'вышивальной нити уже в стежках', caption:'длиннее дороги от Павлодара до Экибастуза'}),
     F({visual:'flag-it', big:'Итальянские нити', caption:'Яркие, прочные, не выцветают после стирок'}),
-    F({icon:'printer', color:'purple', label:'DTF-печать', big:'150', numColor:true, title:'стирок выдерживает принт', caption:'не трескается и не линяет'}) ]},
-  { on:true, layout:'g3', facts:[
+    F({icon:'printer', color:'purple', label:'DTF-печать', big:'150', numColor:true, title:'стирок выдерживает принт', caption:'не трескается и не линяет'}) ]}),
+  S({ facts:[
     F({icon:'needle', color:'indigo', label:'Вышивка логотипа', big:'12000', title:'стежков в одном логотипе', caption:'и 1,5–2 часа работы машинки'}),
     F({icon:'cup', color:'orange', label:'Кофейный топпер', big:'35', unit:'мин', title:'печатается один топпер'}),
-    F({icon:'steam', color:'blue', label:'Наша гордость', title:'Профессиональный отпариватель', caption:'каждая вещь уходит к вам идеально ровной'}) ]},
-  { on:true, layout:'g3', facts:[
+    F({icon:'steam', color:'blue', label:'Наша гордость', title:'Профессиональный отпариватель', caption:'каждая вещь уходит к вам идеально ровной'}) ]}),
+  S({ facts:[
     F({icon:'cube', color:'orange', label:'3D-печать', big:'340', unit:'кг', title:'пластика превратили в изделия'}),
     F({visual:'swatch', swatch:'#ffffff', big:'112', unit:'кг', title:'белого — наш цвет №1', caption:'вывески, таблички, топперы'}),
-    F({visual:'swatch', swatch:'#1d1d1f', big:'96', unit:'кг', title:'чёрного — на втором месте', caption:'вместе с белым — 60% всего пластика'}) ]},
-  { on:true, layout:'g3', facts:[
+    F({visual:'swatch', swatch:'#1d1d1f', big:'96', unit:'кг', title:'чёрного — на втором месте', caption:'вместе с белым — 60% всего пластика'}) ]}),
+  S({ facts:[
     F({icon:'tool', color:'teal', label:'Самое маленькое', big:'Плоскогубцы', caption:'брендировали даже их'}),
     F({icon:'truck', color:'red', label:'Самое большое', big:'Фура', caption:'да, мы брендировали фуру'}),
-    F({icon:'ball', color:'orange', label:'Самый большой заказ', title:'Весь инвентарь для женской волейбольной команды', caption:'Смотрите рилс в нашем Instagram'}) ]},
-  { on:true, layout:'g3', facts:[
+    F({icon:'ball', color:'orange', label:'Самый большой заказ', title:'Весь инвентарь для женской волейбольной команды', caption:'Смотрите рилс в нашем Instagram'}) ]}),
+  S({ facts:[
     F({icon:'clock', color:'green', label:'Сроки', big:'Всегда в срок', caption:'Никогда не обманываем насчёт сроков'}),
     F({icon:'shield', color:'blue', label:'Качество', big:'Гарантия', caption:'Ручаемся за качество каждой работы'}),
-    F({style:'blue', icon:'heart', label:'Сервис', big:'Нас выбирают снова', caption:'Много постоянных клиентов приходят за сервисом и качеством'}) ]},
-  { on:true, layout:'g3', facts:[
+    F({style:'blue', icon:'heart', label:'Сервис', big:'Нас выбирают снова', caption:'Много постоянных клиентов приходят за сервисом и качеством'}) ]}),
+  S({ facts:[
     F({big:'Что мы делаем', list:'DTF на одежде\nВышивка\n3D-печать\nНаклейки на авто\nВывески и таблички'}),
     F({visual:'insta', big:'@raz.brandstudio', numColor:true, color:'blue', caption:'Смотрите наши работы в Instagram'}),
-    F({style:'blue', icon:'plus', big:'Есть идея?', caption:'Расскажите — придумаем и сделаем. А если это подарок, сделаем с особой любовью'}) ]},
+    F({style:'blue', icon:'plus', big:'Есть идея?', caption:'Расскажите — придумаем и сделаем. А если это подарок, сделаем с особой любовью'}) ]}),
 ]};
+TV.newFact = () => F({icon:'sparkle', color:'blue', label:'Новый факт', big:'100', title:'чего-нибудь крутого'});
+TV.newScreen = () => S({ facts:[TV.newFact(), TV.newFact(), TV.newFact(), TV.newFact()] });
+
 TV.AUTO = {};
 TV.AUTO_SRC = { orders:'Выданные заказы студии', kaspi:'Продажи Kaspi', clients:'Клиенты студии' };
-/* число на экране: стартовое + рост живого счётчика из учёта с момента включения */
 TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.auto && TV.AUTO[f.auto] != null ? Math.max(0, +TV.AUTO[f.auto] - (+f.autoFrom || 0)) : 0; return b + v; };
-TV.newFact = () => F({icon:'sparkle', color:'blue', label:'Новый факт', big:'100', title:'чего-нибудь крутого'});
 
-/* ---------- стили карточек ---------- */
+/* привести данные из базы к полному виду (старые записи тоже) */
+TV.normalize = (d) => {
+  if (!d || !Array.isArray(d.screens)) d = JSON.parse(JSON.stringify(TV.DEFAULT));
+  const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
+  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, show,
+    screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
+      const src = s.facts || []; sc.facts = [0,1,2,3].map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
+};
+
+/* ---------- фото ---------- */
+TV.IMGCACHE = {};
+TV.loadImg = (id) => {
+  if (!id) return Promise.resolve('');
+  if (TV.IMGCACHE[id]) return Promise.resolve(TV.IMGCACHE[id]);
+  const db = TV.DB(); if (!db) return Promise.resolve('');
+  return TV.IMGCACHE[id] = fetch(`${db}/pub/${TV.IMG}${id}/d.json`).then(r => r.json()).then(d => (TV.IMGCACHE[id] = d || '')).catch(() => { delete TV.IMGCACHE[id]; return ''; });
+};
+TV.hydrate = (root) => root.querySelectorAll('[data-img]').forEach(el => {
+  const id = el.dataset.img; Promise.resolve(TV.IMGCACHE[id] || TV.loadImg(id)).then(u => { if (u && typeof u === 'string') el.style.backgroundImage = `url("${u}")`; });
+});
+
+/* ---------- стили ---------- */
 TV.CSS = `
 .bgfx{position:absolute;inset:0;z-index:0;overflow:hidden}
 .bgfx i{position:absolute;width:1300px;height:1300px;border-radius:50%;will-change:transform}
@@ -91,78 +132,149 @@ TV.CSS = `
 .bgfx i:nth-child(4){right:100px;bottom:-650px;background:radial-gradient(circle,rgba(48,176,199,.16),rgba(48,176,199,0) 65%);animation:tvd4 44s ease-in-out infinite alternate}
 @keyframes tvd1{to{transform:translate(520px,300px) scale(1.15)}}@keyframes tvd2{to{transform:translate(-560px,360px) scale(.9)}}
 @keyframes tvd3{to{transform:translate(480px,-340px) scale(1.2)}}@keyframes tvd4{to{transform:translate(-620px,-260px) scale(1.05)}}
-.scene{position:absolute;left:72px;right:72px;top:192px;bottom:112px;display:grid;gap:28px;z-index:2;pointer-events:none}
-.scene .f{opacity:0;transform:translateY(60px) scale(.94);transition:opacity .7s ease,transform .7s ease}
-.scene.on .f{opacity:1;transform:none;transition:opacity .9s ease,transform 1.1s cubic-bezier(.2,1.25,.3,1)}
-.scene.out .f{opacity:0;transform:translateY(-40px) scale(.97)}
-.scene.on .f:nth-child(2){transition-delay:.18s}.scene.on .f:nth-child(3){transition-delay:.36s}
-.scene.out .f:nth-child(2){transition-delay:.08s}.scene.out .f:nth-child(3){transition-delay:.16s}
-.scene.on .ic,.scene.on .sw,.scene.on .insta{animation:tvpop .8s cubic-bezier(.2,1.6,.4,1) both}
-.scene.on .f:nth-child(1) .ic{animation-delay:.45s}.scene.on .f:nth-child(2) .ic,.scene.on .f:nth-child(2) .sw,.scene.on .f:nth-child(2) .insta{animation-delay:.6s}.scene.on .f:nth-child(3) .ic,.scene.on .f:nth-child(3) .sw,.scene.on .f:nth-child(3) .insta{animation-delay:.75s}
-.scene.on .li .ic{animation-delay:calc(.5s + var(--n,0)*.12s)}
+.nofx .bgfx{display:none}
+
+.scene{position:absolute;left:72px;right:72px;top:192px;bottom:112px;display:grid;gap:28px;z-index:2;pointer-events:none;--sp:1;--st:.18s;--from:translateY(60px) scale(.94);--to:translateY(-40px) scale(.97);--ease:cubic-bezier(.2,1.25,.3,1)}
+.scene .f{opacity:0;transform:var(--from);transition:opacity calc(.7s * var(--sp)) ease,transform calc(.7s * var(--sp)) ease}
+.scene.on .f{opacity:1;transform:none;transition:opacity calc(.9s * var(--sp)) ease,transform calc(1.1s * var(--sp)) var(--ease)}
+.scene.out .f{opacity:0;transform:var(--to)}
+.scene.on .f:nth-child(2){transition-delay:var(--st)}.scene.on .f:nth-child(3){transition-delay:calc(var(--st) * 2)}.scene.on .f:nth-child(4){transition-delay:calc(var(--st) * 3)}
+.scene.out .f:nth-child(2){transition-delay:calc(var(--st) * .4)}.scene.out .f:nth-child(3){transition-delay:calc(var(--st) * .8)}.scene.out .f:nth-child(4){transition-delay:calc(var(--st) * 1.2)}
+.scene.on .ic,.scene.on .sw,.scene.on .insta{animation:tvpop calc(.8s * var(--sp)) cubic-bezier(.2,1.6,.4,1) both;animation-delay:calc(.45s * var(--sp))}
+.scene.on .f:nth-child(2) .ic,.scene.on .f:nth-child(2) .sw,.scene.on .f:nth-child(2) .insta{animation-delay:calc(.45s * var(--sp) + var(--st))}
+.scene.on .f:nth-child(3) .ic,.scene.on .f:nth-child(3) .sw,.scene.on .f:nth-child(3) .insta{animation-delay:calc(.45s * var(--sp) + var(--st) * 2)}
+.scene.on .f:nth-child(4) .ic,.scene.on .f:nth-child(4) .sw,.scene.on .f:nth-child(4) .insta{animation-delay:calc(.45s * var(--sp) + var(--st) * 3)}
+.scene.on .li .ic{animation-delay:calc(.5s * var(--sp) + var(--n,0) * .12s)}
 @keyframes tvpop{0%{transform:scale(0) rotate(-20deg)}100%{transform:none}}
-.g3{grid-template-columns:1fr 1fr 1fr}
+/* варианты анимации */
+.an-up{--from:translateY(140px);--ease:cubic-bezier(.2,.8,.2,1)}
+.an-fade{--from:none;--to:none}
+.an-left{--from:translateX(-160px);--to:translateX(120px);--ease:cubic-bezier(.2,.9,.25,1)}
+.an-right{--from:translateX(160px);--to:translateX(-120px);--ease:cubic-bezier(.2,.9,.25,1)}
+.an-zoom{--from:scale(.72);--to:scale(1.06);--ease:cubic-bezier(.2,1.2,.3,1)}
+.an-flip{--from:perspective(1400px) rotateY(-75deg);--to:perspective(1400px) rotateY(60deg);--ease:cubic-bezier(.2,1,.3,1)}
+.an-flip .f{transform-origin:left center}
+.an-drop{--from:translateY(-160px);--to:translateY(120px);--ease:cubic-bezier(.3,1.4,.4,1)}
+.an-none{--sp:0.001;--st:0s}
+.an-none .ic,.an-none .sw,.an-none .insta{animation:none!important}
+
+/* раскладки */
+.g1{grid-template-columns:1fr}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}
 .g12{grid-template-columns:1.25fr 1fr;grid-template-rows:1fr 1fr}.g12 .f:first-child{grid-row:span 2}
-.f{background:rgba(255,255,255,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95),0 14px 40px rgba(40,60,140,.08);border-radius:40px;padding:48px 50px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;color:#1d1d1f}
-.f.blue{background:#007aff;color:#fff}.f.kaspi{background:#f14635;color:#fff}
-.f.blue .t,.f.kaspi .t,.f.blue .h,.f.kaspi .h{color:#fff}
-.f.blue .cap,.f.kaspi .cap,.f.blue .top,.f.kaspi .top{color:rgba(255,255,255,.86)}
-.f.blue .ic,.f.kaspi .ic{background:rgba(255,255,255,.22)!important}
-.f.blue::after,.f.kaspi::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);animation:tvshine 7s ease-in-out 2s infinite}
+.g21{grid-template-columns:1fr 1.25fr;grid-template-rows:1fr 1fr}.g21 .f:nth-child(3){grid-column:2;grid-row:1 / span 2}
+.g4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+
+/* карточка */
+.f{--fg:#1d1d1f;--fg2:#8e8e93;background:rgba(255,255,255,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95),0 14px 40px rgba(40,60,140,.08);border-radius:40px;padding:48px 50px;display:flex;flex-direction:column;justify-content:space-between;gap:24px;position:relative;overflow:hidden;color:var(--fg);min-height:0;min-width:0}
+.f>*{position:relative;z-index:1}
+.f.st-white{background:#fff}
+.f.st-blue{background:#007aff;--fg:#fff;--fg2:rgba(255,255,255,.86)}
+.f.st-kaspi{background:#f14635;--fg:#fff;--fg2:rgba(255,255,255,.88)}
+.f.st-dark{background:#1d1d1f;--fg:#fff;--fg2:rgba(255,255,255,.7)}
+.f.st-custom{--fg:#fff;--fg2:rgba(255,255,255,.86)}
+.f.light-bg{--fg:#1d1d1f;--fg2:rgba(0,0,0,.55)}
+.f.on-color .ic{background:rgba(255,255,255,.22)!important;color:#fff}
+.f.shine::after{content:"";position:absolute;z-index:2;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);animation:tvshine 7s ease-in-out 2s infinite;pointer-events:none}
 @keyframes tvshine{0%,70%{left:-60%}100%{left:130%}}
+.f.va-center{justify-content:center}.f.va-top{justify-content:flex-start}.f.va-bottom{justify-content:flex-end}
+.f.al-center{text-align:center;align-items:center}.f.al-center .top{justify-content:center}.f.al-center .li{justify-content:center}
+.f.al-right{text-align:right;align-items:flex-end}.f.al-right .top{justify-content:flex-end}
+/* фото */
+.f .bgph{position:absolute;inset:0;z-index:0;background:#d1d1d6 center/cover no-repeat}
+.f .bgph.kb{animation:tvkb 24s ease-in-out infinite alternate}
+@keyframes tvkb{from{transform:scale(1)}to{transform:scale(1.12) translate(-2%,-1%)}}
+.f .shade{position:absolute;inset:0;z-index:0;background:linear-gradient(to top,rgba(0,0,0,var(--dim)),rgba(0,0,0,calc(var(--dim) * .35)))}
+.f.has-bg{--fg:#fff;--fg2:rgba(255,255,255,.88)}
+.f .pic{flex:1 1 auto;min-height:120px;border-radius:26px;background:#e5e5ea center/cover no-repeat}
+.f .pic.contain{background-size:contain;background-color:transparent}
 .ic{width:80px;height:80px;border-radius:22px;display:grid;place-items:center;color:#fff;flex:none}.ic svg{width:44px;height:44px}
-.top{display:flex;align-items:center;gap:22px;font-size:28px;font-weight:600;color:#8e8e93;min-height:80px}
-.num{display:inline-block;font-family:"Inter Tight",Inter,system-ui,sans-serif;font-weight:800;letter-spacing:-.045em;line-height:.92;font-variant-numeric:tabular-nums;font-size:150px}
+.top{display:flex;align-items:center;gap:22px;font-size:28px;font-weight:600;color:var(--fg2);min-height:80px}
+.num{display:inline-block;font-family:"Inter Tight",Inter,system-ui,sans-serif;font-weight:800;letter-spacing:-.045em;line-height:.92;font-variant-numeric:tabular-nums;font-size:150px;color:var(--fg)}
 .num small{font-size:.38em;letter-spacing:-.01em;margin-left:8px;opacity:.6}.num .pl{font-size:.5em;opacity:1;margin-left:0}
-.g12 .f:first-child .num{font-size:250px}
-.t{font-family:"Inter Tight",Inter,system-ui,sans-serif;font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.08;color:#1d1d1f}
-.num+.t{margin-top:22px}
-.cap{font-size:27px;color:#8e8e93;font-weight:500;line-height:1.35;margin-top:14px}
-.h{font-family:"Inter Tight",Inter,system-ui,sans-serif;font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1.02}
-.h.sm{font-size:52px}.g12 .f:first-child .h{font-size:120px}
+.hero .num{font-size:250px}
+.h{font-family:"Inter Tight",Inter,system-ui,sans-serif;font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1.02;color:var(--fg)}
+.h.long{font-size:52px}.hero .h{font-size:120px}.hero .h.long{font-size:92px}
+.t{font-family:"Inter Tight",Inter,system-ui,sans-serif;font-size:44px;font-weight:700;letter-spacing:-.02em;line-height:1.08;color:var(--fg)}
+.num+.t,.h+.t{margin-top:18px}
+.cap{font-size:27px;color:var(--fg2);font-weight:500;line-height:1.35;margin-top:14px}
+.f[data-fg] .cap,.f[data-fg] .top{color:var(--fg);opacity:.8}
+/* размеры */
+.f.sb-s .num{font-size:96px}.f.sb-m .num{font-size:150px}.f.sb-l .num{font-size:210px}.f.sb-xl .num{font-size:280px}
+.f.sb-s .h{font-size:44px}.f.sb-m .h{font-size:64px}.f.sb-l .h{font-size:92px}.f.sb-xl .h{font-size:124px}
+.f.sx-s .t{font-size:32px}.f.sx-s .cap,.f.sx-s .li{font-size:22px}.f.sx-l .t{font-size:56px}.f.sx-l .cap,.f.sx-l .li{font-size:34px}.f.sx-xl .t{font-size:70px}.f.sx-xl .cap,.f.sx-xl .li{font-size:42px}
 .flag{display:flex;height:20px;width:150px;border-radius:6px;overflow:hidden}.flag i{flex:1}.flag i:nth-child(2){box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
 .sw{width:120px;height:120px;border-radius:30px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.08)}
-.deco{position:absolute;right:-60px;top:-50px;width:440px;opacity:.13;color:#fff;animation:tvspin 60s linear infinite}@keyframes tvspin{to{transform:rotate(360deg)}}
+.deco{position:absolute!important;z-index:0!important;right:-60px;top:-50px;width:440px;opacity:.13;color:#fff;animation:tvspin 60s linear infinite}@keyframes tvspin{to{transform:rotate(360deg)}}
 .list{display:flex;flex-direction:column;gap:16px;margin-top:20px}
 .li{display:flex;align-items:center;gap:20px;font-size:32px;font-weight:600}
 .li .ic{width:60px;height:60px;border-radius:17px}.li .ic svg{width:32px;height:32px}
-.insta{width:96px;height:96px;border-radius:26px;background:linear-gradient(45deg,#ffcc00,#ff2d55,#af52de);display:grid;place-items:center}.insta svg{width:54px;height:54px}
+.insta{width:96px;height:96px;border-radius:26px;background:linear-gradient(45deg,#ffcc00,#ff2d55,#af52de);display:grid;place-items:center;color:#fff}.insta svg{width:54px;height:54px}
 `;
 TV.injectCSS = () => { if (document.getElementById('tv-core-css')) return; const s = document.createElement('style'); s.id = 'tv-core-css'; s.textContent = TV.CSS; document.head.appendChild(s); };
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+TV.esc = esc;
 const isNum = s => /^\d[\d\s]*$/.test(String(s||'').trim());
 TV.isNum = isNum;
+const isLight = hex => { const h = String(hex||'').replace('#',''); if (h.length < 6) return false; const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16); return (r*299 + g*587 + b*114) / 1000 > 170; };
 const TAG = '<svg class="deco" viewBox="44 60 50 50" fill="currentColor"><path d="M70.4 60.3C76.3 60.2 82.3 60.6 88.2 60.4C90.2 60.7 91.7 62.3 92 64.3C91.8 70.3 92.3 76.3 92.1 82.3C92.1 83.7 91.7 85.1 91 86.3C84.3 93.5 77.2 100.4 70.1 107.2C68.3 108.3 66.4 108 64.8 106.7C59.6 101.5 54.3 96.3 49.2 91.1C45.6 87.4 42.7 85.6 47.1 80.7C52.9 74.4 59.6 68.7 65.5 62.4C66.8 61.2 68.6 60.4 70.4 60.3"/></svg>';
 const LIST_COLORS = ['purple','indigo','orange','red','blue','green','teal','pink'];
 const LIST_ICONS = { 'dtf':'printer','вышив':'needle','3d':'cube','накле':'car','авто':'car','вывес':'sign','таблич':'sign','топпер':'cup','футбол':'shirt' };
 const listIcon = t => { const l = t.toLowerCase(); for (const k in LIST_ICONS) if (l.includes(k)) return LIST_ICONS[k]; return 'check'; };
 
-TV.factHTML = (f) => {
+TV.factHTML = (f, hero) => {
   const col = TV.COLORS[f.color] || TV.COLORS.blue;
-  let top = '';
-  if (f.visual === 'flag-it') top = '<div class="flag"><i style="background:#009246"></i><i style="background:#fff"></i><i style="background:#ce2b37"></i></div>';
-  else if (f.visual === 'swatch') top = `<div class="sw" style="background:${esc(f.swatch||'#fff')}"></div>`;
-  else if (f.visual === 'insta') top = `<div class="insta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg></div>`;
-  else if (f.icon || f.label) top = `<div class="top">${f.icon ? `<span class="ic" style="background:${col}">${TV.icon(f.icon)}</span>` : ''}${esc(f.label)}</div>`;
+  const bgPhoto = f.photo && f.photoMode === 'bg';
+  const cls = ['f', 'st-' + (TV.STYLES[f.style] ? f.style : 'plain')];
+  let style = '';
+  if (hero) cls.push('hero');
+  if (f.style === 'custom') { style += `background:${esc(f.bg)};`; if (isLight(f.bg)) cls.push('light-bg'); }
+  const colored = ['blue','kaspi','dark'].includes(f.style) || (f.style === 'custom' && !isLight(f.bg)) || bgPhoto;
+  if (colored) cls.push('on-color');
+  if (['blue','kaspi','custom'].includes(f.style) && !bgPhoto) cls.push('shine');
+  if (bgPhoto) cls.push('has-bg');
+  if (f.fg) style += `--fg:${esc(f.fg)};--fg2:${esc(f.fg)};`;
+  if (f.sizeBig && f.sizeBig !== 'auto') cls.push('sb-' + f.sizeBig);
+  if (f.sizeText && f.sizeText !== 'm') cls.push('sx-' + f.sizeText);
+  if (f.align && f.align !== 'left') cls.push('al-' + f.align);
+  if (f.valign && f.valign !== 'between') cls.push('va-' + f.valign);
+  if (bgPhoto) style += `--dim:${Math.max(0, Math.min(90, +f.dim || 0)) / 100};`;
+
+  const photoTop = f.photo && f.photoMode === 'top';
+  const vis = ['flag-it','swatch','insta'].includes(f.visual) ? f.visual : '';
+  let visual = '';
+  if (vis === 'flag-it') visual = '<div class="flag"><i style="background:#009246"></i><i style="background:#fff"></i><i style="background:#ce2b37"></i></div>';
+  else if (vis === 'swatch') visual = `<div class="sw" style="background:${esc(f.swatch||'#fff')}"></div>`;
+  else if (vis === 'insta') visual = `<div class="insta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg></div>`;
+  const icon = (f.icon && !vis) ? `<span class="ic" style="background:${col}">${TV.icon(f.icon)}</span>` : '';
+  const labelRow = (icon || f.label) ? `<div class="top"${icon ? '' : ' style="min-height:0"'}>${icon}${esc(f.label)}</div>` : '';
+  const pic = photoTop ? `<div class="pic ${f.photoFit === 'contain' ? 'contain' : ''}" data-img="${esc(f.photo)}"></div>` : '';
+  const top = photoTop ? labelRow + pic : vis ? visual + labelRow : labelRow;
+
   let body = '';
   if (f.big) {
+    const ncol = f.numColor ? ` style="color:${col}"` : '';
     if (isNum(f.big)) {
       const val = TV.value(f);
-      body += `<div class="num" data-to="${val}" data-plus="${f.plus?1:''}" data-unit="${esc(f.unit)}"${f.numColor?` style="color:${col}"`:''}>${val.toLocaleString('ru-RU')}${f.plus?'<small class="pl">+</small>':''}${f.unit?`<small>${esc(f.unit)}</small>`:''}</div>`;
+      body += `<div class="num" data-to="${val}" data-plus="${f.plus?1:''}" data-unit="${esc(f.unit)}"${ncol}>${val.toLocaleString('ru-RU')}${f.plus?'<small class="pl">+</small>':''}${f.unit?`<small>${esc(f.unit)}</small>`:''}</div>`;
     } else {
-      body += `<div class="h${String(f.big).length > 12 ? ' sm' : ''}"${f.numColor?` style="color:${col}"`:''}>${esc(f.big)}${f.unit?` <small style="font-size:.5em;opacity:.6">${esc(f.unit)}</small>`:''}</div>`;
+      body += `<div class="h${String(f.big).length > 12 ? ' long' : ''}"${ncol}>${esc(f.big)}${f.unit?` <small style="font-size:.5em;opacity:.6">${esc(f.unit)}</small>`:''}</div>`;
     }
   }
-  if (f.title) body += `<div class="t"${f.big && !isNum(f.big) ? ' style="margin-top:14px"' : ''}>${esc(f.title)}</div>`;
+  if (f.title) body += `<div class="t">${esc(f.title)}</div>`;
   if (f.caption) body += `<div class="cap">${esc(f.caption)}</div>`;
   if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1}"><span class="ic" style="background:${TV.COLORS[LIST_COLORS[i%LIST_COLORS.length]]}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
-  // если «большое» — заголовок, а список под ним, держим заголовок наверху
-  const split = f.list && !top;
-  const deco = (f.style !== 'plain' && f.visual === 'tag') ? TAG : '';
-  return `<div class="f ${f.style==='blue'?'blue':f.style==='kaspi'?'kaspi':''}">${deco}${split ? body : (top || '<div></div>') + `<div>${body}</div>`}</div>`;
+
+  const deco = (colored && !bgPhoto && f.visual === 'tag') ? TAG : '';
+  const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div><div class="shade"></div>` : '';
+  const inner = photoTop ? `<div style="display:flex;flex-direction:column;gap:20px;flex:1 1 auto;min-height:0">${top}</div><div>${body}</div>` : (f.list && !top) ? body : (top ? `<div>${top}</div>` : '<div></div>') + `<div>${body}</div>`;
+  return `<div class="${cls.join(' ')}"${f.fg ? ' data-fg' : ''} style="${style}">${bg}${deco}${inner}</div>`;
 };
-TV.sceneHTML = (sc) => `<section class="scene ${sc.layout==='g12'?'g12':'g3'}">${(sc.facts||[]).slice(0,3).map(TV.factHTML).join('')}</section>`;
+TV.sceneHTML = (sc) => {
+  const L = TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3, sp = (TV.SPEEDS[sc.speed] || TV.SPEEDS.normal)[1];
+  const heroIdx = sc.layout === 'g12' ? 0 : sc.layout === 'g21' ? 2 : sc.layout === 'g1' ? 0 : -1;
+  return `<section class="scene ${sc.layout} an-${TV.ANIMS[sc.anim] ? sc.anim : 'spring'}" style="--sp:${sc.anim === 'none' ? 0.001 : sp};--st:${sc.stagger === false || sc.anim === 'none' ? '0s' : (0.18 * sp).toFixed(2) + 's'}">${(sc.facts||[]).slice(0, L.n).map((f,i) => TV.factHTML(f, i === heroIdx)).join('')}</section>`;
+};
 
 TV.countUp = (el) => {
   const to = +el.dataset.to, plus = !!el.dataset.plus, unit = el.dataset.unit;
@@ -172,11 +284,5 @@ TV.countUp = (el) => {
     el.innerHTML = Math.round(to*e).toLocaleString('ru-RU') + (p===1 ? tail : (unit ? `<small>${unit}</small>` : ''));
     if (p<1) requestAnimationFrame(f); })(t0);
 };
-TV.animateIn = (sceneEl) => { sceneEl.classList.add('on'); sceneEl.querySelectorAll('.num[data-to]').forEach(el => setTimeout(() => TV.countUp(el), 500)); };
-
-/* привести данные из базы к полному виду */
-TV.normalize = (d) => {
-  if (!d || !Array.isArray(d.screens)) return JSON.parse(JSON.stringify(TV.DEFAULT));
-  return { slideSec: +d.slideSec || 20, screens: d.screens.map(s => ({ on: s.on !== false, layout: s.layout === 'g12' ? 'g12' : 'g3', facts: [0,1,2].map(i => F((s.facts||[])[i] || {})) })) };
-};
+TV.animateIn = (sceneEl) => { TV.hydrate(sceneEl); sceneEl.classList.add('on'); sceneEl.querySelectorAll('.num[data-to]').forEach(el => setTimeout(() => TV.countUp(el), 500)); };
 })();
