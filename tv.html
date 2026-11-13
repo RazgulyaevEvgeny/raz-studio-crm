@@ -95,7 +95,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611140100"></script>
+<script src="tv-core.js?v=202611140110"></script>
 </head>
 <body>
 <div id="stage">
@@ -237,7 +237,7 @@ function applySettings(){
   st.classList.toggle('nofx', !DATA.fx);
   st.classList.toggle('lite', DATA.lite); TV.LITE = DATA.lite;
   st.classList.toggle('dark', DATA.theme === 'dark'); TV.THEME = DATA.theme; document.documentElement.classList.toggle('dark', DATA.theme === 'dark');
-  const base = TV.bgApply(st, DATA.bg, DATA.theme); if (base) document.body.style.background = base; document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
+  const base = TV.bgApply ? TV.bgApply(st, DATA.bg, DATA.theme) : ''; if (base) document.body.style.background = base; document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
   const pills = document.querySelectorAll('header .pill');
   for (let i = 0; i < pills.length; i++) { pills[i].style.background = DATA.pill.bg || ''; pills[i].style.color = DATA.pill.fg || ''; pills[i].querySelectorAll('b,.clock,.temp,.lbl2,.track small,.track span').forEach(x => x.style.color = DATA.pill.fg || ''); }
   if (pills[0]) pills[0].style.display = DATA.show.music ? '' : 'none';
