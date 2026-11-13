@@ -169,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611140100"></script>
+<script src="tv-core.js?v=202611140110"></script>
 </head>
 <body>
 <div class="bar">
@@ -265,7 +265,7 @@ $('stage').innerHTML = '<div class="bgfx"><i></i><i></i><i></i><i></i></div><div
 function fitPv(){ $('stage').style.transform = 'scale(' + ($('pv').clientWidth / 1920) + ')'; }
 new ResizeObserver(fitPv).observe($('pv'));
 function preview(animate){
-  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); TV.THEME = D.theme; TV.bgApply($('stage'), D.bg, D.theme); $('pv').style.background = D.theme === 'dark' ? '#000' : ''; $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? '#1c1c1e' : ''));
+  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); TV.THEME = D.theme; if (TV.bgApply) TV.bgApply($('stage'), D.bg, D.theme); $('pv').style.background = D.theme === 'dark' ? '#000' : ''; $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? '#1c1c1e' : ''));
   $('stage').querySelectorAll('[data-p]').forEach(i => i.style.display = D.show[i.dataset.p] ? '' : 'none');
   const s = D.screens[sel]; if (!s) { $('pvs').innerHTML = ''; return; }
   $('pvs').innerHTML = TV.sceneHTML(s);
