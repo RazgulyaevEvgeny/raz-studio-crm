@@ -56,7 +56,7 @@ const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
-  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'',
+  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', icBg:'', icFg:'',
   auto:'', autoFrom:0 }, o);
 const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
@@ -182,7 +182,7 @@ TV.CSS = `
 .f.st-dark{background:#1d1d1f;--fg:#fff;--fg2:rgba(255,255,255,.7)}
 .f.st-custom{--fg:#fff;--fg2:rgba(255,255,255,.86)}
 .f.light-bg{--fg:#1d1d1f;--fg2:rgba(0,0,0,.55)}
-.f.on-color .ic{background:rgba(255,255,255,.22)!important;color:#fff}
+.f.on-color .ic:not(.ic-set){background:rgba(255,255,255,.22)!important;color:#fff}
 .f.shine::after{content:"";position:absolute;z-index:2;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);animation:tvshine 7s ease-in-out 2s infinite;pointer-events:none}
 @keyframes tvshine{0%,70%{left:-60%}100%{left:130%}}
 .f.va-center{justify-content:center}.f.va-top{justify-content:flex-start}.f.va-bottom{justify-content:flex-end}
@@ -277,7 +277,8 @@ TV.factHTML = (f, hero, idx) => {
   if (vis === 'flag-it') visual = '<div class="flag"><i style="background:#009246"></i><i style="background:#fff"></i><i style="background:#ce2b37"></i></div>';
   else if (vis === 'swatch') visual = `<div class="sw" style="background:${esc(f.swatch||'#fff')}"></div>`;
   else if (vis === 'insta') visual = `<div class="insta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg></div>`;
-  const icon = (f.icon && !vis) ? `<span class="ic" style="background:${col}">${TV.icon(f.icon)}</span>` : '';
+  const icB = f.icBg ? (TV.COLORS[f.icBg] || f.icBg) : col;
+  const icon = (f.icon && !vis) ? `<span class="ic${f.icBg || f.icFg ? ' ic-set' : ''}" style="background:${esc(icB)};${f.icFg ? `color:${esc(f.icFg)};` : ''}">${TV.icon(f.icon)}</span>` : '';
   const cl = f.cLabel ? `color:${esc(f.cLabel)};opacity:1;` : '';
   const labelRow = (icon || f.label) ? `<div class="top" style="${icon ? '' : 'min-height:0;'}${cl}">${icon}${esc(f.label)}</div>` : '';
   const pic = photoTop ? `<div class="pic ${f.photoFit === 'contain' ? 'contain' : ''}" data-img="${esc(f.photo)}"></div>` : '';

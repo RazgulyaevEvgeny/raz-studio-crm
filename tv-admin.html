@@ -168,7 +168,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611132238"></script>
+<script src="tv-core.js?v=202611140010"></script>
 </head>
 <body>
 <div class="bar">
@@ -344,7 +344,7 @@ const openState = {};
 function factForm(f, k){
   const s = D.screens[sel];
   const hero = (s.layout==='g12'&&k===0)||(s.layout==='g21'&&k===2)||s.layout==='g1';
-  const icbg = TV.COLORS[f.color];
+  const icbg = f.icBg ? (TV.COLORS[f.icBg] || f.icBg) : TV.COLORS[f.color];
   const num = TV.isNum(f.big);
   const o = (name, def) => (openState[k+name] ?? def) ? 'open' : '';
   const img = TV.IMGCACHE[f.photo];
@@ -375,8 +375,10 @@ function factForm(f, k){
       <label class="fld"><span>Сверху карточки</span><select data-f="visual">${VIS.map(([v,t]) => `<option value="${v}" ${f.visual===v?'selected':''}>${t}</option>`).join('')}</select></label>
       ${f.visual==='swatch' ? `<div class="colrow"><input type="color" data-f="swatch" value="${esc(f.swatch||'#ffffff')}"><span class="hint">Цвет образца</span></div>` : ''}
       ${['flag-it','swatch','insta'].includes(f.visual) ? '' : `<div class="look">
-        <button class="icbtn ${f.icon?'':'none'}" data-act="icon" style="${f.icon?`background:${icbg};color:#fff`:''}" title="Сменить значок">${f.icon ? TV.icon(f.icon) : 'нет'}</button>
-        <div class="dots">${Object.keys(TV.COLORS).map(c => `<button type="button" data-color="${c}" class="${f.color===c?'on':''}" style="background:${TV.COLORS[c]}" title="${TV.COLOR_NAMES[c]}"></button>`).join('')}</div></div>`}
+        <button class="icbtn ${f.icon?'':'none'}" data-act="icon" style="${f.icon?`background:${icbg};color:${f.icFg||'#fff'}`:''}" title="Сменить значок">${f.icon ? TV.icon(f.icon) : 'нет'}</button>
+        <div class="dots">${Object.keys(TV.COLORS).map(c => `<button type="button" data-color="${c}" class="${(f.icBg||f.color)===c?'on':''}" style="background:${TV.COLORS[c]}" title="${TV.COLOR_NAMES[c]}"></button>`).join('')}</div></div>
+        <div class="colrow"><input type="color" data-f="icBg" value="${esc((f.icBg && f.icBg[0]==='#' ? f.icBg : (TV.COLORS[f.icBg||f.color]||'#007aff')))}"><span style="flex:1;font-size:13.5px;font-weight:600">Фон значка</span>${f.icBg ? `<button type="button" class="linkbtn" data-reset="icBg">авто</button>` : '<span class="hint">авто</span>'}</div>
+        <div class="colrow"><input type="color" data-f="icFg" value="${esc(f.icFg||'#ffffff')}"><span style="flex:1;font-size:13.5px;font-weight:600">Цвет рисунка значка</span>${f.icFg ? `<button type="button" class="linkbtn" data-reset="icFg">авто</button>` : '<span class="hint">авто</span>'}</div>`}
     </div></details>
 
     <details data-sec="photo" ${o('photo', !!f.photo)}><summary>Фото${f.photo ? ' ✓' : ''}</summary><div class="in">
@@ -417,12 +419,12 @@ $('facts').addEventListener('input', e => {
   if (k === 'dim') t.previousElementSibling.textContent = 'Затемнение для читаемости текста: ' + t.value + '%';
   markDirty(); preview(false); renderList();
 });
-$('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList'].includes(e.target.dataset.f)) renderFacts(); });
+$('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList','icBg','icFg'].includes(e.target.dataset.f)) renderFacts(); });
 $('facts').addEventListener('click', e => {
   const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
   const sg = e.target.closest('[data-seg] button'), col = e.target.closest('[data-color]'), act = e.target.closest('[data-act]');
   if (sg) { factOf(sg)[sg.parentElement.dataset.seg] = sg.dataset.v; change(); return; }
-  if (col) { factOf(col).color = col.dataset.color; change(); return; }
+  if (col) { const ff = factOf(col); ff.color = col.dataset.color; ff.icBg = col.dataset.color; change(); return; }
   if (!act || act.dataset.act === 'upload') return;
   const f = factOf(act), k = +act.closest('.fe').dataset.k;
   if (act.dataset.act === 'clear') { D.screens[sel].facts[k] = TV.F({}); change(); }
