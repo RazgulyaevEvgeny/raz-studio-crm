@@ -60,7 +60,7 @@ const F = (o) => Object.assign({
   auto:'', autoFrom:0 }, o);
 const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
-TV.DEFAULT = { slideSec: 20, fx: true, show: { music:true, weather:true, clock:true }, screens: [
+TV.DEFAULT = { slideSec: 20, fx: true, lite: true, theme: 'light', show: { music:true, weather:true, clock:true }, screens: [
   S({ layout:'g12', facts:[
     F({style:'blue', label:'Спасибо, что выбираете нас', big:'1500', plus:true, title:'заказов студии выполнено', visual:'tag'}),
     F({style:'kaspi', icon:'bag', label:'Наш магазин на Kaspi', big:'2000', plus:true, caption:'заказов доставили по всему Казахстану'}),
@@ -98,6 +98,14 @@ TV.newFact = () => F({icon:'sparkle', color:'blue', label:'Новый факт',
 TV.newScreen = () => S({ facts:[TV.newFact(), TV.newFact(), TV.newFact(), TV.newFact()] });
 
 TV.AUTO = {};
+/* музыка: воркер ym-wave и настройки по умолчанию */
+TV.YM = { worker: 'https://ym-wave.design-onegin.workers.dev', key: 'XRcl7HslUDmN3WPNqWABNaI5' };
+TV.normalizeMusic = (m) => { m = m || {}; return {
+  st: /^[a-z]+:[A-Za-z0-9_.-]+$/.test(m.st || '') ? m.st : 'user:onyourwave', name: m.name || '',
+  mood: ['all','calm','fun','active','sad'].indexOf(m.mood) >= 0 ? m.mood : 'calm',
+  div: ['default','favorite','popular','discover'].indexOf(m.div) >= 0 ? m.div : 'default',
+  lang: ['any','russian','not-russian'].indexOf(m.lang) >= 0 ? m.lang : 'any',
+  vol: m.vol == null ? 60 : Math.max(0, Math.min(100, +m.vol || 0)), skip: +m.skip || 0 }; };
 TV.AUTO_SRC = { orders:'Выданные заказы студии', kaspi:'Продажи Kaspi', clients:'Клиенты студии' };
 TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.auto && TV.AUTO[f.auto] != null ? Math.max(0, +TV.AUTO[f.auto] - (+f.autoFrom || 0)) : 0; return b + v; };
 
@@ -105,7 +113,7 @@ TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.a
 TV.normalize = (d) => {
   if (!d || !Array.isArray(d.screens)) d = JSON.parse(JSON.stringify(TV.DEFAULT));
   const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
-  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, show,
+  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'dark' ? 'dark' : 'light', show,
     screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
       const src = s.facts || []; sc.facts = [0,1,2,3].map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
 };
@@ -156,11 +164,11 @@ TV.CSS = `
 .an-none .ic,.an-none .sw,.an-none .insta{animation:none!important}
 
 /* раскладки: только flex — работает и в старых браузерах приставок */
-.scene>.f,.scene>.col{flex:1 1 0;min-width:0}
+.scene>.f,.scene>.col{flex:1 1 0%;min-width:0}
 .scene>*+*{margin-left:28px}
-.scene>.big{flex:1.25 1 0}
+.scene>.big{flex:1.25 1 0%}
 .col{display:flex;flex-direction:column;min-height:0}
-.col>.f{flex:1 1 0;min-height:0}
+.col>.f{flex:1 1 0%;min-height:0}
 .col>*+*{margin-top:28px}
 /* карточка */
 .f{--fg:#1d1d1f;--fg2:#8e8e93;background:rgba(255,255,255,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95),0 14px 40px rgba(40,60,140,.08);border-radius:40px;padding:48px 50px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;color:var(--fg);min-height:0;min-width:0}
@@ -210,6 +218,28 @@ TV.CSS = `
 .li{display:flex;align-items:center;font-size:32px;font-weight:600}
 .li .ic{width:60px;height:60px;border-radius:17px;margin-right:20px}.li .ic svg{width:32px;height:32px}
 .insta{width:96px;height:96px;border-radius:26px;background:linear-gradient(45deg,#ffcc00,#ff2d55,#af52de);display:flex;align-items:center;justify-content:center;color:#fff}.insta svg{width:54px;height:54px}
+`;
+TV.CSS += `
+/* лёгкий режим для слабых приставок: без тяжёлых эффектов, карточки просто проявляются */
+.lite .bgfx i{animation:none!important}
+.lite .f{box-shadow:0 0 0 1.5px rgba(0,0,0,.05)!important}
+.lite .f.shine::after{display:none!important}
+.lite .deco,.lite .bgph.kb{animation:none!important}
+.lite .scene .f,.lite .scene.on .f,.lite .scene.out .f{transform:none!important;transition:opacity .5s linear!important;transition-delay:0s!important}
+.lite .scene.on .ic,.lite .scene.on .sw,.lite .scene.on .insta{animation:none!important}
+.lite .eq i{animation:none!important;height:18px!important}
+.lite .colon{animation:none!important}
+`;
+TV.CSS += `
+/* тёмная тема */
+.dark{background:#0b0b0d!important;color:#f5f5f7;--ink:#f5f5f7;--tile:#2c2c2e;--tile2:#3a3a3c;--mute:#98989d}
+.dark .bgfx i{opacity:.75}
+.dark .f.st-plain{background:rgba(44,44,46,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07),0 14px 40px rgba(0,0,0,.35);--fg:#f5f5f7;--fg2:#98989d}
+.dark .f.st-white{background:#1c1c1e;--fg:#f5f5f7;--fg2:#98989d}
+.dark .f.st-dark{background:#3a3a3c}
+.dark .f.light-bg{--fg:#1d1d1f;--fg2:rgba(0,0,0,.55)}
+.dark.lite .f.st-plain{box-shadow:0 0 0 1.5px rgba(255,255,255,.07)!important}
+.dark .sw{box-shadow:inset 0 0 0 2px rgba(255,255,255,.15)}
 `;
 TV.injectCSS = () => { if (document.getElementById('tv-core-css')) return; const s = document.createElement('style'); s.id = 'tv-core-css'; s.textContent = TV.CSS; document.head.appendChild(s); };
 
@@ -286,6 +316,7 @@ TV.sceneHTML = (sc) => {
 TV.countUp = (el) => {
   const to = +el.dataset.to, plus = !!el.dataset.plus, unit = el.dataset.unit;
   const tail = (plus ? '<small class="pl">+</small>' : '') + (unit ? `<small>${unit}</small>` : '');
+  if (TV.LITE) { el.innerHTML = to.toLocaleString('ru-RU') + tail; return; }
   const t0 = performance.now(), d = 2200;
   (function f(t){ const p = Math.min(1,(t-t0)/d), e = 1-Math.pow(1-p,4);
     el.innerHTML = Math.round(to*e).toLocaleString('ru-RU') + (p===1 ? tail : (unit ? `<small>${unit}</small>` : ''));

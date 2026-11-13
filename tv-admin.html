@@ -155,6 +155,8 @@
   input[type=range]{width:100%;accent-color:var(--blue)}
   .hint{font-size:12.5px;color:var(--mute);line-height:1.4}
   .settings{display:flex;flex-direction:column;gap:10px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}.chips button{height:30px;padding:0 12px;border-radius:99px;background:var(--tile);font-size:13px;font-weight:600}.chips button.on{background:var(--blue);color:#fff}
+  #musicbox select{width:100%;border:0;background:var(--tile);border-radius:10px;height:38px;padding:0 10px;font-weight:600}
   .settings h4{font:700 13px var(--T);letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
   .settings .row2{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600}
   .facts.n1{grid-template-columns:minmax(0,560px)}.facts.n2{grid-template-columns:repeat(2,1fr)}.facts.n4{grid-template-columns:repeat(2,1fr)}
@@ -185,11 +187,27 @@
     <div class="settings">
       <h4>Общие настройки</h4>
       <label class="row2">Экран по умолчанию, сек <input type="number" id="sec" min="5" max="300"></label>
+      <div class="row2">Тема экрана <div class="seg" id="theme"><button type="button" data-th="light">Светлая</button><button type="button" data-th="dark">Тёмная</button></div></div>
+      <label class="row2">Лёгкий режим для приставки <button class="sw2" id="lite" type="button"></button></label>
+      <span class="hint" style="margin-top:-6px">Без тяжёлых эффектов — для слабых ТВ-приставок</span>
       <label class="row2">Переливы на фоне <button class="sw2" id="fx" type="button"></button></label>
       <h4 style="margin-top:4px">Сверху на экране</h4>
       <label class="row2">Что играет <button class="sw2" data-show="music" type="button"></button></label>
       <label class="row2">Погода <button class="sw2" data-show="weather" type="button"></button></label>
       <label class="row2">Часы и дата <button class="sw2" data-show="clock" type="button"></button></label>
+    </div>
+    <div class="settings" id="musicbox">
+      <h4>Музыка на экране</h4>
+      <div class="chips" id="mquick"></div>
+      <label class="fld"><span>Что играет</span><select id="mst"><option value="user:onyourwave">Моя волна</option></select></label>
+      <div id="mwave">
+        <div class="fld"><span>Настроение волны</span><div class="seg full sg3 sm" id="mmood"></div></div>
+        <label class="fld" style="margin-top:8px"><span>Подбор</span><select id="mdiv"><option value="default">Как обычно</option><option value="favorite">Любимое</option><option value="popular">Популярное</option><option value="discover">Незнакомое</option></select></label>
+        <label class="fld" style="margin-top:8px"><span>Язык песен</span><select id="mlang"><option value="any">Любой</option><option value="russian">Русский</option><option value="not-russian">Без русского</option></select></label>
+      </div>
+      <label class="fld"><span>Громкость: <b id="mvolv"></b>%</span><input type="range" id="mvol" min="0" max="100" step="5"></label>
+      <button class="btn" id="mskip" type="button" style="justify-content:center"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 4l10 8-10 8zM17 4h2v16h-2z"/></svg>Следующий трек</button>
+      <span class="hint">Музыка меняется на телевизоре сразу, кнопку «Сохранить» нажимать не нужно.</span>
     </div>
   </aside>
   <main>
@@ -236,7 +254,7 @@ $('stage').innerHTML = '<div class="bgfx"><i></i><i></i><i></i><i></i></div><div
 function fitPv(){ $('stage').style.transform = 'scale(' + ($('pv').clientWidth / 1920) + ')'; }
 new ResizeObserver(fitPv).observe($('pv'));
 function preview(animate){
-  $('stage').classList.toggle('nofx', !D.fx);
+  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.theme === 'dark' ? 'rgba(44,44,46,.66)' : '');
   $('stage').querySelectorAll('[data-p]').forEach(i => i.style.display = D.show[i.dataset.p] ? '' : 'none');
   const s = D.screens[sel]; if (!s) { $('pvs').innerHTML = ''; return; }
   $('pvs').innerHTML = TV.sceneHTML(s);
@@ -302,10 +320,12 @@ function renderBar(){
 
 /* ---------- общие настройки ---------- */
 $('sec').oninput = () => { D.slideSec = Math.max(5, Math.min(300, +$('sec').value || 20)); markDirty(); };
+$('theme').onclick = e => { const b = e.target.closest('[data-th]'); if (!b) return; D.theme = b.dataset.th; markDirty(); renderSettings(); preview(false); };
+$('lite').onclick = () => { D.lite = !D.lite; markDirty(); renderSettings(); preview(true); };
 $('fx').onclick = () => { D.fx = !D.fx; markDirty(); renderSettings(); preview(false); };
 document.querySelectorAll('[data-show]').forEach(b => b.onclick = () => { const k = b.dataset.show; D.show[k] = !D.show[k]; markDirty(); renderSettings(); preview(false); });
 function renderSettings(){
-  $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx);
+  $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx); $('lite').classList.toggle('on', D.lite); [...$('theme').children].forEach(b => b.classList.toggle('on', b.dataset.th === D.theme));
   document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', !!D.show[b.dataset.show]));
 }
 
@@ -434,6 +454,51 @@ function iconPop(btn, f){
 }
 function closePop(){ const p = $('pop'); if (p) p.remove(); }
 
+
+/* ---------- музыка ---------- */
+const QUICK = [['user:onyourwave','Моя волна'],['genre:lounge','Лаундж'],['genre:smoothjazz','Смус-джаз'],['genre:conjazz','Современный джаз'],['genre:ambientgenre','Эмбиент'],['genre:newage','Нью-эйдж']];
+const MOODS = [['all','Любое'],['calm','Спокойное'],['fun','Весёлое'],['active','Бодрое'],['sad','Грустное']];
+const STYPE = { mood:'Настроения', activity:'Занятия', genre:'Жанры', epoch:'Эпохи', local:'Местное' };
+let MUS = TV.normalizeMusic(null), stations = [];
+$('mmood').innerHTML = MOODS.map(([k,t]) => `<button type="button" data-m="${k}">${t}</button>`).join('');
+function renderMusic(){
+  $('mquick').innerHTML = QUICK.map(([k,t]) => `<button type="button" data-q="${k}" class="${MUS.st===k?'on':''}">${t}</button>`).join('');
+  const sel = $('mst');
+  if (!sel.querySelector(`option[value="${MUS.st}"]`)) sel.insertAdjacentHTML('beforeend', `<option value="${esc(MUS.st)}">${esc(MUS.name || MUS.st)}</option>`);
+  sel.value = MUS.st;
+  $('mwave').style.display = MUS.st === 'user:onyourwave' ? '' : 'none';
+  [...$('mmood').children].forEach(b => b.classList.toggle('on', b.dataset.m === MUS.mood));
+  $('mdiv').value = MUS.div; $('mlang').value = MUS.lang; $('mvol').value = MUS.vol; $('mvolv').textContent = MUS.vol;
+}
+let musT = 0;
+function saveMusic(now){
+  renderMusic();
+  clearTimeout(musT);
+  musT = setTimeout(async () => {
+    if (demo) { toast('Демо: на сайте CRM музыка сразу сменится на телевизоре'); return; }
+    try { await db.ref('pub/' + TV.KEY + '/music').set(MUS); toast('Музыка на телевизоре обновлена'); } catch (e) { toast('Не сохранилось: ' + (e.code || e.message)); }
+  }, now ? 0 : 500);
+}
+const stName = id => { const s = stations.find(x => x.id === id) || QUICK.map(([i,n]) => ({id:i,name:n})).find(x => x.id === id); return s ? s.name : ''; };
+function setStation(id){ MUS.st = id; MUS.name = stName(id); saveMusic(true); }
+$('mquick').onclick = e => { const b = e.target.closest('[data-q]'); if (b) setStation(b.dataset.q); };
+$('mst').onchange = () => setStation($('mst').value);
+$('mmood').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; MUS.mood = b.dataset.m; saveMusic(true); };
+$('mdiv').onchange = () => { MUS.div = $('mdiv').value; saveMusic(true); };
+$('mlang').onchange = () => { MUS.lang = $('mlang').value; saveMusic(true); };
+$('mvol').oninput = () => { MUS.vol = +$('mvol').value; saveMusic(false); };
+$('mskip').onclick = () => { MUS.skip = Date.now(); saveMusic(true); };
+async function loadStations(){
+  try {
+    const j = await fetch(TV.YM.worker + '/stations?k=' + TV.YM.key).then(r => r.json());
+    stations = (j.stations || []).sort((a,b) => a.name.localeCompare(b.name, 'ru'));
+    const groups = {}; stations.forEach(s => { const g = STYPE[s.type] || 'Другое'; (groups[g] = groups[g] || []).push(s); });
+    $('mst').innerHTML = '<option value="user:onyourwave">Моя волна (под ваш вкус)</option>' + ['Настроения','Занятия','Жанры','Эпохи','Местное','Другое'].filter(g => groups[g]).map(g => `<optgroup label="${g}">${groups[g].map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</optgroup>`).join('');
+    renderMusic();
+  } catch (e) { /* без связи — остаются быстрые варианты */ }
+}
+renderMusic(); loadStations();
+
 /* ---------- общее ---------- */
 function renderAll(animate){
   sel = Math.max(0, Math.min(sel, D.screens.length - 1));
@@ -450,7 +515,7 @@ $('save').onclick = async () => {
   if (demo) { markClean('Демо: не сохранено в базу'); toast('В демо-режиме база недоступна'); return; }
   $('save').disabled = true;
   try {
-    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, show: D.show, screens: D.screens, upd: Date.now() })));
+    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, show: D.show, screens: D.screens, upd: Date.now() })));
     const used = collectImgs();
     knownImgs.forEach(id => { if (!used.has(id)) { db.ref('pub/' + TV.IMG + id).remove().catch(() => {}); knownImgs.delete(id); } });
     markClean(); toast('Сохранено — экран обновится через пару секунд');
@@ -470,6 +535,7 @@ renderAll(true);
     try {
       const v = (await db.ref('pub/' + TV.KEY).get()).val();
       TV.AUTO = (v && v.auto) || {};
+      MUS = TV.normalizeMusic(v && v.music); renderMusic();
       if (v && v.screens) { D = TV.normalize(v); sel = 0; }
       collectImgs().forEach(id => knownImgs.add(id));
       renderAll(true);
