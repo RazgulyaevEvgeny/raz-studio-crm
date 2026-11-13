@@ -10,6 +10,9 @@ TV.IMG = 'tvimg_IGPD6hxdYWcGBs0gb8OsEg_';
 TV.DB = () => (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.databaseURL || '').replace(/\/$/, '');
 
 TV.COLORS = { blue:'#007aff', indigo:'#5856d6', purple:'#af52de', pink:'#ff2d55', red:'#ff3b30', orange:'#ff9500', yellow:'#ffcc00', green:'#34c759', teal:'#30b0c7', gray:'#8e8e93', black:'#1d1d1f' };
+TV.COLORS_D = { blue:'#0a84ff', indigo:'#5e5ce6', purple:'#bf5af2', pink:'#ff375f', red:'#ff453a', orange:'#ff9f0a', yellow:'#ffd60a', green:'#30d158', teal:'#40c8e0', gray:'#8e8e93', black:'#3a3a3c' };
+TV.THEME = 'light';
+TV.col = k => (TV.THEME === 'dark' ? TV.COLORS_D : TV.COLORS)[k];
 TV.COLOR_NAMES = { blue:'Синий', indigo:'Индиго', purple:'Фиолетовый', pink:'Розовый', red:'Красный', orange:'Оранжевый', yellow:'Жёлтый', green:'Зелёный', teal:'Бирюзовый', gray:'Серый', black:'Чёрный' };
 
 TV.LAYOUTS = { g1:{n:1,t:'Одна на весь экран'}, g2:{n:2,t:'Две равные'}, g3:{n:3,t:'Три равные'}, g12:{n:3,t:'Большая слева + две'}, g21:{n:3,t:'Две + большая справа'}, g4:{n:4,t:'Четыре (2×2)'} };
@@ -56,11 +59,11 @@ const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
-  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'',
+  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', icBg:'', icFg:'',
   auto:'', autoFrom:0 }, o);
 const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
-TV.DEFAULT = { slideSec: 20, fx: true, lite: true, theme: 'light', show: { music:true, weather:true, clock:true }, screens: [
+TV.DEFAULT = { slideSec: 20, fx: true, lite: true, theme: 'dark', show: { music:true, weather:true, clock:true }, screens: [
   S({ layout:'g12', facts:[
     F({style:'blue', label:'Спасибо, что выбираете нас', big:'1500', plus:true, title:'заказов студии выполнено', visual:'tag'}),
     F({style:'kaspi', icon:'bag', label:'Наш магазин на Kaspi', big:'2000', plus:true, caption:'заказов доставили по всему Казахстану'}),
@@ -113,7 +116,7 @@ TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.a
 TV.normalize = (d) => {
   if (!d || !Array.isArray(d.screens)) d = JSON.parse(JSON.stringify(TV.DEFAULT));
   const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
-  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'dark' ? 'dark' : 'light', pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
+  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'light' ? 'light' : 'dark', pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
     screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
       const src = s.facts || []; sc.facts = [0,1,2,3].map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
 };
@@ -127,7 +130,7 @@ TV.loadImg = (id) => {
   return TV.IMGCACHE[id] = fetch(`${db}/pub/${TV.IMG}${id}/d.json`).then(r => r.json()).then(d => (TV.IMGCACHE[id] = d || '')).catch(() => { delete TV.IMGCACHE[id]; return ''; });
 };
 TV.hydrate = (root) => root.querySelectorAll('[data-img]').forEach(el => {
-  const id = el.dataset.img; Promise.resolve(TV.IMGCACHE[id] || TV.loadImg(id)).then(u => { if (u && typeof u === 'string') el.style.backgroundImage = `url("${u}")`; });
+  const id = el.dataset.img; Promise.resolve(TV.IMGCACHE[id] || TV.loadImg(id)).then(u => { if (u && typeof u === 'string') { if (el.tagName === 'IMG') el.src = u; else el.style.backgroundImage = `url("${u}")`; } });
 });
 
 /* ---------- стили ---------- */
@@ -182,7 +185,7 @@ TV.CSS = `
 .f.st-dark{background:#1d1d1f;--fg:#fff;--fg2:rgba(255,255,255,.7)}
 .f.st-custom{--fg:#fff;--fg2:rgba(255,255,255,.86)}
 .f.light-bg{--fg:#1d1d1f;--fg2:rgba(0,0,0,.55)}
-.f.on-color .ic{background:rgba(255,255,255,.22)!important;color:#fff}
+.f.on-color .ic:not(.ic-set){background:rgba(255,255,255,.22)!important;color:#fff}
 .f.shine::after{content:"";position:absolute;z-index:2;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);animation:tvshine 7s ease-in-out 2s infinite;pointer-events:none}
 @keyframes tvshine{0%,70%{left:-60%}100%{left:130%}}
 .f.va-center{justify-content:center}.f.va-top{justify-content:flex-start}.f.va-bottom{justify-content:flex-end}
@@ -229,17 +232,69 @@ TV.CSS += `
 .lite .scene.on .ic,.lite .scene.on .sw,.lite .scene.on .insta{animation:none!important}
 .lite .eq i{animation:none!important;height:18px!important}
 .lite .colon{animation:none!important}
+.lite .f .pic .pb{filter:brightness(.5)}
 `;
 TV.CSS += `
-/* тёмная тема */
-.dark{background:#0b0b0d!important;color:#f5f5f7;--ink:#f5f5f7;--tile:#2c2c2e;--tile2:#3a3a3c;--mute:#98989d}
-.dark .bgfx i{opacity:.75}
-.dark .f.st-plain{background:rgba(44,44,46,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07),0 14px 40px rgba(0,0,0,.35);--fg:#f5f5f7;--fg2:#98989d}
-.dark .f.st-white{background:#1c1c1e;--fg:#f5f5f7;--fg2:#98989d}
-.dark .f.st-dark{background:#3a3a3c}
+/* ===== тёмная тема в духе iOS =====
+   фон — чистый чёрный с едва заметным цветным свечением; карточки — «материал» #1c1c1e с тонкой светлой гранью;
+   текст — белый и два уровня серого как в iOS (60% и 30%); цветные карточки — мягкие градиенты; фото — с плавной вуалью */
+.dark{background:#000!important;color:#fff;--ink:#fff;--tile:#1c1c1e;--tile2:#2c2c2e;--mute:rgba(235,235,245,.6);
+  --l2:rgba(235,235,245,.6);--l3:rgba(235,235,245,.3);--card:#1c1c1e;--card2:#161618;--edge:rgba(255,255,255,.07)}
+.dark .bgfx i{opacity:1}
+.dark .bgfx i:nth-child(1){background:radial-gradient(circle,rgba(10,132,255,.16),rgba(10,132,255,0) 62%)}
+.dark .bgfx i:nth-child(2){background:radial-gradient(circle,rgba(94,92,230,.14),rgba(94,92,230,0) 62%)}
+.dark .bgfx i:nth-child(3){background:radial-gradient(circle,rgba(191,90,242,.08),rgba(191,90,242,0) 62%)}
+.dark .bgfx i:nth-child(4){background:radial-gradient(circle,rgba(64,200,224,.08),rgba(64,200,224,0) 62%)}
+
+.dark .f{border-radius:44px;box-shadow:inset 0 0 0 1.5px var(--edge),inset 0 1.5px 0 rgba(255,255,255,.06);--fg:#fff;--fg2:var(--l2)}
+.dark .f.st-plain{background:#1c1c1e;background:linear-gradient(180deg,#202022 0%,#18181a 100%)}
+.dark .f.st-white{background:#2c2c2e;background:linear-gradient(180deg,#323234 0%,#28282a 100%)}
+.dark .f.st-dark{background:#000;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.12)}
+.dark .f.st-blue{background:#0a84ff;background:linear-gradient(155deg,#3d9bff 0%,#0a7aff 38%,#0058d6 100%);--fg2:rgba(255,255,255,.78)}
+.dark .f.st-kaspi{background:#f14635;background:linear-gradient(155deg,#ff6a5b 0%,#f2402f 40%,#c8241a 100%);--fg2:rgba(255,255,255,.8)}
+.dark .f.st-custom{background-image:linear-gradient(155deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,0) 45%,rgba(0,0,0,.22) 100%)!important}
+.dark .f.st-blue,.dark .f.st-kaspi,.dark .f.st-custom{box-shadow:inset 0 1.5px 0 rgba(255,255,255,.22),inset 0 0 0 1.5px rgba(255,255,255,.08)}
 .dark .f.light-bg{--fg:#1d1d1f;--fg2:rgba(0,0,0,.55)}
-.dark.lite .f.st-plain{box-shadow:0 0 0 1.5px rgba(255,255,255,.07)!important}
-.dark .sw{box-shadow:inset 0 0 0 2px rgba(255,255,255,.15)}
+.dark .f.shine::after{background:linear-gradient(100deg,transparent,rgba(255,255,255,.12),transparent)}
+
+/* типографика */
+.dark .top{color:var(--fg2);font-weight:600;letter-spacing:-.005em}
+.dark .num{font-weight:700;letter-spacing:-.05em;color:var(--fg)}
+.dark .num small{color:var(--fg2);opacity:1;font-weight:600}
+.dark .num .pl{color:var(--fg);opacity:.55}
+.dark .h{font-weight:700;letter-spacing:-.035em}
+.dark .t{font-weight:600;letter-spacing:-.02em;color:var(--fg)}
+.dark .cap{color:var(--fg2);font-weight:500}
+.dark .f.st-plain .cap,.dark .f.st-white .cap,.dark .f.st-dark .cap{color:var(--l2)}
+
+/* значки — как иконки настроек iOS: сплошной цвет с лёгким объёмом */
+.dark .ic{border-radius:24px;background-image:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,0) 55%,rgba(0,0,0,.12))}
+.dark .f.on-color .ic:not(.ic-set){background-color:rgba(255,255,255,.2)!important;background-image:none}
+.dark .li .ic{border-radius:18px}
+.dark .li{color:var(--fg)}
+.dark .sw{box-shadow:inset 0 0 0 2px rgba(255,255,255,.14)}
+.dark .flag{box-shadow:0 0 0 1.5px rgba(255,255,255,.1)}
+
+/* фото на всю карточку: снизу и сверху плавная вуаль, чтобы текст читался, а середина фото оставалась живой */
+.dark .f .bgph{background-color:#2c2c2e}
+.dark .f .shade{border-radius:inherit;background:linear-gradient(to top,rgba(0,0,0,calc(var(--dim) * 1.75)) 0%,rgba(0,0,0,calc(var(--dim) * 1.05)) 28%,rgba(0,0,0,0) 62%),linear-gradient(to bottom,rgba(0,0,0,calc(var(--dim) * .9)) 0%,rgba(0,0,0,0) 30%);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.08)}
+.dark .f.has-bg .num,.dark .f.has-bg .h,.dark .f.has-bg .t{text-shadow:0 2px 24px rgba(0,0,0,.35)}
+.dark .f.has-bg{--fg2:rgba(255,255,255,.82)}
+/* фото сверху: на всю ширину карточки, без отступов, как карточки App Store */
+.dark .f .ft .pic{order:-1;margin:-48px -50px 0;border-radius:0;background-color:#2c2c2e}
+.dark .f .ft .top+.pic,.dark .f .ft .pic{margin-top:-48px}
+.dark .f .ft .top:first-child:not(:last-child){margin-top:30px}
+.dark .f.st-plain .ft .pic::after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(to bottom,rgba(24,24,26,0),rgba(28,28,30,.9))}
+`;
+TV.CSS += `
+/* фото «целиком» (логотип, изделие на белом): размытая копия заполняет фон, само фото — поверх без обрезки */
+.f .pic{position:relative;overflow:hidden}
+.f .pic .pb{position:absolute;top:0;right:0;bottom:0;left:0;background:center/cover no-repeat}
+.f .pic .pw{position:absolute;top:8%;right:8%;bottom:8%;left:8%;display:flex;align-items:center;justify-content:center}
+.f .pic .pb{transform:scale(1.25);filter:blur(40px) saturate(1.2) brightness(.55)}
+.f .pic .ps{display:block;max-width:100%;max-height:100%;border-radius:22px;box-shadow:0 24px 60px rgba(0,0,0,.45),0 0 0 1.5px rgba(255,255,255,.08)}
+.dark .f .pic.contain{background-color:#2c2c2e}
+.dark.lite .f{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07)!important}
 `;
 TV.injectCSS = () => { if (document.getElementById('tv-core-css')) return; const s = document.createElement('style'); s.id = 'tv-core-css'; s.textContent = TV.CSS; document.head.appendChild(s); };
 
@@ -254,7 +309,7 @@ const LIST_ICONS = { 'dtf':'printer','вышив':'needle','3d':'cube','накл
 const listIcon = t => { const l = t.toLowerCase(); for (const k in LIST_ICONS) if (l.includes(k)) return LIST_ICONS[k]; return 'check'; };
 
 TV.factHTML = (f, hero, idx) => {
-  const col = TV.COLORS[f.color] || TV.COLORS.blue;
+  const col = TV.col(f.color) || TV.col('blue');
   const bgPhoto = f.photo && f.photoMode === 'bg';
   const cls = ['f', 'st-' + (TV.STYLES[f.style] ? f.style : 'plain')];
   let style = idx != null ? `--i:${idx};` : '';
@@ -277,10 +332,11 @@ TV.factHTML = (f, hero, idx) => {
   if (vis === 'flag-it') visual = '<div class="flag"><i style="background:#009246"></i><i style="background:#fff"></i><i style="background:#ce2b37"></i></div>';
   else if (vis === 'swatch') visual = `<div class="sw" style="background:${esc(f.swatch||'#fff')}"></div>`;
   else if (vis === 'insta') visual = `<div class="insta"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff"/></svg></div>`;
-  const icon = (f.icon && !vis) ? `<span class="ic" style="background:${col}">${TV.icon(f.icon)}</span>` : '';
+  const icB = f.icBg ? (TV.col(f.icBg) || f.icBg) : col;
+  const icon = (f.icon && !vis) ? `<span class="ic${f.icBg || f.icFg ? ' ic-set' : ''}" style="background:${esc(icB)};${f.icFg ? `color:${esc(f.icFg)};` : ''}">${TV.icon(f.icon)}</span>` : '';
   const cl = f.cLabel ? `color:${esc(f.cLabel)};opacity:1;` : '';
   const labelRow = (icon || f.label) ? `<div class="top" style="${icon ? '' : 'min-height:0;'}${cl}">${icon}${esc(f.label)}</div>` : '';
-  const pic = photoTop ? `<div class="pic ${f.photoFit === 'contain' ? 'contain' : ''}" data-img="${esc(f.photo)}"></div>` : '';
+  const pic = !photoTop ? '' : f.photoFit === 'contain' ? `<div class="pic contain"><i class="pb" data-img="${esc(f.photo)}"></i><span class="pw"><img class="ps" alt="" data-img="${esc(f.photo)}"></span></div>` : `<div class="pic" data-img="${esc(f.photo)}"></div>`;
   const top = photoTop ? labelRow + pic : vis ? visual + labelRow : labelRow;
 
   let body = '';
@@ -295,7 +351,7 @@ TV.factHTML = (f, hero, idx) => {
   }
   if (f.title) body += `<div class="t"${f.cTitle ? ` style="color:${esc(f.cTitle)}"` : ''}>${esc(f.title)}</div>`;
   if (f.caption) body += `<div class="cap"${f.cCap ? ` style="color:${esc(f.cCap)};opacity:1"` : ''}>${esc(f.caption)}</div>`;
-  if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1};${f.cList ? 'color:' + esc(f.cList) : ''}"><span class="ic" style="background:${TV.COLORS[LIST_COLORS[i%LIST_COLORS.length]]}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
+  if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1};${f.cList ? 'color:' + esc(f.cList) : ''}"><span class="ic" style="background:${TV.col(LIST_COLORS[i%LIST_COLORS.length])}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
 
   const deco = (colored && !bgPhoto && f.visual === 'tag') ? TAG : '';
   const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div><div class="shade"></div>` : '';
