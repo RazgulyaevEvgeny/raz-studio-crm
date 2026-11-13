@@ -75,8 +75,8 @@
 /* диагностика для старых приставок: ошибки видно внизу экрана, сводка уходит в журнал воркера */
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
-<script src="firebase-config.js?v=202611132200"></script>
-<script src="tv-core.js?v=202611132200"></script>
+<script src="firebase-config.js?v=202611132203"></script>
+<script src="tv-core.js?v=202611132203"></script>
 </head>
 <body>
 <div id="stage">
@@ -193,6 +193,7 @@ let LIST = [];
 function applySettings(){
   const st = document.getElementById('stage');
   st.classList.toggle('nofx', !DATA.fx);
+  st.classList.toggle('lite', DATA.lite); TV.LITE = DATA.lite;
   const pills = document.querySelectorAll('header .pill');
   if (pills[0]) pills[0].style.display = DATA.show.music ? '' : 'none';
   if (pills[1]) pills[1].style.display = DATA.show.weather ? '' : 'none';
@@ -220,7 +221,7 @@ build();
   const cfg = window.FIREBASE_CONFIG; if (!cfg || !cfg.databaseURL || !window.EventSource) return;
   const url = cfg.databaseURL.replace(/\/$/, '') + '/pub/' + TV.KEY + '.json';
   let last = '';
-  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show }); if (j === last) return; last = j; DATA = TV.normalize(d); build(); };
+  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite }); if (j === last) return; last = j; DATA = TV.normalize(d); build(); };
   try {
     const es = new EventSource(url);
     const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };

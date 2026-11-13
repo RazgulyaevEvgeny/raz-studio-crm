@@ -185,6 +185,8 @@
     <div class="settings">
       <h4>Общие настройки</h4>
       <label class="row2">Экран по умолчанию, сек <input type="number" id="sec" min="5" max="300"></label>
+      <label class="row2">Лёгкий режим для приставки <button class="sw2" id="lite" type="button"></button></label>
+      <span class="hint" style="margin-top:-6px">Без тяжёлых эффектов — для слабых ТВ-приставок</span>
       <label class="row2">Переливы на фоне <button class="sw2" id="fx" type="button"></button></label>
       <h4 style="margin-top:4px">Сверху на экране</h4>
       <label class="row2">Что играет <button class="sw2" data-show="music" type="button"></button></label>
@@ -236,7 +238,7 @@ $('stage').innerHTML = '<div class="bgfx"><i></i><i></i><i></i><i></i></div><div
 function fitPv(){ $('stage').style.transform = 'scale(' + ($('pv').clientWidth / 1920) + ')'; }
 new ResizeObserver(fitPv).observe($('pv'));
 function preview(animate){
-  $('stage').classList.toggle('nofx', !D.fx);
+  $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite;
   $('stage').querySelectorAll('[data-p]').forEach(i => i.style.display = D.show[i.dataset.p] ? '' : 'none');
   const s = D.screens[sel]; if (!s) { $('pvs').innerHTML = ''; return; }
   $('pvs').innerHTML = TV.sceneHTML(s);
@@ -302,10 +304,11 @@ function renderBar(){
 
 /* ---------- общие настройки ---------- */
 $('sec').oninput = () => { D.slideSec = Math.max(5, Math.min(300, +$('sec').value || 20)); markDirty(); };
+$('lite').onclick = () => { D.lite = !D.lite; markDirty(); renderSettings(); preview(true); };
 $('fx').onclick = () => { D.fx = !D.fx; markDirty(); renderSettings(); preview(false); };
 document.querySelectorAll('[data-show]').forEach(b => b.onclick = () => { const k = b.dataset.show; D.show[k] = !D.show[k]; markDirty(); renderSettings(); preview(false); });
 function renderSettings(){
-  $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx);
+  $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx); $('lite').classList.toggle('on', D.lite);
   document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', !!D.show[b.dataset.show]));
 }
 
@@ -450,7 +453,7 @@ $('save').onclick = async () => {
   if (demo) { markClean('Демо: не сохранено в базу'); toast('В демо-режиме база недоступна'); return; }
   $('save').disabled = true;
   try {
-    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, show: D.show, screens: D.screens, upd: Date.now() })));
+    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, show: D.show, screens: D.screens, upd: Date.now() })));
     const used = collectImgs();
     knownImgs.forEach(id => { if (!used.has(id)) { db.ref('pub/' + TV.IMG + id).remove().catch(() => {}); knownImgs.delete(id); } });
     markClean(); toast('Сохранено — экран обновится через пару секунд');

@@ -60,7 +60,7 @@ const F = (o) => Object.assign({
   auto:'', autoFrom:0 }, o);
 const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
-TV.DEFAULT = { slideSec: 20, fx: true, show: { music:true, weather:true, clock:true }, screens: [
+TV.DEFAULT = { slideSec: 20, fx: true, lite: true, show: { music:true, weather:true, clock:true }, screens: [
   S({ layout:'g12', facts:[
     F({style:'blue', label:'Спасибо, что выбираете нас', big:'1500', plus:true, title:'заказов студии выполнено', visual:'tag'}),
     F({style:'kaspi', icon:'bag', label:'Наш магазин на Kaspi', big:'2000', plus:true, caption:'заказов доставили по всему Казахстану'}),
@@ -105,7 +105,7 @@ TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.a
 TV.normalize = (d) => {
   if (!d || !Array.isArray(d.screens)) d = JSON.parse(JSON.stringify(TV.DEFAULT));
   const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
-  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, show,
+  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, show,
     screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
       const src = s.facts || []; sc.facts = [0,1,2,3].map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
 };
@@ -211,6 +211,17 @@ TV.CSS = `
 .li .ic{width:60px;height:60px;border-radius:17px;margin-right:20px}.li .ic svg{width:32px;height:32px}
 .insta{width:96px;height:96px;border-radius:26px;background:linear-gradient(45deg,#ffcc00,#ff2d55,#af52de);display:flex;align-items:center;justify-content:center;color:#fff}.insta svg{width:54px;height:54px}
 `;
+TV.CSS += `
+/* лёгкий режим для слабых приставок: без тяжёлых эффектов, карточки просто проявляются */
+.lite .bgfx i{animation:none!important}
+.lite .f{box-shadow:0 0 0 1.5px rgba(0,0,0,.05)!important}
+.lite .f.shine::after{display:none!important}
+.lite .deco,.lite .bgph.kb{animation:none!important}
+.lite .scene .f,.lite .scene.on .f,.lite .scene.out .f{transform:none!important;transition:opacity .5s linear!important;transition-delay:0s!important}
+.lite .scene.on .ic,.lite .scene.on .sw,.lite .scene.on .insta{animation:none!important}
+.lite .eq i{animation:none!important;height:18px!important}
+.lite .colon{animation:none!important}
+`;
 TV.injectCSS = () => { if (document.getElementById('tv-core-css')) return; const s = document.createElement('style'); s.id = 'tv-core-css'; s.textContent = TV.CSS; document.head.appendChild(s); };
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -286,6 +297,7 @@ TV.sceneHTML = (sc) => {
 TV.countUp = (el) => {
   const to = +el.dataset.to, plus = !!el.dataset.plus, unit = el.dataset.unit;
   const tail = (plus ? '<small class="pl">+</small>' : '') + (unit ? `<small>${unit}</small>` : '');
+  if (TV.LITE) { el.innerHTML = to.toLocaleString('ru-RU') + tail; return; }
   const t0 = performance.now(), d = 2200;
   (function f(t){ const p = Math.min(1,(t-t0)/d), e = 1-Math.pow(1-p,4);
     el.innerHTML = Math.round(to*e).toLocaleString('ru-RU') + (p===1 ? tail : (unit ? `<small>${unit}</small>` : ''));
