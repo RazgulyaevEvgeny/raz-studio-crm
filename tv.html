@@ -69,9 +69,14 @@
   #ov h3{font-family:var(--T);font-size:17px;margin:16px 0 6px}
   #ov li{margin:6px 0 6px 18px}
   #ov code{background:#f2f2f7;padding:1px 6px;border-radius:6px}
+  .legacy .scene .f{opacity:1!important;transform:none!important}
 </style>
-<script src="firebase-config.js"></script>
-<script src="tv-core.js"></script>
+<script>
+/* диагностика для старых приставок: ошибки видно внизу экрана, сводка уходит в журнал воркера */
+window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
+</script>
+<script src="firebase-config.js?v=202611132200"></script>
+<script src="tv-core.js?v=202611132200"></script>
 </head>
 <body>
 <div id="stage">
@@ -91,6 +96,7 @@
     <div class="pager" id="pager"></div>
     <div class="foot">Студия брендирования Разгуляев</div>
   </footer>
+  <div id="diag" style="display:none;position:absolute;left:72px;right:72px;bottom:6px;z-index:9;font-size:16px;color:#ff3b30"></div>
 </div>
 
 <button id="how" style="display:none">Как это работает</button>
@@ -223,6 +229,15 @@ build();
   } catch (_) { setInterval(() => fetch(url).then(r => r.json()).then(apply).catch(() => {}), 60000); }
 })();
 
+(function(){
+  var legacy = !(window.CSS && CSS.supports && CSS.supports('--a','0'));
+  if (legacy) document.documentElement.className += ' legacy';
+  setTimeout(function(){ try {
+    var sc = document.querySelector('.scene.on .f'), w = sc ? Math.round(sc.getBoundingClientRect().width) : -1;
+    var q = 'ua=' + encodeURIComponent(navigator.userAgent) + '&vw=' + innerWidth + '&vh=' + innerHeight + '&dpr=' + (window.devicePixelRatio||1) + '&card=' + w + '&legacy=' + (legacy?1:0) + '&err=' + encodeURIComponent(window.__errs.join('|').slice(0,400));
+    if (YM.worker) fetch(YM.worker + '/diag?k=' + YM.key + '&' + q).catch(function(){});
+  } catch (e) {} }, 8000);
+})();
 document.getElementById('how').onclick=()=>document.getElementById('ov').classList.add('on');
 document.getElementById('ov').onclick=e=>{if(e.target.id==='ov')e.currentTarget.classList.remove('on')};
 </script>

@@ -156,11 +156,11 @@ TV.CSS = `
 .an-none .ic,.an-none .sw,.an-none .insta{animation:none!important}
 
 /* раскладки: только flex — работает и в старых браузерах приставок */
-.scene>.f,.scene>.col{flex:1 1 0;min-width:0}
+.scene>.f,.scene>.col{flex:1 1 0%;min-width:0}
 .scene>*+*{margin-left:28px}
-.scene>.big{flex:1.25 1 0}
+.scene>.big{flex:1.25 1 0%}
 .col{display:flex;flex-direction:column;min-height:0}
-.col>.f{flex:1 1 0;min-height:0}
+.col>.f{flex:1 1 0%;min-height:0}
 .col>*+*{margin-top:28px}
 /* карточка */
 .f{--fg:#1d1d1f;--fg2:#8e8e93;background:rgba(255,255,255,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95),0 14px 40px rgba(40,60,140,.08);border-radius:40px;padding:48px 50px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;color:var(--fg);min-height:0;min-width:0}
