@@ -116,7 +116,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611150100"></script>
+<script src="tv-core.js?v=202611150200"></script>
 </head>
 <body>
 <div id="stage">
@@ -166,7 +166,7 @@ window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).sli
 const CITY = {lat:52.2873, lon:76.9674}; // Павлодар
 const TZ = 'Asia/Almaty';
 /* ====================== */
-function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080),st=document.getElementById('stage');if('zoom' in st.style){st.style.zoom=s;st.style.transform='none'}else st.style.transform='scale('+s+')'}
+function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080),st=document.getElementById('stage');if(window.RazApp){/* в приложении масштаб через transform: координаты карточек тогда считаются одинаково на любом движке */st.style.zoom=1;st.style.position='absolute';st.style.left='0';st.style.top='0';st.style.transformOrigin='0 0';st.style.transform='scale('+s+')';return}if('zoom' in st.style){st.style.zoom=s;st.style.transform='none'}else st.style.transform='scale('+s+')'}
 addEventListener('resize',fit);fit();
 
 const DOW=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'],MON=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
