@@ -59,7 +59,7 @@ const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
-  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', video:'', oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
+  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', video:'', stars:0, oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
   auto:'', autoFrom:0 }, o);
 const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
@@ -220,6 +220,11 @@ TV.CSS = `
 .f{--fg:#1d1d1f;--fg2:#8e8e93;background:rgba(255,255,255,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95),0 14px 40px rgba(40,60,140,.08);border-radius:40px;padding:48px 50px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;color:var(--fg);min-height:0;min-width:0}
 .f>*{position:relative;z-index:1}
 .f>.bgph,.f>.shade,.f>.deco{position:absolute}
+.f .stars{font-size:44px;letter-spacing:8px;line-height:1;color:#ffcc00;margin-bottom:22px}
+.f .stars i{font-style:normal;opacity:.22}
+.f.rev .t{font-size:32px;font-weight:500;line-height:1.32;letter-spacing:-.01em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:9;overflow:hidden}
+.f.rev.big .t{font-size:40px}
+.f.rev .cap{font-weight:600;margin-top:20px}
 .f video.bgv{position:absolute!important;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0!important;border-radius:inherit}
 .f .fb{margin-top:24px}
 .ft .top+.pic,.ft .flag+.top,.ft .sw+.top,.ft .insta+.top{margin-top:20px}
@@ -412,6 +417,9 @@ TV.factHTML = (f, hero, idx) => {
   if (f.caption) body += `<div class="cap" style="${tone(f.cCap, op('oCap'))}">${esc(f.caption)}</div>`;
   if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1};${f.cList ? 'color:' + esc(f.cList) + ';' : ''}${op('oList') != null ? 'opacity:' + op('oList') : ''}"><span class="ic" style="background:${TV.col(LIST_COLORS[i%LIST_COLORS.length])}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
 
+  // отзыв: ряд звёзд над текстом, сам текст мельче и ограничен по высоте
+  const nst = Math.max(0, Math.min(5, Math.round(+f.stars || 0)));
+  if (nst) { cls.push('rev'); body = `<div class="stars">${'★'.repeat(nst)}<i>${'★'.repeat(5 - nst)}</i></div>` + body; }
   const deco = (colored && !bgPhoto && f.visual === 'tag') ? TAG : '';
   const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div>${f.video ? `<video class="bgv" muted loop playsinline preload="auto" data-vid="${esc(f.video)}"></video>` : ''}<div class="shade"></div>` : '';
   const inner = photoTop ? `<div class="ft" style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0">${top}</div><div class="fb">${body}</div>` : (f.list && !top) ? body : (top ? `<div class="ft">${top}</div>` : '<div></div>') + `<div class="fb">${body}</div>`;

@@ -169,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611142300"></script>
+<script src="tv-core.js?v=202611150100"></script>
 </head>
 <body>
 <div class="bar">
@@ -187,6 +187,7 @@
     <div class="side-h">Экраны <span id="cnt"></span></div>
     <div id="list" style="display:flex;flex-direction:column;gap:10px"></div>
     <button class="add" id="add">+ Новый экран</button>
+    <button class="add" id="addrev" style="margin-top:8px">★ Экраны с отзывами</button>
     <div class="settings">
       <h4>Общие настройки</h4>
       <label class="row2">Экран по умолчанию, сек <input type="number" id="sec" min="5" max="300"></label>
@@ -306,6 +307,34 @@ $('list').onclick = e => {
   if (tg) { const i = +tg.dataset.tg; D.screens[i].on = !D.screens[i].on; change(); return; }
   if (sc) { sel = +sc.dataset.i; renderAll(true); }
 };
+/* отзывы: вставляем текстом, получаем готовые экраны по три карточки */
+$('addrev').onclick = () => {
+  closePop();
+  const p = document.createElement('div'); p.id = 'pop';
+  p.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px';
+  p.innerHTML = `<div style="background:var(--card,#fff);border-radius:20px;padding:22px;width:640px;max-width:100%;max-height:92vh;overflow:auto;display:flex;flex-direction:column;gap:12px">
+    <b style="font-size:18px">Отзывы из 2ГИС</b>
+    <span class="hint">Скопируйте отзывы и вставьте сюда. Каждый отзыв — отдельным блоком через пустую строку: в первой строке имя, во второй оценка цифрой (можно пропустить — будет 5), дальше текст.</span>
+    <textarea id="revtxt" rows="12" style="border:0;background:var(--tile);border-radius:12px;padding:12px;font:inherit;resize:vertical" placeholder="Айгерим\n5\nЗаказывали худи с вышивкой для команды, сделали быстро и очень аккуратно.\n\nДмитрий\nОтличный сервис, всё в срок."></textarea>
+    <label class="row2">Подпись на карточках <input id="revsrc" value="Отзыв в 2ГИС" style="border:0;background:var(--tile);border-radius:10px;height:36px;padding:0 10px;font-weight:600;width:220px"></label>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="revno">Отмена</button><button type="button" class="btn pri" id="revok">Сделать экраны</button></div></div>`;
+  document.body.appendChild(p);
+  $('revno').onclick = closePop;
+  $('revok').onclick = () => {
+    const src = $('revsrc').value.trim() || 'Отзыв';
+    const revs = $('revtxt').value.split(/\n\s*\n/).map(b => b.split('\n').map(x => x.trim()).filter(Boolean)).filter(l => l.length >= 2).map(l => {
+      const name = l[0]; let stars = 5, rest = l.slice(1);
+      if (/^[1-5]([.,]\d)?$/.test(rest[0]) && rest.length > 1) { stars = Math.round(parseFloat(rest[0].replace(',', '.'))); rest = rest.slice(1); }
+      return { name, stars, text: rest.join(' ') }; }).filter(r => r.text);
+    if (!revs.length) { toast('Не нашёл отзывов: нужно имя и текст, блоки через пустую строку'); return; }
+    const cols = ['green', 'blue', 'orange', 'purple', 'teal', 'pink'];
+    for (let i = 0; i < revs.length; i += 3) { const part = revs.slice(i, i + 3);
+      const sc = TV.newScreen(); sc.layout = part.length === 1 ? 'g1' : part.length === 2 ? 'g2' : 'g3'; sc.anim = 'up';
+      sc.facts = [0, 1, 2, 3].map(k => { const r = part[k]; return r ? Object.assign(TV.newFact(), { icon: 'star', color: cols[(i + k) % cols.length], label: src, big: '', title: '«' + r.text + '»', caption: r.name, stars: r.stars, valign: 'top' }) : TV.newFact(); });
+      D.screens.push(sc); }
+    sel = D.screens.length - 1; closePop(); change(true); toast('Добавлено отзывов: ' + revs.length + '. Проверьте и нажмите «Сохранить»');
+  };
+};
 $('add').onclick = () => { D.screens.push(TV.newScreen()); sel = D.screens.length-1; change(true); scrollTo({top:0,behavior:'smooth'}); };
 $('dup').onclick = () => { D.screens.splice(sel+1, 0, JSON.parse(JSON.stringify(D.screens[sel]))); sel++; change(true); toast('Экран скопирован'); };
 $('del').onclick = () => {
@@ -391,6 +420,7 @@ function factForm(f, k){
       <div class="chks">
         <label class="chk ${num?'':'hide'}" data-numonly><input type="checkbox" data-f="plus" ${f.plus?'checked':''}>«+» после числа</label>
         <label class="chk"><input type="checkbox" data-f="numColor" ${f.numColor?'checked':''}>Крупное цветом значка</label>
+        <label class="fld"><span>Звёзды (для отзыва)</span><select data-f="stars">${[[0,'Нет'],[5,'★★★★★'],[4,'★★★★'],[3,'★★★']].map(([v,t]) => `<option value="${v}" ${+f.stars===v?'selected':''}>${t}</option>`).join('')}</select></label>
       </div>
       <label class="fld ${num?'':'hide'}" data-numonly><span>Прибавлять живой счётчик из учёта</span><select data-f="auto"><option value="">Нет, число как есть</option>${Object.entries(TV.AUTO_SRC).map(([key,t]) => `<option value="${key}" ${f.auto===key?'selected':''}>${t}${TV.AUTO[key]!=null?' (сейчас '+TV.AUTO[key]+')':''}</option>`).join('')}</select>
         ${f.auto ? `<span class="hint">На экране: ${TV.value(f).toLocaleString('ru-RU')} — растёт с каждым новым ${f.auto==='clients'?'клиентом':'заказом'}</span>` : ''}</label>
