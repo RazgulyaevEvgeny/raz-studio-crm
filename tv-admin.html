@@ -169,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611141800"></script>
+<script src="tv-core.js?v=202611142000"></script>
 </head>
 <body>
 <div class="bar">
@@ -194,6 +194,12 @@
       <label class="row2">Плавный режим для приставки <button class="sw2" id="lite" type="button"></button></label>
       <span class="hint" style="margin-top:-6px">Простые лёгкие анимации — для слабых ТВ-приставок</span>
       <label class="row2">Переливы на фоне <button class="sw2" id="fx" type="button"></button></label>
+      <div class="row2">Вернуть прошлую версию <select id="bak" style="max-width:190px;border:0;background:var(--tile);border-radius:10px;height:34px;padding:0 8px;font-weight:600"><option value="">Пока пусто</option></select></div>
+      <span class="hint" style="margin-top:-6px">Перед каждым сохранением прежние экраны попадают сюда</span>
+      <h4 style="margin-top:4px">Пресеты</h4>
+      <div id="prelist" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div style="display:flex;gap:6px"><input id="prename" placeholder="Название, напр. «Новый год»" style="flex:1;min-width:0;border:0;background:var(--tile);border-radius:10px;height:36px;padding:0 10px;font-weight:600"><button type="button" class="btn" id="presave" style="height:36px">Сохранить</button></div>
+      <span class="hint">Пресет запоминает все экраны и настройки как есть. Нажмите на пресет, чтобы открыть его, затем «Сохранить» вверху — и он уйдёт на экран.</span>
       <h4 style="margin-top:4px">Фон экрана</h4>
       <div class="chips" id="bgpre"></div>
       <div class="row2">Основа <span style="display:flex;align-items:center;gap:8px"><input type="color" id="bgbase"><button type="button" class="linkbtn" data-bgreset="base">авто</button></span></div>
@@ -256,9 +262,10 @@ TV.injectCSS();
 const $ = id => document.getElementById(id);
 const esc = TV.esc;
 const LOGO = document.querySelector('.bar .logo').outerHTML;
-let D = TV.normalize(null), sel = 0, dirty = false, db = null, demo = false;
+let D = TV.normalize(null), sel = 0, dirty = false, db = null, demo = false, loaded = false;
+const BAK = 'tvbak_' + TV.KEY.split('_').pop();
 const knownImgs = new Set();
-const collectImgs = () => { const s = new Set(); D.screens.forEach(sc => sc.facts.forEach(f => f.photo && s.add(f.photo))); return s; };
+const collectImgs = () => { const s = new Set(); D.screens.forEach(sc => sc.facts.forEach(f => { f.photo && s.add(f.photo); f.video && s.add(f.video); })); return s; };
 
 /* ---------- предпросмотр ---------- */
 $('stage').innerHTML = '<div class="bgfx"><i></i><i></i><i></i><i></i></div><div class="ph">' + LOGO + '<div class="pl"><i data-p="music" style="width:390px"></i><i data-p="weather" style="width:355px"></i><i data-p="clock" style="width:330px"></i></div></div><div id="pvs" style="position:absolute;inset:0;z-index:2"></div>';
@@ -394,6 +401,10 @@ function factForm(f, k){
       <div class="fld"><span>Цвет текста</span>
         ${[['fg','Весь текст'],['cLabel','Подпись сверху'],['cBig','Крупное'],['cTitle','Заголовок'],['cCap','Пояснение'],['cList','Пункты списка']].map(([k,t]) => `<div class="colrow"><input type="color" data-f="${k}" value="${esc(f[k] || (k==='fg' ? '#1d1d1f' : f.fg || '#1d1d1f'))}"><span style="flex:1;font-size:13.5px;font-weight:600">${t}</span>${f[k] ? `<button type="button" class="linkbtn" data-reset="${k}">авто</button>` : '<span class="hint">авто</span>'}</div>`).join('')}
       </div>
+      <div class="fld"><span>Непрозрачность текста</span>
+        ${[['oLabel','Подпись сверху',60],['oBig','Крупное',100],['oTitle','Заголовок',100],['oCap','Пояснение',65],['oList','Пункты списка',100]].map(([k,t,d]) => `<div class="colrow"><span style="width:150px;font-size:13.5px;font-weight:600">${t}</span><input type="range" min="10" max="100" step="5" data-f="${k}" value="${f[k] === '' || f[k] == null ? d : f[k]}" style="flex:1"><b style="width:52px;text-align:right;font-size:13.5px">${f[k] === '' || f[k] == null ? 'авто' : f[k] + '%'}</b>${f[k] === '' || f[k] == null ? '<span style="width:34px"></span>' : `<button type="button" class="linkbtn" data-reset="${k}" style="width:34px">авто</button>`}</div>`).join('')}
+        <span class="hint">100% — сплошной цвет. «Авто» — как задумано темой.</span>
+      </div>
       <label class="fld"><span>Сверху карточки</span><select data-f="visual">${VIS.map(([v,t]) => `<option value="${v}" ${f.visual===v?'selected':''}>${t}</option>`).join('')}</select></label>
       ${f.visual==='swatch' ? `<div class="colrow"><input type="color" data-f="swatch" value="${esc(f.swatch||'#ffffff')}"><span class="hint">Цвет образца</span></div>` : ''}
       ${['flag-it','swatch','insta'].includes(f.visual) ? '' : `<div class="look">
@@ -403,16 +414,17 @@ function factForm(f, k){
         <div class="colrow"><input type="color" data-f="icFg" value="${esc(f.icFg||'#ffffff')}"><span style="flex:1;font-size:13.5px;font-weight:600">Цвет рисунка значка</span>${f.icFg ? `<button type="button" class="linkbtn" data-reset="icFg">авто</button>` : '<span class="hint">авто</span>'}</div>`}
     </div></details>
 
-    <details data-sec="photo" ${o('photo', !!f.photo)}><summary>Фото${f.photo ? ' ✓' : ''}</summary><div class="in">
+    <details data-sec="photo" ${o('photo', !!f.photo)}><summary>Фото или видео${f.video ? ' ✓ видео' : f.photo ? ' ✓' : ''}</summary><div class="in">
       <div class="phbox">${f.photo ? `<div class="thumb" style="${img && typeof img==='string' ? `background-image:url('${img}')` : ''}" data-img="${esc(f.photo)}"></div>` : ''}
-        <span class="btn upl" style="height:38px">${f.photo ? 'Заменить фото' : 'Загрузить фото'}<input type="file" accept="image/*" data-act="upload"></span>
+        <span class="btn upl" style="height:38px">${f.photo ? 'Заменить' : 'Загрузить фото или видео'}<input type="file" accept="image/*,video/*" data-act="upload"></span>
         ${f.photo ? '<button type="button" class="linkbtn" data-act="nophoto" style="color:var(--red)">Убрать</button>' : ''}</div>
       ${f.photo ? `
       <div class="fld"><span>Как показать</span>${seg('photoMode', f.photoMode, [['bg','Фоном всей карточки'],['top','Картинкой сверху']])}</div>
       ${f.photoMode==='bg' ? `
         <label class="fld"><span>Затемнение для читаемости текста: ${f.dim}%</span><input type="range" min="0" max="85" step="5" data-f="dim" value="${f.dim}"></label>
         <label class="chk"><input type="checkbox" data-f="zoom" ${f.zoom?'checked':''}>Медленное приближение фото (живой эффект)</label>`
-      : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">JPG или PNG с телефона или компьютера. Фото само уменьшится до нужного размера.</span>'}
+      : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео сожмётся в короткий лёгкий ролик без звука (до 12 секунд) и будет крутиться по кругу.</span>'}
+      <span class="hint">Размер этой карточки на экране: <b>${cardSize(D.screens[sel], k)}</b> px. Делайте картинку в таких пропорциях.</span>
     </div></details>
 
     <details data-sec="size" ${o('size', false)}><summary>Размер и положение</summary><div class="in">
@@ -438,10 +450,11 @@ $('facts').addEventListener('input', e => {
   if (k === 'big') t.closest('.fe').querySelectorAll('[data-numonly]').forEach(x => x.classList.toggle('hide', !TV.isNum(t.value)));
   if (k === 'auto') { f.autoFrom = f.auto && TV.AUTO[f.auto] != null ? +TV.AUTO[f.auto] : 0; renderFacts(); }
   if (k === 'visual') renderFacts();
+  if (/^o[A-Z]/.test(k) && t.type === 'range') t.nextElementSibling.textContent = t.value + '%';
   if (k === 'dim') t.previousElementSibling.textContent = 'Затемнение для читаемости текста: ' + t.value + '%';
   markDirty(); preview(false); renderList();
 });
-$('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList','icBg','icFg'].includes(e.target.dataset.f)) renderFacts(); });
+$('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList','icBg','icFg','oLabel','oBig','oTitle','oCap','oList'].includes(e.target.dataset.f)) renderFacts(); });
 $('facts').addEventListener('click', e => {
   const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
   const sg = e.target.closest('[data-seg] button'), col = e.target.closest('[data-color]'), act = e.target.closest('[data-act]');
@@ -451,7 +464,7 @@ $('facts').addEventListener('click', e => {
   const f = factOf(act), k = +act.closest('.fe').dataset.k;
   if (act.dataset.act === 'clear') { D.screens[sel].facts[k] = TV.F({}); change(); }
 
-  if (act.dataset.act === 'nophoto') { f.photo = ''; change(); }
+  if (act.dataset.act === 'nophoto') { f.photo = ''; f.video = ''; change(); }
   if (act.dataset.act === 'icon') iconPop(act, f);
 });
 
@@ -459,6 +472,7 @@ $('facts').addEventListener('click', e => {
 async function upload(input){
   const file = input.files && input.files[0]; if (!file) return;
   const f = factOf(input);
+  if (/^video\//.test(file.type)) return uploadVideo(input, file, f);
   toast('Загружаем фото…');
   try {
     const url = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
@@ -470,10 +484,43 @@ async function upload(input){
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     if (!demo) await db.ref('pub/' + TV.IMG + id).set({ d: data, at: Date.now() });
     TV.IMGCACHE[id] = data; knownImgs.add(id);
-    f.photo = id; openState[input.closest('.fe').dataset.k + 'photo'] = true;
+    f.photo = id; f.video = ''; openState[input.closest('.fe').dataset.k + 'photo'] = true;
     change(); toast('Фото добавлено');
   } catch (e) { toast('Не получилось загрузить фото: ' + (e.code || e.message || 'ошибка')); }
 }
+
+/* загрузка видео: проигрываем ролик в браузере и пережимаем в лёгкий (до 960 px, до 12 сек, без звука); первый кадр — как фото-заставка */
+async function uploadVideo(input, file, f){
+  if (!window.MediaRecorder) { toast('Этот браузер не умеет сжимать видео — откройте админку в Chrome'); return; }
+  const fe = input.closest('.fe');
+  try {
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file);
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('видео не читается')); });
+    const k = Math.min(1, 960 / Math.max(v.videoWidth, v.videoHeight)), w = Math.round(v.videoWidth * k / 2) * 2, h = Math.round(v.videoHeight * k / 2) * 2;
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    g.drawImage(v, 0, 0, w, h); const poster = c.toDataURL('image/jpeg', 0.8);
+    const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
+    const rec = new MediaRecorder(c.captureStream(24), { mimeType: mime, videoBitsPerSecond: 1400000 }), parts = [];
+    rec.ondataavailable = e => e.data.size && parts.push(e.data);
+    const dur = Math.min(12, v.duration || 12);
+    const done = new Promise(res => { rec.onstop = res; });
+    rec.start(500); await v.play();
+    await new Promise(res => { const tick = () => { g.drawImage(v, 0, 0, w, h); toast('Сжимаем видео… ' + Math.min(100, Math.round(v.currentTime / dur * 100)) + '%');
+      if (v.ended || v.currentTime >= dur) return res(); requestAnimationFrame(tick); }; tick(); });
+    v.pause(); rec.stop(); await done;
+    const blob = new Blob(parts, { type: mime.split(';')[0] });
+    if (blob.size > 6e6) throw new Error('ролик получился слишком большим, возьмите покороче');
+    const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), vid = 'v' + id;
+    if (!demo) { await db.ref('pub/' + TV.IMG + id).set({ d: poster, at: Date.now() }); await db.ref('pub/' + TV.IMG + vid).set({ d: data, at: Date.now() }); }
+    TV.IMGCACHE[id] = poster; TV.IMGCACHE[vid] = data; knownImgs.add(id); knownImgs.add(vid);
+    f.photo = id; f.video = vid; f.zoom = false; openState[fe.dataset.k + 'photo'] = true;
+    change(); toast('Видео добавлено: ' + (blob.size / 1e6).toFixed(1) + ' МБ, ' + Math.round(dur) + ' сек');
+  } catch (e) { toast('Не получилось загрузить видео: ' + (e.code || e.message || 'ошибка')); }
+}
+/* размер карточки на экране 1920×1080, px */
+const CARD_PX = { g1:['1776 × 776'], g2:['874 × 776','874 × 776'], g3:['573 × 776','573 × 776','573 × 776'], g12:['971 × 776','777 × 374','777 × 374'], g21:['777 × 374','777 × 374','971 × 776'], g4:['874 × 374','874 × 374','874 × 374','874 × 374'] };
+function cardSize(sc, i){ return (CARD_PX[sc.layout] || CARD_PX.g3)[i] || ''; }
 
 function iconPop(btn, f){
   closePop();
@@ -540,21 +587,54 @@ function renderAll(animate){
   renderSettings(); renderBar(); renderList(); renderFacts(); preview(animate);
 }
 function change(animate){ markDirty(); renderAll(animate); }
-function markDirty(){ dirty = true; $('state').className = 'state dirty'; $('state').lastChild.textContent = 'Есть изменения'; $('save').disabled = false; }
+function markDirty(){ dirty = true; $('state').className = 'state dirty'; $('state').lastChild.textContent = 'Есть изменения'; $('save').disabled = !(loaded || demo); }
 function markClean(t){ dirty = false; $('state').className = 'state'; $('state').lastChild.textContent = t || 'Сохранено'; $('save').disabled = true; }
 function toast(t){ const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2400); }
 addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 $('save').onclick = async () => {
   if (demo) { markClean('Демо: не сохранено в базу'); toast('В демо-режиме база недоступна'); return; }
+  // пока экраны не загружены из базы, сохранять нельзя: иначе стартовые факты затрут настоящие
+  if (!loaded) { toast('Экраны из базы не загрузились — обновите страницу. Сохранение выключено.'); return; }
   $('save').disabled = true;
   try {
+    // перед записью кладём текущую версию из базы в историю
+    const cur = (await db.ref('pub/' + TV.KEY).get()).val();
+    if (cur && cur.screens) { const b = Object.assign({}, cur); delete b.auto; delete b.music; await db.ref('pub/' + BAK + '/' + Date.now()).set(b); loadBaks(); }
     await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), pill: D.pill, show: D.show, screens: D.screens, upd: Date.now() })));
-    const used = collectImgs();
-    knownImgs.forEach(id => { if (!used.has(id)) { db.ref('pub/' + TV.IMG + id).remove().catch(() => {}); knownImgs.delete(id); } });
     markClean(); toast('Сохранено — экран обновится через пару секунд');
   } catch (e) { $('save').disabled = false; toast('Не сохранилось: ' + (e.code || e.message)); }
 };
+
+/* ---------- пресеты: именованные наборы экранов и настроек ---------- */
+const PRE = 'tvpre_' + TV.KEY.split('_').pop(); let PRES = {};
+const snapshot = () => JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), pill: D.pill, show: D.show, screens: D.screens }));
+async function loadPres(){
+  try { PRES = (await db.ref('pub/' + PRE).get()).val() || {}; } catch (e) { PRES = {}; }
+  const ks = Object.keys(PRES).sort((a, b) => (PRES[b].at || 0) - (PRES[a].at || 0));
+  $('prelist').innerHTML = ks.length ? ks.map(k => `<div style="display:flex;align-items:center;gap:6px"><button type="button" class="btn" data-pre="${k}" style="flex:1;height:36px;justify-content:flex-start;overflow:hidden">${esc(PRES[k].name || 'Без названия')} <span style="opacity:.5;font-weight:500;margin-left:6px">${(PRES[k].data.screens || []).length} экр.</span></button><button type="button" class="linkbtn" data-predel="${k}" style="color:var(--red)" title="Двойной клик — удалить">✕</button></div>`).join('') : '<span class="hint">Пока нет ни одного</span>';
+}
+$('presave').onclick = async () => {
+  if (demo || !loaded) { toast('Сначала должны загрузиться экраны из базы'); return; }
+  const name = $('prename').value.trim() || ('Пресет ' + new Date().toLocaleDateString('ru-RU'));
+  const same = Object.keys(PRES).find(k => PRES[k].name === name), id = same || Date.now().toString(36);
+  try { await db.ref('pub/' + PRE + '/' + id).set({ name, at: Date.now(), data: snapshot() }); $('prename').value = ''; await loadPres(); toast(same ? 'Пресет «' + name + '» обновлён' : 'Пресет «' + name + '» сохранён'); }
+  catch (e) { toast('Не сохранилось: ' + (e.code || e.message)); }
+};
+$('prelist').onclick = e => { const b = e.target.closest('[data-pre]'); if (!b || !PRES[b.dataset.pre]) return;
+  D = TV.normalize(PRES[b.dataset.pre].data); sel = 0; renderAll(true); markDirty(); toast('Пресет открыт. Нажмите «Сохранить» вверху, чтобы показать его на экране'); };
+$('prelist').ondblclick = async e => { const b = e.target.closest('[data-predel]'); if (!b) return; try { await db.ref('pub/' + PRE + '/' + b.dataset.predel).remove(); await loadPres(); toast('Пресет удалён'); } catch (er) { toast('Не удалилось'); } };
+
+/* ---------- история версий ---------- */
+let BAKS = {};
+async function loadBaks(){
+  try { BAKS = (await db.ref('pub/' + BAK).get()).val() || {}; } catch (e) { BAKS = {}; }
+  const keys = Object.keys(BAKS).sort().reverse();
+  keys.slice(15).forEach(k => { db.ref('pub/' + BAK + '/' + k).remove().catch(() => {}); delete BAKS[k]; });
+  const f = k => { const d = new Date(+k), p = n => (n < 10 ? '0' : '') + n; return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ' — экранов: ' + ((BAKS[k].screens || []).length); };
+  $('bak').innerHTML = '<option value="">' + (keys.length ? 'Выбрать версию…' : 'Пока пусто') + '</option>' + keys.slice(0, 15).map(k => `<option value="${k}">${f(k)}</option>`).join('');
+}
+$('bak').onchange = () => { const k = $('bak').value; if (!k || !BAKS[k]) return; D = TV.normalize(BAKS[k]); sel = 0; renderAll(true); markDirty(); toast('Версия открыта. Нажмите «Сохранить», чтобы вернуть её на экран'); $('bak').value = ''; };
 
 /* ---------- запуск: вход и загрузка из базы CRM ---------- */
 renderAll(true);
@@ -571,10 +651,11 @@ renderAll(true);
       TV.AUTO = (v && v.auto) || {};
       MUS = TV.normalizeMusic(v && v.music); renderMusic();
       if (v && v.screens) { D = TV.normalize(v); sel = 0; }
+      loaded = true; loadBaks(); loadPres();
       collectImgs().forEach(id => knownImgs.add(id));
       renderAll(true);
       markClean(v && v.screens ? 'Сохранено' : 'В базе пусто — показаны факты по умолчанию'); if (!(v && v.screens)) $('save').disabled = false;
-    } catch (e) { toast('Нет доступа к базе: ' + (e.code || e.message)); }
+    } catch (e) { loaded = false; $('save').disabled = true; $('state').className = 'state dirty'; $('state').lastChild.textContent = 'База не загрузилась — обновите страницу'; toast('Нет доступа к базе: ' + (e.code || e.message)); }
   });
   $('authf').onsubmit = async e => { e.preventDefault(); $('aerr').textContent = '';
     try { await auth.signInWithEmailAndPassword($('em').value.trim(), $('pw').value); } catch (er) { $('aerr').textContent = 'Не удалось войти: проверьте почту и пароль'; } };
