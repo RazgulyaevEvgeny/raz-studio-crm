@@ -194,6 +194,8 @@
       <label class="row2">Плавный режим для приставки <button class="sw2" id="lite" type="button"></button></label>
       <span class="hint" style="margin-top:-6px">Простые лёгкие анимации — для слабых ТВ-приставок</span>
       <label class="row2">Переливы на фоне <button class="sw2" id="fx" type="button"></button></label>
+      <div class="row2">Вернуть прошлую версию <select id="bak" style="max-width:190px;border:0;background:var(--tile);border-radius:10px;height:34px;padding:0 8px;font-weight:600"><option value="">Пока пусто</option></select></div>
+      <span class="hint" style="margin-top:-6px">Перед каждым сохранением прежние экраны попадают сюда</span>
       <h4 style="margin-top:4px">Фон экрана</h4>
       <div class="chips" id="bgpre"></div>
       <div class="row2">Основа <span style="display:flex;align-items:center;gap:8px"><input type="color" id="bgbase"><button type="button" class="linkbtn" data-bgreset="base">авто</button></span></div>
@@ -256,7 +258,8 @@ TV.injectCSS();
 const $ = id => document.getElementById(id);
 const esc = TV.esc;
 const LOGO = document.querySelector('.bar .logo').outerHTML;
-let D = TV.normalize(null), sel = 0, dirty = false, db = null, demo = false;
+let D = TV.normalize(null), sel = 0, dirty = false, db = null, demo = false, loaded = false;
+const BAK = 'tvbak_' + TV.KEY.split('_').pop();
 const knownImgs = new Set();
 const collectImgs = () => { const s = new Set(); D.screens.forEach(sc => sc.facts.forEach(f => f.photo && s.add(f.photo))); return s; };
 
@@ -540,21 +543,35 @@ function renderAll(animate){
   renderSettings(); renderBar(); renderList(); renderFacts(); preview(animate);
 }
 function change(animate){ markDirty(); renderAll(animate); }
-function markDirty(){ dirty = true; $('state').className = 'state dirty'; $('state').lastChild.textContent = 'Есть изменения'; $('save').disabled = false; }
+function markDirty(){ dirty = true; $('state').className = 'state dirty'; $('state').lastChild.textContent = 'Есть изменения'; $('save').disabled = !(loaded || demo); }
 function markClean(t){ dirty = false; $('state').className = 'state'; $('state').lastChild.textContent = t || 'Сохранено'; $('save').disabled = true; }
 function toast(t){ const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2400); }
 addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 $('save').onclick = async () => {
   if (demo) { markClean('Демо: не сохранено в базу'); toast('В демо-режиме база недоступна'); return; }
+  // пока экраны не загружены из базы, сохранять нельзя: иначе стартовые факты затрут настоящие
+  if (!loaded) { toast('Экраны из базы не загрузились — обновите страницу. Сохранение выключено.'); return; }
   $('save').disabled = true;
   try {
+    // перед записью кладём текущую версию из базы в историю
+    const cur = (await db.ref('pub/' + TV.KEY).get()).val();
+    if (cur && cur.screens) { const b = Object.assign({}, cur); delete b.auto; delete b.music; await db.ref('pub/' + BAK + '/' + Date.now()).set(b); loadBaks(); }
     await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), pill: D.pill, show: D.show, screens: D.screens, upd: Date.now() })));
-    const used = collectImgs();
-    knownImgs.forEach(id => { if (!used.has(id)) { db.ref('pub/' + TV.IMG + id).remove().catch(() => {}); knownImgs.delete(id); } });
     markClean(); toast('Сохранено — экран обновится через пару секунд');
   } catch (e) { $('save').disabled = false; toast('Не сохранилось: ' + (e.code || e.message)); }
 };
+
+/* ---------- история версий ---------- */
+let BAKS = {};
+async function loadBaks(){
+  try { BAKS = (await db.ref('pub/' + BAK).get()).val() || {}; } catch (e) { BAKS = {}; }
+  const keys = Object.keys(BAKS).sort().reverse();
+  keys.slice(15).forEach(k => { db.ref('pub/' + BAK + '/' + k).remove().catch(() => {}); delete BAKS[k]; });
+  const f = k => { const d = new Date(+k), p = n => (n < 10 ? '0' : '') + n; return p(d.getDate()) + '.' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ' — экранов: ' + ((BAKS[k].screens || []).length); };
+  $('bak').innerHTML = '<option value="">' + (keys.length ? 'Выбрать версию…' : 'Пока пусто') + '</option>' + keys.slice(0, 15).map(k => `<option value="${k}">${f(k)}</option>`).join('');
+}
+$('bak').onchange = () => { const k = $('bak').value; if (!k || !BAKS[k]) return; D = TV.normalize(BAKS[k]); sel = 0; renderAll(true); markDirty(); toast('Версия открыта. Нажмите «Сохранить», чтобы вернуть её на экран'); $('bak').value = ''; };
 
 /* ---------- запуск: вход и загрузка из базы CRM ---------- */
 renderAll(true);
@@ -571,10 +588,11 @@ renderAll(true);
       TV.AUTO = (v && v.auto) || {};
       MUS = TV.normalizeMusic(v && v.music); renderMusic();
       if (v && v.screens) { D = TV.normalize(v); sel = 0; }
+      loaded = true; loadBaks();
       collectImgs().forEach(id => knownImgs.add(id));
       renderAll(true);
       markClean(v && v.screens ? 'Сохранено' : 'В базе пусто — показаны факты по умолчанию'); if (!(v && v.screens)) $('save').disabled = false;
-    } catch (e) { toast('Нет доступа к базе: ' + (e.code || e.message)); }
+    } catch (e) { loaded = false; $('save').disabled = true; $('state').className = 'state dirty'; $('state').lastChild.textContent = 'База не загрузилась — обновите страницу'; toast('Нет доступа к базе: ' + (e.code || e.message)); }
   });
   $('authf').onsubmit = async e => { e.preventDefault(); $('aerr').textContent = '';
     try { await auth.signInWithEmailAndPassword($('em').value.trim(), $('pw').value); } catch (er) { $('aerr').textContent = 'Не удалось войти: проверьте почту и пароль'; } };
