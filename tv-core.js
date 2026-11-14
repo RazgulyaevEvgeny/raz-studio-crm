@@ -377,6 +377,8 @@ TV.factHTML = (f, hero, idx) => {
   const cls = ['f', 'st-' + (TV.STYLES[f.style] ? f.style : 'plain')];
   let style = idx != null ? `--i:${idx};` : '';
   if (hero) cls.push('hero');
+  /* доля места: ширина в ряду или высота в колонке */
+  if (+f.w && +f.w !== 1) style += `flex:${Math.max(0.5, Math.min(3, +f.w))} 1 0%;`;
   if (f.style === 'custom') { style += `background:${esc(f.bg)};`; if (isLight(f.bg)) cls.push('light-bg'); }
   const colored = ['blue','kaspi','dark'].includes(f.style) || (f.style === 'custom' && !isLight(f.bg)) || bgPhoto;
   if (colored) cls.push('on-color');
