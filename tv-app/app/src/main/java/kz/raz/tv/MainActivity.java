@@ -10,6 +10,11 @@ import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.widget.FrameLayout;
+import android.widget.TextView;
+import org.mozilla.geckoview.GeckoRuntimeSettings;
 import android.widget.Toast;
 
 import org.mozilla.geckoview.GeckoResult;
@@ -27,13 +32,28 @@ public class MainActivity extends Activity {
   private final Handler h = new Handler(Looper.getMainLooper());
   private final Runnable reload = this::load;
   private long backAt;
+  private TextView status;
+  private boolean loaded;
+  private void say(String t){ h.post(() -> { status.setText(t); status.setVisibility(t.isEmpty() ? View.GONE : View.VISIBLE); }); }
 
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    FrameLayout root = new FrameLayout(this);
+    root.setBackgroundColor(Color.BLACK);
     view = new GeckoView(this);
-    setContentView(view);
-    if (runtime == null) runtime = GeckoRuntime.create(getApplicationContext());
+    view.setBackgroundColor(Color.BLACK);
+    // на многих ТВ-приставках обычный SurfaceView даёт пустой белый/чёрный экран — рисуем через TextureView
+    try { view.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW); } catch (Throwable ignored) {}
+    root.addView(view, new FrameLayout.LayoutParams(-1, -1));
+    status = new TextView(this);
+    status.setTextColor(0xFFEBEBF5); status.setTextSize(22); status.setGravity(Gravity.CENTER);
+    status.setBackgroundColor(Color.BLACK); status.setPadding(60, 60, 60, 60);
+    root.addView(status, new FrameLayout.LayoutParams(-1, -1));
+    setContentView(root);
+    say("Экран студии запускается…");
+    if (runtime == null) runtime = GeckoRuntime.create(getApplicationContext(),
+        new GeckoRuntimeSettings.Builder().consoleOutput(true).aboutConfigEnabled(false).build());
     open();
     askAutostart();
   }
@@ -49,14 +69,23 @@ public class MainActivity extends Activity {
     });
     session.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
       @Override public GeckoResult<String> onLoadError(GeckoSession s, String uri, WebRequestError e) {
+        say("Не удалось загрузить экран (ошибка " + e.code + ", " + e.category + ").\nПроверьте интернет — пробую снова через 10 секунд.");
         h.removeCallbacks(reload); h.postDelayed(reload, 10000);   // нет сети — пробуем снова через 10 сек
         return null;
       }
     });
     session.setContentDelegate(new GeckoSession.ContentDelegate() {
-      @Override public void onCrash(GeckoSession s) { h.post(MainActivity.this::open); }
+      @Override public void onCrash(GeckoSession s) { loaded = false; say("Движок перезапускается…"); h.post(MainActivity.this::open); }
       @Override public void onKill(GeckoSession s) { h.post(MainActivity.this::open); }
     });
+    session.setProgressDelegate(new GeckoSession.ProgressDelegate() {
+      @Override public void onPageStart(GeckoSession s, String url) { if (!loaded) say("Загружаю экран…"); }
+      @Override public void onProgressChange(GeckoSession s, int p) { if (!loaded) say("Загружаю экран… " + p + "%"); }
+      @Override public void onPageStop(GeckoSession s, boolean ok) {
+        if (ok) { loaded = true; h.postDelayed(() -> say(""), 600); }
+      }
+    });
+    h.postDelayed(() -> { if (!loaded) say("Экран долго не загружается.\nНажмите «Меню» на пульте, чтобы перезагрузить."); }, 40000);
     session.open(runtime);
     view.setSession(session);
     view.requestFocus();
