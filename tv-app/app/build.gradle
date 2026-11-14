@@ -6,8 +6,8 @@ android {
     applicationId 'kz.raz.tv'
     minSdk 23
     targetSdk 34
-    versionCode 22
-    versionName '2.2'
+    versionCode 23
+    versionName '2.3'
   }
   buildTypes {
     release { minifyEnabled false; signingConfig signingConfigs.debug }

@@ -83,8 +83,8 @@ public class MainActivity extends Activity {
   private final List<Vid> vids = new ArrayList<>();
   private final Set<String> loading = new HashSet<>();
 
-  static class Card { int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
-  static class Scene { int i; double sec = 20; String anim = "spring"; int shift = 40; List<Card> cards = new ArrayList<>(); }
+  static class Card { boolean kb; int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
+  static class Scene { int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
 
   private final Runnable fire = () -> { due = true; if (pending != null) showPending(); };
   private final Runnable askNext = () -> { if (count > 1) js("razScene(" + ((cur + 1) % count) + ")"); };
@@ -189,24 +189,24 @@ public class MainActivity extends Activity {
     if ("scene".equals(kind)) {
       JSONObject o = new JSONObject(json);
       Scene sc = new Scene();
-      sc.i = o.optInt("i"); sc.sec = o.optDouble("sec", 20); sc.anim = o.optString("anim", "spring"); sc.shift = o.optInt("shift", 40);
+      sc.i = o.optInt("i"); sc.sec = o.optDouble("sec", 20); sc.anim = o.optString("anim", "spring"); sc.tanim = o.optString("tanim", "fade"); sc.shift = o.optInt("shift", 40);
       JSONArray cs = o.getJSONArray("cards");
       boolean hasVid = false;
       for (int k = 0; k < cs.length(); k++) {
         JSONObject c = cs.getJSONObject(k); JSONArray r = c.getJSONArray("r");
         Card cd = new Card();
-        cd.x = r.getInt(0); cd.y = r.getInt(1); cd.w = r.getInt(2); cd.hh = r.getInt(3); cd.rad = c.optInt("rad", 0); cd.idx = c.optInt("i", k);
+        cd.x = r.getInt(0); cd.y = r.getInt(1); cd.w = r.getInt(2); cd.hh = r.getInt(3); cd.rad = c.optInt("rad", 0); cd.kb = c.optBoolean("kb", false); cd.idx = c.optInt("i", k);
         cd.a = crop(s, cd.x, cd.y, cd.w, cd.hh);
         JSONObject v = c.optJSONObject("v");
         if (v != null) { JSONArray vr = v.getJSONArray("r"); cd.vid = v.getString("id"); cd.vurl = v.getString("url");
           cd.vx = vr.getInt(0); cd.vy = vr.getInt(1); cd.vw = vr.getInt(2); cd.vh = vr.getInt(3); hasVid = true; fetchVideo(cd.vid, cd.vurl); }
         if (cd.a != null) sc.cards.add(cd);
       }
-      if (hasVid) building = sc; else ready(sc);
+      building = sc;   // следом придёт слой текста
       return;
     }
     if ("over".equals(kind) && building != null) {
-      for (Card cd : building.cards) if (cd.vid != null) cd.b = crop(s, cd.x, cd.y, cd.w, cd.hh);
+      for (Card cd : building.cards) cd.b = crop(s, cd.x, cd.y, cd.w, cd.hh);
       Scene sc = building; building = null; ready(sc);
     }
   }
@@ -259,13 +259,27 @@ public class MainActivity extends Activity {
     box.setClipToOutline(true);
     ImageView a = new ImageView(this); a.setScaleType(ImageView.ScaleType.FIT_XY); a.setImageBitmap(c.a);
     box.addView(a, new FrameLayout.LayoutParams(-1, -1));
+    if (c.kb) {   // живое фото: фон карточки медленно приближается всё время показа
+      a.setScaleX(1.02f); a.setScaleY(1.02f);
+      a.animate().scaleX(1.14f).scaleY(1.14f).setDuration(Math.max(6000, slideMs + 1500)).setInterpolator(new LinearInterpolator()).start();
+    }
     if (c.vid != null) {
       TextureView tv = new TextureView(this);
       FrameLayout.LayoutParams vp = new FrameLayout.LayoutParams(Math.max(2, c.vw), Math.max(2, c.vh)); vp.leftMargin = c.vx - c.x; vp.topMargin = c.vy - c.y;
       tv.setAlpha(0.01f);
       box.addView(tv, vp);
-      if (c.b != null) { ImageView bv = new ImageView(this); bv.setScaleType(ImageView.ScaleType.FIT_XY); bv.setImageBitmap(c.b); box.addView(bv, new FrameLayout.LayoutParams(-1, -1)); }
       vids.add(new Vid(c.vid, tv));
+    }
+    if (c.b != null) {   // слой текста: появляется отдельно, чуть позже карточки
+      ImageView bv = new ImageView(this); bv.setScaleType(ImageView.ScaleType.FIT_XY); bv.setImageBitmap(c.b);
+      box.addView(bv, new FrameLayout.LayoutParams(-1, -1));
+      if (!"none".equals(sc.tanim) && !"none".equals(sc.anim)) {
+        bv.setAlpha(0f);
+        if ("up".equals(sc.tanim)) bv.setTranslationY(sc.shift * 1.2f);
+        else if ("left".equals(sc.tanim)) bv.setTranslationX(-sc.shift * 1.6f);
+        else if ("zoom".equals(sc.tanim)) { bv.setScaleX(0.9f); bv.setScaleY(0.9f); }
+        bv.animate().alpha(1f).translationX(0).translationY(0).scaleX(1f).scaleY(1f).setDuration(620).setStartDelay(110L * c.idx + 260).setInterpolator(new DecelerateInterpolator(2f)).start();
+      }
     }
     float dx = 0, dy = sc.shift * 1.5f, sc0 = 0.94f; long dur = 720; android.animation.TimeInterpolator ip = new OvershootInterpolator(1.15f);
     switch (sc.anim) {
@@ -280,7 +294,7 @@ public class MainActivity extends Activity {
     }
     box.setAlpha(0f); box.setTranslationX(dx); box.setTranslationY(dy); box.setScaleX(sc0); box.setScaleY(sc0);
     cardsV.addView(box, lp);
-    final boolean plain = c.vid == null;
+    final boolean plain = false;   // внутри карточки свои анимации (текст, фото) — общий слой не используем
     if (plain) box.setLayerType(View.LAYER_TYPE_HARDWARE, null);   // на время движения карточка — одна текстура
     final FrameLayout fb = box;
     box.animate().translationX(0).translationY(0).scaleX(1f).scaleY(1f).setDuration(dur).setStartDelay(110L * c.idx).setInterpolator(ip)
