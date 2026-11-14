@@ -140,7 +140,7 @@ TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.a
 TV.normalize = (d) => {
   if (!d || !Array.isArray(d.screens)) d = JSON.parse(JSON.stringify(TV.DEFAULT));
   const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
-  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'light' ? 'light' : 'dark', bg: TV.normBg(d.bg), pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
+  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'light' ? 'light' : 'dark', foot: d.foot == null ? 'Работаем с 11:00 до 19:00' : String(d.foot).slice(0, 120), bg: TV.normBg(d.bg), pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
     screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
       const src = s.facts || []; sc.facts = [0,1,2,3].map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
 };

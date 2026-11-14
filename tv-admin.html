@@ -169,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611142200"></script>
+<script src="tv-core.js?v=202611142300"></script>
 </head>
 <body>
 <div class="bar">
@@ -206,6 +206,9 @@
       <div class="row2">Свечение <span style="display:flex;align-items:center;gap:6px" id="bgcols"></span></div>
       <label class="row2">Яркость свечения <span style="display:flex;align-items:center;gap:8px"><input type="range" id="bga" min="0" max="300" step="10" style="width:110px"><b id="bgav" style="width:44px;text-align:right;font-size:13px"></b></span></label>
       <span class="hint" style="margin-top:-6px">4 цветных пятна медленно плывут по фону. Клик по кружку — выбрать цвет, двойной клик — вернуть «авто».</span>
+      <h4 style="margin-top:4px">Подпись внизу экрана</h4>
+      <input id="foot" maxlength="120" placeholder="Часы работы и адрес" style="border:0;background:var(--tile);border-radius:10px;height:38px;padding:0 10px;font-weight:600">
+      <span class="hint" style="margin-top:-6px">Например: «Ежедневно 11:00–19:00 · ул. …, дом …». Оставьте пустым, чтобы убрать.</span>
       <h4 style="margin-top:4px">Сверху на экране</h4>
       <div class="row2">Фон плашек <span style="display:flex;align-items:center;gap:8px"><input type="color" id="pbg"><button type="button" class="linkbtn" data-preset="bg">авто</button></span></div>
       <div class="row2">Текст плашек <span style="display:flex;align-items:center;gap:8px"><input type="color" id="pfg"><button type="button" class="linkbtn" data-preset="fg">авто</button></span></div>
@@ -359,8 +362,9 @@ function renderBg(){ D.bg = TV.normBg(D.bg); const T = bgTheme();
   $('bgbase').value = D.bg.base || T.base; $('bga').value = D.bg.a; $('bgav').textContent = D.bg.a + '%';
   document.querySelectorAll('[data-bgc]').forEach(x => { const i = +x.dataset.bgc; x.value = D.bg.c[i] || T.c[i]; x.style.outline = D.bg.c[i] ? '2px solid var(--blue)' : ''; });
   document.querySelectorAll('[data-bgp]').forEach(b => b.classList.toggle('on', JSON.stringify(TV.normBg(TV.BG_PRESETS[+b.dataset.bgp].bg)) === JSON.stringify(D.bg))); }
+$('foot').oninput = () => { D.foot = $('foot').value; markDirty(); };
 function renderSettings(){
-  renderBg();
+  renderBg(); $('foot').value = D.foot || '';
   $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx); $('lite').classList.toggle('on', D.lite); $('pbg').value = D.pill.bg || '#ffffff'; $('pfg').value = D.pill.fg || '#1d1d1f'; [...$('theme').children].forEach(b => b.classList.toggle('on', b.dataset.th === D.theme));
   document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', !!D.show[b.dataset.show]));
 }
@@ -636,14 +640,14 @@ $('save').onclick = async () => {
     // перед записью кладём текущую версию из базы в историю
     const cur = (await db.ref('pub/' + TV.KEY).get()).val();
     if (cur && cur.screens) { const b = Object.assign({}, cur); delete b.auto; delete b.music; await db.ref('pub/' + BAK + '/' + Date.now()).set(b); loadBaks(); }
-    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), pill: D.pill, show: D.show, screens: D.screens, upd: Date.now() })));
+    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), foot: D.foot || '', pill: D.pill, show: D.show, screens: D.screens, upd: Date.now() })));
     markClean(); toast('Сохранено — экран обновится через пару секунд');
   } catch (e) { $('save').disabled = false; toast('Не сохранилось: ' + (e.code || e.message)); }
 };
 
 /* ---------- пресеты: именованные наборы экранов и настроек ---------- */
 const PRE = 'tvpre_' + TV.KEY.split('_').pop(); let PRES = {};
-const snapshot = () => JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), pill: D.pill, show: D.show, screens: D.screens }));
+const snapshot = () => JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), foot: D.foot || '', pill: D.pill, show: D.show, screens: D.screens }));
 async function loadPres(){
   try { PRES = (await db.ref('pub/' + PRE).get()).val() || {}; } catch (e) { PRES = {}; }
   const ks = Object.keys(PRES).sort((a, b) => (PRES[b].at || 0) - (PRES[a].at || 0));

@@ -104,7 +104,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611142200"></script>
+<script src="tv-core.js?v=202611142300"></script>
 </head>
 <body>
 <div id="stage">
@@ -122,7 +122,7 @@ window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).sli
   <div id="scenes" style="position:absolute;top:0;right:0;bottom:0;left:0;z-index:2"></div>
   <footer>
     <div class="pager" id="pager"></div>
-    <div class="foot">Студия брендирования Разгуляев</div>
+    <div class="foot" id="foot"></div>
   </footer>
   <div id="diag" style="display:none;position:absolute;left:72px;right:72px;bottom:6px;z-index:9;font-size:16px;color:#ff3b30"></div>
 </div>
@@ -249,6 +249,7 @@ function applySettings(){
   st.classList.toggle('nofx', !DATA.fx);
   st.classList.toggle('lite', DATA.lite); TV.LITE = DATA.lite;
   st.classList.toggle('dark', DATA.theme === 'dark'); TV.THEME = DATA.theme; document.documentElement.classList.toggle('dark', DATA.theme === 'dark');
+  document.getElementById('foot').textContent = DATA.foot || '';
   const base = TV.bgApply ? TV.bgApply(st, DATA.bg, DATA.theme) : ''; if (base) document.body.style.background = base; document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
   const pills = document.querySelectorAll('header .pill');
   for (let i = 0; i < pills.length; i++) { pills[i].style.background = DATA.pill.bg || ''; pills[i].style.color = DATA.pill.fg || ''; pills[i].querySelectorAll('b,.clock,.temp,.lbl2,.track small,.track span').forEach(x => x.style.color = DATA.pill.fg || ''); }
@@ -303,7 +304,7 @@ async function runUpdate(){
       updShow('Готово', 'Всё загружено в память приставки', '', 1); await sleep(900); updBox().className = '';
     }
     if (upd.pending) continue;   // пока качали, пришла версия новее — берём её
-    try { localStorage.setItem('raz-tv-data', JSON.stringify({ screens: d.screens, slideSec: d.slideSec, fx: d.fx, show: d.show, lite: d.lite, theme: d.theme, pill: d.pill, bg: d.bg })); } catch (e) {}
+    try { localStorage.setItem('raz-tv-data', JSON.stringify({ screens: d.screens, slideSec: d.slideSec, fx: d.fx, show: d.show, lite: d.lite, theme: d.theme, pill: d.pill, bg: d.bg, foot: d.foot })); } catch (e) {}
     DATA = nd; build();
   } } catch (e) {} 
   upd.busy = false;
@@ -311,8 +312,8 @@ async function runUpdate(){
 (function live(){
   const cfg = window.FIREBASE_CONFIG; if (!cfg || !cfg.databaseURL || !window.EventSource) return;
   const url = cfg.databaseURL.replace(/\/$/, '') + '/pub/' + TV.KEY + '.json';
-  let last = SAVED && SAVED.screens ? JSON.stringify({ s: SAVED.screens, n: SAVED.slideSec, fx: SAVED.fx, sh: SAVED.show, l: SAVED.lite, th: SAVED.theme, p: SAVED.pill, bg: SAVED.bg }) : '';
-  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg }); if (j === last) return; last = j; queueUpdate(d); };
+  let last = SAVED && SAVED.screens ? JSON.stringify({ s: SAVED.screens, n: SAVED.slideSec, fx: SAVED.fx, sh: SAVED.show, l: SAVED.lite, th: SAVED.theme, p: SAVED.pill, bg: SAVED.bg, ft: SAVED.foot }) : '';
+  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg, ft: d.foot }); if (j === last) return; last = j; queueUpdate(d); };
   try {
     const es = new EventSource(url);
     const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
