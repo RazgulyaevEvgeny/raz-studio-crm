@@ -90,7 +90,9 @@
   #stage.native .scene.nshow .f{opacity:1!important;transform:none!important}
   #stage.native:not(.m-bg) .bgfx,#stage.native.m-bg header,#stage.native.m-bg footer,#stage.native.m-scene header,#stage.native.m-scene footer,#stage.native #upd,#stage.native #toast,#stage.native #how{display:none!important}
   #stage.native .pager i.on{width:90px}#stage.native .pager i.on::after{display:none!important}
+  #stage.native.notext .f>*:not(.bgph):not(.deco):not(video):not(.ft),#stage.native.notext .f>.ft>*:not(.pic){visibility:hidden!important}
   #stage.native.novid .f{background:transparent!important;box-shadow:none!important}
+  #stage.native.novid .f>.deco{visibility:hidden!important}
   #stage.native.novid .f .bgph,#stage.native.novid .f .pic,#stage.native .f video{visibility:hidden!important}
   #toast{position:absolute;left:50%;bottom:120px;z-index:8;transform:translateX(-50%) translateY(20px);opacity:0;transition:opacity .25s,transform .25s;background:rgba(28,28,30,.92);color:#fff;font:600 30px Inter,system-ui,sans-serif;padding:20px 40px;border-radius:999px;box-shadow:0 20px 60px rgba(0,0,0,.4),inset 0 0 0 1.5px rgba(255,255,255,.08)}
   #toast.on{opacity:1;transform:translateX(-50%)}
@@ -116,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611150200"></script>
+<script src="tv-core.js?v=202611150300"></script>
 </head>
 <body>
 <div id="stage">
@@ -252,7 +254,7 @@ setTimeout(startMusic, 4000); // если база не ответила — и�
 // ===== факты: из базы CRM (раздел pub/<ключ>), живое обновление; без базы — данные по умолчанию =====
 TV.injectCSS();
 // память приставки: фото, видео и последние экраны хранятся на устройстве и при запуске берутся оттуда
-TV.PERSIST = true;
+TV.PERSIST = true; TV.NOVID = !!window.RazApp;
 let SAVED = null; try { SAVED = JSON.parse(localStorage.getItem('raz-tv-data') || 'null'); } catch (e) {}
 let DATA = TV.normalize(SAVED && SAVED.screens ? SAVED : null), sc = -1, timer = null;
 const box = document.getElementById('scenes'), pager = document.getElementById('pager');
@@ -297,13 +299,14 @@ window.razScene = (i) => (nq = nq.then(async () => {
   await Promise.race([TV.preloadAll([sc0]), new Promise(r => setTimeout(r, 12000))]);
   TV.hydrate(s); s.classList.add('nshow');
   const L = TV.LITE; TV.LITE = true; s.querySelectorAll('.num[data-to]').forEach(el => TV.countUp(el)); TV.LITE = L;
-  nmode('m-scene'); await settle(200);
+  nmode('m-scene'); nstage().classList.add('notext'); await settle(200);
   const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1);
   const cards = [...s.querySelectorAll('.f')].map((f, k) => { const v = f.querySelector('video[data-vid]');
-    return { r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
+    const d = sc0.facts[k] || {};
+    return { kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
   const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';
-  await shot('scene', JSON.stringify({ i, sec: (+sc0.sec) || DATA.slideSec, anim: an, shift: Math.round(40 * z), cards }));
-  if (cards.some(c => c.v)) { st.classList.add('novid'); await settle(120); await shot('over'); st.classList.remove('novid'); }
+  await shot('scene', JSON.stringify({ i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
+  st.classList.remove('notext'); st.classList.add('novid'); await settle(120); await shot('over'); st.classList.remove('novid');
   nmode('m-chrome');
 }).catch(() => {}));
 let nchT = 0; const nchrome = () => { clearTimeout(nchT); nchT = setTimeout(() => { try { RazApp.chromeChanged(); } catch (e) {} }, 400); };
@@ -340,7 +343,8 @@ async function runUpdate(){
     const d = upd.pending; upd.pending = null;
     const nd = TV.normalize(d), ids = [], seen = {};
     nd.screens.filter(s => s.on).forEach(sc => sc.facts.slice(0, (TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3).n).forEach(f => { [['i', f.photo], ['v', f.video]].forEach(x => { if (x[1] && !seen[x[1]]) { seen[x[1]] = 1; ids.push(x); } }); }));
-    const miss = []; for (let i = 0; i < ids.length; i++) if (!(await TV.fileHas(ids[i][1]))) miss.push(ids[i]);
+    // в приложении новые экраны применяем сразу: фото каждого слайда подгружаются перед его показом, а видео качает сама приставка
+    const miss = []; if (!window.RazApp) for (let i = 0; i < ids.length; i++) if (!(await TV.fileHas(ids[i][1]))) miss.push(ids[i]);
     if (miss.length) {
       if (!NATIVE) await askUpdate(miss.length);
       for (let i = 0; i < miss.length; i++) { updShow('Загружаю в память приставки', 'Файл ' + (i + 1) + ' из ' + miss.length, 'Экран обновится сам, когда всё загрузится', i / miss.length); await (miss[i][0] === 'v' ? TV.loadVid(miss[i][1]) : TV.loadImg(miss[i][1])); }

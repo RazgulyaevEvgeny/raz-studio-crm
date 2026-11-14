@@ -169,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611150100"></script>
+<script src="tv-core.js?v=202611150300"></script>
 </head>
 <body>
 <div class="bar">
@@ -240,6 +240,7 @@
     <div class="scbar" id="scbar">
       <div class="fld"><span>Раскладка</span><div class="lays" id="lays"></div></div>
       <label class="fld"><span>Анимация появления</span><select id="anim"></select></label>
+      <label class="fld"><span>Появление текста (в приложении на ТВ)</span><select id="tanim"></select></label>
       <div class="fld"><span>Скорость</span><div class="seg" id="speed"></div></div>
       <label class="tog"><button class="sw2" id="stag" type="button"></button>Карточки по очереди</label>
       <label class="fld"><span>Показывать этот экран, сек</span><input type="number" id="ssec" min="0" max="300" placeholder="как у всех"></label>
@@ -353,6 +354,8 @@ const LAY_SVG = {
   g4:'<rect width="14" height="9" rx="2.5"/><rect x="16" width="14" height="9" rx="2.5"/><rect y="11" width="14" height="9" rx="2.5"/><rect x="16" y="11" width="14" height="9" rx="2.5"/>' };
 $('lays').innerHTML = Object.keys(TV.LAYOUTS).map(k => `<button type="button" data-lay="${k}" title="${TV.LAYOUTS[k].t}"><svg viewBox="0 0 30 20" fill="currentColor">${LAY_SVG[k]}</svg></button>`).join('');
 $('anim').innerHTML = Object.entries(TV.ANIMS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('');
+$('tanim').innerHTML = Object.entries(TV.TANIMS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('');
+$('tanim').onchange = () => { D.screens[sel].tanim = $('tanim').value; markDirty(); };
 $('speed').innerHTML = Object.entries(TV.SPEEDS).map(([k,v]) => `<button type="button" data-sp="${k}">${v[0]}</button>`).join('');
 $('lays').onclick = e => { const b = e.target.closest('[data-lay]'); if (!b) return; D.screens[sel].layout = b.dataset.lay; change(); };
 $('anim').onchange = () => { D.screens[sel].anim = $('anim').value; markDirty(); renderBar(); preview(true); };
@@ -362,7 +365,7 @@ $('ssec').oninput = () => { D.screens[sel].sec = Math.max(0, Math.min(300, +$('s
 function renderBar(){
   const s = D.screens[sel];
   [...$('lays').children].forEach(b => b.classList.toggle('on', b.dataset.lay === s.layout));
-  $('anim').value = s.anim;
+  $('anim').value = s.anim; $('tanim').value = s.tanim || 'fade';
   [...$('speed').children].forEach(b => b.classList.toggle('on', b.dataset.sp === s.speed));
   $('stag').classList.toggle('on', s.stagger !== false);
   $('ssec').value = s.sec || '';
@@ -456,7 +459,7 @@ function factForm(f, k){
       <div class="fld"><span>Как показать</span>${seg('photoMode', f.photoMode, [['bg','Фоном всей карточки'],['top','Картинкой сверху']])}</div>
       ${f.photoMode==='bg' ? `
         <label class="fld"><span>Затемнение для читаемости текста: ${f.dim}%</span><input type="range" min="0" max="85" step="5" data-f="dim" value="${f.dim}"></label>
-        <label class="chk"><input type="checkbox" data-f="zoom" ${f.zoom?'checked':''}>Медленное приближение фото (живой эффект)</label>`
+        <label class="chk"><input type="checkbox" data-f="zoom" ${f.zoom?'checked':''}>Медленное приближение фото (живой эффект, работает и в приложении на ТВ)</label>`
       : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео MP4 или MOV до 30 МБ загружается как есть, в исходном качестве. Ролики с айфона в формате HEVC и файлы тяжелее 30 МБ пережимаются и будет крутиться по кругу.</span>'}
       <span class="hint">Размер этой карточки на экране: <b>${cardSize(D.screens[sel], k)}</b> px. Делайте картинку в таких пропорциях.</span>
     </div></details>

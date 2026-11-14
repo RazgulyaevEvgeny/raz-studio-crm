@@ -17,6 +17,7 @@ TV.COLOR_NAMES = { blue:'Синий', indigo:'Индиго', purple:'Фиоле�
 
 TV.LAYOUTS = { g1:{n:1,t:'Одна на весь экран'}, g2:{n:2,t:'Две равные'}, g3:{n:3,t:'Три равные'}, g12:{n:3,t:'Большая слева + две'}, g21:{n:3,t:'Две + большая справа'}, g4:{n:4,t:'Четыре (2×2)'} };
 TV.ANIMS = { spring:'Пружина снизу', up:'Плавно снизу', fade:'Растворение', left:'Слева направо', right:'Справа налево', zoom:'Увеличение', flip:'Переворот', drop:'Падение сверху', none:'Без анимации' };
+TV.TANIMS = { none:'Вместе с карточкой', fade:'Проявление', up:'Снизу вверх', left:'Слева', zoom:'Увеличение' };
 TV.SPEEDS = { slow:['Медленно',1.7], normal:['Обычно',1], fast:['Быстро',.55] };
 TV.STYLES = { plain:'Стекло', white:'Белая', blue:'Синяя', kaspi:'Kaspi', dark:'Тёмная', custom:'Свой цвет' };
 
@@ -61,7 +62,7 @@ const F = (o) => Object.assign({
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
   sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', video:'', stars:0, oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
   auto:'', autoFrom:0 }, o);
-const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
+const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', tanim:'fade', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
 TV.DEFAULT = { slideSec: 20, fx: true, lite: true, theme: 'dark', show: { music:true, weather:true, clock:true }, screens: [
   S({ layout:'g12', facts:[
@@ -165,12 +166,13 @@ TV.loadImg = (id) => {
 };
 /* видео: хранится как dataURL, для проигрывания превращаем в blob-ссылку (один раз на файл) */
 TV.VIDURL = {};
+TV.NOVID = false;   // в приложении «Студия» видео скачивает и играет сама приставка, странице оно не нужно
 TV.loadVid = (id) => TV.VIDURL[id] || (TV.VIDURL[id] = Promise.resolve(TV.loadImg(id)).then(d => (d && typeof d === 'string') ? fetch(d).then(r => r.blob()).then(b => URL.createObjectURL(b)) : '').catch(() => { delete TV.VIDURL[id]; return ''; }));
 TV.playVids = (root, on) => root.querySelectorAll('video').forEach(v => { try { if (on) { v.muted = true; const p = v.play(); if (p && p.catch) p.catch(() => {}); } else v.pause(); } catch (e) {} });
 /* заранее скачать все фото и видео экранов, по одному, чтобы смена слайдов шла без ожидания */
-TV.preloadAll = (screens) => { const ids = [], keep = {}; (screens || []).forEach(sc => (sc.facts || []).forEach(f => { if (f.photo) { ids.push(['i', f.photo]); keep[f.photo] = 1; } if (f.video) { ids.push(['v', f.video]); keep[f.video] = 1; } }));
+TV.preloadAll = (screens) => { const ids = [], keep = {}; (screens || []).forEach(sc => (sc.facts || []).forEach(f => { if (f.photo) { ids.push(['i', f.photo]); keep[f.photo] = 1; } if (f.video && !TV.NOVID) { ids.push(['v', f.video]); keep[f.video] = 1; } }));
   return ids.reduce((p, x) => p.then(() => x[0] === 'v' ? TV.loadVid(x[1]) : TV.loadImg(x[1])).catch(() => {}), Promise.resolve()).then(() => TV.filePrune(keep)); };
-TV.hydrate = (root) => { root.querySelectorAll('video[data-vid]').forEach(el => { if (el._h) return; el._h = 1; el.muted = true;
+TV.hydrate = (root) => { root.querySelectorAll('video[data-vid]').forEach(el => { if (el._h || TV.NOVID) return; el._h = 1; el.muted = true;
     TV.loadVid(el.dataset.vid).then(u => { if (!u) return; el.src = u; if (el.closest('.scene.on')) TV.playVids(el.parentNode, true); }); });
   root.querySelectorAll('[data-img]').forEach(el => {
   const id = el.dataset.img; Promise.resolve(TV.IMGCACHE[id] || TV.loadImg(id)).then(u => { if (u && typeof u === 'string') { if (el.tagName === 'IMG') el.src = u; else el.style.backgroundImage = `url("${u}")`; } });
