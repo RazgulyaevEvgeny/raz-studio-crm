@@ -423,7 +423,7 @@ function factForm(f, k){
       ${f.photoMode==='bg' ? `
         <label class="fld"><span>Затемнение для читаемости текста: ${f.dim}%</span><input type="range" min="0" max="85" step="5" data-f="dim" value="${f.dim}"></label>
         <label class="chk"><input type="checkbox" data-f="zoom" ${f.zoom?'checked':''}>Медленное приближение фото (живой эффект)</label>`
-      : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео сожмётся в короткий лёгкий ролик без звука (до 12 секунд) и будет крутиться по кругу.</span>'}
+      : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео обрежется под размер карточки и сохранится в хорошем качестве без звука (до 12 секунд) и будет крутиться по кругу.</span>'}
       <span class="hint">Размер этой карточки на экране: <b>${cardSize(D.screens[sel], k)}</b> px. Делайте картинку в таких пропорциях.</span>
     </div></details>
 
@@ -496,20 +496,24 @@ async function uploadVideo(input, file, f){
   try {
     const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file);
     await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('видео не читается')); });
-    const k = Math.min(1, 960 / Math.max(v.videoWidth, v.videoHeight)), w = Math.round(v.videoWidth * k / 2) * 2, h = Math.round(v.videoHeight * k / 2) * 2;
-    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
-    g.drawImage(v, 0, 0, w, h); const poster = c.toDataURL('image/jpeg', 0.8);
+    // кадр сразу обрезаем под размер карточки (по центру) и пишем в её настоящем разрешении — без растягивания на экране
+    const cs = (cardSize(D.screens[sel], +fe.dataset.k) || '971 × 776').split('×').map(x => parseInt(x, 10));
+    const w = Math.round(cs[0] / 2) * 2, h = Math.round(cs[1] / 2) * 2, vw = v.videoWidth, vh = v.videoHeight;
+    const sc = Math.max(w / vw, h / vh), sw = w / sc, sh = h / sc, sx = (vw - sw) / 2, sy = (vh - sh) / 2;
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    const draw = () => g.drawImage(v, sx, sy, sw, sh, 0, 0, w, h);
+    draw(); const poster = c.toDataURL('image/jpeg', 0.9);
     const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
-    const rec = new MediaRecorder(c.captureStream(24), { mimeType: mime, videoBitsPerSecond: 1400000 }), parts = [];
+    const rec = new MediaRecorder(c.captureStream(30), { mimeType: mime, videoBitsPerSecond: Math.round(Math.min(4200000, Math.max(2200000, w * h * 5.5))) }), parts = [];
     rec.ondataavailable = e => e.data.size && parts.push(e.data);
     const dur = Math.min(12, v.duration || 12);
     const done = new Promise(res => { rec.onstop = res; });
     rec.start(500); await v.play();
-    await new Promise(res => { const tick = () => { g.drawImage(v, 0, 0, w, h); toast('Сжимаем видео… ' + Math.min(100, Math.round(v.currentTime / dur * 100)) + '%');
+    await new Promise(res => { const tick = () => { draw(); toast('Сжимаем видео… ' + Math.min(100, Math.round(v.currentTime / dur * 100)) + '%');
       if (v.ended || v.currentTime >= dur) return res(); requestAnimationFrame(tick); }; tick(); });
     v.pause(); rec.stop(); await done;
     const blob = new Blob(parts, { type: mime.split(';')[0] });
-    if (blob.size > 6e6) throw new Error('ролик получился слишком большим, возьмите покороче');
+    if (blob.size > 7e6) throw new Error('ролик получился слишком большим, возьмите покороче');
     const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), vid = 'v' + id;
     if (!demo) { await db.ref('pub/' + TV.IMG + id).set({ d: poster, at: Date.now() }); await db.ref('pub/' + TV.IMG + vid).set({ d: data, at: Date.now() }); }
