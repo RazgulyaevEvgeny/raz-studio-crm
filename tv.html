@@ -72,6 +72,14 @@
   .legacy .scene .f{opacity:1!important;transform:none!important}
   /* тёмная тема iOS: шапка — плашки-«материал», музыка как Live Activity, белый логотип */
   .lite .pager i{transition:none}.lite .pager i.on::after{animation:none!important;transform:none}
+  #upd{position:absolute;top:0;right:0;bottom:0;left:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72)}
+  #upd.on{display:flex}
+  #upd .uc{width:900px;background:#1c1c1e;color:#fff;border-radius:44px;padding:56px 64px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.08);font-family:Inter,system-ui,sans-serif}
+  #upd b{display:block;font-size:52px;font-weight:700;letter-spacing:-.03em}
+  #upd span{display:block;margin-top:16px;font-size:32px;font-weight:500;color:rgba(235,235,245,.7)}
+  #upd .ub{margin-top:36px;height:14px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+  #upd .ub i{display:block;height:100%;width:0;background:#0a84ff;border-radius:99px}
+  #upd small{display:block;margin-top:28px;font-size:24px;font-weight:500;color:rgba(235,235,245,.45)}
   #toast{position:absolute;left:50%;bottom:120px;z-index:8;transform:translateX(-50%) translateY(20px);opacity:0;transition:opacity .25s,transform .25s;background:rgba(28,28,30,.92);color:#fff;font:600 30px Inter,system-ui,sans-serif;padding:20px 40px;border-radius:999px;box-shadow:0 20px 60px rgba(0,0,0,.4),inset 0 0 0 1.5px rgba(255,255,255,.08)}
   #toast.on{opacity:1;transform:translateX(-50%)}
   .dark #stage{background:#000}
@@ -96,7 +104,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611142000"></script>
+<script src="tv-core.js?v=202611142100"></script>
 </head>
 <body>
 <div id="stage">
@@ -270,11 +278,41 @@ function show(i){
 let preT = 0;
 function next(){ const n = box.children.length; if (!n) return; sc = (sc + 1) % n; const sec = show(sc); clearTimeout(timer); timer = setTimeout(next, sec * 1000); }
 build();
+/* обновление: новые фото и видео сначала скачиваются в память приставки (с вопросом и полосой загрузки), и только потом экран переключается на новую версию */
+const upd = { pending: null, busy: false };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function updBox(){ let el = document.getElementById('upd'); if (!el) { el = document.createElement('div'); el.id = 'upd'; el.innerHTML = '<div class="uc"><b id="updT"></b><span id="updS"></span><div class="ub"><i id="updB"></i></div><small id="updH"></small></div>'; document.getElementById('stage').appendChild(el); } return el; }
+function updShow(t, s, h, pr){ const el = updBox(); document.getElementById('updT').textContent = t; document.getElementById('updS').textContent = s; document.getElementById('updH').textContent = h || '';
+  el.querySelector('.ub').style.display = pr == null ? 'none' : 'block'; if (pr != null) document.getElementById('updB').style.width = Math.round(pr * 100) + '%'; el.className = 'on'; }
+function askUpdate(n){ return new Promise(res => { let left = 15, t = 0; const word = n === 1 ? 'новый файл' : n < 5 ? 'новых файла' : 'новых файлов';
+  const draw = () => updShow('Есть обновление экрана', n + ' ' + word + ' — фото и видео. Загрузить в память приставки?', 'Нажмите OK на пульте · начнётся само через ' + left + ' сек');
+  const done = () => { clearInterval(t); removeEventListener('keydown', key, true); res(); };
+  const key = e => { const c = e.keyCode; if (e.key === 'Enter' || c === 13 || c === 23 || c === 66) { e.preventDefault(); done(); } };
+  addEventListener('keydown', key, true); draw(); t = setInterval(() => { if (--left <= 0) done(); else draw(); }, 1000); }); }
+function queueUpdate(d){ upd.pending = d; if (!upd.busy) runUpdate(); }
+async function runUpdate(){
+  upd.busy = true;
+  try { while (upd.pending) {
+    const d = upd.pending; upd.pending = null;
+    const nd = TV.normalize(d), ids = [], seen = {};
+    nd.screens.filter(s => s.on).forEach(sc => sc.facts.slice(0, (TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3).n).forEach(f => { [['i', f.photo], ['v', f.video]].forEach(x => { if (x[1] && !seen[x[1]]) { seen[x[1]] = 1; ids.push(x); } }); }));
+    const miss = []; for (let i = 0; i < ids.length; i++) if (!(await TV.fileHas(ids[i][1]))) miss.push(ids[i]);
+    if (miss.length) {
+      await askUpdate(miss.length);
+      for (let i = 0; i < miss.length; i++) { updShow('Загружаю в память приставки', 'Файл ' + (i + 1) + ' из ' + miss.length, 'Экран обновится сам, когда всё загрузится', i / miss.length); await (miss[i][0] === 'v' ? TV.loadVid(miss[i][1]) : TV.loadImg(miss[i][1])); }
+      updShow('Готово', 'Всё загружено в память приставки', '', 1); await sleep(900); updBox().className = '';
+    }
+    if (upd.pending) continue;   // пока качали, пришла версия новее — берём её
+    try { localStorage.setItem('raz-tv-data', JSON.stringify({ screens: d.screens, slideSec: d.slideSec, fx: d.fx, show: d.show, lite: d.lite, theme: d.theme, pill: d.pill, bg: d.bg })); } catch (e) {}
+    DATA = nd; build();
+  } } catch (e) {} 
+  upd.busy = false;
+}
 (function live(){
   const cfg = window.FIREBASE_CONFIG; if (!cfg || !cfg.databaseURL || !window.EventSource) return;
   const url = cfg.databaseURL.replace(/\/$/, '') + '/pub/' + TV.KEY + '.json';
   let last = SAVED && SAVED.screens ? JSON.stringify({ s: SAVED.screens, n: SAVED.slideSec, fx: SAVED.fx, sh: SAVED.show, l: SAVED.lite, th: SAVED.theme, p: SAVED.pill, bg: SAVED.bg }) : '';
-  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg }); if (j === last) return; last = j; try { localStorage.setItem('raz-tv-data', JSON.stringify({ screens: d.screens, slideSec: d.slideSec, fx: d.fx, show: d.show, lite: d.lite, theme: d.theme, pill: d.pill, bg: d.bg })); } catch (e) {} DATA = TV.normalize(d); build(); };
+  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg }); if (j === last) return; last = j; queueUpdate(d); };
   try {
     const es = new EventSource(url);
     const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
