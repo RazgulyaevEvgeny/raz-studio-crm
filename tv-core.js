@@ -151,6 +151,7 @@ TV.IMGCACHE = {};
 TV.PERSIST = false;
 const idb = () => TV._idb || (TV._idb = new Promise((res) => { try { const r = indexedDB.open('raz-tv', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }));
 TV.fileGet = (id) => !TV.PERSIST ? Promise.resolve('') : idb().then(d => !d ? '' : new Promise(res => { try { const q = d.transaction('files').objectStore('files').get(id); q.onsuccess = () => res(q.result || ''); q.onerror = () => res(''); } catch (e) { res(''); } }));
+TV.fileHas = (id) => (TV.IMGCACHE[id] && typeof TV.IMGCACHE[id] === 'string') ? Promise.resolve(true) : !TV.PERSIST ? Promise.resolve(false) : idb().then(d => !d ? false : new Promise(res => { try { const q = d.transaction('files').objectStore('files').count(id); q.onsuccess = () => res(q.result > 0); q.onerror = () => res(false); } catch (e) { res(false); } }));
 TV.filePut = (id, v) => { if (TV.PERSIST && v) idb().then(d => { try { d && d.transaction('files', 'readwrite').objectStore('files').put(v, id); } catch (e) {} }); };
 TV.filePrune = (keep) => { if (TV.PERSIST) idb().then(d => { try { if (!d) return; const st = d.transaction('files', 'readwrite').objectStore('files'), q = st.getAllKeys(); q.onsuccess = () => { const ks = q.result || []; if (ks.length > 60) ks.forEach(k => { if (!keep[k]) st.delete(k); }); }; } catch (e) {} }); };
 TV.loadImg = (id) => {
