@@ -80,6 +80,18 @@
   #upd .ub{margin-top:36px;height:14px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
   #upd .ub i{display:block;height:100%;width:0;background:#0a84ff;border-radius:99px}
   #upd small{display:block;margin-top:28px;font-size:24px;font-weight:500;color:rgba(235,235,245,.45)}
+  /* режим приложения «Студия»: страница рисуется за кадром слоями (фон, шапка, карточки), а показывает и анимирует их сама приставка */
+  html.native,html.native.dark,html.native body{background:transparent!important}
+  #stage.native,#stage.native *{animation:none!important;transition:none!important}
+  #stage.native{background:transparent!important}
+  #stage.native.m-bg{background:#fff!important}#stage.native.dark.m-bg{background:#000!important}
+  #stage.native .scene{display:none!important}
+  #stage.native.m-scene .scene.nshow{display:flex!important}
+  #stage.native .scene.nshow .f{opacity:1!important;transform:none!important}
+  #stage.native:not(.m-bg) .bgfx,#stage.native.m-bg header,#stage.native.m-bg footer,#stage.native.m-scene header,#stage.native.m-scene footer,#stage.native #upd,#stage.native #toast,#stage.native #how{display:none!important}
+  #stage.native .pager i.on{width:90px}#stage.native .pager i.on::after{transform:none!important}
+  #stage.native.novid .f{background:transparent!important;box-shadow:none!important}
+  #stage.native.novid .f .bgph,#stage.native.novid .f .pic,#stage.native .f video{visibility:hidden!important}
   #toast{position:absolute;left:50%;bottom:120px;z-index:8;transform:translateX(-50%) translateY(20px);opacity:0;transition:opacity .25s,transform .25s;background:rgba(28,28,30,.92);color:#fff;font:600 30px Inter,system-ui,sans-serif;padding:20px 40px;border-radius:999px;box-shadow:0 20px 60px rgba(0,0,0,.4),inset 0 0 0 1.5px rgba(255,255,255,.08)}
   #toast.on{opacity:1;transform:translateX(-50%)}
   .dark #stage{background:#000}
@@ -104,7 +116,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611142300"></script>
+<script src="tv-core.js?v=202611150000"></script>
 </head>
 <body>
 <div id="stage">
@@ -250,7 +262,7 @@ function applySettings(){
   st.classList.toggle('lite', DATA.lite); TV.LITE = DATA.lite;
   st.classList.toggle('dark', DATA.theme === 'dark'); TV.THEME = DATA.theme; document.documentElement.classList.toggle('dark', DATA.theme === 'dark');
   document.getElementById('foot').textContent = DATA.foot || '';
-  const base = TV.bgApply ? TV.bgApply(st, DATA.bg, DATA.theme) : ''; if (base) document.body.style.background = base; document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
+  const base = TV.bgApply ? TV.bgApply(st, DATA.bg, DATA.theme) : ''; if (typeof nbase !== 'undefined') nbase = base || ''; if (base) document.body.style.background = base; document.body.style.background = DATA.theme === 'dark' ? '#000' : '#fff';
   const pills = document.querySelectorAll('header .pill');
   for (let i = 0; i < pills.length; i++) { pills[i].style.background = DATA.pill.bg || ''; pills[i].style.color = DATA.pill.fg || ''; pills[i].querySelectorAll('b,.clock,.temp,.lbl2,.track small,.track span').forEach(x => x.style.color = DATA.pill.fg || ''); }
   if (pills[0]) pills[0].style.display = DATA.show.music ? '' : 'none';
@@ -263,8 +275,38 @@ function build(){
   box.innerHTML = LIST.map(TV.sceneHTML).join('');
   pager.innerHTML = LIST.map(() => '<i></i>').join('');
   TV.preloadAll(LIST);
-  sc = -1; clearTimeout(timer); next();
+  sc = -1; clearTimeout(timer);
+  if (NATIVE) { nmode('m-chrome'); try { RazApp.built(JSON.stringify({ n: LIST.length })); } catch (e) {} return; }
+  next();
 }
+/* ---- приложение «Студия»: отдаём приставке готовые слои ---- */
+const NATIVE = !!window.RazApp;
+if (NATIVE) { document.documentElement.classList.add('native'); document.getElementById('stage').classList.add('native', 'm-chrome'); }
+let nq = Promise.resolve(), nbase = '';
+const nstage = () => document.getElementById('stage');
+const nmode = m => { const st = nstage(); st.classList.remove('m-bg', 'm-chrome', 'm-scene', 'novid'); st.classList.add(m); if (m === 'm-bg' && nbase) st.style.setProperty('background', nbase, 'important'); else st.style.removeProperty('background'); };
+const settle = (ms) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; setTimeout(r, ms || 60); } }; try { requestAnimationFrame(() => requestAnimationFrame(f)); } catch (e) {} setTimeout(f, 300); });
+const shot = (kind, json) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; r(); } }; window.razAck = f; setTimeout(f, 4000); try { RazApp.shot(kind, json || ''); } catch (e) { f(); } });
+const nrect = el => { const r = el.getBoundingClientRect(), k = window.devicePixelRatio || 1; return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };
+window.razBg = () => (nq = nq.then(async () => { nmode('m-bg'); await settle(); await shot('bg'); }).catch(() => {}));
+window.razChrome = (i) => (nq = nq.then(async () => { [...pager.children].forEach((d, j) => d.classList.toggle('on', j === i)); nmode('m-chrome'); await settle(); await shot('chrome'); }).catch(() => {}));
+window.razScene = (i) => (nq = nq.then(async () => {
+  const s = box.children[i], sc0 = LIST[i]; if (!s || !sc0) return;
+  [...box.children].forEach(x => x.classList.remove('nshow'));
+  await Promise.race([TV.preloadAll([sc0]), new Promise(r => setTimeout(r, 12000))]);
+  TV.hydrate(s); s.classList.add('nshow');
+  const L = TV.LITE; TV.LITE = true; s.querySelectorAll('.num[data-to]').forEach(el => TV.countUp(el)); TV.LITE = L;
+  nmode('m-scene'); await settle(200);
+  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1);
+  const cards = [...s.querySelectorAll('.f')].map((f, k) => { const v = f.querySelector('video[data-vid]');
+    return { r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
+  const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';
+  await shot('scene', JSON.stringify({ i, sec: (+sc0.sec) || DATA.slideSec, anim: an, shift: Math.round(40 * z), cards }));
+  if (cards.some(c => c.v)) { st.classList.add('novid'); await settle(120); await shot('over'); st.classList.remove('novid'); }
+  nmode('m-chrome');
+}).catch(() => {}));
+let nchT = 0; const nchrome = () => { clearTimeout(nchT); nchT = setTimeout(() => { try { RazApp.chromeChanged(); } catch (e) {} }, 400); };
+if (NATIVE) new MutationObserver(nchrome).observe(document.querySelector('header'), { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['src'] });
 function show(i){
   const scenes = [...box.children], dots = [...pager.children], lite = !!DATA.lite;
   let wait = 0;
@@ -299,7 +341,7 @@ async function runUpdate(){
     nd.screens.filter(s => s.on).forEach(sc => sc.facts.slice(0, (TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3).n).forEach(f => { [['i', f.photo], ['v', f.video]].forEach(x => { if (x[1] && !seen[x[1]]) { seen[x[1]] = 1; ids.push(x); } }); }));
     const miss = []; for (let i = 0; i < ids.length; i++) if (!(await TV.fileHas(ids[i][1]))) miss.push(ids[i]);
     if (miss.length) {
-      await askUpdate(miss.length);
+      if (!NATIVE) await askUpdate(miss.length);
       for (let i = 0; i < miss.length; i++) { updShow('Загружаю в память приставки', 'Файл ' + (i + 1) + ' из ' + miss.length, 'Экран обновится сам, когда всё загрузится', i / miss.length); await (miss[i][0] === 'v' ? TV.loadVid(miss[i][1]) : TV.loadImg(miss[i][1])); }
       updShow('Готово', 'Всё загружено в память приставки', '', 1); await sleep(900); updBox().className = '';
     }
