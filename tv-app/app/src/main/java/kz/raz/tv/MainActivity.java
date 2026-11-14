@@ -24,6 +24,13 @@ import android.view.View;
 import android.view.ViewOutlineProvider;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.OvershootInterpolator;
+import android.view.animation.AccelerateInterpolator;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
+import android.animation.PropertyValuesHolder;
+import android.graphics.drawable.GradientDrawable;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -64,6 +71,9 @@ public class MainActivity extends Activity {
   private ImageView bgV, chromeV;
   private FrameLayout cardsV;
   private TextView status;
+  private View prog;
+  private long slideAt, slideMs;
+  private ObjectAnimator bgAnim;
   private Bitmap scratch;
   private long backAt;
 
@@ -111,11 +121,18 @@ public class MainActivity extends Activity {
 
     bgV = new ImageView(this); bgV.setScaleType(ImageView.ScaleType.FIT_XY); bgV.setBackgroundColor(Color.BLACK);
     root.addView(bgV, new FrameLayout.LayoutParams(-1, -1));
+    // фон чуть больше экрана и очень медленно плывёт — один слой, приставке это ничего не стоит
+    bgV.setScaleX(1.12f); bgV.setScaleY(1.12f);
+    bgAnim = ObjectAnimator.ofPropertyValuesHolder(bgV, PropertyValuesHolder.ofFloat(View.TRANSLATION_X, -40f, 40f), PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 22f, -22f), PropertyValuesHolder.ofFloat(View.SCALE_X, 1.12f, 1.18f), PropertyValuesHolder.ofFloat(View.SCALE_Y, 1.12f, 1.18f));
+    bgAnim.setDuration(36000); bgAnim.setRepeatCount(ValueAnimator.INFINITE); bgAnim.setRepeatMode(ValueAnimator.REVERSE); bgAnim.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+    bgAnim.start();
     cardsV = new FrameLayout(this);
     root.addView(cardsV, new FrameLayout.LayoutParams(-1, -1));
     chromeV = new ImageView(this); chromeV.setScaleType(ImageView.ScaleType.FIT_XY);
     root.addView(chromeV, new FrameLayout.LayoutParams(-1, -1));
 
+    prog = new View(this); prog.setVisibility(View.GONE); prog.setPivotX(0);
+    root.addView(prog, new FrameLayout.LayoutParams(1, 1));
     status = new TextView(this);
     status.setTextColor(0xFFEBEBF5); status.setTextSize(22); status.setGravity(Gravity.CENTER);
     status.setBackgroundColor(Color.BLACK); status.setPadding(60, 60, 60, 60);
@@ -164,7 +181,11 @@ public class MainActivity extends Activity {
     Bitmap s = grab();
     if (s == null) return;
     if ("bg".equals(kind)) { bgV.setImageBitmap(s.copy(Bitmap.Config.RGB_565, false)); return; }
-    if ("chrome".equals(kind)) { chromeV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false)); return; }
+    if ("chrome".equals(kind)) {
+      chromeV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false));
+      try { JSONObject o = new JSONObject(json); JSONArray d = o.optJSONArray("dot"); if (d != null) placeProgress(d.getInt(0), d.getInt(1), d.getInt(2), d.getInt(3), o.optBoolean("dark", true)); } catch (Exception ignored) {}
+      return;
+    }
     if ("scene".equals(kind)) {
       JSONObject o = new JSONObject(json);
       Scene sc = new Scene();
@@ -190,12 +211,28 @@ public class MainActivity extends Activity {
     }
   }
 
+  /** Полоска прогресса текущего слайда: заполняется за время показа. */
+  private void placeProgress(int x, int y, int w, int hh, boolean dark) {
+    if (w <= 0 || hh <= 0) { prog.setVisibility(View.GONE); return; }
+    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) prog.getLayoutParams();
+    lp.width = w; lp.height = hh; lp.leftMargin = x; lp.topMargin = y; prog.setLayoutParams(lp);
+    GradientDrawable g = new GradientDrawable(); g.setColor(dark ? Color.WHITE : 0xFF007AFF); g.setCornerRadius(hh / 2f); prog.setBackground(g);
+    prog.setVisibility(count > 1 ? View.VISIBLE : View.GONE);
+    prog.animate().cancel();
+    long left = slideMs - (System.currentTimeMillis() - slideAt);
+    float done = slideMs > 0 ? Math.max(0f, Math.min(1f, 1f - left / (float) slideMs)) : 1f;
+    prog.setScaleX(done);
+    if (left > 0) prog.animate().scaleX(1f).setDuration(left).setInterpolator(new LinearInterpolator()).start();
+  }
+
   private void ready(Scene sc) { pending = sc; if (due) showPending(); }
 
   private void showPending() {
     final Scene sc = pending; pending = null; due = false;
     if (!started) { started = true; say(""); }
     cur = sc.i;
+    slideAt = System.currentTimeMillis(); slideMs = (long) (Math.max(5, sc.sec) * 1000);
+    prog.animate().cancel(); prog.setScaleX(0f);
     transition(sc);
     js("razChrome(" + cur + ")");
     h.removeCallbacks(fire); h.removeCallbacks(askNext);
@@ -207,9 +244,11 @@ public class MainActivity extends Activity {
     final List<View> old = new ArrayList<>();
     for (int k = 0; k < cardsV.getChildCount(); k++) old.add(cardsV.getChildAt(k));
     final List<Vid> oldVids = new ArrayList<>(vids); vids.clear();
-    for (final View v : old) v.animate().alpha(0f).setDuration(240).setStartDelay(0).withEndAction(() -> cardsV.removeView(v)).start();
-    h.postDelayed(() -> { for (Vid v : oldVids) v.release(); }, 300);
-    h.postDelayed(() -> { for (Card c : sc.cards) addCard(sc, c); }, old.isEmpty() ? 0 : 280);
+    int n = 0;
+    for (final View v : old) v.animate().alpha(0f).translationY(-sc.shift * 0.6f).scaleX(0.97f).scaleY(0.97f)
+        .setDuration(260).setStartDelay(40L * n++).setInterpolator(new AccelerateInterpolator(1.4f)).withEndAction(() -> cardsV.removeView(v)).start();
+    h.postDelayed(() -> { for (Vid v : oldVids) v.release(); }, 420);
+    h.postDelayed(() -> { for (Card c : sc.cards) addCard(sc, c); }, old.isEmpty() ? 0 : 340);
   }
 
   private void addCard(Scene sc, final Card c) {
@@ -228,19 +267,25 @@ public class MainActivity extends Activity {
       if (c.b != null) { ImageView bv = new ImageView(this); bv.setScaleType(ImageView.ScaleType.FIT_XY); bv.setImageBitmap(c.b); box.addView(bv, new FrameLayout.LayoutParams(-1, -1)); }
       vids.add(new Vid(c.vid, tv));
     }
-    float dx = 0, dy = sc.shift;
+    float dx = 0, dy = sc.shift * 1.5f, sc0 = 0.94f; long dur = 720; android.animation.TimeInterpolator ip = new OvershootInterpolator(1.15f);
     switch (sc.anim) {
-      case "left": case "flip": dx = -sc.shift * 1.2f; dy = 0; break;
-      case "right": dx = sc.shift * 1.2f; dy = 0; break;
-      case "drop": dy = -sc.shift; break;
-      case "fade": case "none": dy = 0; break;
-      default: break;
+      case "up": ip = new DecelerateInterpolator(2.2f); dy = sc.shift * 2.4f; sc0 = 1f; dur = 640; break;
+      case "left": case "flip": dx = -sc.shift * 3f; dy = 0; sc0 = 1f; ip = new DecelerateInterpolator(2.2f); dur = 640; break;
+      case "right": dx = sc.shift * 3f; dy = 0; sc0 = 1f; ip = new DecelerateInterpolator(2.2f); dur = 640; break;
+      case "drop": dy = -sc.shift * 2.4f; sc0 = 1f; ip = new OvershootInterpolator(1.3f); break;
+      case "zoom": dy = 0; sc0 = 0.82f; ip = new OvershootInterpolator(1.2f); break;
+      case "fade": dy = 0; sc0 = 1f; ip = new DecelerateInterpolator(1.5f); dur = 600; break;
+      case "none": dy = 0; sc0 = 1f; dur = 1; break;
+      default: break;   // spring: снизу с лёгкой пружиной
     }
-    box.setAlpha(0f); box.setTranslationX(dx); box.setTranslationY(dy);
-    if ("zoom".equals(sc.anim)) { box.setScaleX(0.96f); box.setScaleY(0.96f); box.setTranslationY(0); }
+    box.setAlpha(0f); box.setTranslationX(dx); box.setTranslationY(dy); box.setScaleX(sc0); box.setScaleY(sc0);
     cardsV.addView(box, lp);
-    box.animate().alpha(1f).translationX(0).translationY(0).scaleX(1f).scaleY(1f)
-        .setDuration("none".equals(sc.anim) ? 1 : 520).setStartDelay(90L * c.idx).setInterpolator(new DecelerateInterpolator(1.8f)).start();
+    final boolean plain = c.vid == null;
+    if (plain) box.setLayerType(View.LAYER_TYPE_HARDWARE, null);   // на время движения карточка — одна текстура
+    final FrameLayout fb = box;
+    box.animate().translationX(0).translationY(0).scaleX(1f).scaleY(1f).setDuration(dur).setStartDelay(110L * c.idx).setInterpolator(ip)
+        .withEndAction(() -> { if (plain) fb.setLayerType(View.LAYER_TYPE_NONE, null); }).start();
+    ObjectAnimator fade = ObjectAnimator.ofFloat(box, View.ALPHA, 0f, 1f); fade.setDuration(Math.min(dur, 380)); fade.setStartDelay(110L * c.idx); fade.setInterpolator(new DecelerateInterpolator()); fade.start();
   }
 
   /** Видео карточки: аппаратный плеер приставки, по кругу, без звука. Файл берётся из памяти приставки. */
