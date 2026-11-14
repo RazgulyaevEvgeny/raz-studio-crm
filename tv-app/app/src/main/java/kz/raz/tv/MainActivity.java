@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     status.setBackgroundColor(Color.BLACK); status.setPadding(60, 60, 60, 60);
     root.addView(status, new FrameLayout.LayoutParams(-1, -1));
     setContentView(root);
-    say("Экран студии запускается…");
+    say("Студия запускается…");
     if (runtime == null) runtime = GeckoRuntime.create(getApplicationContext(),
         new GeckoRuntimeSettings.Builder().consoleOutput(true).aboutConfigEnabled(false)
             // свой поиск адресов сайтов (через 1.1.1.1), если системный на приставке не отвечает; без IPv6
