@@ -89,7 +89,7 @@
   #stage.native.m-scene .scene.nshow{display:flex!important}
   #stage.native .scene.nshow .f{opacity:1!important;transform:none!important}
   #stage.native:not(.m-bg) .bgfx,#stage.native.m-bg header,#stage.native.m-bg footer,#stage.native.m-scene header,#stage.native.m-scene footer,#stage.native #upd,#stage.native #toast,#stage.native #how{display:none!important}
-  #stage.native .pager i.on{width:90px}#stage.native .pager i.on::after{transform:none!important}
+  #stage.native .pager i.on{width:90px}#stage.native .pager i.on::after{display:none!important}
   #stage.native.novid .f{background:transparent!important;box-shadow:none!important}
   #stage.native.novid .f .bgph,#stage.native.novid .f .pic,#stage.native .f video{visibility:hidden!important}
   #toast{position:absolute;left:50%;bottom:120px;z-index:8;transform:translateX(-50%) translateY(20px);opacity:0;transition:opacity .25s,transform .25s;background:rgba(28,28,30,.92);color:#fff;font:600 30px Inter,system-ui,sans-serif;padding:20px 40px;border-radius:999px;box-shadow:0 20px 60px rgba(0,0,0,.4),inset 0 0 0 1.5px rgba(255,255,255,.08)}
@@ -172,6 +172,7 @@ addEventListener('resize',fit);fit();
 const DOW=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'],MON=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const kz=()=>new Date(Date.now()+5*3600e3); // Казахстан: UTC+5 круглый год
 function tick(){const d=kz(),p=n=>(n<10?'0':'')+n;
+  const key=p(d.getUTCHours())+p(d.getUTCMinutes())+d.getUTCDate(); if(key===tick.k) return; tick.k=key;   // трогаем шапку только когда время реально сменилось
   document.getElementById('clock').innerHTML=p(d.getUTCHours())+'<span class="colon">:</span>'+p(d.getUTCMinutes());
   document.getElementById('dow').textContent=DOW[d.getUTCDay()];document.getElementById('dm').textContent=d.getUTCDate()+' '+MON[d.getUTCMonth()];}
 tick();setInterval(tick,15000);
@@ -289,7 +290,7 @@ const settle = (ms) => new Promise(r => { let d = false; const f = () => { if (!
 const shot = (kind, json) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; r(); } }; window.razAck = f; setTimeout(f, 4000); try { RazApp.shot(kind, json || ''); } catch (e) { f(); } });
 const nrect = el => { const r = el.getBoundingClientRect(), k = window.devicePixelRatio || 1; return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };
 window.razBg = () => (nq = nq.then(async () => { nmode('m-bg'); await settle(); await shot('bg'); }).catch(() => {}));
-window.razChrome = (i) => (nq = nq.then(async () => { [...pager.children].forEach((d, j) => d.classList.toggle('on', j === i)); nmode('m-chrome'); await settle(); await shot('chrome'); }).catch(() => {}));
+window.razChrome = (i) => (nq = nq.then(async () => { [...pager.children].forEach((d, j) => d.classList.toggle('on', j === i)); nmode('m-chrome'); await settle(); const dot = pager.children[i]; await shot('chrome', JSON.stringify({ dot: dot ? nrect(dot) : null, dark: DATA.theme === 'dark' })); }).catch(() => {}));
 window.razScene = (i) => (nq = nq.then(async () => {
   const s = box.children[i], sc0 = LIST[i]; if (!s || !sc0) return;
   [...box.children].forEach(x => x.classList.remove('nshow'));
