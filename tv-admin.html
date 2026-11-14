@@ -79,6 +79,12 @@
   .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
   .fe.addc{align-items:center;justify-content:center;min-height:180px;border:2px dashed var(--line,#c7c7cc);background:transparent;color:var(--blue,#007aff);font:600 16px var(--T);cursor:pointer}.fe.addc span{font-size:44px;line-height:1;font-weight:300}
   .fe .szr{background:#fff;border-radius:14px;padding:10px 12px}.dark .fe .szr{background:rgba(255,255,255,.06)}
+  #pvs .rzh{position:absolute;right:18px;bottom:18px;width:64px;height:64px;border-radius:50%;z-index:6;pointer-events:auto;cursor:nwse-resize;background:rgba(255,255,255,.92);box-shadow:0 6px 20px rgba(0,0,0,.35);opacity:.0;transition:opacity .15s}
+  #pvs .rzh::after{content:'';position:absolute;left:19px;top:19px;width:22px;height:22px;border-right:6px solid #007aff;border-bottom:6px solid #007aff;border-radius:0 0 6px 0}
+  #pvs .f:hover .rzh,body.rzing #pvs .rzh{opacity:1}
+  #pvs .f:hover{outline:4px solid rgba(0,122,255,.7);outline-offset:-4px}
+  body.rzing,body.rzing *{cursor:nwse-resize!important;user-select:none}
+  #pvs .scene .f{pointer-events:auto}
   .fe{background:var(--tile);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
   .fe-h{display:flex;align-items:center;gap:10px;font:700 15px var(--T)}
   .fe-h .b{width:26px;height:26px;border-radius:8px;background:#fff;display:grid;place-items:center;font-size:13px}
@@ -171,7 +177,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611150500"></script>
+<script src="tv-core.js?v=202611150530"></script>
 </head>
 <body>
 <div class="bar">
@@ -252,6 +258,7 @@
     </div>
     <div class="pv" id="pv"><div class="stage" id="stage"></div>
       <button class="btn replay" id="replay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L1 10"/></svg>Показать анимацию</button></div>
+    <div class="hint" style="margin:8px 4px 0">Наведите на карточку в предпросмотре и потяните за синий уголок — карточка станет шире или уже, текст сам подстроится.</div>
     <div class="facts" id="facts"></div>
   </main>
 </div>
@@ -288,10 +295,42 @@ function preview(animate){
   $('pvs').innerHTML = TV.sceneHTML(s);
   const el = $('pvs').firstElementChild;
   if (animate) requestAnimationFrame(() => requestAnimationFrame(() => TV.animateIn(el)));
-  requestAnimationFrame(fillSizes);
+  addHandles(el);
+  requestAnimationFrame(() => { TV.fitText(el); fillSizes(); });
   if (animate) {} else { el.style.setProperty('--sp', '0.001'); el.style.setProperty('--st', '0s'); el.classList.add('on'); TV.hydrate(el); el.querySelectorAll('.ic,.sw,.insta').forEach(x => x.style.animation = 'none'); }
 }
 $('replay').onclick = () => preview(true);
+
+/* ---------- размер карточки мышкой: тянем за уголок, как виджет на айфоне ---------- */
+function addHandles(el){
+  if (!el) return;
+  el.querySelectorAll('.f:not(.shd)').forEach((f, k) => { const h = document.createElement('i'); h.className = 'rzh'; h.dataset.k = k; h.title = 'Потяните, чтобы изменить размер'; f.appendChild(h); });
+}
+const SNAP = [25, 33, 50, 66, 75, 100];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+$('stage').addEventListener('pointerdown', e => {
+  const h = e.target.closest('.rzh'); if (!h) return;
+  e.preventDefault(); e.stopPropagation();
+  const s = D.screens[sel], k = +h.dataset.k, f = s.facts[k], card = h.parentElement, par = card.parentElement;
+  const gx = s.layout === 'gx', inCol = par.classList.contains('col'), single = inCol && par.children.length === 1;
+  const box = single ? par : card, vert = inCol && !single;
+  const r = box.getBoundingClientRect(), pr = (single ? par.parentElement : par).getBoundingClientRect(), sr = card.closest('.scene').getBoundingClientRect();
+  const size0 = vert ? r.height : r.width, other = (vert ? pr.height : pr.width) - size0;
+  const x0 = e.clientX, y0 = e.clientY, g0 = +f.gw || 33, w0 = +f.w || 1, b0 = +s.bigw || 1.25, bigLeft = single && s.layout === 'g12';
+  let raf = 0;
+  document.body.classList.add('rzing');
+  const mv = ev => {
+    let d = vert ? ev.clientY - y0 : ev.clientX - x0;
+    if (single && !bigLeft) d = -d;                        // большая справа: тянем влево — шире
+    if (single && !par.classList.contains('big')) return;
+    if (gx) { let v = clamp(g0 + d / sr.width * 100, 15, 100); const sn = SNAP.find(x => Math.abs(x - v) < 2.5); f.gw = Math.round(sn || v); }
+    else { const a = Math.max(size0 * .3, size0 + d), o = Math.max(40, other - d), v = (single ? b0 : w0) * (a / size0) * (other / o);
+      if (single) s.bigw = Math.round(clamp(v, .6, 3) * 100) / 100; else f.w = Math.round(clamp(v, .5, 3) * 20) / 20; }
+    if (!raf) raf = requestAnimationFrame(() => { raf = 0; preview(false); });
+  };
+  const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); document.body.classList.remove('rzing'); markDirty(); renderBar(); renderFacts(); renderList(); preview(false); };
+  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+});
 
 /* ---------- список экранов ---------- */
 const summary = s => s.facts.slice(0, TV.cnt(s)).map(f => f.big || f.title || f.label).filter(Boolean).slice(0,2).join(' · ') || 'Пустой экран';
