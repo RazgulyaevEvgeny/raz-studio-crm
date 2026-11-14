@@ -15,7 +15,8 @@ TV.THEME = 'light';
 TV.col = k => (TV.THEME === 'dark' ? TV.COLORS_D : TV.COLORS)[k];
 TV.COLOR_NAMES = { blue:'Синий', indigo:'Индиго', purple:'Фиолетовый', pink:'Розовый', red:'Красный', orange:'Оранжевый', yellow:'Жёлтый', green:'Зелёный', teal:'Бирюзовый', gray:'Серый', black:'Чёрный' };
 
-TV.LAYOUTS = { g1:{n:1,t:'Одна на весь экран'}, g2:{n:2,t:'Две равные'}, g3:{n:3,t:'Три равные'}, g12:{n:3,t:'Большая слева + две'}, g21:{n:3,t:'Две + большая справа'}, g4:{n:4,t:'Четыре (2×2)'} };
+TV.LAYOUTS = { g1:{n:1,t:'Одна на весь экран'}, g2:{n:2,t:'Две равные'}, g3:{n:3,t:'Три равные'}, g12:{n:3,t:'Большая слева + две'}, g21:{n:3,t:'Две + большая справа'}, g4:{n:4,t:'Четыре (2×2)'}, gx:{n:8,t:'Свободная: добавляйте карточки и задавайте ширину'} };
+TV.cnt = sc => sc.layout === 'gx' ? Math.max(1, Math.min(8, +sc.cnt || 3)) : (TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3).n;
 TV.ANIMS = { spring:'Пружина снизу', up:'Плавно снизу', fade:'Растворение', left:'Слева направо', right:'Справа налево', zoom:'Увеличение', flip:'Переворот', drop:'Падение сверху', none:'Без анимации' };
 TV.TANIMS = { none:'Вместе с карточкой', fade:'Проявление', up:'Снизу вверх', left:'Слева', zoom:'Увеличение' };
 TV.SPEEDS = { slow:['Медленно',1.7], normal:['Обычно',1], fast:['Быстро',.55] };
@@ -143,7 +144,7 @@ TV.normalize = (d) => {
   const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
   return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'light' ? 'light' : 'dark', foot: d.foot == null ? 'Работаем с 11:00 до 19:00' : String(d.foot).slice(0, 120), bg: TV.normBg(d.bg), pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
     screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
-      const src = s.facts || []; sc.facts = [0,1,2,3].map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
+      const src = s.facts || []; sc.facts = Array.from({ length: Math.max(4, Math.min(8, src.length)) }, (_, i) => i).map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
 };
 
 /* ---------- фото ---------- */
@@ -215,6 +216,17 @@ TV.CSS = `
 .scene>.f,.scene>.col{flex:1 1 0%;min-width:0}
 .scene>*+*{margin-left:28px}
 .scene>.big{flex:1.25 1 0%}
+/* заголовок экрана над карточками */
+.scene.has-head{padding-top:132px}
+/* свободная раскладка: карточки идут рядами, ширина у каждой своя */
+.scene.gx{-webkit-flex-wrap:wrap;flex-wrap:wrap;align-content:stretch;left:58px;right:58px;top:178px;bottom:98px}
+.scene.gx>.f:not(.shd){margin:14px!important;flex:0 0 auto;min-height:0}
+.scene.gx.has-head{padding-top:132px}
+.scene.gx>.f.shd{left:14px;right:14px;top:14px}
+.scene>.f.shd{position:absolute;left:0;right:0;top:0;height:108px;margin:0!important;padding:0 6px;background:none!important;box-shadow:none!important;border-radius:0;justify-content:center;overflow:visible;flex:none}
+.shd .sh1{font-family:"Inter Tight",Inter,system-ui,sans-serif;font-size:68px;font-weight:800;letter-spacing:-.025em;line-height:1.02;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shd .sh2{font-size:30px;font-weight:500;line-height:1.2;color:var(--fg2);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dark .scene>.f.shd{box-shadow:none!important;background:none!important}
 .col{display:flex;flex-direction:column;min-height:0}
 .col>.f{flex:1 1 0%;min-height:0}
 .col>*+*{margin-top:28px}
@@ -371,12 +383,15 @@ const LIST_COLORS = ['purple','indigo','orange','red','blue','green','teal','pin
 const LIST_ICONS = { 'dtf':'printer','вышив':'needle','3d':'cube','накле':'car','авто':'car','вывес':'sign','таблич':'sign','топпер':'cup','футбол':'shirt' };
 const listIcon = t => { const l = t.toLowerCase(); for (const k in LIST_ICONS) if (l.includes(k)) return LIST_ICONS[k]; return 'check'; };
 
-TV.factHTML = (f, hero, idx) => {
+TV.factHTML = (f, hero, idx, gx) => {
   const col = TV.col(f.color) || TV.col('blue');
   const bgPhoto = f.photo && f.photoMode === 'bg';
   const cls = ['f', 'st-' + (TV.STYLES[f.style] ? f.style : 'plain')];
   let style = idx != null ? `--i:${idx};` : '';
   if (hero) cls.push('hero');
+  /* свободная раскладка: ширина в % ряда; иначе доля места в ряду или колонке */
+  if (gx) style += `width:calc(${Math.max(15, Math.min(100, +f.gw || 33))}% - 28px);height:calc(${(100 / gx).toFixed(3)}% - 28px);`;
+  else if (+f.w && +f.w !== 1) style += `flex:${Math.max(0.5, Math.min(3, +f.w))} 1 0%;`;
   if (f.style === 'custom') { style += `background:${esc(f.bg)};`; if (isLight(f.bg)) cls.push('light-bg'); }
   const colored = ['blue','kaspi','dark'].includes(f.style) || (f.style === 'custom' && !isLight(f.bg)) || bgPhoto;
   if (colored) cls.push('on-color');
@@ -430,14 +445,21 @@ TV.factHTML = (f, hero, idx) => {
 TV.sceneHTML = (sc) => {
   const L = TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3, sp = (TV.SPEEDS[sc.speed] || TV.SPEEDS.normal)[1];
   const heroIdx = sc.layout === 'g12' ? 0 : sc.layout === 'g21' ? 2 : sc.layout === 'g1' ? 0 : -1;
-  const cards = (sc.facts||[]).slice(0, L.n).map((f,i) => TV.factHTML(f, i === heroIdx, i));
-  const c = (arr, big) => `<div class="col${big ? ' big' : ''}">${arr.join('')}</div>`;
+  const list = (sc.facts||[]).slice(0, TV.cnt(sc));
+  let rows = 1;   // свободная раскладка: считаем ряды, чтобы высота делилась поровну и ничего не вылезало
+  if (sc.layout === 'gx') { let acc = 0; list.forEach(f => { const w = Math.max(15, Math.min(100, +f.gw || 33)); if (acc && acc + w > 100.5) { rows++; acc = 0; } acc += w; }); }
+  const cards = list.map((f,i) => TV.factHTML(f, i === heroIdx, i, sc.layout === 'gx' ? rows : 0));
+  const bw = Math.max(0.6, Math.min(3, +sc.bigw || 1.25));
+  const c = (arr, big) => `<div class="col${big ? ' big' : ''}"${big && bw !== 1.25 ? ` style="flex:${bw} 1 0%"` : ''}>${arr.join('')}</div>`;
+  const hd = String(sc.head || '').trim(), sb = String(sc.sub || '').trim();
+  const head = (hd || sb) ? `<div class="f shd" style="--i:0">${hd ? `<div class="sh1"${sc.cHead ? ` style="color:${esc(sc.cHead)}"` : ''}>${esc(hd)}</div>` : ''}${sb ? `<div class="sh2">${esc(sb)}</div>` : ''}</div>` : '';
   let inner;
   if (sc.layout === 'g12') inner = c([cards[0]], true) + c([cards[1], cards[2]]);
   else if (sc.layout === 'g21') inner = c([cards[0], cards[1]]) + c([cards[2]], true);
   else if (sc.layout === 'g4') inner = c([cards[0], cards[2]]) + c([cards[1], cards[3]]);
   else inner = cards.join('');
-  return `<section class="scene ${sc.layout} an-${TV.ANIMS[sc.anim] ? sc.anim : 'spring'}" style="--sp:${sc.anim === 'none' ? 0.001 : sp};--st:${sc.stagger === false || sc.anim === 'none' ? '0s' : (0.18 * sp).toFixed(2) + 's'}">${inner}</section>`;
+  inner += head;
+  return `<section class="scene ${sc.layout}${head ? ' has-head' : ''} an-${TV.ANIMS[sc.anim] ? sc.anim : 'spring'}" style="--sp:${sc.anim === 'none' ? 0.001 : sp};--st:${sc.stagger === false || sc.anim === 'none' ? '0s' : (0.18 * sp).toFixed(2) + 's'}">${inner}</section>`;
 };
 TV.countUp = (el) => {
   const to = +el.dataset.to, plus = !!el.dataset.plus, unit = el.dataset.unit;

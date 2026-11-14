@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611150300"></script>
+<script src="tv-core.js?v=202611150500"></script>
 </head>
 <body>
 <div id="stage">
@@ -302,7 +302,7 @@ window.razScene = (i) => (nq = nq.then(async () => {
   nmode('m-scene'); nstage().classList.add('notext'); await settle(200);
   const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1);
   const cards = [...s.querySelectorAll('.f')].map((f, k) => { const v = f.querySelector('video[data-vid]');
-    const d = sc0.facts[k] || {};
+    const d = f.classList.contains('shd') ? {} : (sc0.facts[k] || {});
     return { kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
   const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';
   await shot('scene', JSON.stringify({ i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
@@ -342,7 +342,7 @@ async function runUpdate(){
   try { while (upd.pending) {
     const d = upd.pending; upd.pending = null;
     const nd = TV.normalize(d), ids = [], seen = {};
-    nd.screens.filter(s => s.on).forEach(sc => sc.facts.slice(0, (TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3).n).forEach(f => { [['i', f.photo], ['v', f.video]].forEach(x => { if (x[1] && !seen[x[1]]) { seen[x[1]] = 1; ids.push(x); } }); }));
+    nd.screens.filter(s => s.on).forEach(sc => sc.facts.slice(0, TV.cnt(sc)).forEach(f => { [['i', f.photo], ['v', f.video]].forEach(x => { if (x[1] && !seen[x[1]]) { seen[x[1]] = 1; ids.push(x); } }); }));
     // в приложении новые экраны применяем сразу: фото каждого слайда подгружаются перед его показом, а видео качает сама приставка
     const miss = []; if (!window.RazApp) for (let i = 0; i < ids.length; i++) if (!(await TV.fileHas(ids[i][1]))) miss.push(ids[i]);
     if (miss.length) {
