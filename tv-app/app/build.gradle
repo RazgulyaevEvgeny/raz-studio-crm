@@ -4,10 +4,10 @@ android {
   compileSdk 35
   defaultConfig {
     applicationId 'kz.raz.tv'
-    minSdk 26
+    minSdk 23
     targetSdk 34
-    versionCode 6
-    versionName '1.5'
+    versionCode 20
+    versionName '2.0'
   }
   buildTypes {
     release { minifyEnabled false; signingConfig signingConfigs.debug }
@@ -15,6 +15,4 @@ android {
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 dependencies {
-  // движок Firefox, 32-битная сборка: работает и на 32-, и на 64-битных ARM-приставках
-  implementation 'org.mozilla.geckoview:geckoview-armeabi-v7a:140.+'
 }
