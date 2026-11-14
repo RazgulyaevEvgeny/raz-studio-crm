@@ -373,7 +373,13 @@ TV.CSS += `
 .dark .f .pic.contain{background-color:#2c2c2e}
 .dark.lite .f{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07)!important}
 `;
-TV.injectCSS = () => { if (document.getElementById('tv-core-css')) return; const s = document.createElement('style'); s.id = 'tv-core-css'; s.textContent = TV.CSS; document.head.appendChild(s); };
+/* размеры текста карточки умножаются на --fz (его ставит fitText). zoom не используем:
+   в WebView 74 на приставке он ломает раскладку и замеры */
+TV.cssFz = css => css.replace(/font-size:(\d+(?:\.\d+)?)px/g, 'font-size:calc($1px * var(--fz,1))')
+  .replace('.ic{width:80px;height:80px;', '.ic{width:calc(80px * var(--fz,1));height:calc(80px * var(--fz,1));')
+  .replace('.ic svg{width:44px;height:44px}', '.ic svg{width:calc(44px * var(--fz,1));height:calc(44px * var(--fz,1))}')
+  .replace('.top .ic{margin-right:22px}', '.top .ic{margin-right:calc(22px * var(--fz,1))}');
+TV.injectCSS = () => { if (document.getElementById('tv-core-css')) return; const s = document.createElement('style'); s.id = 'tv-core-css'; s.textContent = TV.cssFz(TV.CSS); document.head.appendChild(s); };
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 TV.esc = esc;
@@ -449,17 +455,18 @@ TV.factHTML = (f, hero, idx, gx) => {
 TV.fitText = (root) => {
   if (!root) return;
   [].forEach.call(root.querySelectorAll('.f:not(.shd)'), f => {
-    const kids = [].filter.call(f.children, c => !/(^|\s)(bgph|bgv|shade|rzh)(\s|$)/.test(c.className) && c.tagName !== 'VIDEO' && getComputedStyle(c).position !== 'absolute');
-    if (!kids.length) return;
-    const set = s => { kids.forEach(c => { c.style.zoom = s >= 1 ? '' : s; }); f.style.padding = s >= 1 ? '' : Math.round(48 * Math.max(s, .45)) + 'px ' + Math.round(50 * Math.max(s, .45)) + 'px'; };
+    const kids = [].filter.call(f.children, c => !/(^|\s)(bgph|bgv|shade|rzh|deco)(\s|$)/.test(c.getAttribute('class') || '') && c.tagName !== 'VIDEO');
+    const set = s => { if (s >= 1) { f.style.removeProperty('--fz'); f.style.padding = ''; } else { f.style.setProperty('--fz', s.toFixed(3)); f.style.padding = Math.round(48 * Math.max(s, .5)) + 'px ' + Math.round(50 * Math.max(s, .5)) + 'px'; } };
     set(1);
-    if (!f.clientHeight || !f.clientWidth) return;
-    const over = () => { const fr = f.getBoundingClientRect(), cs = getComputedStyle(f), pb = parseFloat(cs.paddingBottom) || 0;
-      const last = kids[kids.length - 1].getBoundingClientRect();
-      if (last.bottom > fr.bottom - pb * .4 + 1) return true;
-      return kids.some(c => c.scrollWidth > c.clientWidth + 2 || [].some.call(c.querySelectorAll('.num,.h,.t,.lt'), x => x.scrollWidth > x.clientWidth + 2)); };
+    if (!kids.length || !f.clientHeight || !f.clientWidth) return;
+    const over = () => {
+      const cs = getComputedStyle(f), pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+      const fr = f.getBoundingClientRect(), k = fr.height / (f.offsetHeight || 1);   // k — масштаб сцены на экране
+      if (kids[kids.length - 1].getBoundingClientRect().bottom > fr.bottom - pb * .5 * k + 2 || kids[0].getBoundingClientRect().top < fr.top + pt * .5 * k - 2) return true;
+      return [].some.call(f.querySelectorAll('.ft,.fb,.top,.num,.h,.t,.cap,.lt,.list'), x => x.scrollWidth > x.clientWidth + 2 && x.clientWidth > 0);
+    };
     if (!over()) return;
-    let lo = .28, hi = 1;
+    let lo = .3, hi = 1;
     for (let i = 0; i < 7; i++) { const m = (lo + hi) / 2; set(m); if (over()) hi = m; else lo = m; }
     set(lo);
   });
