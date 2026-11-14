@@ -1,0 +1,20 @@
+plugins { id 'com.android.application' }
+android {
+  namespace 'kz.raz.tv'
+  compileSdk 35
+  defaultConfig {
+    applicationId 'kz.raz.tv'
+    minSdk 26
+    targetSdk 34
+    versionCode 1
+    versionName '1.0'
+  }
+  buildTypes {
+    release { minifyEnabled false; signingConfig signingConfigs.debug }
+  }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies {
+  // движок Firefox, 32-битная сборка: работает и на 32-, и на 64-битных ARM-приставках
+  implementation 'org.mozilla.geckoview:geckoview-armeabi-v7a:140.+'
+}
