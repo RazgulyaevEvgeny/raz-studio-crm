@@ -77,6 +77,8 @@
 
   /* редакторы фактов */
   .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
+  .fe.addc{align-items:center;justify-content:center;min-height:180px;border:2px dashed var(--line,#c7c7cc);background:transparent;color:var(--blue,#007aff);font:600 16px var(--T);cursor:pointer}.fe.addc span{font-size:44px;line-height:1;font-weight:300}
+  .fe .szr{background:#fff;border-radius:14px;padding:10px 12px}.dark .fe .szr{background:rgba(255,255,255,.06)}
   .fe{background:var(--tile);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
   .fe-h{display:flex;align-items:center;gap:10px;font:700 15px var(--T)}
   .fe-h .b{width:26px;height:26px;border-radius:8px;background:#fff;display:grid;place-items:center;font-size:13px}
@@ -169,7 +171,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611150420"></script>
+<script src="tv-core.js?v=202611150500"></script>
 </head>
 <body>
 <div class="bar">
@@ -238,7 +240,10 @@
       <button class="ibtn del" id="del" title="Удалить экран"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
     </div>
     <div class="scbar" id="scbar">
+      <label class="fld" style="grid-column:1/-1"><span>Заголовок экрана (над карточками, можно оставить пустым)</span><input type="text" id="shead" placeholder="например: Нам доверяют"></label>
+      <label class="fld" style="grid-column:1/-1"><span>Подзаголовок</span><input type="text" id="ssub" placeholder="например: отзывы клиентов в 2ГИС"></label>
       <div class="fld"><span>Раскладка</span><div class="lays" id="lays"></div></div>
+      <div class="fld" id="bigwf"><span>Ширина большой карточки</span><div class="seg" id="bigw"></div></div>
       <label class="fld"><span>Анимация появления</span><select id="anim"></select></label>
       <label class="fld"><span>Появление текста (в приложении на ТВ)</span><select id="tanim"></select></label>
       <div class="fld"><span>Скорость</span><div class="seg" id="speed"></div></div>
@@ -283,18 +288,19 @@ function preview(animate){
   $('pvs').innerHTML = TV.sceneHTML(s);
   const el = $('pvs').firstElementChild;
   if (animate) requestAnimationFrame(() => requestAnimationFrame(() => TV.animateIn(el)));
-  else { el.style.setProperty('--sp', '0.001'); el.style.setProperty('--st', '0s'); el.classList.add('on'); TV.hydrate(el); el.querySelectorAll('.ic,.sw,.insta').forEach(x => x.style.animation = 'none'); }
+  requestAnimationFrame(fillSizes);
+  if (animate) {} else { el.style.setProperty('--sp', '0.001'); el.style.setProperty('--st', '0s'); el.classList.add('on'); TV.hydrate(el); el.querySelectorAll('.ic,.sw,.insta').forEach(x => x.style.animation = 'none'); }
 }
 $('replay').onclick = () => preview(true);
 
 /* ---------- список экранов ---------- */
-const summary = s => s.facts.slice(0, TV.LAYOUTS[s.layout].n).map(f => f.big || f.title || f.label).filter(Boolean).slice(0,2).join(' · ') || 'Пустой экран';
+const summary = s => s.facts.slice(0, TV.cnt(s)).map(f => f.big || f.title || f.label).filter(Boolean).slice(0,2).join(' · ') || 'Пустой экран';
 const chipBg = f => f.style==='blue'?'#007aff':f.style==='kaspi'?'#f14635':f.style==='dark'?'#1d1d1f':f.style==='custom'?f.bg:(f.icon?TV.COLORS[f.color]:'#d1d1d6');
 function renderList(){
   $('cnt').textContent = D.screens.filter(s => s.on).length + ' из ' + D.screens.length;
   $('list').innerHTML = D.screens.map((s,i) => `<div class="sc ${i===sel?'sel':''} ${s.on?'':'off'}" data-i="${i}">
     <span class="n">${i+1}</span>
-    <div class="d"><b>${esc(summary(s))}</b><span>${s.facts.slice(0, TV.LAYOUTS[s.layout].n).map(f => `<i style="background:${f.photo?'#8e8e93':chipBg(f)};color:#fff">${f.photo?TV.icon('camera'):TV.icon(f.icon)}</i>`).join('')}</span></div>
+    <div class="d"><b>${esc(summary(s))}</b><span>${s.facts.slice(0, TV.cnt(s)).map(f => `<i style="background:${f.photo?'#8e8e93':chipBg(f)};color:#fff">${f.photo?TV.icon('camera'):TV.icon(f.icon)}</i>`).join('')}</span></div>
     <div class="acts">
       <button class="ibtn" data-up="${i}" title="Выше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m18 15-6-6-6 6"/></svg></button>
       <button class="ibtn" data-dn="${i}" title="Ниже"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
@@ -351,13 +357,18 @@ const LAY_SVG = {
   g3:'<rect width="9" height="20" rx="2.5"/><rect x="10.5" width="9" height="20" rx="2.5"/><rect x="21" width="9" height="20" rx="2.5"/>',
   g12:'<rect width="16" height="20" rx="3"/><rect x="18" width="12" height="9" rx="2.5"/><rect x="18" y="11" width="12" height="9" rx="2.5"/>',
   g21:'<rect width="12" height="9" rx="2.5"/><rect y="11" width="12" height="9" rx="2.5"/><rect x="14" width="16" height="20" rx="3"/>',
-  g4:'<rect width="14" height="9" rx="2.5"/><rect x="16" width="14" height="9" rx="2.5"/><rect y="11" width="14" height="9" rx="2.5"/><rect x="16" y="11" width="14" height="9" rx="2.5"/>' };
+  g4:'<rect width="14" height="9" rx="2.5"/><rect x="16" width="14" height="9" rx="2.5"/><rect y="11" width="14" height="9" rx="2.5"/><rect x="16" y="11" width="14" height="9" rx="2.5"/>',
+  gx:'<rect width="19" height="9" rx="2.5"/><rect x="21" width="9" height="9" rx="2.5"/><rect y="11" width="9" height="9" rx="2.5"/><rect x="11" y="11" width="9" height="9" rx="2.5"/><path d="M25 12v7M21.5 15.5h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' };
 $('lays').innerHTML = Object.keys(TV.LAYOUTS).map(k => `<button type="button" data-lay="${k}" title="${TV.LAYOUTS[k].t}"><svg viewBox="0 0 30 20" fill="currentColor">${LAY_SVG[k]}</svg></button>`).join('');
 $('anim').innerHTML = Object.entries(TV.ANIMS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('');
 $('tanim').innerHTML = Object.entries(TV.TANIMS).map(([k,t]) => `<option value="${k}">${t}</option>`).join('');
 $('tanim').onchange = () => { D.screens[sel].tanim = $('tanim').value; markDirty(); };
 $('speed').innerHTML = Object.entries(TV.SPEEDS).map(([k,v]) => `<button type="button" data-sp="${k}">${v[0]}</button>`).join('');
 $('lays').onclick = e => { const b = e.target.closest('[data-lay]'); if (!b) return; D.screens[sel].layout = b.dataset.lay; change(); };
+$('shead').oninput = () => { D.screens[sel].head = $('shead').value; markDirty(); preview(false); renderList(); };
+$('ssub').oninput = () => { D.screens[sel].sub = $('ssub').value; markDirty(); preview(false); };
+$('bigw').innerHTML = [['0.8','Узкая'],['1','Как колонка'],['1.25','Обычная'],['1.6','Шире'],['2','Вдвое'],['2.6','Почти весь']].map(([v,t]) => `<button type="button" data-bw="${v}">${t}</button>`).join('');
+$('bigw').onclick = e => { const b = e.target.closest('[data-bw]'); if (!b) return; D.screens[sel].bigw = +b.dataset.bw; markDirty(); renderBar(); preview(false); renderFacts(); };
 $('anim').onchange = () => { D.screens[sel].anim = $('anim').value; markDirty(); renderBar(); preview(true); };
 $('speed').onclick = e => { const b = e.target.closest('[data-sp]'); if (!b) return; D.screens[sel].speed = b.dataset.sp; markDirty(); renderBar(); preview(true); };
 $('stag').onclick = () => { D.screens[sel].stagger = !D.screens[sel].stagger; markDirty(); renderBar(); preview(true); };
@@ -369,6 +380,10 @@ function renderBar(){
   [...$('speed').children].forEach(b => b.classList.toggle('on', b.dataset.sp === s.speed));
   $('stag').classList.toggle('on', s.stagger !== false);
   $('ssec').value = s.sec || '';
+  if (document.activeElement !== $('shead')) $('shead').value = s.head || '';
+  if (document.activeElement !== $('ssub')) $('ssub').value = s.sub || '';
+  $('bigwf').style.display = ['g12','g21'].includes(s.layout) ? '' : 'none';
+  [...$('bigw').children].forEach(b => b.classList.toggle('on', +b.dataset.bw === (+s.bigw || 1.25)));
 }
 
 /* ---------- общие настройки ---------- */
@@ -415,7 +430,11 @@ function factForm(f, k){
   const img = TV.IMGCACHE[f.photo];
   return `<div class="fe" data-k="${k}">
     <div class="fe-h"><span class="b">${k+1}</span>${hero ? 'Большая карточка' : 'Карточка'}<span class="sp"></span>
+      ${D.screens[sel].layout === 'gx' && TV.cnt(D.screens[sel]) > 1 ? '<button class="ibtn del" data-rm="1" title="Убрать карточку с экрана"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' : ''}
       <button class="ibtn" data-act="clear" title="Очистить карточку"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M19 6l-1 14H6L5 6"/></svg></button></div>
+      ${D.screens[sel].layout === 'gx'
+        ? `<label class="fld szr"><span>Ширина: ${+f.gw || 33}% ряда (если не влезает — карточка уходит в следующий ряд)</span><input type="range" min="15" max="100" step="1" data-f="gw" value="${+f.gw || 33}"></label>`
+        : `<label class="fld szr"><span>Размер: ×${(+f.w || 1).toFixed(2).replace(/\.?0+$/, '')} от соседних (ширина в ряду, высота в колонке)</span><input type="range" min="0.5" max="3" step="0.05" data-f="w" value="${+f.w || 1}"></label>`}
 
     <details data-sec="text" ${o('text', true)}><summary>Текст</summary><div class="in">
       <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="например: Вышивка"></label>
@@ -461,11 +480,10 @@ function factForm(f, k){
         <label class="fld"><span>Затемнение для читаемости текста: ${f.dim}%</span><input type="range" min="0" max="85" step="5" data-f="dim" value="${f.dim}"></label>
         <label class="chk"><input type="checkbox" data-f="zoom" ${f.zoom?'checked':''}>Медленное приближение фото (живой эффект, работает и в приложении на ТВ)</label>`
       : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео MP4 или MOV до 30 МБ загружается как есть, в исходном качестве. Ролики с айфона в формате HEVC и файлы тяжелее 30 МБ пережимаются и будет крутиться по кругу.</span>'}
-      <span class="hint">Размер этой карточки на экране: <b>${cardSize(D.screens[sel], k)}</b> px. Делайте картинку в таких пропорциях.</span>
+      <span class="hint">Размер этой карточки на экране: <b data-csz="${k}">${cardSize(D.screens[sel], k)}</b> px. Делайте картинку в таких пропорциях.</span>
     </div></details>
 
-    <details data-sec="size" ${o('size', false)}><summary>Размер и положение</summary><div class="in">
-      <div class="fld"><span>Доля места: ширина карточки в ряду (или высота в колонке)</span>${seg('w', String(f.w || 1), [['0.5','×0.5'],['0.75','×0.75'],['1','Как все'],['1.5','×1.5'],['2','×2'],['3','×3']])}</div>
+    <details data-sec="size" ${o('size', true)}><summary>Размер и положение</summary><div class="in">
       <div class="fld"><span>Размер крупного</span>${seg('sizeBig', f.sizeBig, [['auto','Авто'],['s','S'],['m','M'],['l','L'],['xl','XL']])}</div>
       <div class="fld"><span>Размер заголовка и пояснения</span>${seg('sizeText', f.sizeText, [['s','S'],['m','M'],['l','L'],['xl','XL']])}</div>
       <div class="fld"><span>Выравнивание</span>${seg('align', f.align, AL)}</div>
@@ -474,9 +492,10 @@ function factForm(f, k){
   </div>`;
 }
 function renderFacts(){
-  const s = D.screens[sel], n = TV.LAYOUTS[s.layout].n;
-  $('facts').className = 'facts n' + n;
-  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('');
+  const s = D.screens[sel], n = TV.cnt(s), gx = s.layout === 'gx';
+  if (gx) while (s.facts.length < n) s.facts.push(TV.F({}));
+  $('facts').className = 'facts n' + (gx ? Math.min(n + (n < 8 ? 1 : 0), 4) : n);
+  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<button type="button" class="fe addc" data-add="1"><span>+</span>Добавить карточку</button>' : '');
   TV.hydrate($('facts'));
 }
 const factOf = el => D.screens[sel].facts[+el.closest('.fe').dataset.k];
@@ -488,12 +507,15 @@ $('facts').addEventListener('input', e => {
   if (k === 'big') t.closest('.fe').querySelectorAll('[data-numonly]').forEach(x => x.classList.toggle('hide', !TV.isNum(t.value)));
   if (k === 'auto') { f.autoFrom = f.auto && TV.AUTO[f.auto] != null ? +TV.AUTO[f.auto] : 0; renderFacts(); }
   if (k === 'visual') renderFacts();
+  if (k === 'gw' || k === 'w') { const sp = t.closest('label').firstElementChild; sp.textContent = k === 'gw' ? `Ширина: ${t.value}% ряда (если не влезает — карточка уходит в следующий ряд)` : `Размер: ×${(+t.value).toFixed(2).replace(/\.?0+$/, '')} от соседних (ширина в ряду, высота в колонке)`; requestAnimationFrame(fillSizes); }
   if (/^o[A-Z]/.test(k) && t.type === 'range') t.nextElementSibling.textContent = t.value + '%';
   if (k === 'dim') t.previousElementSibling.textContent = 'Затемнение для читаемости текста: ' + t.value + '%';
   markDirty(); preview(false); renderList();
 });
 $('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList','icBg','icFg','oLabel','oBig','oTitle','oCap','oList'].includes(e.target.dataset.f)) renderFacts(); });
 $('facts').addEventListener('click', e => {
+  if (e.target.closest('[data-add]')) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33 })); change(); } return; }
+  const rm = e.target.closest('[data-rm]'); if (rm) { const s = D.screens[sel], k = +rm.closest('.fe').dataset.k; if (TV.cnt(s) > 1 && confirm('Убрать эту карточку с экрана?')) { s.facts.splice(k, 1); s.cnt = TV.cnt(s) - 1; while (s.facts.length < 4) s.facts.push(TV.F({})); change(); } return; }
   const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
   const sg = e.target.closest('[data-seg] button'), col = e.target.closest('[data-color]'), act = e.target.closest('[data-act]');
   if (sg) { factOf(sg)[sg.parentElement.dataset.seg] = sg.dataset.v; change(); return; }
@@ -593,7 +615,11 @@ async function uploadVideo(input, file, f){
 }
 /* размер карточки на экране 1920×1080, px */
 const CARD_PX = { g1:['1776 × 776'], g2:['874 × 776','874 × 776'], g3:['573 × 776','573 × 776','573 × 776'], g12:['971 × 776','777 × 374','777 × 374'], g21:['777 × 374','777 × 374','971 × 776'], g4:['874 × 374','874 × 374','874 × 374','874 × 374'] };
-function cardSize(sc, i){ return (CARD_PX[sc.layout] || CARD_PX.g3)[i] || ''; }
+function cardSize(sc, i){
+  try { const st = $('stage').getBoundingClientRect().width, el = $('pvs').querySelectorAll('.f:not(.shd)')[i];
+    if (st > 0 && el && sc === D.screens[sel]) { const z = 1920 / st, r = el.getBoundingClientRect(); if (r.width > 0) return Math.round(r.width * z) + ' × ' + Math.round(r.height * z); } } catch (e) {}
+  return (CARD_PX[sc.layout] || CARD_PX.g3)[i] || ''; }
+function fillSizes(){ document.querySelectorAll('[data-csz]').forEach(b => { b.textContent = cardSize(D.screens[sel], +b.dataset.csz); }); }
 
 function iconPop(btn, f){
   closePop();
