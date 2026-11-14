@@ -59,7 +59,7 @@ const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
-  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
+  sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', video:'', oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
   auto:'', autoFrom:0 }, o);
 const S = (o) => Object.assign({ on:true, layout:'g3', anim:'spring', speed:'normal', stagger:true, sec:0, facts:[] }, o);
 TV.F = F;
@@ -147,15 +147,30 @@ TV.normalize = (d) => {
 
 /* ---------- фото ---------- */
 TV.IMGCACHE = {};
+/* память устройства: фото и видео лежат в IndexedDB приставки и при следующих запусках берутся оттуда, без интернета */
+TV.PERSIST = false;
+const idb = () => TV._idb || (TV._idb = new Promise((res) => { try { const r = indexedDB.open('raz-tv', 1); r.onupgradeneeded = () => r.result.createObjectStore('files'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); } }));
+TV.fileGet = (id) => !TV.PERSIST ? Promise.resolve('') : idb().then(d => !d ? '' : new Promise(res => { try { const q = d.transaction('files').objectStore('files').get(id); q.onsuccess = () => res(q.result || ''); q.onerror = () => res(''); } catch (e) { res(''); } }));
+TV.filePut = (id, v) => { if (TV.PERSIST && v) idb().then(d => { try { d && d.transaction('files', 'readwrite').objectStore('files').put(v, id); } catch (e) {} }); };
+TV.filePrune = (keep) => { if (TV.PERSIST) idb().then(d => { try { if (!d) return; const st = d.transaction('files', 'readwrite').objectStore('files'), q = st.getAllKeys(); q.onsuccess = () => { const ks = q.result || []; if (ks.length > 60) ks.forEach(k => { if (!keep[k]) st.delete(k); }); }; } catch (e) {} }); };
 TV.loadImg = (id) => {
   if (!id) return Promise.resolve('');
   if (TV.IMGCACHE[id]) return Promise.resolve(TV.IMGCACHE[id]);
   const db = TV.DB(); if (!db) return Promise.resolve('');
-  return TV.IMGCACHE[id] = fetch(`${db}/pub/${TV.IMG}${id}/d.json`).then(r => r.json()).then(d => (TV.IMGCACHE[id] = d || '')).catch(() => { delete TV.IMGCACHE[id]; return ''; });
+  return TV.IMGCACHE[id] = TV.fileGet(id).then(c => c || fetch(`${db}/pub/${TV.IMG}${id}/d.json`).then(r => r.json()).then(d => { TV.filePut(id, d); return d; })).then(d => (TV.IMGCACHE[id] = d || '')).catch(() => { delete TV.IMGCACHE[id]; return ''; });
 };
-TV.hydrate = (root) => root.querySelectorAll('[data-img]').forEach(el => {
+/* видео: хранится как dataURL, для проигрывания превращаем в blob-ссылку (один раз на файл) */
+TV.VIDURL = {};
+TV.loadVid = (id) => TV.VIDURL[id] || (TV.VIDURL[id] = Promise.resolve(TV.loadImg(id)).then(d => (d && typeof d === 'string') ? fetch(d).then(r => r.blob()).then(b => URL.createObjectURL(b)) : '').catch(() => { delete TV.VIDURL[id]; return ''; }));
+TV.playVids = (root, on) => root.querySelectorAll('video').forEach(v => { try { if (on) { v.muted = true; const p = v.play(); if (p && p.catch) p.catch(() => {}); } else v.pause(); } catch (e) {} });
+/* заранее скачать все фото и видео экранов, по одному, чтобы смена слайдов шла без ожидания */
+TV.preloadAll = (screens) => { const ids = [], keep = {}; (screens || []).forEach(sc => (sc.facts || []).forEach(f => { if (f.photo) { ids.push(['i', f.photo]); keep[f.photo] = 1; } if (f.video) { ids.push(['v', f.video]); keep[f.video] = 1; } }));
+  return ids.reduce((p, x) => p.then(() => x[0] === 'v' ? TV.loadVid(x[1]) : TV.loadImg(x[1])).catch(() => {}), Promise.resolve()).then(() => TV.filePrune(keep)); };
+TV.hydrate = (root) => { root.querySelectorAll('video[data-vid]').forEach(el => { if (el._h) return; el._h = 1; el.muted = true;
+    TV.loadVid(el.dataset.vid).then(u => { if (!u) return; el.src = u; if (el.closest('.scene.on')) TV.playVids(el.parentNode, true); }); });
+  root.querySelectorAll('[data-img]').forEach(el => {
   const id = el.dataset.img; Promise.resolve(TV.IMGCACHE[id] || TV.loadImg(id)).then(u => { if (u && typeof u === 'string') { if (el.tagName === 'IMG') el.src = u; else el.style.backgroundImage = `url("${u}")`; } });
-});
+}); };
 
 /* ---------- стили ---------- */
 TV.CSS = `
@@ -201,6 +216,7 @@ TV.CSS = `
 .f{--fg:#1d1d1f;--fg2:#8e8e93;background:rgba(255,255,255,.62);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.95),0 14px 40px rgba(40,60,140,.08);border-radius:40px;padding:48px 50px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;color:var(--fg);min-height:0;min-width:0}
 .f>*{position:relative;z-index:1}
 .f>.bgph,.f>.shade,.f>.deco{position:absolute}
+.f video.bgv{position:absolute!important;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0!important;border-radius:inherit}
 .f .fb{margin-top:24px}
 .ft .top+.pic,.ft .flag+.top,.ft .sw+.top,.ft .insta+.top{margin-top:20px}
 .f.st-white{background:#fff}
@@ -375,7 +391,7 @@ TV.factHTML = (f, hero, idx) => {
   const tone = (c, o, solid) => (c || o != null) ? `color:${c ? esc(c) : 'var(--fg)'};opacity:${o != null ? o : 1};` : '';
   const cl = tone(f.cLabel, op('oLabel'));
   const labelRow = (icon || f.label) ? `<div class="top" style="${icon ? '' : 'min-height:0;'}">${icon}${f.label ? `<span class="lt" style="${cl}">${esc(f.label)}</span>` : ''}</div>` : '';
-  const pic = !photoTop ? '' : f.photoFit === 'contain' ? `<div class="pic contain"><i class="pb" data-img="${esc(f.photo)}"></i><span class="pw"><img class="ps" alt="" data-img="${esc(f.photo)}"></span></div>` : `<div class="pic" data-img="${esc(f.photo)}"></div>`;
+  const pic = !photoTop ? '' : f.photoFit === 'contain' ? `<div class="pic contain"><i class="pb" data-img="${esc(f.photo)}"></i><span class="pw">${f.video ? `<video class="ps" muted loop playsinline preload="auto" data-vid="${esc(f.video)}"></video>` : `<img class="ps" alt="" data-img="${esc(f.photo)}">`}</span></div>` : `<div class="pic" data-img="${esc(f.photo)}">${f.video ? `<video class="bgv" muted loop playsinline preload="auto" data-vid="${esc(f.video)}"></video>` : ''}</div>`;
   const top = photoTop ? labelRow + pic : vis ? visual + labelRow : labelRow;
 
   let body = '';
@@ -393,7 +409,7 @@ TV.factHTML = (f, hero, idx) => {
   if (f.list) body += '<div class="list">' + String(f.list).split('\n').filter(x=>x.trim()).map((x,i)=>`<div class="li" style="--n:${i+1};${f.cList ? 'color:' + esc(f.cList) + ';' : ''}${op('oList') != null ? 'opacity:' + op('oList') : ''}"><span class="ic" style="background:${TV.col(LIST_COLORS[i%LIST_COLORS.length])}">${TV.icon(listIcon(x))}</span>${esc(x)}</div>`).join('') + '</div>';
 
   const deco = (colored && !bgPhoto && f.visual === 'tag') ? TAG : '';
-  const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div><div class="shade"></div>` : '';
+  const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div>${f.video ? `<video class="bgv" muted loop playsinline preload="auto" data-vid="${esc(f.video)}"></video>` : ''}<div class="shade"></div>` : '';
   const inner = photoTop ? `<div class="ft" style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0">${top}</div><div class="fb">${body}</div>` : (f.list && !top) ? body : (top ? `<div class="ft">${top}</div>` : '<div></div>') + `<div class="fb">${body}</div>`;
   return `<div class="${cls.join(' ')}"${f.fg ? ' data-fg' : ''} style="${style}">${bg}${deco}${inner}</div>`;
 };
@@ -418,5 +434,5 @@ TV.countUp = (el) => {
     el.innerHTML = Math.round(to*e).toLocaleString('ru-RU') + (p===1 ? tail : (unit ? `<small>${unit}</small>` : ''));
     if (p<1) requestAnimationFrame(f); })(t0);
 };
-TV.animateIn = (sceneEl) => { TV.hydrate(sceneEl); sceneEl.classList.add('on'); sceneEl.querySelectorAll('.num[data-to]').forEach(el => setTimeout(() => TV.countUp(el), 500)); };
+TV.animateIn = (sceneEl) => { TV.hydrate(sceneEl); sceneEl.classList.add('on'); TV.playVids(sceneEl, true); sceneEl.querySelectorAll('.num[data-to]').forEach(el => setTimeout(() => TV.countUp(el), 500)); };
 })();

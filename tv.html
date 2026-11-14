@@ -96,7 +96,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611141800"></script>
+<script src="tv-core.js?v=202611142000"></script>
 </head>
 <body>
 <div id="stage">
@@ -230,7 +230,10 @@ setTimeout(startMusic, 4000); // если база не ответила — и�
 
 // ===== факты: из базы CRM (раздел pub/<ключ>), живое обновление; без базы — данные по умолчанию =====
 TV.injectCSS();
-let DATA = TV.normalize(null), sc = -1, timer = null;
+// память приставки: фото, видео и последние экраны хранятся на устройстве и при запуске берутся оттуда
+TV.PERSIST = true;
+let SAVED = null; try { SAVED = JSON.parse(localStorage.getItem('raz-tv-data') || 'null'); } catch (e) {}
+let DATA = TV.normalize(SAVED && SAVED.screens ? SAVED : null), sc = -1, timer = null;
 const box = document.getElementById('scenes'), pager = document.getElementById('pager');
 let LIST = [];
 function applySettings(){
@@ -250,12 +253,13 @@ function build(){
   LIST = DATA.screens.filter(s => s.on);
   box.innerHTML = LIST.map(TV.sceneHTML).join('');
   pager.innerHTML = LIST.map(() => '<i></i>').join('');
+  TV.preloadAll(LIST);
   sc = -1; clearTimeout(timer); next();
 }
 function show(i){
   const scenes = [...box.children], dots = [...pager.children], lite = !!DATA.lite;
   let wait = 0;
-  scenes.forEach((s,j) => { if (j !== i && s.classList.contains('on')) { s.classList.remove('on'); s.classList.add('out'); wait = lite ? 280 : 700; setTimeout(() => s.classList.remove('out','pre'), lite ? 420 : 1400); } });
+  scenes.forEach((s,j) => { if (j !== i && s.classList.contains('on')) { s.classList.remove('on'); s.classList.add('out'); wait = lite ? 280 : 700; setTimeout(() => { s.classList.remove('out','pre'); TV.playVids(s, false); }, lite ? 420 : 1400); } });
   setTimeout(() => { const s = scenes[i]; if (!s) return; s.classList.add('pre'); void s.offsetWidth; TV.animateIn(s); }, wait);
   // следующий экран готовим заранее (фото и отрисовка), чтобы смена шла без рывка
   clearTimeout(preT); preT = setTimeout(() => { const n = scenes[(i + 1) % scenes.length]; if (n && n !== scenes[i]) { TV.hydrate(n); n.classList.add('pre'); } }, 3000);
@@ -269,8 +273,8 @@ build();
 (function live(){
   const cfg = window.FIREBASE_CONFIG; if (!cfg || !cfg.databaseURL || !window.EventSource) return;
   const url = cfg.databaseURL.replace(/\/$/, '') + '/pub/' + TV.KEY + '.json';
-  let last = '';
-  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg }); if (j === last) return; last = j; DATA = TV.normalize(d); build(); };
+  let last = SAVED && SAVED.screens ? JSON.stringify({ s: SAVED.screens, n: SAVED.slideSec, fx: SAVED.fx, sh: SAVED.show, l: SAVED.lite, th: SAVED.theme, p: SAVED.pill, bg: SAVED.bg }) : '';
+  const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg }); if (j === last) return; last = j; try { localStorage.setItem('raz-tv-data', JSON.stringify({ screens: d.screens, slideSec: d.slideSec, fx: d.fx, show: d.show, lite: d.lite, theme: d.theme, pill: d.pill, bg: d.bg })); } catch (e) {} DATA = TV.normalize(d); build(); };
   try {
     const es = new EventSource(url);
     const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
