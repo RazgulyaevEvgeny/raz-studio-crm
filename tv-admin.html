@@ -423,7 +423,7 @@ function factForm(f, k){
       ${f.photoMode==='bg' ? `
         <label class="fld"><span>Затемнение для читаемости текста: ${f.dim}%</span><input type="range" min="0" max="85" step="5" data-f="dim" value="${f.dim}"></label>
         <label class="chk"><input type="checkbox" data-f="zoom" ${f.zoom?'checked':''}>Медленное приближение фото (живой эффект)</label>`
-      : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео MP4 до 30 МБ загружается как есть, в исходном качестве и без рывков. Файлы тяжелее или в другом формате пережимаются, и качество падает и будет крутиться по кругу.</span>'}
+      : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео MP4 или MOV до 30 МБ загружается как есть, в исходном качестве. Ролики с айфона в формате HEVC и файлы тяжелее 30 МБ пережимаются и будет крутиться по кругу.</span>'}
       <span class="hint">Размер этой карточки на экране: <b>${cardSize(D.screens[sel], k)}</b> px. Делайте картинку в таких пропорциях.</span>
     </div></details>
 
@@ -493,14 +493,19 @@ async function upload(input){
 async function uploadVideo(input, file, f){
   const fe = input.closest('.fe');
   // ролик до 7 МБ кладём как есть: исходное качество и ровный ход кадров (пережатие в браузере даёт рывки)
-  if (file.size <= 30e6 && /mp4|webm/.test(file.type)) {
+  // какой кодек внутри файла: H.264 (avc1) играет везде, HEVC с айфона (hvc1/hev1) приставка не умеет
+  const has = (u8, s) => { const a = s.charCodeAt(0), b = s.charCodeAt(1), c = s.charCodeAt(2), d = s.charCodeAt(3); for (let i = 0, n = u8.length - 3; i < n; i++) if (u8[i] === a && u8[i+1] === b && u8[i+2] === c && u8[i+3] === d) return true; return false; };
+  let h264 = false, webm = /webm/.test(file.type);
+  if (file.size <= 30e6 && !webm) { try { const u8 = new Uint8Array(await file.arrayBuffer()); h264 = has(u8, 'avc1') && !has(u8, 'hvc1') && !has(u8, 'hev1'); } catch (e) {} }
+  if (file.size <= 30e6 && (h264 || webm)) {
     try {
       toast('Загружаем видео…');
       const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file);
       await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('видео не читается')); });
       const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext('2d').drawImage(v, 0, 0);
       const poster = c.toDataURL('image/jpeg', 0.85);
-      const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+      let data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+      if (!webm) data = 'data:video/mp4;base64,' + data.slice(data.indexOf(',') + 1);   // MOV с H.264 играет как MP4
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), vid = 'v' + id;
       if (!demo) { await db.ref('pub/' + TV.IMG + id).set({ d: poster, at: Date.now() });
         // база принимает записи до 10 МБ, поэтому большой ролик кладём частями по 6 МБ
@@ -514,7 +519,7 @@ async function uploadVideo(input, file, f){
     return;
   }
   if (!window.MediaRecorder) { toast('Этот браузер не умеет сжимать видео — откройте админку в Chrome'); return; }
-  toast('Ролик больше 30 МБ или не MP4 — сжимаю, возможны рывки. Лучше взять файл покороче');
+  toast(file.size > 30e6 ? 'Ролик больше 30 МБ — пережимаю, качество будет ниже' : 'Формат ролика приставка не умеет (HEVC с айфона) — пережимаю в обычный');
   try {
     const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file);
     await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('видео не читается')); });
@@ -526,13 +531,17 @@ async function uploadVideo(input, file, f){
     const draw = () => g.drawImage(v, sx, sy, sw, sh, 0, 0, w, h);
     draw(); const poster = c.toDataURL('image/jpeg', 0.9);
     const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp8', 'video/webm'].find(m => MediaRecorder.isTypeSupported(m));
-    const rec = new MediaRecorder(c.captureStream(30), { mimeType: mime, videoBitsPerSecond: Math.round(Math.min(4200000, Math.max(2200000, w * h * 5.5))) }), parts = [];
+    const stream = c.captureStream(0), track = stream.getVideoTracks()[0];
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: Math.round(Math.min(4200000, Math.max(2200000, w * h * 5.5))) }), parts = [];
     rec.ondataavailable = e => e.data.size && parts.push(e.data);
     const dur = Math.min(12, v.duration || 12);
     const done = new Promise(res => { rec.onstop = res; });
     rec.start(500); await v.play();
-    await new Promise(res => { const tick = () => { draw(); toast('Сжимаем видео… ' + Math.min(100, Math.round(v.currentTime / dur * 100)) + '%');
-      if (v.ended || v.currentTime >= dur) return res(); requestAnimationFrame(tick); }; tick(); });
+    await new Promise(res => {
+      const step = () => { draw(); if (track.requestFrame) track.requestFrame(); toast('Сжимаем видео… ' + Math.min(100, Math.round(v.currentTime / dur * 100)) + '%');
+        if (v.ended || v.currentTime >= dur) return res(); next(); };
+      const next = () => v.requestVideoFrameCallback ? v.requestVideoFrameCallback(step) : requestAnimationFrame(step);
+      v.onended = () => res(); step(); });
     v.pause(); rec.stop(); await done;
     const blob = new Blob(parts, { type: mime.split(';')[0] });
     if (blob.size > 7e6) throw new Error('ролик получился слишком большим, возьмите покороче');
