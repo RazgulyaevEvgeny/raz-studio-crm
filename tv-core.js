@@ -218,6 +218,8 @@ TV.CSS = `
 .scene>.big{flex:1.25 1 0%}
 /* заголовок экрана над карточками */
 .scene.has-head{padding-top:132px}
+.f .t,.f .cap,.f .lt,.f .h,.f .li{overflow-wrap:break-word;word-wrap:break-word;-webkit-hyphens:auto;hyphens:auto}
+.f .lt{min-width:0}
 /* свободная раскладка: карточки идут рядами, ширина у каждой своя */
 .scene.gx{-webkit-flex-wrap:wrap;flex-wrap:wrap;align-content:stretch;left:58px;right:58px;top:178px;bottom:98px}
 .scene.gx>.f:not(.shd){margin:14px!important;flex:0 0 auto;min-height:0}
@@ -441,6 +443,26 @@ TV.factHTML = (f, hero, idx, gx) => {
   const bg = bgPhoto ? `<div class="bgph ${f.zoom ? 'kb' : ''}" data-img="${esc(f.photo)}"></div>${f.video ? `<video class="bgv" muted loop playsinline preload="auto" data-vid="${esc(f.video)}"></video>` : ''}<div class="shade"></div>` : '';
   const inner = photoTop ? `<div class="ft" style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0">${top}</div><div class="fb">${body}</div>` : (f.list && !top) ? body : (top ? `<div class="ft">${top}</div>` : '<div></div>') + `<div class="fb">${body}</div>`;
   return `<div class="${cls.join(' ')}"${f.fg ? ' data-fg' : ''} style="${style}">${bg}${deco}${inner}</div>`;
+};
+/* текст подстраивается под размер карточки, как у виджетов айфона:
+   если не влезает — всё содержимое плавно уменьшается (и отступы тоже), строки переносятся */
+TV.fitText = (root) => {
+  if (!root) return;
+  [].forEach.call(root.querySelectorAll('.f:not(.shd)'), f => {
+    const kids = [].filter.call(f.children, c => !/(^|\s)(bgph|bgv|shade|rzh)(\s|$)/.test(c.className) && c.tagName !== 'VIDEO' && getComputedStyle(c).position !== 'absolute');
+    if (!kids.length) return;
+    const set = s => { kids.forEach(c => { c.style.zoom = s >= 1 ? '' : s; }); f.style.padding = s >= 1 ? '' : Math.round(48 * Math.max(s, .45)) + 'px ' + Math.round(50 * Math.max(s, .45)) + 'px'; };
+    set(1);
+    if (!f.clientHeight || !f.clientWidth) return;
+    const over = () => { const fr = f.getBoundingClientRect(), cs = getComputedStyle(f), pb = parseFloat(cs.paddingBottom) || 0;
+      const last = kids[kids.length - 1].getBoundingClientRect();
+      if (last.bottom > fr.bottom - pb * .4 + 1) return true;
+      return kids.some(c => c.scrollWidth > c.clientWidth + 2 || [].some.call(c.querySelectorAll('.num,.h,.t,.lt'), x => x.scrollWidth > x.clientWidth + 2)); };
+    if (!over()) return;
+    let lo = .28, hi = 1;
+    for (let i = 0; i < 7; i++) { const m = (lo + hi) / 2; set(m); if (over()) hi = m; else lo = m; }
+    set(lo);
+  });
 };
 TV.sceneHTML = (sc) => {
   const L = TV.LAYOUTS[sc.layout] || TV.LAYOUTS.g3, sp = (TV.SPEEDS[sc.speed] || TV.SPEEDS.normal)[1];
