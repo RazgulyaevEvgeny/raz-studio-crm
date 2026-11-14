@@ -158,7 +158,10 @@ TV.loadImg = (id) => {
   if (!id) return Promise.resolve('');
   if (TV.IMGCACHE[id]) return Promise.resolve(TV.IMGCACHE[id]);
   const db = TV.DB(); if (!db) return Promise.resolve('');
-  return TV.IMGCACHE[id] = TV.fileGet(id).then(c => c || fetch(`${db}/pub/${TV.IMG}${id}/d.json`).then(r => r.json()).then(d => { TV.filePut(id, d); return d; })).then(d => (TV.IMGCACHE[id] = d || '')).catch(() => { delete TV.IMGCACHE[id]; return ''; });
+  return TV.IMGCACHE[id] = TV.fileGet(id).then(c => c || fetch(`${db}/pub/${TV.IMG}${id}.json`).then(r => r.json()).then(o => { if (!o) return ''; const n = +o.n || 1; if (n < 2) return o.d || '';
+      /* большой файл лежит частями: докачиваем остальные по очереди и склеиваем */
+      let p = Promise.resolve([o.d || '']); for (let k = 1; k < n; k++) p = p.then(a => fetch(`${db}/pub/${TV.IMG}${id}_p${k}/d.json`).then(r => r.json()).then(x => { if (typeof x !== 'string') throw new Error('part'); a.push(x); return a; }));
+      return p.then(a => a.join('')); }).then(d => { TV.filePut(id, d); return d; })).then(d => (TV.IMGCACHE[id] = d || '')).catch(() => { delete TV.IMGCACHE[id]; return ''; });
 };
 /* видео: хранится как dataURL, для проигрывания превращаем в blob-ссылку (один раз на файл) */
 TV.VIDURL = {};

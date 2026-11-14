@@ -169,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611142100"></script>
+<script src="tv-core.js?v=202611142200"></script>
 </head>
 <body>
 <div class="bar">
@@ -423,7 +423,7 @@ function factForm(f, k){
       ${f.photoMode==='bg' ? `
         <label class="fld"><span>Затемнение для читаемости текста: ${f.dim}%</span><input type="range" min="0" max="85" step="5" data-f="dim" value="${f.dim}"></label>
         <label class="chk"><input type="checkbox" data-f="zoom" ${f.zoom?'checked':''}>Медленное приближение фото (живой эффект)</label>`
-      : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео MP4 до 7 МБ загружается как есть, в исходном качестве. Ролики тяжелее сжимаются (до 12 секунд), и качество падает и будет крутиться по кругу.</span>'}
+      : `<div class="fld"><span>Как вписать</span>${seg('photoFit', f.photoFit, [['cover','Заполнить'],['contain','Целиком']])}</div>`}` : '<span class="hint">Фото (JPG, PNG) само уменьшится до нужного размера. Видео MP4 до 30 МБ загружается как есть, в исходном качестве и без рывков. Файлы тяжелее или в другом формате пережимаются, и качество падает и будет крутиться по кругу.</span>'}
       <span class="hint">Размер этой карточки на экране: <b>${cardSize(D.screens[sel], k)}</b> px. Делайте картинку в таких пропорциях.</span>
     </div></details>
 
@@ -493,7 +493,7 @@ async function upload(input){
 async function uploadVideo(input, file, f){
   const fe = input.closest('.fe');
   // ролик до 7 МБ кладём как есть: исходное качество и ровный ход кадров (пережатие в браузере даёт рывки)
-  if (file.size <= 7e6 && /mp4|webm/.test(file.type)) {
+  if (file.size <= 30e6 && /mp4|webm/.test(file.type)) {
     try {
       toast('Загружаем видео…');
       const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file);
@@ -502,7 +502,11 @@ async function uploadVideo(input, file, f){
       const poster = c.toDataURL('image/jpeg', 0.85);
       const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
       const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), vid = 'v' + id;
-      if (!demo) { await db.ref('pub/' + TV.IMG + id).set({ d: poster, at: Date.now() }); await db.ref('pub/' + TV.IMG + vid).set({ d: data, at: Date.now() }); }
+      if (!demo) { await db.ref('pub/' + TV.IMG + id).set({ d: poster, at: Date.now() });
+        // база принимает записи до 10 МБ, поэтому большой ролик кладём частями по 6 МБ
+        const CH = 6000000, n = Math.max(1, Math.ceil(data.length / CH));
+        for (let k = n - 1; k >= 1; k--) { toast('Загружаем видео… ' + Math.round((n - k) / n * 100) + '%'); await db.ref('pub/' + TV.IMG + vid + '_p' + k).set({ d: data.slice(k * CH, (k + 1) * CH), at: Date.now() }); }
+        await db.ref('pub/' + TV.IMG + vid).set({ d: data.slice(0, CH), n, at: Date.now() }); }
       TV.IMGCACHE[id] = poster; TV.IMGCACHE[vid] = data; knownImgs.add(id); knownImgs.add(vid);
       f.photo = id; f.video = vid; f.zoom = false; openState[fe.dataset.k + 'photo'] = true;
       change(); toast('Видео добавлено без пережатия: ' + (file.size / 1e6).toFixed(1) + ' МБ, ' + v.videoWidth + '×' + v.videoHeight);
@@ -510,7 +514,7 @@ async function uploadVideo(input, file, f){
     return;
   }
   if (!window.MediaRecorder) { toast('Этот браузер не умеет сжимать видео — откройте админку в Chrome'); return; }
-  toast('Ролик больше 7 МБ — сжимаю, качество будет ниже исходного');
+  toast('Ролик больше 30 МБ или не MP4 — сжимаю, возможны рывки. Лучше взять файл покороче');
   try {
     const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file);
     await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('видео не читается')); });
