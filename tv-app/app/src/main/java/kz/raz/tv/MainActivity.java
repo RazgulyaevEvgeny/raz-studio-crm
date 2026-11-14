@@ -69,8 +69,12 @@ public class MainActivity extends Activity {
     });
     session.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
       @Override public GeckoResult<String> onLoadError(GeckoSession s, String uri, WebRequestError e) {
+        // ошибки не самой страницы экрана (ссылки на видео/файлы внутри неё и т.п.) не трогаем: экран продолжает работать
+        boolean main = uri == null || uri.startsWith("https://razgulyaevevgeny.github.io/");
+        if (!main || e.category == WebRequestError.ERROR_CATEGORY_URI) return null;
+        if (loaded) return null;   // экран уже показан — не перекрываем его и не перезагружаем
         say("Не удалось загрузить экран (ошибка " + e.code + ", " + e.category + ").\nПроверьте интернет — пробую снова через 10 секунд.");
-        h.removeCallbacks(reload); h.postDelayed(reload, 10000);   // нет сети — пробуем снова через 10 сек
+        h.removeCallbacks(reload); h.postDelayed(reload, 10000);
         return null;
       }
     });
