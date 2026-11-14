@@ -248,11 +248,23 @@ TV.CSS = `
 `;
 TV.CSS += `
 /* лёгкий режим для слабых приставок: без тяжёлых эффектов, карточки просто проявляются */
-.lite .bgfx i{animation:none!important}
+.lite .bgfx i{animation:none!important;will-change:auto!important}
 .lite .f{box-shadow:0 0 0 1.5px rgba(0,0,0,.05)!important}
 .lite .f.shine::after{display:none!important}
 .lite .deco,.lite .bgph.kb{animation:none!important}
-.lite .scene .f,.lite .scene.on .f,.lite .scene.out .f{transform:none!important;transition:opacity .5s linear!important;transition-delay:0s!important}
+/* плавный режим для слабой приставки: в дереве только текущий экран (и следующий, заранее отрисованный);
+   двигаются только готовые слои карточек — прозрачность и короткий сдвиг, без перерисовки; в покое на экране не анимируется ничего */
+.lite .scene{display:none}
+.lite .scene.on,.lite .scene.out,.lite .scene.pre{display:flex}
+.lite .scene .f{opacity:0;transform:translateY(36px);transition:none!important;will-change:opacity,transform}
+.lite .scene.an-left .f,.lite .scene.an-flip .f{transform:translateX(-48px)}
+.lite .scene.an-right .f{transform:translateX(48px)}
+.lite .scene.an-drop .f{transform:translateY(-36px)}
+.lite .scene.an-zoom .f{transform:scale(.96)}
+.lite .scene.an-fade .f,.lite .scene.an-none .f{transform:none}
+.lite .scene.on .f{opacity:1;transform:none!important;transition:opacity .45s ease-out,transform .55s cubic-bezier(.2,.8,.2,1)!important;transition-delay:calc(.09s * var(--i,0))!important}
+.lite .scene.an-none.on .f{transition:none!important}
+.lite .scene.out .f{opacity:0;transform:none!important;transition:opacity .25s linear!important;transition-delay:0s!important}
 .lite .scene.on .ic,.lite .scene.on .sw,.lite .scene.on .insta{animation:none!important}
 .lite .eq i{animation:none!important;height:18px!important}
 .lite .colon{animation:none!important}
