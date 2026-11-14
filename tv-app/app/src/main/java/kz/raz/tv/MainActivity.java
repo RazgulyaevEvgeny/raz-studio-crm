@@ -97,12 +97,17 @@ public class MainActivity extends Activity {
       }
     });
     session.setContentDelegate(new GeckoSession.ContentDelegate() {
+      @Override public void onFirstContentfulPaint(GeckoSession s) { loaded = true; h.postDelayed(() -> say(""), 300); }
       @Override public void onCrash(GeckoSession s) { loaded = false; say("Движок перезапускается…"); h.post(MainActivity.this::open); }
       @Override public void onKill(GeckoSession s) { h.post(MainActivity.this::open); }
     });
     session.setProgressDelegate(new GeckoSession.ProgressDelegate() {
       @Override public void onPageStart(GeckoSession s, String url) { if (!loaded) say("Загружаю экран…"); }
-      @Override public void onProgressChange(GeckoSession s, int p) { if (!loaded) say("Загружаю экран… " + p + "%"); }
+      @Override public void onProgressChange(GeckoSession s, int p) {
+        if (loaded) return;
+        // страница держит открытые соединения (музыка, обновления), поэтому «загрузка окончена» может не прийти — открываем экран на 100%
+        if (p >= 100) { loaded = true; h.postDelayed(() -> say(""), 800); } else say("Загружаю экран… " + p + "%");
+      }
       @Override public void onPageStop(GeckoSession s, boolean ok) {
         if (ok) { loaded = true; h.postDelayed(() -> say(""), 600); }
       }
