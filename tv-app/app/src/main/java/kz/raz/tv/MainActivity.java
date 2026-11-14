@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
     root.setBackgroundColor(Color.BLACK);
     view = new GeckoView(this);
     view.setBackgroundColor(Color.BLACK);
+    try { view.coverUntilFirstPaint(Color.BLACK); } catch (Throwable ignored) {}
     // на многих ТВ-приставках обычный SurfaceView даёт пустой белый/чёрный экран — рисуем через TextureView
     try { view.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW); } catch (Throwable ignored) {}
     root.addView(view, new FrameLayout.LayoutParams(-1, -1));
@@ -53,9 +54,23 @@ public class MainActivity extends Activity {
     setContentView(root);
     say("Экран студии запускается…");
     if (runtime == null) runtime = GeckoRuntime.create(getApplicationContext(),
-        new GeckoRuntimeSettings.Builder().consoleOutput(true).aboutConfigEnabled(false).build());
+        new GeckoRuntimeSettings.Builder().consoleOutput(true).aboutConfigEnabled(false)
+            // свой поиск адресов сайтов (через 1.1.1.1), если системный на приставке не отвечает; без IPv6
+            .trustedRecursiveResolverMode(GeckoRuntimeSettings.TRR_MODE_FIRST)
+            .trustedRecursiveResolverUri("https://1.1.1.1/dns-query")
+            .configFilePath(writeConfig())
+            .build());
     open();
     askAutostart();
+  }
+
+  /** Настройки движка: выключаем IPv6 — на приставках с 4G-роутером он часто ломает поиск адресов. */
+  private String writeConfig() {
+    try {
+      java.io.File f = new java.io.File(getFilesDir(), "geckoview-config.yaml");
+      try (java.io.FileWriter w = new java.io.FileWriter(f)) { w.write("prefs:\n  network.dns.disableIPv6: true\n  network.dns.native_https_query: false\n"); }
+      return f.getAbsolutePath();
+    } catch (Exception e) { return ""; }
   }
 
   private void open() {
@@ -69,11 +84,14 @@ public class MainActivity extends Activity {
     });
     session.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
       @Override public GeckoResult<String> onLoadError(GeckoSession s, String uri, WebRequestError e) {
-        // ошибки не самой страницы экрана (ссылки на видео/файлы внутри неё и т.п.) не трогаем: экран продолжает работать
         boolean main = uri == null || uri.startsWith("https://razgulyaevevgeny.github.io/");
-        if (!main || e.category == WebRequestError.ERROR_CATEGORY_URI) return null;
-        if (loaded) return null;   // экран уже показан — не перекрываем его и не перезагружаем
-        say("Не удалось загрузить экран (ошибка " + e.code + ", " + e.category + ").\nПроверьте интернет — пробую снова через 10 секунд.");
+        if (!main && loaded) return null;   // сбой вложенной ссылки при работающем экране — не трогаем
+        loaded = false;
+        String why = e.code == WebRequestError.ERROR_UNKNOWN_HOST ? "приставка не нашла адрес сайта (DNS)"
+            : e.code == WebRequestError.ERROR_OFFLINE ? "нет интернета"
+            : e.code == WebRequestError.ERROR_NET_TIMEOUT ? "сайт долго не отвечает"
+            : "ошибка 0x" + Integer.toHexString(e.code);
+        say("Не удалось загрузить экран: " + why + ".\nПробую снова через 10 секунд.");
         h.removeCallbacks(reload); h.postDelayed(reload, 10000);
         return null;
       }
