@@ -71,6 +71,7 @@
   #ov code{background:#f2f2f7;padding:1px 6px;border-radius:6px}
   .legacy .scene .f{opacity:1!important;transform:none!important}
   /* тёмная тема iOS: шапка — плашки-«материал», музыка как Live Activity, белый логотип */
+  .lite .pager i{transition:none}.lite .pager i.on::after{animation:none!important;transform:none}
   #toast{position:absolute;left:50%;bottom:120px;z-index:8;transform:translateX(-50%) translateY(20px);opacity:0;transition:opacity .25s,transform .25s;background:rgba(28,28,30,.92);color:#fff;font:600 30px Inter,system-ui,sans-serif;padding:20px 40px;border-radius:999px;box-shadow:0 20px 60px rgba(0,0,0,.4),inset 0 0 0 1.5px rgba(255,255,255,.08)}
   #toast.on{opacity:1;transform:translateX(-50%)}
   .dark #stage{background:#000}
@@ -95,7 +96,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611140110"></script>
+<script src="tv-core.js?v=202611141800"></script>
 </head>
 <body>
 <div id="stage">
@@ -252,14 +253,17 @@ function build(){
   sc = -1; clearTimeout(timer); next();
 }
 function show(i){
-  const scenes = [...box.children], dots = [...pager.children];
+  const scenes = [...box.children], dots = [...pager.children], lite = !!DATA.lite;
   let wait = 0;
-  scenes.forEach((s,j) => { if (s.classList.contains('on') && j !== i) { s.classList.remove('on'); s.classList.add('out'); wait = 700; setTimeout(() => s.classList.remove('out'), 1400); } });
-  setTimeout(() => scenes[i] && TV.animateIn(scenes[i]), wait);
+  scenes.forEach((s,j) => { if (j !== i && s.classList.contains('on')) { s.classList.remove('on'); s.classList.add('out'); wait = lite ? 280 : 700; setTimeout(() => s.classList.remove('out','pre'), lite ? 420 : 1400); } });
+  setTimeout(() => { const s = scenes[i]; if (!s) return; s.classList.add('pre'); void s.offsetWidth; TV.animateIn(s); }, wait);
+  // следующий экран готовим заранее (фото и отрисовка), чтобы смена шла без рывка
+  clearTimeout(preT); preT = setTimeout(() => { const n = scenes[(i + 1) % scenes.length]; if (n && n !== scenes[i]) { TV.hydrate(n); n.classList.add('pre'); } }, 3000);
   const sec = (LIST[i] && +LIST[i].sec) || DATA.slideSec;
   dots.forEach((d,j) => { d.classList.remove('on'); void d.offsetWidth; if (j === i) { d.style.setProperty('--dur', sec + 's'); d.classList.add('on'); } });
   return sec;
 }
+let preT = 0;
 function next(){ const n = box.children.length; if (!n) return; sc = (sc + 1) % n; const sec = show(sc); clearTimeout(timer); timer = setTimeout(next, sec * 1000); }
 build();
 (function live(){
