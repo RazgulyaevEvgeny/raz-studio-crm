@@ -1,0 +1,21 @@
+name: TV app (APK)
+on:
+  push:
+    paths: ['tv-app/**', '.github/workflows/tv-app.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - run: gradle --no-daemon :app:assembleRelease
+        working-directory: tv-app
+      - run: cp tv-app/app/build/outputs/apk/release/app-release.apk raz-tv.apk && ls -la raz-tv.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: raz-tv-apk, path: raz-tv.apk }

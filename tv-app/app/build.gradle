@@ -1,0 +1,18 @@
+plugins { id 'com.android.application' }
+android {
+  namespace 'kz.raz.tv'
+  compileSdk 35
+  defaultConfig {
+    applicationId 'kz.raz.tv'
+    minSdk 23
+    targetSdk 34
+    versionCode 23
+    versionName '2.3'
+  }
+  buildTypes {
+    release { minifyEnabled false; signingConfig signingConfigs.debug }
+  }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies {
+}
