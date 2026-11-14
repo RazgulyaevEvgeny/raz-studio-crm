@@ -180,7 +180,7 @@ public class MainActivity extends Activity {
   private void onShot(String kind, String json) throws Exception {
     Bitmap s = grab();
     if (s == null) return;
-    if ("bg".equals(kind)) { bgV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false));   // полный цвет: без полос на плавных переливах return; }
+    if ("bg".equals(kind)) { bgV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false)); return; }
     if ("chrome".equals(kind)) {
       chromeV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false));
       try { JSONObject o = new JSONObject(json); JSONArray d = o.optJSONArray("dot"); if (d != null) placeProgress(d.getInt(0), d.getInt(1), d.getInt(2), d.getInt(3), o.optBoolean("dark", true)); } catch (Exception ignored) {}
@@ -262,7 +262,7 @@ public class MainActivity extends Activity {
     if (c.vid != null) {
       TextureView tv = new TextureView(this);
       FrameLayout.LayoutParams vp = new FrameLayout.LayoutParams(Math.max(2, c.vw), Math.max(2, c.vh)); vp.leftMargin = c.vx - c.x; vp.topMargin = c.vy - c.y;
-      tv.setAlpha(0.01f);   // совсем прозрачный вид система не рисует, и плеер не получил бы поверхность
+      tv.setAlpha(0.01f);
       box.addView(tv, vp);
       if (c.b != null) { ImageView bv = new ImageView(this); bv.setScaleType(ImageView.ScaleType.FIT_XY); bv.setImageBitmap(c.b); box.addView(bv, new FrameLayout.LayoutParams(-1, -1)); }
       vids.add(new Vid(c.vid, tv));
@@ -314,7 +314,7 @@ public class MainActivity extends Activity {
     @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int hh) {}
     @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { release(); return true; }
     boolean shown;
-    @Override public void onSurfaceTextureUpdated(SurfaceTexture st) { if (!shown && mp != null) { shown = true; tv.animate().alpha(1f).setDuration(350).start(); } }   // показываем с первым кадром
+    @Override public void onSurfaceTextureUpdated(SurfaceTexture st) { if (!shown && mp != null) { shown = true; tv.animate().alpha(1f).setDuration(350).start(); } }
   }
 
   /** Скачать ролик в память приставки (один раз): в базе он лежит текстом, одной или несколькими частями. */
