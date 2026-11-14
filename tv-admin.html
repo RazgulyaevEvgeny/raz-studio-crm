@@ -169,7 +169,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611150300"></script>
+<script src="tv-core.js?v=202611150420"></script>
 </head>
 <body>
 <div class="bar">
@@ -465,6 +465,7 @@ function factForm(f, k){
     </div></details>
 
     <details data-sec="size" ${o('size', false)}><summary>Размер и положение</summary><div class="in">
+      <div class="fld"><span>Доля места: ширина карточки в ряду (или высота в колонке)</span>${seg('w', String(f.w || 1), [['0.5','×0.5'],['0.75','×0.75'],['1','Как все'],['1.5','×1.5'],['2','×2'],['3','×3']])}</div>
       <div class="fld"><span>Размер крупного</span>${seg('sizeBig', f.sizeBig, [['auto','Авто'],['s','S'],['m','M'],['l','L'],['xl','XL']])}</div>
       <div class="fld"><span>Размер заголовка и пояснения</span>${seg('sizeText', f.sizeText, [['s','S'],['m','M'],['l','L'],['xl','XL']])}</div>
       <div class="fld"><span>Выравнивание</span>${seg('align', f.align, AL)}</div>
