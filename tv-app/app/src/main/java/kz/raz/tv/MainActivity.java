@@ -53,6 +53,12 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.io.BufferedOutputStream;
+import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -82,12 +88,17 @@ public class MainActivity extends Activity {
   private Scene pending, building;
   private final List<Vid> vids = new ArrayList<>();
   private final Set<String> loading = new HashSet<>();
+  private final Map<String, Integer> tries = new HashMap<>();
+  /** Готовые экраны: снимаем страницу один раз и дальше показываем из памяти — снимок тормозил видео. */
+  private final Map<Integer, Scene> cache = new HashMap<>();
+  /** Ролики качаются по одному в фоне, чтобы не забивать память и сеть. */
+  private final ExecutorService dl = Executors.newSingleThreadExecutor();
 
   static class Card { boolean kb; int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
   static class Scene { int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
 
   private final Runnable fire = () -> { due = true; if (pending != null) showPending(); };
-  private final Runnable askNext = () -> { if (count > 1) js("razScene(" + ((cur + 1) % count) + ")"); };
+  private final Runnable askNext = () -> { if (count <= 1) return; int n = (cur + 1) % count; Scene c = cache.get(n); if (c != null) ready(c); else js("razScene(" + n + ")"); };
   private final Runnable reload = () -> web.loadUrl(PAGE);
 
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -155,7 +166,16 @@ public class MainActivity extends Activity {
   }
 
   private void onBuilt(String json) {
-    try { count = new JSONObject(json).optInt("n", 0); } catch (Exception e) { count = 0; }
+    JSONArray vl = null;
+    try { JSONObject o = new JSONObject(json); count = o.optInt("n", 0); vl = o.optJSONArray("videos"); } catch (Exception e) { count = 0; }
+    cache.clear();
+    if (vl != null) {   // заранее качаем все ролики в память приставки, лишние удаляем
+      Set<String> keep = new HashSet<>();
+      for (int k = 0; k < vl.length(); k++) { JSONObject v = vl.optJSONObject(k); if (v == null) continue; String id = v.optString("id"); keep.add("v_" + id + ".mp4"); }
+      File[] fs = getFilesDir().listFiles();
+      if (fs != null) for (File f : fs) { String nm = f.getName(); if ((nm.startsWith("v_") && nm.endsWith(".mp4") && !keep.contains(nm)) || nm.endsWith(".tmp")) f.delete(); }
+      for (int k = 0; k < vl.length(); k++) { JSONObject v = vl.optJSONObject(k); if (v != null) fetchVideo(v.optString("id"), v.optString("url")); }
+    }
     h.removeCallbacks(fire); h.removeCallbacks(askNext);
     pending = null; building = null; due = true; cur = -1;
     if (count > 0) js("razBg();razChrome(0);razScene(0)");
@@ -207,7 +227,7 @@ public class MainActivity extends Activity {
     }
     if ("over".equals(kind) && building != null) {
       for (Card cd : building.cards) cd.b = crop(s, cd.x, cd.y, cd.w, cd.hh);
-      Scene sc = building; building = null; ready(sc);
+      Scene sc = building; building = null; cache.put(sc.i, sc); ready(sc);
     }
   }
 
@@ -247,7 +267,7 @@ public class MainActivity extends Activity {
     int n = 0;
     for (final View v : old) v.animate().alpha(0f).translationY(-sc.shift * 0.6f).scaleX(0.97f).scaleY(0.97f)
         .setDuration(260).setStartDelay(40L * n++).setInterpolator(new AccelerateInterpolator(1.4f)).withEndAction(() -> cardsV.removeView(v)).start();
-    h.postDelayed(() -> { for (Vid v : oldVids) v.release(); }, 420);
+    for (Vid v : oldVids) v.release();   // декодеров у приставки мало: освобождаем до запуска новых (последний кадр остаётся на экране)
     h.postDelayed(() -> { for (Card c : sc.cards) addCard(sc, c); }, old.isEmpty() ? 0 : 340);
   }
 
@@ -268,7 +288,7 @@ public class MainActivity extends Activity {
       FrameLayout.LayoutParams vp = new FrameLayout.LayoutParams(Math.max(2, c.vw), Math.max(2, c.vh)); vp.leftMargin = c.vx - c.x; vp.topMargin = c.vy - c.y;
       tv.setAlpha(0.01f);
       box.addView(tv, vp);
-      vids.add(new Vid(c.vid, tv));
+      vids.add(new Vid(c.vid, tv, 300L + 260L * vids.size()));
     }
     if (c.b != null) {   // слой текста: появляется отдельно, чуть позже карточки
       ImageView bv = new ImageView(this); bv.setScaleType(ImageView.ScaleType.FIT_XY); bv.setImageBitmap(c.b);
@@ -304,54 +324,72 @@ public class MainActivity extends Activity {
 
   /** Видео карточки: аппаратный плеер приставки, по кругу, без звука. Файл берётся из памяти приставки. */
   class Vid implements TextureView.SurfaceTextureListener {
-    final String id; final TextureView tv; MediaPlayer mp; Surface surface; boolean dead;
-    Vid(String id, TextureView tv) { this.id = id; this.tv = tv; tv.setSurfaceTextureListener(this); if (tv.isAvailable()) onSurfaceTextureAvailable(tv.getSurfaceTexture(), tv.getWidth(), tv.getHeight()); }
+    final String id; final TextureView tv; MediaPlayer mp; Surface surface; boolean dead, shown; int errs; long delay;
+    Vid(String id, TextureView tv, long delay) { this.id = id; this.tv = tv; this.delay = delay; tv.setSurfaceTextureListener(this); if (tv.isAvailable()) onSurfaceTextureAvailable(tv.getSurfaceTexture(), tv.getWidth(), tv.getHeight()); }
     File file() { return new File(getFilesDir(), "v_" + id + ".mp4"); }
-    void tryStart() {
+    final Runnable start = this::tryStart;
+    void later(long ms) { h.removeCallbacks(start); h.postDelayed(start, ms); }
+    void tryStart() {   // плееры запускаются по очереди, а не все в один момент — меньше нагрузка на процессор
       if (dead || mp != null || surface == null || !file().exists() || loading.contains(id)) return;
       try {
         mp = new MediaPlayer();
         mp.setDataSource(file().getAbsolutePath());
         mp.setSurface(surface); mp.setLooping(true); mp.setVolume(0f, 0f);
         mp.setOnPreparedListener(p -> { if (dead) return; fit(p.getVideoWidth(), p.getVideoHeight()); p.start(); });
-        mp.setOnErrorListener((p, a, b2) -> true);
+        mp.setOnErrorListener((p, a, b2) -> { try { p.release(); } catch (Exception ignored) {} mp = null; if (!dead && ++errs < 4) later(1200L * errs); return true; });
         mp.prepareAsync();
-      } catch (Exception e) { mp = null; }
+      } catch (Exception e) { try { if (mp != null) mp.release(); } catch (Exception ignored) {} mp = null; if (!dead && ++errs < 4) later(1500); }
     }
     void fit(int vw, int vh) {   // заполнить область с обрезкой по центру
       int w = tv.getWidth(), hh = tv.getHeight(); if (vw <= 0 || vh <= 0 || w <= 0 || hh <= 0) return;
       float s = Math.max(w / (float) vw, hh / (float) vh);
       Matrix m = new Matrix(); m.setScale(vw * s / w, vh * s / hh, w / 2f, hh / 2f); tv.setTransform(m);
     }
-    void release() { dead = true; try { if (mp != null) { mp.release(); mp = null; } } catch (Exception ignored) {} }
-    @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int hh) { surface = new Surface(st); tryStart(); }
+    void release() { dead = true; h.removeCallbacks(start); try { if (mp != null) { mp.release(); mp = null; } } catch (Exception ignored) {} }
+    @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int hh) { surface = new Surface(st); later(delay); }
     @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int hh) {}
     @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { release(); return true; }
-    boolean shown;
     @Override public void onSurfaceTextureUpdated(SurfaceTexture st) { if (!shown && mp != null) { shown = true; tv.animate().alpha(1f).setDuration(350).start(); } }
   }
 
-  /** Скачать ролик в память приставки (один раз): в базе он лежит текстом, одной или несколькими частями. */
+  /** Скачать ролик в память приставки (один раз). В базе он лежит текстом base64 частями по 6 МБ —
+   *  раскодируем по кусочку прямо в файл, не собирая весь ролик в памяти (раньше большие ролики не влезали). */
   private void fetchVideo(final String id, final String url) {
+    if (id == null || id.isEmpty() || url == null || url.isEmpty()) return;
     final File f = new File(getFilesDir(), "v_" + id + ".mp4");
     if (f.exists() || loading.contains(id)) return;
     loading.add(id);
-    new Thread(() -> {
-      boolean ok = false;
-      try {
-        JSONObject o = new JSONObject(http(url + ".json"));
-        StringBuilder sb = new StringBuilder(o.optString("d", ""));
-        int n = Math.max(1, o.optInt("n", 1));
-        for (int k = 1; k < n; k++) sb.append((String) new JSONTokener(http(url + "_p" + k + "/d.json")).nextValue());
-        int comma = sb.indexOf(",");
-        byte[] data = Base64.decode(sb.substring(comma + 1), Base64.DEFAULT);
-        File tmp = new File(getFilesDir(), "v_" + id + ".tmp");
-        try (FileOutputStream out = new FileOutputStream(tmp)) { out.write(data); }
-        ok = tmp.renameTo(f);
-      } catch (Throwable ignored) {}
-      final boolean done = ok;
-      h.post(() -> { loading.remove(id); if (done) for (Vid v : vids) if (v.id.equals(id)) v.tryStart(); });
-    }).start();
+    dl.execute(() -> {
+      boolean ok = download(id, url, f);
+      h.post(() -> {
+        loading.remove(id);
+        if (ok) { for (Vid v : vids) if (v.id.equals(id)) v.later(100); return; }
+        int t = tries.containsKey(id) ? tries.get(id) + 1 : 1; tries.put(id, t);
+        if (t < 6) h.postDelayed(() -> fetchVideo(id, url), 20000L * t);   // сеть моргнула — попробуем ещё
+      });
+    });
+  }
+
+  private boolean download(String id, String url, File f) {
+    File tmp = new File(getFilesDir(), "v_" + id + ".tmp");
+    try (OutputStream out = new BufferedOutputStream(new FileOutputStream(tmp), 1 << 16)) {
+      JSONObject o = new JSONObject(http(url + ".json"));
+      String d0 = o.optString("d", ""); int n = Math.max(1, o.optInt("n", 1)); o = null;
+      StringBuilder carry = new StringBuilder();
+      feed(out, carry, d0.substring(d0.indexOf(',') + 1)); d0 = null;
+      for (int k = 1; k < n; k++) feed(out, carry, (String) new JSONTokener(http(url + "_p" + k + "/d.json")).nextValue());
+      if (carry.length() > 0) out.write(Base64.decode(carry.toString(), Base64.DEFAULT));
+    } catch (Throwable e) { tmp.delete(); return false; }
+    if (tmp.length() < 1000) { tmp.delete(); return false; }
+    return tmp.renameTo(f);
+  }
+
+  /** Раскодировать кусок base64 порциями по ~1 МБ; хвост, не кратный 4 символам, переносим в следующий кусок. */
+  private static void feed(OutputStream out, StringBuilder carry, String part) throws Exception {
+    carry.append(part);
+    int usable = carry.length() - carry.length() % 4, pos = 0;
+    while (pos < usable) { int end = Math.min(usable, pos + (1 << 20)); out.write(Base64.decode(carry.substring(pos, end), Base64.DEFAULT)); pos = end; }
+    carry.delete(0, usable);
   }
 
   private static String http(String u) throws Exception {
@@ -376,12 +414,19 @@ public class MainActivity extends Activity {
       return true;
     }
     if (k == KeyEvent.KEYCODE_MENU) { if (up) { started = false; say("Перезагружаю…"); web.reload(); } return true; }
+    if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_NUMPAD_ENTER
+        || k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE || k == KeyEvent.KEYCODE_SPACE) {
+      if (up) try { web.evaluateJavascript("(function(){try{return togglePause()}catch(e){return 'none'}})()", r -> {
+        String m = r != null && r.contains("pause") ? "Музыка на паузе" : r != null && r.contains("play") ? "Музыка играет" : "Музыка ещё не запущена";
+        Toast.makeText(this, m, Toast.LENGTH_SHORT).show(); }); } catch (Exception ignored) {}
+      return true;
+    }
     if (k == KeyEvent.KEYCODE_DPAD_RIGHT || k == KeyEvent.KEYCODE_MEDIA_NEXT) { if (up) { js("nextTrack()"); Toast.makeText(this, "Следующий трек", Toast.LENGTH_SHORT).show(); } return true; }
     if (k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_MEDIA_PREVIOUS) { if (up) { js("prevTrack()"); Toast.makeText(this, "Предыдущий трек", Toast.LENGTH_SHORT).show(); } return true; }
     return super.dispatchKeyEvent(e);
   }
 
-  @Override protected void onDestroy() { for (Vid v : vids) v.release(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
+  @Override protected void onDestroy() { for (Vid v : vids) v.release(); dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
 
   @Override public void onWindowFocusChanged(boolean f) {
     super.onWindowFocusChanged(f);
