@@ -177,7 +177,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611150620"></script>
+<script src="tv-core.js?v=202611151840"></script>
+<script src="tv-video.js?v=202611151840"></script>
 </head>
 <body>
 <div class="bar">
@@ -205,6 +206,8 @@
       <label class="row2">Переливы на фоне <button class="sw2" id="fx" type="button"></button></label>
       <div class="row2">Вернуть прошлую версию <select id="bak" style="max-width:190px;border:0;background:var(--tile);border-radius:10px;height:34px;padding:0 8px;font-weight:600"><option value="">Пока пусто</option></select></div>
       <span class="hint" style="margin-top:-6px">Перед каждым сохранением прежние экраны попадают сюда</span>
+      <button type="button" class="btn" id="vopt" style="height:36px">Облегчить все видео для приставки</button>
+      <span class="hint" style="margin-top:-6px" id="voptHint">Пережимает уже загруженные ролики: до 1280 px, ровные 30 кадров/с. Приставка играет их без подвисаний. Новые ролики облегчаются сами при загрузке.</span>
       <h4 style="margin-top:4px">Пресеты</h4>
       <div id="prelist" style="display:flex;flex-direction:column;gap:6px"></div>
       <div style="display:flex;gap:6px"><input id="prename" placeholder="Название, напр. «Новый год»" style="flex:1;min-width:0;border:0;background:var(--tile);border-radius:10px;height:36px;padding:0 10px;font-weight:600"><button type="button" class="btn" id="presave" style="height:36px">Сохранить</button></div>
@@ -300,6 +303,23 @@ function preview(animate){
   if (animate) {} else { el.style.setProperty('--sp', '0.001'); el.style.setProperty('--st', '0s'); el.classList.add('on'); TV.hydrate(el); el.querySelectorAll('.ic,.sw,.insta').forEach(x => x.style.animation = 'none'); }
 }
 $('replay').onclick = () => preview(true);
+$('vopt').onclick = async () => {
+  if (!window.TVV || !TVV.supported()) { toast('Откройте админку в Chrome на компьютере — там это работает'); return; }
+  const todo = []; D.screens.forEach(s => s.facts.forEach(f => { if (f.video && !f.vopt) todo.push(f); }));
+  if (!todo.length) { toast('Все видео уже облегчены'); return; }
+  const btn = $('vopt'); btn.disabled = true; let ok = 0;
+  for (let i = 0; i < todo.length; i++) {
+    const f = todo[i], pre = 'Видео ' + (i + 1) + ' из ' + todo.length + ': ';
+    try {
+      toast(pre + 'скачиваю…'); const url = await TV.loadVid(f.video); if (!url) throw new Error('нет файла');
+      const o = await TVV.optimize(url, { progress: p => toast(pre + p + '%') });
+      toast(pre + 'загружаю…'); const r = await putVideo(await blobURL(o.blob), o.poster);
+      f.photo = r.id; f.video = r.vid; f.vopt = 1; ok++;
+    } catch (e) { toast(pre + 'не получилось — ' + (e.message || 'ошибка')); await new Promise(r => setTimeout(r, 1500)); }
+  }
+  btn.disabled = false; change();
+  toast('Облегчено роликов: ' + ok + ' из ' + todo.length + '. Нажмите «Сохранить» вверху.');
+};
 
 /* ---------- размер карточки мышкой: тянем за уголок, как виджет на айфоне ---------- */
 function addHandles(el){
@@ -589,8 +609,31 @@ async function upload(input){
 }
 
 /* загрузка видео: проигрываем ролик в браузере и пережимаем в лёгкий (до 960 px, до 12 сек, без звука); первый кадр — как фото-заставка */
+/* положить ролик в базу (частями по 6 МБ) и заставку; вернуть их id */
+async function putVideo(data, poster){
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), vid = 'v' + id;
+  if (!demo) { await db.ref('pub/' + TV.IMG + id).set({ d: poster, at: Date.now() });
+    const CH = 6000000, n = Math.max(1, Math.ceil(data.length / CH));
+    for (let k = n - 1; k >= 1; k--) await db.ref('pub/' + TV.IMG + vid + '_p' + k).set({ d: data.slice(k * CH, (k + 1) * CH), at: Date.now() });
+    await db.ref('pub/' + TV.IMG + vid).set({ d: data.slice(0, CH), n, at: Date.now() }); }
+  TV.IMGCACHE[id] = poster; TV.IMGCACHE[vid] = data; knownImgs.add(id); knownImgs.add(vid);
+  return { id, vid };
+}
+const blobURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
 async function uploadVideo(input, file, f){
   const fe = input.closest('.fe');
+  if (window.TVV && TVV.supported()) {
+    try {
+      toast('Готовлю видео для приставки… 0%');
+      const o = await TVV.optimize(file, { progress: p => toast('Готовлю видео для приставки… ' + p + '%') });
+      if (o.blob.size > 30e6) throw new Error('ролик получился больше 30 МБ, возьмите покороче');
+      toast('Загружаем видео…');
+      const r = await putVideo(await blobURL(o.blob), o.poster);
+      f.photo = r.id; f.video = r.vid; f.vopt = 1; f.zoom = false; openState[fe.dataset.k + 'photo'] = true;
+      change(); toast('Видео добавлено: ' + (o.blob.size / 1e6).toFixed(1) + ' МБ, ' + o.w + '×' + o.h + ', ' + Math.round(o.sec) + ' сек');
+      return;
+    } catch (e) { toast('Не получилось облегчить ролик (' + (e.message || 'ошибка') + ') — загружаю как есть'); await new Promise(r => setTimeout(r, 1200)); }
+  }
   // ролик до 7 МБ кладём как есть: исходное качество и ровный ход кадров (пережатие в браузере даёт рывки)
   // какой кодек внутри файла: H.264 (avc1) играет везде, HEVC с айфона (hvc1/hev1) приставка не умеет
   const has = (u8, s) => { const a = s.charCodeAt(0), b = s.charCodeAt(1), c = s.charCodeAt(2), d = s.charCodeAt(3); for (let i = 0, n = u8.length - 3; i < n; i++) if (u8[i] === a && u8[i+1] === b && u8[i+2] === c && u8[i+3] === d) return true; return false; };

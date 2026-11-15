@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611150620"></script>
+<script src="tv-core.js?v=202611151840"></script>
 </head>
 <body>
 <div id="stage">
@@ -230,15 +230,18 @@ audio.addEventListener('error',()=>{ if (audio.src) setTimeout(playNext,2000); }
 const played = []; let keyT = 0;
 function toast(t){ let el = document.getElementById('toast'); if (!el) { el = document.createElement('div'); el.id = 'toast'; document.getElementById('stage').appendChild(el); }
   el.textContent = t; el.className = 'on'; clearTimeout(el._t); el._t = setTimeout(() => { el.className = ''; }, 1800); }
-function prevTrack(){ if (!played.length) { audio.currentTime = 0; return; } if (cur) queue.unshift(cur); const p = played.pop(); queue.unshift(p); cur = null; busy = false; gen++; playNext(true); }
-function nextTrack(){ if (cur) fb('skip',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.currentTime||0)}); busy = false; gen++; playNext(); }
+function prevTrack(){ userPaused = false;  if (!played.length) { audio.currentTime = 0; return; } if (cur) queue.unshift(cur); const p = played.pop(); queue.unshift(p); cur = null; busy = false; gen++; playNext(true); }
+/* большая кнопка пульта: пауза / продолжить */
+let userPaused = false;
+function togglePause(){ if (!audio.src) return 'none'; if (audio.paused) { userPaused = false; audio.play().catch(() => {}); return 'play'; } userPaused = true; audio.pause(); return 'pause'; }
+function nextTrack(){ userPaused = false;  if (cur) fb('skip',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.currentTime||0)}); busy = false; gen++; playNext(); }
 addEventListener('keydown', e => {
   const k = e.key || '', c = e.keyCode;
   const right = k === 'ArrowRight' || k === 'MediaTrackNext' || c === 39 || c === 22 || c === 176, left = k === 'ArrowLeft' || k === 'MediaTrackPrevious' || c === 37 || c === 21 || c === 177;
   if ((right || left) && audio.src && !needTap) { e.preventDefault(); const now = Date.now(); if (now - keyT < 700) return; keyT = now;
     if (right) { toast('Следующий трек  ›'); nextTrack(); } else { toast('‹  Предыдущий трек'); if ((audio.currentTime || 0) > 8) audio.currentTime = 0; else prevTrack(); } }
 });
-['keydown','click'].forEach(ev=>addEventListener(ev,()=>{ if(audio.paused&&audio.src) audio.play().then(()=>{ if(needTap&&cur){ needTap=false; showTrack(cur); fb('trackStarted',{trackId:cur.id,albumId:cur.albumId}); } }).catch(()=>{}) }));
+['keydown','click'].forEach(ev=>addEventListener(ev,()=>{ if(audio.paused&&audio.src&&!userPaused) audio.play().then(()=>{ if(needTap&&cur){ needTap=false; showTrack(cur); fb('trackStarted',{trackId:cur.id,albumId:cur.albumId}); } }).catch(()=>{}) }));
 /* настройки музыки из админки: станция/настроение — с новой очереди, громкость — сразу, «следующий трек» — по кнопке */
 function applyMusic(m){
   const n = TV.normalizeMusic(m), o = MUSIC; MUSIC = n; showStation();
@@ -279,7 +282,11 @@ function build(){
   pager.innerHTML = LIST.map(() => '<i></i>').join('');
   TV.preloadAll(LIST);
   sc = -1; clearTimeout(timer);
-  if (NATIVE) { nmode('m-chrome'); try { RazApp.built(JSON.stringify({ n: LIST.length })); } catch (e) {} return; }
+  if (NATIVE) { nmode('m-chrome');
+    // приложению — список всех роликов, чтобы оно заранее скачало их в память приставки
+    const vids = []; const seen = {};
+    LIST.forEach(sc => sc.facts.slice(0, TV.cnt(sc)).forEach(f => { if (f.video && !seen[f.video]) { seen[f.video] = 1; vids.push({ id: f.video, url: TV.DB() + '/pub/' + TV.IMG + f.video }); } }));
+    try { RazApp.built(JSON.stringify({ n: LIST.length, videos: vids })); } catch (e) {} return; }
   next();
 }
 /* ---- приложение «Студия»: отдаём приставке готовые слои ---- */
