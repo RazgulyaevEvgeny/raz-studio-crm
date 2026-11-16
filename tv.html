@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611151840"></script>
+<script src="tv-core.js?v=202611161630"></script>
 </head>
 <body>
 <div id="stage">
@@ -224,7 +224,30 @@ async function playNext(back){
   finally { busy = false; }
 }
 audio.addEventListener('ended',()=>{ if(cur) fb('trackFinished',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.duration||0)}); playNext(); });
-audio.addEventListener('error',()=>{ if (audio.src) setTimeout(playNext,2000); });
+// сбой посреди трека (моргнула сеть, протухла ссылка) — сначала пробуем продолжить тот же трек с того же места
+audio.addEventListener('error',()=>{ if (!audio.src || busy) return; if (cur && !cur._re) { cur._re = 1; setTimeout(resumeSame, 1500); } else setTimeout(playNext, 2000); });
+async function resumeSame(){
+  if (!cur) return playNext();
+  const pos = audio.currentTime || 0, my = ++gen;
+  try { const r = await api('/url?id=' + cur.id); if (my !== gen) return;
+    audio.src = r.url;
+    if (pos > 1) audio.addEventListener('loadedmetadata', () => { try { audio.currentTime = pos; } catch (e) {} }, { once: true });
+    await audio.play();
+  } catch (e) {}
+}
+/* сторож музыки: раз в 5 сек проверяет, что трек реально идёт. Если застрял —
+   10 сек: пробуем просто продолжить; 20 сек: свежая ссылка, тот же трек с того же места; 35 сек: следующий трек */
+let wdT = -1, wdStuck = 0;
+setInterval(() => {
+  if (!audio.src || userPaused || needTap || busy) { wdStuck = 0; return; }
+  const t = audio.currentTime || 0;
+  if (!audio.paused && Math.abs(t - wdT) > 0.2) { wdT = t; wdStuck = 0; return; }
+  wdT = t; wdStuck++;
+  if (wdStuck === 2) audio.play().catch(() => {});
+  else if (wdStuck === 4) resumeSame();
+  else if (wdStuck >= 7) { wdStuck = 0; busy = false; gen++; playNext(); }
+}, 5000);
+addEventListener('online', () => { if (audio.src && !userPaused && (audio.paused || audio.readyState < 3)) resumeSame(); });
 // если приставка не дала включить звук без нажатия — первое нажатие любой кнопки пульта запустит музыку
 // пульт: → следующий трек, ← предыдущий; любая другая кнопка — просто включить звук, если приставка его не пустила
 const played = []; let keyT = 0;
