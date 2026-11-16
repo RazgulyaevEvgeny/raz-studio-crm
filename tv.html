@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611161630"></script>
+<script src="tv-core.js?v=202611161700"></script>
 </head>
 <body>
 <div id="stage">
@@ -219,13 +219,24 @@ async function playNext(back){
     const r=await api('/url?id='+cur.id); if (my !== gen) return;
     audio.src=r.url; showTrack(cur);
     try { await audio.play(); needTap = false; fb('trackStarted',{trackId:cur.id,albumId:cur.albumId}); }
-    catch (e) { needTap = true; document.getElementById('artist').textContent = 'Нажмите любую кнопку на пульте, чтобы включить звук'; }
-  }catch(e){ setTimeout(playNext,5000); }
+    catch (e) { ml('приставка не дала включить звук: ' + (e && e.name)); needTap = true; document.getElementById('artist').textContent = 'Нажмите любую кнопку на пульте, чтобы включить звук'; }
+  }catch(e){ ml('не удалось получить трек: ' + (e && e.message || e || 'нет ответа') + ' — повтор через 5 сек'); setTimeout(playNext,5000); }
   finally { busy = false; }
 }
 audio.addEventListener('ended',()=>{ if(cur) fb('trackFinished',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.duration||0)}); playNext(); });
+/* журнал музыки: кнопка ↑ на пульте показывает его поверх экрана — по нему видно, почему пропал звук */
+const mlog = [];
+function ml(t){ const d = new Date(); mlog.push(String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0') + '  ' + t); if (mlog.length > 60) mlog.shift(); }
+function musicLog(){ const st = 'сейчас: ' + (cur ? (cur.artist + ' — ' + cur.title) : 'нет трека') + ' | ' + (userPaused ? 'пауза кнопкой' : audio.paused ? 'НЕ играет' : 'играет') + ' | ' + Math.round(audio.currentTime || 0) + '/' + Math.round(audio.duration || 0) + ' сек | буфер ' + audio.readyState + ' | сеть ' + (navigator.onLine ? 'есть' : 'НЕТ') + ' | очередь ' + queue.length;
+  return [st].concat(mlog.slice(-22).reverse()).join('\n'); }
+['waiting','stalled','suspend','emptied'].forEach(ev => audio.addEventListener(ev, () => { if (ev !== 'suspend' || audio.readyState < 3) ml(ev + ' (буфер ' + audio.readyState + ', ' + Math.round(audio.currentTime || 0) + ' сек)'); }));
+audio.addEventListener('playing', () => ml('играет: ' + (cur ? cur.title : '')));
+// звук остановила не кнопка (например, система забрала звук у страницы) — сразу включаем обратно
+audio.addEventListener('pause', () => { if (audio.ended) return; ml(userPaused ? 'пауза кнопкой' : 'ОСТАНОВЛЕНО не кнопкой — включаю снова'); if (!userPaused && !busy && audio.src) setTimeout(() => { if (audio.paused && !userPaused && !busy) audio.play().catch(e => ml('не дали включить: ' + (e && e.name))); }, 1200); });
+addEventListener('offline', () => ml('пропал интернет'));
+document.addEventListener('visibilitychange', () => ml('страница ' + (document.hidden ? 'скрыта' : 'видна')));
 // сбой посреди трека (моргнула сеть, протухла ссылка) — сначала пробуем продолжить тот же трек с того же места
-audio.addEventListener('error',()=>{ if (!audio.src || busy) return; if (cur && !cur._re) { cur._re = 1; setTimeout(resumeSame, 1500); } else setTimeout(playNext, 2000); });
+audio.addEventListener('error',()=>{ ml('ошибка трека, код ' + (audio.error ? audio.error.code : '?')); if (!audio.src || busy) return; if (cur && !cur._re) { cur._re = 1; setTimeout(resumeSame, 1500); } else setTimeout(playNext, 2000); });
 async function resumeSame(){
   if (!cur) return playNext();
   const pos = audio.currentTime || 0, my = ++gen;
@@ -243,11 +254,11 @@ setInterval(() => {
   const t = audio.currentTime || 0;
   if (!audio.paused && Math.abs(t - wdT) > 0.2) { wdT = t; wdStuck = 0; return; }
   wdT = t; wdStuck++;
-  if (wdStuck === 2) audio.play().catch(() => {});
-  else if (wdStuck === 4) resumeSame();
-  else if (wdStuck >= 7) { wdStuck = 0; busy = false; gen++; playNext(); }
+  if (wdStuck === 2) { ml('сторож: трек стоит 10 сек — продолжаю'); audio.play().catch(() => {}); }
+  else if (wdStuck === 4) { ml('сторож: 20 сек — новая ссылка'); resumeSame(); }
+  else if (wdStuck >= 7) { ml('сторож: 35 сек — следующий трек'); wdStuck = 0; busy = false; gen++; playNext(); }
 }, 5000);
-addEventListener('online', () => { if (audio.src && !userPaused && (audio.paused || audio.readyState < 3)) resumeSame(); });
+addEventListener('online', () => { ml('интернет вернулся'); if (audio.src && !userPaused && (audio.paused || audio.readyState < 3)) resumeSame(); });
 // если приставка не дала включить звук без нажатия — первое нажатие любой кнопки пульта запустит музыку
 // пульт: → следующий трек, ← предыдущий; любая другая кнопка — просто включить звук, если приставка его не пустила
 const played = []; let keyT = 0;
