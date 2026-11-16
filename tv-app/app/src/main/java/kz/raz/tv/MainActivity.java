@@ -9,7 +9,11 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Outline;
 import android.graphics.SurfaceTexture;
-import android.media.MediaPlayer;
+import android.media.MediaCodec;
+import android.media.MediaExtractor;
+import android.media.MediaFormat;
+import android.webkit.RenderProcessGoneDetail;
+import java.nio.ByteBuffer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -121,6 +125,11 @@ public class MainActivity extends Activity {
     ws.setUseWideViewPort(false);
     web.addJavascriptInterface(new Bridge(), "RazApp");
     web.setWebViewClient(new WebViewClient() {
+      @Override public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail d) {
+        // движок страницы упал (обычно не хватило памяти) — музыка бы замолчала; перезапускаем экран целиком
+        h.post(() -> { try { recreate(); } catch (Exception e) { finish(); startActivity(getIntent()); } });
+        return true;
+      }
       @Override public void onReceivedError(WebView v, WebResourceRequest rq, WebResourceError er) {
         if (rq != null && rq.isForMainFrame() && !started) {
           say("Не удалось загрузить экран. Проверьте интернет.\nПробую снова через 10 секунд.");
@@ -153,6 +162,25 @@ public class MainActivity extends Activity {
     h.postDelayed(() -> { if (!started) say("Экран долго не загружается.\nНажмите «Меню» на пульте, чтобы перезагрузить."); }, 60000);
     web.loadUrl(PAGE);
     askAutostart();
+  }
+
+  private TextView logV;
+  private final Runnable hideLog = () -> { if (logV != null) logV.setVisibility(View.GONE); };
+  /** Журнал музыки поверх экрана (кнопка ↑, скрыть — ↓). По нему видно, почему пропадал звук. */
+  private void showLog() {
+    if (logV == null) {
+      logV = new TextView(this); logV.setTextColor(Color.WHITE); logV.setTextSize(12); logV.setPadding(28, 22, 28, 22);
+      GradientDrawable g = new GradientDrawable(); g.setColor(0xE6000000); g.setCornerRadius(24); logV.setBackground(g);
+      FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT); lp.leftMargin = 40; lp.topMargin = 40; lp.rightMargin = 40;
+      ((FrameLayout) web.getParent()).addView(logV, lp);
+    }
+    web.evaluateJavascript("(function(){try{return musicLog()}catch(e){return 'журнал пока пуст (обновите страницу кнопкой меню)'}})()", r -> {
+      String t = r; try { t = (String) new JSONTokener(r).nextValue(); } catch (Exception ignored) {}
+      Runtime rt = Runtime.getRuntime();
+      t = "МУЗЫКА — журнал (↓ скрыть)   память приложения: " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ\n" + t;
+      logV.setText(t); logV.setVisibility(View.VISIBLE); logV.bringToFront();
+      h.removeCallbacks(hideLog); h.postDelayed(hideLog, 30000);
+    });
   }
 
   private void say(String t) { status.setText(t); status.setVisibility(t.isEmpty() ? View.GONE : View.VISIBLE); }
@@ -323,33 +351,72 @@ public class MainActivity extends Activity {
   }
 
   /** Видео карточки: аппаратный плеер приставки, по кругу, без звука. Файл берётся из памяти приставки. */
-  class Vid implements TextureView.SurfaceTextureListener {
-    final String id; final TextureView tv; MediaPlayer mp; Surface surface; boolean dead, shown; int errs; long delay;
+  /** Видео в карточке. Играем только картинку ролика через аппаратный декодер (MediaCodec):
+   *  звуковую дорожку не трогаем вовсе — раньше плеер ролика мог отбирать звук у музыки. */
+  class Vid implements TextureView.SurfaceTextureListener, Runnable {
+    final String id; final TextureView tv; Surface surface; volatile boolean dead; boolean shown, running; int errs; long delay;
     Vid(String id, TextureView tv, long delay) { this.id = id; this.tv = tv; this.delay = delay; tv.setSurfaceTextureListener(this); if (tv.isAvailable()) onSurfaceTextureAvailable(tv.getSurfaceTexture(), tv.getWidth(), tv.getHeight()); }
     File file() { return new File(getFilesDir(), "v_" + id + ".mp4"); }
     final Runnable start = this::tryStart;
     void later(long ms) { h.removeCallbacks(start); h.postDelayed(start, ms); }
-    void tryStart() {   // плееры запускаются по очереди, а не все в один момент — меньше нагрузка на процессор
-      if (dead || mp != null || surface == null || !file().exists() || loading.contains(id)) return;
-      try {
-        mp = new MediaPlayer();
-        mp.setDataSource(file().getAbsolutePath());
-        mp.setSurface(surface); mp.setLooping(true); mp.setVolume(0f, 0f);
-        mp.setOnPreparedListener(p -> { if (dead) return; fit(p.getVideoWidth(), p.getVideoHeight()); p.start(); });
-        mp.setOnErrorListener((p, a, b2) -> { try { p.release(); } catch (Exception ignored) {} mp = null; if (!dead && ++errs < 4) later(1200L * errs); return true; });
-        mp.prepareAsync();
-      } catch (Exception e) { try { if (mp != null) mp.release(); } catch (Exception ignored) {} mp = null; if (!dead && ++errs < 4) later(1500); }
+    void tryStart() {   // декодеры запускаются по очереди, а не все в один момент
+      if (dead || running || surface == null || !file().exists() || loading.contains(id)) return;
+      running = true; Thread t = new Thread(this, "vid-" + id); t.setPriority(Thread.NORM_PRIORITY + 1); t.start();
     }
-    void fit(int vw, int vh) {   // заполнить область с обрезкой по центру
+    void fit(int vw, int vh, int rot) {   // заполнить карточку с обрезкой по центру, с учётом поворота ролика
       int w = tv.getWidth(), hh = tv.getHeight(); if (vw <= 0 || vh <= 0 || w <= 0 || hh <= 0) return;
-      float s = Math.max(w / (float) vw, hh / (float) vh);
-      Matrix m = new Matrix(); m.setScale(vw * s / w, vh * s / hh, w / 2f, hh / 2f); tv.setTransform(m);
+      Matrix m = new Matrix();
+      m.postScale(vw / (float) w, vh / (float) hh); m.postTranslate(-vw / 2f, -vh / 2f); m.postRotate(rot);
+      float rw = rot % 180 == 0 ? vw : vh, rh = rot % 180 == 0 ? vh : vw, sc = Math.max(w / rw, hh / rh);
+      m.postScale(sc, sc); m.postTranslate(w / 2f, hh / 2f); tv.setTransform(m);
     }
-    void release() { dead = true; h.removeCallbacks(start); try { if (mp != null) { mp.release(); mp = null; } } catch (Exception ignored) {} }
+    @Override public void run() {
+      MediaExtractor ex = null; MediaCodec dec = null; boolean failed = false;
+      try {
+        ex = new MediaExtractor(); ex.setDataSource(file().getAbsolutePath());
+        int tr = -1; MediaFormat fmt = null;
+        for (int i = 0; i < ex.getTrackCount(); i++) { MediaFormat m = ex.getTrackFormat(i); String mime = m.getString(MediaFormat.KEY_MIME); if (mime != null && mime.startsWith("video/")) { tr = i; fmt = m; break; } }
+        if (tr < 0) throw new Exception("нет видео");
+        ex.selectTrack(tr);
+        final int vw = fmt.getInteger(MediaFormat.KEY_WIDTH), vh = fmt.getInteger(MediaFormat.KEY_HEIGHT);
+        final int rot = fmt.containsKey("rotation-degrees") ? fmt.getInteger("rotation-degrees") : 0;
+        h.post(() -> fit(vw, vh, rot));
+        dec = MediaCodec.createDecoderByType(fmt.getString(MediaFormat.KEY_MIME));
+        dec.configure(fmt, surface, null, 0); dec.start();
+        MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+        long first = ex.getSampleTime(), offset = 0, lastIn = 0, base = -1, frame = 33333;
+        while (!dead) {
+          int ii = dec.dequeueInputBuffer(5000);
+          if (ii >= 0) {
+            ByteBuffer buf = dec.getInputBuffer(ii); int n = ex.readSampleData(buf, 0);
+            if (n < 0) {   // конец ролика: с начала, время кадров продолжает идти — без паузы и рывка
+              offset = lastIn + frame - first; ex.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
+              n = ex.readSampleData(buf, 0); if (n < 0) throw new Exception("пустой ролик");
+            }
+            long pts = ex.getSampleTime() + offset; if (pts > lastIn) { if (lastIn > 0 && pts - lastIn < 100000) frame = pts - lastIn; lastIn = pts; }
+            dec.queueInputBuffer(ii, 0, n, pts, 0); ex.advance();
+          }
+          int oi = dec.dequeueOutputBuffer(info, 5000);
+          if (oi >= 0) {
+            long now = System.nanoTime() / 1000, pts = info.presentationTimeUs;
+            if (base < 0) base = now - pts;
+            long at = base + pts, wait = at - now;
+            if (wait > 30000) Thread.sleep((wait - 15000) / 1000);
+            if (wait < -250000) { base = System.nanoTime() / 1000 - pts; dec.releaseOutputBuffer(oi, true); }   // отстали (приставка была занята) — догоняем без рывка
+            else dec.releaseOutputBuffer(oi, at * 1000);
+            if (!shown) { shown = true; h.post(() -> tv.animate().alpha(1f).setDuration(350).start()); }
+          }
+        }
+      } catch (Throwable e) { failed = !dead; }
+      finally { try { if (dec != null) { dec.stop(); dec.release(); } } catch (Throwable ignored) {} try { if (ex != null) ex.release(); } catch (Throwable ignored) {} }
+      final boolean fl = failed;
+      h.post(() -> { running = false; if (fl && !dead && ++errs < 4) later(1500L * errs); });
+    }
+    void release() { dead = true; h.removeCallbacks(start); }
     @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int hh) { surface = new Surface(st); later(delay); }
     @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int hh) {}
     @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { release(); return true; }
-    @Override public void onSurfaceTextureUpdated(SurfaceTexture st) { if (!shown && mp != null) { shown = true; tv.animate().alpha(1f).setDuration(350).start(); } }
+    @Override public void onSurfaceTextureUpdated(SurfaceTexture st) {}
   }
 
   /** Скачать ролик в память приставки (один раз). В базе он лежит текстом base64 частями по 6 МБ —
@@ -413,6 +480,10 @@ public class MainActivity extends Activity {
       if (up) { long now = System.currentTimeMillis(); if (now - backAt < 2000) finish(); else { backAt = now; Toast.makeText(this, "Нажмите «Назад» ещё раз, чтобы выйти", Toast.LENGTH_SHORT).show(); } }
       return true;
     }
+    if (k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_INFO || k == KeyEvent.KEYCODE_GUIDE) {
+      if (up) showLog(); return true;
+    }
+    if (k == KeyEvent.KEYCODE_DPAD_DOWN) { if (up && logV != null) logV.setVisibility(View.GONE); return true; }
     if (k == KeyEvent.KEYCODE_MENU) { if (up) { started = false; say("Перезагружаю…"); web.reload(); } return true; }
     if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_NUMPAD_ENTER
         || k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE || k == KeyEvent.KEYCODE_SPACE) {
