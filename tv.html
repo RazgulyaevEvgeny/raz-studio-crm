@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611161700"></script>
+<script src="tv-core.js?v=202611161710"></script>
 </head>
 <body>
 <div id="stage">
@@ -210,16 +210,32 @@ async function refill(){
   const q = '/wave?st=' + encodeURIComponent(MUSIC.st) + '&mood=' + MUSIC.mood + '&div=' + MUSIC.div + '&lang=' + MUSIC.lang + (lastId ? '&last=' + lastId : '');
   const j = await api(q); batch = j.batchId || batch; queue.push.apply(queue, j.tracks || []);
 }
+/* треки скачиваются в память целиком заранее: следующий — пока играет текущий.
+   Интернет через 4G-роутер иногда пропадает на 20–30 сек — скачанный трек при этом играет дальше без пауз */
+const pre = {};
+function getTrack(t){
+  if (pre[t.id]) return pre[t.id];
+  const p = api('/url?id=' + t.id).then(r => fetch(r.url).then(x => { if (!x.ok) throw 0; return x.blob(); })
+      .then(b => { if (b.size < 50000) throw 0; ml('скачан в память: ' + t.title + ' (' + (b.size / 1e6).toFixed(1) + ' МБ)'); return URL.createObjectURL(b); })
+      .catch(() => { ml('скачать заранее не вышло, будет по сети: ' + t.title); return r.url; }));
+  pre[t.id] = p; p.catch(() => { delete pre[t.id]; });
+  return p;
+}
+function dropOld(){ Object.keys(pre).forEach(id => { if ((cur && cur.id === id) || (queue[0] && queue[0].id === id)) return; const p = pre[id]; delete pre[id]; p.then(u => { if (u && u.indexOf('blob:') === 0) URL.revokeObjectURL(u); }).catch(() => {}); }); }
+async function prefetchNext(){ try { if (queue.length < 2) await refill(); dropOld(); if (queue[0]) await getTrack(queue[0]); } catch (e) {} }
 async function playNext(back){
   if (busy) return; busy = true; const my = ++gen;
   try{
     if(queue.length<2) await refill();
     if (cur && !back) { played.push(cur); if (played.length > 30) played.shift(); }
     cur=queue.shift(); if(!cur) throw 0; lastId=cur.id;
-    const r=await api('/url?id='+cur.id); if (my !== gen) return;
-    audio.src=r.url; showTrack(cur);
+    let src = '';
+    if (pre[cur.id]) src = await Promise.race([pre[cur.id], new Promise(r => setTimeout(() => r(''), 8000))]).catch(() => '');
+    if (!src) { const r = await api('/url?id=' + cur.id); src = r.url; }
+    if (my !== gen) return;
+    cur._u = src; audio.src = src; showTrack(cur); setTimeout(prefetchNext, 4000);
     try { await audio.play(); needTap = false; fb('trackStarted',{trackId:cur.id,albumId:cur.albumId}); }
-    catch (e) { ml('приставка не дала включить звук: ' + (e && e.name)); needTap = true; document.getElementById('artist').textContent = 'Нажмите любую кнопку на пульте, чтобы включить звук'; }
+    catch (e) { if (!e || e.name !== 'NotAllowedError') { ml('запуск трека прерван (' + (e && e.name) + ')'); return; } ml('приставка не дала включить звук: ' + e.name); needTap = true; document.getElementById('artist').textContent = 'Нажмите любую кнопку на пульте, чтобы включить звук'; }
   }catch(e){ ml('не удалось получить трек: ' + (e && e.message || e || 'нет ответа') + ' — повтор через 5 сек'); setTimeout(playNext,5000); }
   finally { busy = false; }
 }
@@ -240,8 +256,8 @@ audio.addEventListener('error',()=>{ ml('ошибка трека, код ' + (au
 async function resumeSame(){
   if (!cur) return playNext();
   const pos = audio.currentTime || 0, my = ++gen;
-  try { const r = await api('/url?id=' + cur.id); if (my !== gen) return;
-    audio.src = r.url;
+  try { let u = cur._u && cur._u.indexOf('blob:') === 0 ? cur._u : ''; if (!u) { const r = await api('/url?id=' + cur.id); u = r.url; } if (my !== gen) return;
+    audio.src = u;
     if (pos > 1) audio.addEventListener('loadedmetadata', () => { try { audio.currentTime = pos; } catch (e) {} }, { once: true });
     await audio.play();
   } catch (e) {}
