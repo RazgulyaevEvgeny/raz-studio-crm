@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261113160000">
+<meta name="app-build" content="20261116124000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -6155,25 +6155,39 @@ function kLoadPdfLib(){
 /* Kaspi кладёт этикетку в угол большой страницы, вокруг пусто: находим, где на странице есть печать, и берём только эту область */
 function kLoadPdfJs(){
   if(window.pdfjsLib)return Promise.resolve();
-  const base='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
-  return new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=base+'pdf.min.js';sc.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js';ok()};sc.onerror=()=>no(new Error('pdfjs'));document.head.appendChild(sc)});
+  /* два зеркала: если cdnjs не открылся, берём ту же версию с jsdelivr */
+  const bases=['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/','https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/'];
+  const one=base=>new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=base+'pdf.min.js';sc.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js';ok()};sc.onerror=()=>{sc.remove();no(new Error('pdf.js не загрузился'))};document.head.appendChild(sc)});
+  return one(bases[0]).catch(()=>one(bases[1]));
 }
+/* Где на странице накладная: ищем тёмные точки (текст, штрихкоды), светло-серые фоны и рамки
+   по самому краю листа не считаем, иначе «печать» находится на всём листе и обрезки нет. */
 async function kInkBoxes(bytes){
   await kLoadPdfJs();
   const doc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise,boxes=[];
   for(let n=1;n<=doc.numPages;n++){
-    const pg=await doc.getPage(n),vp=pg.getViewport({scale:2});
-    const cv=document.createElement('canvas');cv.width=Math.ceil(vp.width);cv.height=Math.ceil(vp.height);
-    const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);
+    const pg=await doc.getPage(n),vp=pg.getViewport({scale:1.5});
+    const W=Math.ceil(vp.width),H=Math.ceil(vp.height);
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;
+    const cx=cv.getContext('2d',{willReadFrequently:true});cx.fillStyle='#fff';cx.fillRect(0,0,W,H);
     await pg.render({canvasContext:cx,viewport:vp}).promise;
-    const d=cx.getImageData(0,0,cv.width,cv.height).data;
-    let x0=cv.width,y0=cv.height,x1=-1,y1=-1;
-    for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++){
-      const i=(y*cv.width+x)*4;
-      if(d[i]<235||d[i+1]<235||d[i+2]<235){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
-    }
-    if(x1<0){boxes.push(null);continue}
-    const a=vp.convertToPdfPoint(x0,y0),b=vp.convertToPdfPoint(x1+1,y1+1),pad=4;
+    const d=cx.getImageData(0,0,W,H).data,eg=Math.round(Math.min(W,H)*.015);
+    const find=lim=>{
+      const rows=new Uint32Array(H),cols=new Uint32Array(W);
+      for(let y=eg;y<H-eg;y++)for(let x=eg;x<W-eg;x++){
+        const i=(y*W+x)*4;
+        if(d[i]*.3+d[i+1]*.59+d[i+2]*.11<lim){rows[y]++;cols[x]++}
+      }
+      /* строка или столбец считается занятой, если в ней хотя бы 2 тёмные точки (одиночные пятнышки пропускаем) */
+      let y0=-1,y1=-1,x0=-1,x1=-1;
+      for(let y=0;y<H;y++)if(rows[y]>=2){if(y0<0)y0=y;y1=y}
+      for(let x=0;x<W;x++)if(cols[x]>=2){if(x0<0)x0=x;x1=x}
+      return y0<0||x0<0?null:{x0,y0,x1,y1};
+    };
+    let r=find(200);
+    if(r&&(r.x1-r.x0)*(r.y1-r.y0)>W*H*.9)r=find(120)||r;
+    if(!r){boxes.push(null);continue}
+    const a=vp.convertToPdfPoint(r.x0,r.y0),b=vp.convertToPdfPoint(r.x1+1,r.y1+1),pad=4;
     boxes.push({left:Math.min(a[0],b[0])-pad,bottom:Math.min(a[1],b[1])-pad,right:Math.max(a[0],b[0])+pad,top:Math.max(a[1],b[1])+pad});
   }
   return boxes;
@@ -6194,7 +6208,7 @@ async function kPrint(){
         const r=await kApi({mode:'waybill',url:k.waybill},{raw:true});
         const bytes=new Uint8Array(await r.arrayBuffer());
         const src=await PDFDocument.load(bytes);
-        let boxes=[];try{boxes=await Promise.race([kInkBoxes(bytes),new Promise((ok,no)=>setTimeout(()=>no(new Error('не успели за 15 с')),15000))])}catch(e){cropErr=cropErr||(e&&e.message)||String(e);console.warn('Обрезка накладной',k.code,e)}
+        let boxes=[];try{boxes=await Promise.race([kInkBoxes(bytes),new Promise((ok,no)=>setTimeout(()=>no(new Error('не успели за 30 с')),30000))])}catch(e){cropErr=cropErr||(e&&e.message)||String(e);console.warn('Обрезка накладной',k.code,e)}
         for(const [i,sp] of src.getPages().entries()){
           let ep;try{ep=await out.embedPage(sp,boxes[i]||undefined);if(boxes[i])cropOk++}catch(e){cropErr=cropErr||'вставка: '+e.message;ep=await out.embedPage(sp)}
           pages.push(ep);
