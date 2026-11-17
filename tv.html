@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611161710"></script>
+<script src="tv-core.js?v=202611171900"></script>
 </head>
 <body>
 <div id="stage">
@@ -294,6 +294,7 @@ addEventListener('keydown', e => {
 ['keydown','click'].forEach(ev=>addEventListener(ev,()=>{ if(audio.paused&&audio.src&&!userPaused) audio.play().then(()=>{ if(needTap&&cur){ needTap=false; showTrack(cur); fb('trackStarted',{trackId:cur.id,albumId:cur.albumId}); } }).catch(()=>{}) }));
 /* настройки музыки из админки: станция/настроение — с новой очереди, громкость — сразу, «следующий трек» — по кнопке */
 function applyMusic(m){
+  if (window.RazApp && RazApp.music) { MUSIC = TV.normalizeMusic(m); showStation(); nativeMusic(); return; }
   const n = TV.normalizeMusic(m), o = MUSIC; MUSIC = n; showStation();
   audio.volume = n.vol / 100;
   if (n.st !== o.st || n.mood !== o.mood || n.div !== o.div || n.lang !== o.lang) { queue = []; lastId = ''; batch = ''; fb('radioStarted'); busy = false; playNext(); return; }
@@ -301,7 +302,10 @@ function applyMusic(m){
 }
 showStation();
 let musicStarted = false;
-function startMusic(){ if (musicStarted || !YM.worker) return; musicStarted = true; fb('radioStarted'); playNext(); }
+/* в приложении «Студия» музыку играет сама приставка (ExoPlayer) — страница только передаёт настройки и показывает трек */
+const nativeMusic = () => { try { RazApp.music(JSON.stringify(Object.assign({ worker: YM.worker, key: YM.key }, MUSIC))); } catch (e) {} };
+window.razNow = t => { try { showTrack(t || {}); showStation(); } catch (e) {} };
+function startMusic(){ if (musicStarted || !YM.worker) return; if (window.RazApp && RazApp.music) { musicStarted = true; nativeMusic(); return; } musicStarted = true; fb('radioStarted'); playNext(); }
 setTimeout(startMusic, 4000); // если база не ответила — играем с настройками по умолчанию
 
 // ===== факты: из базы CRM (раздел pub/<ключ>), живое обновление; без базы — данные по умолчанию =====
@@ -349,7 +353,7 @@ const settle = (ms) => new Promise(r => { let d = false; const f = () => { if (!
 const shot = (kind, json) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; r(); } }; window.razAck = f; setTimeout(f, 4000); try { RazApp.shot(kind, json || ''); } catch (e) { f(); } });
 const nrect = el => { const r = el.getBoundingClientRect(), k = window.devicePixelRatio || 1; return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };
 window.razBg = () => (nq = nq.then(async () => { nmode('m-bg'); await settle(); await shot('bg'); }).catch(() => {}));
-window.razChrome = (i) => (nq = nq.then(async () => { [...pager.children].forEach((d, j) => d.classList.toggle('on', j === i)); nmode('m-chrome'); await settle(); const dot = pager.children[i]; await shot('chrome', JSON.stringify({ dot: dot ? nrect(dot) : null, dark: DATA.theme === 'dark' })); }).catch(() => {}));
+window.razChrome = (i) => (nq = nq.then(async () => { [...pager.children].forEach((d, j) => d.classList.toggle('on', j === i)); nmode('m-chrome'); await settle(); const dot = pager.children[i]; await shot('chrome', JSON.stringify({ dot: dot ? nrect(dot) : null, dark: DATA.theme === 'dark', hd: nrect(document.querySelector('header')), ft: nrect(document.querySelector('footer')) })); }).catch(() => {}));
 window.razScene = (i) => (nq = nq.then(async () => {
   const s = box.children[i], sc0 = LIST[i]; if (!s || !sc0) return;
   [...box.children].forEach(x => x.classList.remove('nshow'));
