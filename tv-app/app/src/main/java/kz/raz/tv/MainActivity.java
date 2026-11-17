@@ -9,11 +9,14 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Outline;
 import android.graphics.SurfaceTexture;
-import android.media.MediaCodec;
-import android.media.MediaExtractor;
-import android.media.MediaFormat;
+import androidx.media3.common.C;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
+import androidx.media3.common.VideoSize;
+import androidx.media3.exoplayer.ExoPlayer;
+import android.content.ComponentCallbacks2;
 import android.webkit.RenderProcessGoneDetail;
-import java.nio.ByteBuffer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -97,47 +100,45 @@ public class MainActivity extends Activity {
   private final Map<Integer, Scene> cache = new HashMap<>();
   /** Ролики качаются по одному в фоне, чтобы не забивать память и сеть. */
   private final ExecutorService dl = Executors.newSingleThreadExecutor();
+  private Music music;
+  private FrameLayout root;
+  private int want = -1;                 // какой экран ждём от страницы для показа
+  private long pong = 0, chromeAt = 0;   // последний ответ страницы; последняя съёмка шапки
+  private boolean chromeQueued;
 
   static class Card { boolean kb; int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
   static class Scene { int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
 
   private final Runnable fire = () -> { due = true; if (pending != null) showPending(); };
-  private final Runnable askNext = () -> { if (count <= 1) return; int n = (cur + 1) % count; Scene c = cache.get(n); if (c != null) ready(c); else js("razScene(" + n + ")"); };
+  private final Runnable askNext = () -> { if (count <= 1) return; int n = (cur + 1) % count; Scene c = cache.get(n); if (c != null) ready(c); else { want = n; js("razScene(" + n + ")"); } };
+  /** Сторож показа: если следующий экран не готов вовремя (страница задумалась) — показываем готовый из памяти. Слайды не встают никогда. */
+  private final Runnable guard = new Runnable() { @Override public void run() {
+    h.postDelayed(this, 4000);
+    if (!started || count <= 1 || cache.isEmpty()) return;
+    long late = System.currentTimeMillis() - slideAt - slideMs;
+    if (late < 6000) return;
+    Scene c = null; for (int k = 1; k <= count && c == null; k++) c = cache.get((cur + k) % count);
+    if (c != null) { want = -1; pending = null; due = true; ready(c); }
+  } };
+  /** Сторож страницы: раз в 15 сек проверяем, что движок страницы отвечает; завис на минуту — пересоздаём его, слайды при этом идут из памяти. */
+  private final Runnable ping = new Runnable() { @Override public void run() {
+    h.postDelayed(this, 15000);
+    if (web == null) return;
+    try { web.evaluateJavascript("1", v -> pong = System.currentTimeMillis()); } catch (Exception ignored) {}
+    if (pong > 0 && System.currentTimeMillis() - pong > 60000) { pong = System.currentTimeMillis(); rebuildWeb(); }
+  } };
+  private final Runnable chromeShot = () -> { chromeQueued = false; if (cur >= 0) { chromeAt = System.currentTimeMillis(); js("razChrome(" + cur + ")"); } };
   private final Runnable reload = () -> web.loadUrl(PAGE);
 
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_FULLSCREEN);
-    FrameLayout root = new FrameLayout(this);
+    root = new FrameLayout(this);
     root.setBackgroundColor(Color.BLACK);
 
-    web = new WebView(this);
-    web.setBackgroundColor(Color.TRANSPARENT);
-    web.setLayerType(View.LAYER_TYPE_SOFTWARE, null);   // страница только готовит картинки; рисовать её видеокартой не нужно
-    web.setFocusable(false);
-    WebSettings ws = web.getSettings();
-    ws.setJavaScriptEnabled(true);
-    ws.setDomStorageEnabled(true);
-    ws.setDatabaseEnabled(true);
-    ws.setMediaPlaybackRequiresUserGesture(false);       // музыка без нажатия кнопки
-    ws.setLoadWithOverviewMode(false);
-    ws.setUseWideViewPort(false);
-    web.addJavascriptInterface(new Bridge(), "RazApp");
-    web.setWebViewClient(new WebViewClient() {
-      @Override public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail d) {
-        // движок страницы упал (обычно не хватило памяти) — музыка бы замолчала; перезапускаем экран целиком
-        h.post(() -> { try { recreate(); } catch (Exception e) { finish(); startActivity(getIntent()); } });
-        return true;
-      }
-      @Override public void onReceivedError(WebView v, WebResourceRequest rq, WebResourceError er) {
-        if (rq != null && rq.isForMainFrame() && !started) {
-          say("Не удалось загрузить экран. Проверьте интернет.\nПробую снова через 10 секунд.");
-          h.removeCallbacks(reload); h.postDelayed(reload, 10000);
-        }
-      }
-    });
-    root.addView(web, new FrameLayout.LayoutParams(-1, -1));
+    makeWeb();
+
 
     bgV = new ImageView(this); bgV.setScaleType(ImageView.ScaleType.FIT_XY); bgV.setBackgroundColor(Color.BLACK);
     root.addView(bgV, new FrameLayout.LayoutParams(-1, -1));
@@ -161,7 +162,49 @@ public class MainActivity extends Activity {
     say("Студия запускается…");
     h.postDelayed(() -> { if (!started) say("Экран долго не загружается.\nНажмите «Меню» на пульте, чтобы перезагрузить."); }, 60000);
     web.loadUrl(PAGE);
+    music = new Music(this, new Music.Ui() {
+      @Override public void now(JSONObject t, String how) { js("window.razNow&&razNow(" + t.toString() + ")"); }
+      @Override public void js(String code) { MainActivity.this.js(code); }
+    });
+    pong = System.currentTimeMillis();
+    h.postDelayed(guard, 4000); h.postDelayed(ping, 15000);
     askAutostart();
+  }
+
+  /** Движок страницы (WebView): готовит картинки слоёв и данные. В показе не участвует. */
+  @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+  private void makeWeb() {
+    web = new WebView(this);
+    web.setBackgroundColor(Color.TRANSPARENT);
+    web.setLayerType(View.LAYER_TYPE_SOFTWARE, null);   // страница только готовит картинки; рисовать её видеокартой не нужно
+    web.setFocusable(false);
+    WebSettings ws = web.getSettings();
+    ws.setJavaScriptEnabled(true);
+    ws.setDomStorageEnabled(true);
+    ws.setDatabaseEnabled(true);
+    ws.setMediaPlaybackRequiresUserGesture(false);       // музыка без нажатия кнопки
+    ws.setLoadWithOverviewMode(false);
+    ws.setUseWideViewPort(false);
+    web.addJavascriptInterface(new Bridge(), "RazApp");
+    web.setWebViewClient(new WebViewClient() {
+      @Override public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail d) {
+        // движок страницы упал (обычно не хватило памяти) — музыка бы замолчала; перезапускаем экран целиком
+        h.post(() -> rebuildWeb());   // слайды продолжают идти из памяти, пока страница перезапускается
+        return true;
+      }
+      @Override public void onReceivedError(WebView v, WebResourceRequest rq, WebResourceError er) {
+        if (rq != null && rq.isForMainFrame() && !started) {
+          say("Не удалось загрузить экран. Проверьте интернет.\nПробую снова через 10 секунд.");
+          h.removeCallbacks(reload); h.postDelayed(reload, 10000);
+        }
+      }
+    });
+    root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
+  }
+
+  private void rebuildWeb() {
+    try { root.removeView(web); web.destroy(); } catch (Exception ignored) {}
+    makeWeb(); web.loadUrl(PAGE);
   }
 
   private TextView logV;
@@ -174,13 +217,13 @@ public class MainActivity extends Activity {
       FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT); lp.leftMargin = 40; lp.topMargin = 40; lp.rightMargin = 40;
       ((FrameLayout) web.getParent()).addView(logV, lp);
     }
-    web.evaluateJavascript("(function(){try{return musicLog()}catch(e){return 'журнал пока пуст (обновите страницу кнопкой меню)'}})()", r -> {
-      String t = r; try { t = (String) new JSONTokener(r).nextValue(); } catch (Exception ignored) {}
-      Runtime rt = Runtime.getRuntime();
-      t = "МУЗЫКА — журнал (↓ скрыть)   память приложения: " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ\n" + t;
-      logV.setText(t); logV.setVisibility(View.VISIBLE); logV.bringToFront();
-      h.removeCallbacks(hideLog); h.postDelayed(hideLog, 30000);
-    });
+    Runtime rt = Runtime.getRuntime();
+    android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
+    try { ((android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mi); } catch (Exception ignored) {}
+    String t = "СТУДИЯ " + BuildConfig.VERSION_NAME + " — журнал (↓ скрыть)\nпамять приложения " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ · свободно в приставке " + (mi.availMem >> 20) + " из " + (mi.totalMem >> 20) + " МБ"
+      + " · экранов готово " + cache.size() + " из " + count + " · видео играет " + vids.size() + "\n" + (music != null ? music.journal() : "");
+    logV.setText(t); logV.setVisibility(View.VISIBLE); logV.bringToFront();
+    h.removeCallbacks(hideLog); h.postDelayed(hideLog, 30000);
   }
 
   private void say(String t) { status.setText(t); status.setVisibility(t.isEmpty() ? View.GONE : View.VISIBLE); }
@@ -190,7 +233,10 @@ public class MainActivity extends Activity {
   class Bridge {
     @JavascriptInterface public void built(String json) { h.post(() -> onBuilt(json)); }
     @JavascriptInterface public void shot(String kind, String json) { h.post(() -> { try { onShot(kind, json); } catch (Throwable t) { /* слой пропустим */ } js("window.razAck&&razAck()"); }); }
-    @JavascriptInterface public void chromeChanged() { h.post(() -> { if (cur >= 0) js("razChrome(" + cur + ")"); }); }
+    @JavascriptInterface public void chromeChanged() { h.post(() -> {   // шапку переснимаем не чаще раза в 8 сек — съёмка нагружает приставку
+      if (cur < 0 || chromeQueued) return; long w = 8000 - (System.currentTimeMillis() - chromeAt);
+      chromeQueued = true; h.postDelayed(chromeShot, Math.max(0, w)); }); }
+    @JavascriptInterface public void music(String json) { h.post(() -> { try { if (music != null) music.settings(new JSONObject(json)); } catch (Exception ignored) {} }); }
   }
 
   private void onBuilt(String json) {
@@ -206,17 +252,23 @@ public class MainActivity extends Activity {
     }
     h.removeCallbacks(fire); h.removeCallbacks(askNext);
     pending = null; building = null; due = true; cur = -1;
+    want = 0; chromeAt = System.currentTimeMillis();
     if (count > 0) js("razBg();razChrome(0);razScene(0)");
   }
 
-  private Bitmap grab() {
+  private Bitmap grab() { return grab(null); }
+  /** Снимок страницы. clip — рисуем только эти полосы (шапка и низ): так съёмка в разы быстрее. */
+  private Bitmap grab(int[][] clip) {
     int w = web.getWidth(), hh = web.getHeight();
     if (w <= 0 || hh <= 0) return null;
     if (scratch == null || scratch.getWidth() != w || scratch.getHeight() != hh) scratch = Bitmap.createBitmap(w, hh, Bitmap.Config.ARGB_8888);
     scratch.eraseColor(Color.TRANSPARENT);
-    web.draw(new Canvas(scratch));
+    if (clip == null) { web.draw(new Canvas(scratch)); return scratch; }
+    for (int[] r : clip) { if (r == null || r[3] <= r[1]) continue; Canvas cv = new Canvas(scratch); cv.clipRect(0, Math.max(0, r[1]), w, Math.min(hh, r[3])); web.draw(cv); }
     return scratch;
   }
+  private Bitmap opaque(Bitmap b) {   // фон карточки без прозрачности — в 2 раза меньше памяти
+    if (b == null) return null; try { Bitmap c = b.copy(Bitmap.Config.RGB_565, false); if (c != null && b != scratch) b.recycle(); return c != null ? c : b; } catch (Throwable e) { return b; } }
 
   private Bitmap crop(Bitmap src, int x, int y, int w, int hh) {
     x = Math.max(0, x); y = Math.max(0, y);
@@ -226,7 +278,10 @@ public class MainActivity extends Activity {
   }
 
   private void onShot(String kind, String json) throws Exception {
-    Bitmap s = grab();
+    int[][] clip = null;
+    if ("chrome".equals(kind)) try { JSONObject o = new JSONObject(json); JSONArray hd = o.optJSONArray("hd"), ft = o.optJSONArray("ft");
+      if (hd != null && ft != null) clip = new int[][] { { 0, 0, 0, hd.getInt(1) + hd.getInt(3) + 8 }, { 0, ft.getInt(1) - 8, 0, ft.getInt(1) + ft.getInt(3) + 8 } }; } catch (Exception ignored) {}
+    Bitmap s = grab(clip);
     if (s == null) return;
     if ("bg".equals(kind)) { bgV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false)); return; }
     if ("chrome".equals(kind)) {
@@ -244,7 +299,7 @@ public class MainActivity extends Activity {
         JSONObject c = cs.getJSONObject(k); JSONArray r = c.getJSONArray("r");
         Card cd = new Card();
         cd.x = r.getInt(0); cd.y = r.getInt(1); cd.w = r.getInt(2); cd.hh = r.getInt(3); cd.rad = c.optInt("rad", 0); cd.kb = c.optBoolean("kb", false); cd.idx = c.optInt("i", k);
-        cd.a = crop(s, cd.x, cd.y, cd.w, cd.hh);
+        cd.a = opaque(crop(s, cd.x, cd.y, cd.w, cd.hh));
         JSONObject v = c.optJSONObject("v");
         if (v != null) { JSONArray vr = v.getJSONArray("r"); cd.vid = v.getString("id"); cd.vurl = v.getString("url");
           cd.vx = vr.getInt(0); cd.vy = vr.getInt(1); cd.vw = vr.getInt(2); cd.vh = vr.getInt(3); hasVid = true; fetchVideo(cd.vid, cd.vurl); }
@@ -255,7 +310,9 @@ public class MainActivity extends Activity {
     }
     if ("over".equals(kind) && building != null) {
       for (Card cd : building.cards) cd.b = crop(s, cd.x, cd.y, cd.w, cd.hh);
-      Scene sc = building; building = null; cache.put(sc.i, sc); ready(sc);
+      Scene sc = building; building = null; cache.put(sc.i, sc);
+      if (sc.i == want || cur < 0) { want = -1; ready(sc); }
+      h.removeCallbacks(prerender); h.postDelayed(prerender, 2500);
     }
   }
 
@@ -272,6 +329,12 @@ public class MainActivity extends Activity {
     prog.setScaleX(done);
     if (left > 0) prog.animate().scaleX(1f).setDuration(left).setInterpolator(new LinearInterpolator()).start();
   }
+
+  /** Остальные экраны готовим заранее, по одному, пока идёт показ — дальше всё крутится из памяти. */
+  private final Runnable prerender = () -> {
+    if (count <= 1 || building != null) return;
+    for (int k = 0; k < count; k++) if (!cache.containsKey(k) && k != cur && k != want) { js("razScene(" + k + ")"); return; }
+  };
 
   private void ready(Scene sc) { pending = sc; if (due) showPending(); }
 
@@ -350,18 +413,28 @@ public class MainActivity extends Activity {
     ObjectAnimator fade = ObjectAnimator.ofFloat(box, View.ALPHA, 0f, 1f); fade.setDuration(Math.min(dur, 380)); fade.setStartDelay(110L * c.idx); fade.setInterpolator(new DecelerateInterpolator()); fade.start();
   }
 
-  /** Видео карточки: аппаратный плеер приставки, по кругу, без звука. Файл берётся из памяти приставки. */
-  /** Видео в карточке. Играем только картинку ролика через аппаратный декодер (MediaCodec):
-   *  звуковую дорожку не трогаем вовсе — раньше плеер ролика мог отбирать звук у музыки. */
-  class Vid implements TextureView.SurfaceTextureListener, Runnable {
-    final String id; final TextureView tv; Surface surface; volatile boolean dead; boolean shown, running; int errs; long delay;
-    Vid(String id, TextureView tv, long delay) { this.id = id; this.tv = tv; this.delay = delay; tv.setSurfaceTextureListener(this); if (tv.isAvailable()) onSurfaceTextureAvailable(tv.getSurfaceTexture(), tv.getWidth(), tv.getHeight()); }
+  /** Видео в карточке: ExoPlayer (тот же движок, что в YouTube для Android) с аппаратным декодером,
+   *  по кругу без шва, звуковая дорожка ролика отключена полностью — музыке не мешает. */
+  class Vid {
+    final String id; final TextureView tv; ExoPlayer p; boolean dead; int errs;
+    Vid(String id, TextureView tv, long delay) { this.id = id; this.tv = tv; later(delay); }
     File file() { return new File(getFilesDir(), "v_" + id + ".mp4"); }
     final Runnable start = this::tryStart;
     void later(long ms) { h.removeCallbacks(start); h.postDelayed(start, ms); }
-    void tryStart() {   // декодеры запускаются по очереди, а не все в один момент
-      if (dead || running || surface == null || !file().exists() || loading.contains(id)) return;
-      running = true; Thread t = new Thread(this, "vid-" + id); t.setPriority(Thread.NORM_PRIORITY + 1); t.start();
+    void tryStart() {
+      if (dead || p != null || !file().exists() || loading.contains(id)) return;
+      try {
+        p = new ExoPlayer.Builder(MainActivity.this).build();
+        p.setTrackSelectionParameters(p.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
+        p.setVolume(0f); p.setRepeatMode(Player.REPEAT_MODE_ONE);
+        p.setVideoTextureView(tv);
+        p.addListener(new Player.Listener() {
+          @Override public void onVideoSizeChanged(VideoSize vs) { fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
+          @Override public void onRenderedFirstFrame() { tv.animate().alpha(1f).setDuration(350).start(); }
+          @Override public void onPlayerError(PlaybackException e) { drop(); if (!dead && ++errs < 4) later(1500L * errs); }
+        });
+        p.setMediaItem(MediaItem.fromUri(Uri.fromFile(file()))); p.prepare(); p.play();
+      } catch (Throwable e) { drop(); if (!dead && ++errs < 4) later(1500L * errs); }
     }
     void fit(int vw, int vh, int rot) {   // заполнить карточку с обрезкой по центру, с учётом поворота ролика
       int w = tv.getWidth(), hh = tv.getHeight(); if (vw <= 0 || vh <= 0 || w <= 0 || hh <= 0) return;
@@ -370,53 +443,8 @@ public class MainActivity extends Activity {
       float rw = rot % 180 == 0 ? vw : vh, rh = rot % 180 == 0 ? vh : vw, sc = Math.max(w / rw, hh / rh);
       m.postScale(sc, sc); m.postTranslate(w / 2f, hh / 2f); tv.setTransform(m);
     }
-    @Override public void run() {
-      MediaExtractor ex = null; MediaCodec dec = null; boolean failed = false;
-      try {
-        ex = new MediaExtractor(); ex.setDataSource(file().getAbsolutePath());
-        int tr = -1; MediaFormat fmt = null;
-        for (int i = 0; i < ex.getTrackCount(); i++) { MediaFormat m = ex.getTrackFormat(i); String mime = m.getString(MediaFormat.KEY_MIME); if (mime != null && mime.startsWith("video/")) { tr = i; fmt = m; break; } }
-        if (tr < 0) throw new Exception("нет видео");
-        ex.selectTrack(tr);
-        final int vw = fmt.getInteger(MediaFormat.KEY_WIDTH), vh = fmt.getInteger(MediaFormat.KEY_HEIGHT);
-        final int rot = fmt.containsKey("rotation-degrees") ? fmt.getInteger("rotation-degrees") : 0;
-        h.post(() -> fit(vw, vh, rot));
-        dec = MediaCodec.createDecoderByType(fmt.getString(MediaFormat.KEY_MIME));
-        dec.configure(fmt, surface, null, 0); dec.start();
-        MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-        long first = ex.getSampleTime(), offset = 0, lastIn = 0, base = -1, frame = 33333;
-        while (!dead) {
-          int ii = dec.dequeueInputBuffer(5000);
-          if (ii >= 0) {
-            ByteBuffer buf = dec.getInputBuffer(ii); int n = ex.readSampleData(buf, 0);
-            if (n < 0) {   // конец ролика: с начала, время кадров продолжает идти — без паузы и рывка
-              offset = lastIn + frame - first; ex.seekTo(0, MediaExtractor.SEEK_TO_CLOSEST_SYNC);
-              n = ex.readSampleData(buf, 0); if (n < 0) throw new Exception("пустой ролик");
-            }
-            long pts = ex.getSampleTime() + offset; if (pts > lastIn) { if (lastIn > 0 && pts - lastIn < 100000) frame = pts - lastIn; lastIn = pts; }
-            dec.queueInputBuffer(ii, 0, n, pts, 0); ex.advance();
-          }
-          int oi = dec.dequeueOutputBuffer(info, 5000);
-          if (oi >= 0) {
-            long now = System.nanoTime() / 1000, pts = info.presentationTimeUs;
-            if (base < 0) base = now - pts;
-            long at = base + pts, wait = at - now;
-            if (wait > 30000) Thread.sleep((wait - 15000) / 1000);
-            if (wait < -250000) { base = System.nanoTime() / 1000 - pts; dec.releaseOutputBuffer(oi, true); }   // отстали (приставка была занята) — догоняем без рывка
-            else dec.releaseOutputBuffer(oi, at * 1000);
-            if (!shown) { shown = true; h.post(() -> tv.animate().alpha(1f).setDuration(350).start()); }
-          }
-        }
-      } catch (Throwable e) { failed = !dead; }
-      finally { try { if (dec != null) { dec.stop(); dec.release(); } } catch (Throwable ignored) {} try { if (ex != null) ex.release(); } catch (Throwable ignored) {} }
-      final boolean fl = failed;
-      h.post(() -> { running = false; if (fl && !dead && ++errs < 4) later(1500L * errs); });
-    }
-    void release() { dead = true; h.removeCallbacks(start); }
-    @Override public void onSurfaceTextureAvailable(SurfaceTexture st, int w, int hh) { surface = new Surface(st); later(delay); }
-    @Override public void onSurfaceTextureSizeChanged(SurfaceTexture st, int w, int hh) {}
-    @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture st) { release(); return true; }
-    @Override public void onSurfaceTextureUpdated(SurfaceTexture st) {}
+    void drop() { if (p != null) { try { p.release(); } catch (Throwable ignored) {} p = null; } }
+    void release() { dead = true; h.removeCallbacks(start); drop(); }
   }
 
   /** Скачать ролик в память приставки (один раз). В базе он лежит текстом base64 частями по 6 МБ —
@@ -487,17 +515,21 @@ public class MainActivity extends Activity {
     if (k == KeyEvent.KEYCODE_MENU) { if (up) { started = false; say("Перезагружаю…"); web.reload(); } return true; }
     if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_NUMPAD_ENTER
         || k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE || k == KeyEvent.KEYCODE_SPACE) {
-      if (up) try { web.evaluateJavascript("(function(){try{return togglePause()}catch(e){return 'none'}})()", r -> {
-        String m = r != null && r.contains("pause") ? "Музыка на паузе" : r != null && r.contains("play") ? "Музыка играет" : "Музыка ещё не запущена";
-        Toast.makeText(this, m, Toast.LENGTH_SHORT).show(); }); } catch (Exception ignored) {}
+      if (up && music != null) { String r = music.togglePause();
+        Toast.makeText(this, "pause".equals(r) ? "Музыка на паузе" : "play".equals(r) ? "Музыка играет" : "Музыка ещё не запущена", Toast.LENGTH_SHORT).show(); }
       return true;
     }
-    if (k == KeyEvent.KEYCODE_DPAD_RIGHT || k == KeyEvent.KEYCODE_MEDIA_NEXT) { if (up) { js("nextTrack()"); Toast.makeText(this, "Следующий трек", Toast.LENGTH_SHORT).show(); } return true; }
-    if (k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_MEDIA_PREVIOUS) { if (up) { js("prevTrack()"); Toast.makeText(this, "Предыдущий трек", Toast.LENGTH_SHORT).show(); } return true; }
+    if (k == KeyEvent.KEYCODE_DPAD_RIGHT || k == KeyEvent.KEYCODE_MEDIA_NEXT) { if (up && music != null) { music.nextTrack(); Toast.makeText(this, "Следующий трек", Toast.LENGTH_SHORT).show(); } return true; }
+    if (k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_MEDIA_PREVIOUS) { if (up && music != null) { music.prevTrack(); Toast.makeText(this, "Предыдущий трек", Toast.LENGTH_SHORT).show(); } return true; }
     return super.dispatchKeyEvent(e);
   }
 
-  @Override protected void onDestroy() { for (Vid v : vids) v.release(); dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
+  @Override public void onTrimMemory(int level) {   // система просит память — отдаём готовые экраны (кроме текущего), они пересоберутся
+    super.onTrimMemory(level);
+    if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) { Scene c = cache.get(cur); cache.clear(); if (c != null) cache.put(cur, c); }
+  }
+
+  @Override protected void onDestroy() { if (music != null) music.release(); h.removeCallbacksAndMessages(null); for (Vid v : vids) v.release(); dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
 
   @Override public void onWindowFocusChanged(boolean f) {
     super.onWindowFocusChanged(f);
