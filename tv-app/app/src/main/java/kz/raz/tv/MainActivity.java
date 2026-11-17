@@ -236,7 +236,7 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void chromeChanged() { h.post(() -> {   // шапку переснимаем не чаще раза в 8 сек — съёмка нагружает приставку
       if (cur < 0 || chromeQueued) return; long w = 8000 - (System.currentTimeMillis() - chromeAt);
       chromeQueued = true; h.postDelayed(chromeShot, Math.max(0, w)); }); }
-    @JavascriptInterface public void music(String json) { h.post(() -> { try { if (music != null) music.settings(new JSONObject(json)); } catch (Exception ignored) {} }); }
+    @JavascriptInterface public void music(String json) { h.post(() -> { try { if (music != null) { music.settings(new JSONObject(json)); music.announce(); } } catch (Exception ignored) {} }); }
   }
 
   private void onBuilt(String json) {

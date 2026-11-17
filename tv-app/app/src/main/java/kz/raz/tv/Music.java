@@ -114,6 +114,9 @@ public class Music {
     else if (sk) next(true);
   }
 
+  /** Страница перезапустилась — заново показать в шапке текущий трек. */
+  public void announce() { if (cur == null) return; try { JSONObject o = new JSONObject(); o.put("title", cur.title); o.put("artist", cur.artist); o.put("cover", cur.cover); ui.now(o, ""); } catch (Exception ignored) {} }
+
   // ---------- пульт ----------
   public String togglePause() {
     if (cur == null) return "none";
