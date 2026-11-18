@@ -266,6 +266,9 @@ TV.CSS = `
 .f .pic{display:block;flex:1 1 auto;min-height:120px;border-radius:26px;background:#e5e5ea center/cover no-repeat}
 .f .pic.contain{background-size:contain;background-color:transparent}
 .wxic{background:transparent!important;width:76px;height:76px}.wxic svg{width:76px;height:76px}
+.hero.wdg .h.wxt,.hero.wdg .h.clk{font-size:300px}.hero.wdg .wxn .t,.hero.wdg-clock .t{font-size:64px}.hero.wdg .h.mus{font-size:110px}.hero.wdg .t{font-size:52px}
+.hero .wxic{width:110px;height:110px}.hero .wxic svg{width:110px;height:110px}.hero.wdg .top .lt{font-size:52px}
+.hero .wxd{gap:64px}.hero .wxd>div{font-size:40px}.hero .wxd i,.hero .wxd i svg{width:96px;height:96px}.hero .wxd i{margin:10px 0}.hero .wxd b{font-size:60px}.hero .wxd small{font-size:40px}
 .wdg-weather .fb{display:flex;align-items:flex-end;justify-content:space-between;gap:40px;flex-wrap:wrap}.wdg-weather .wxd{margin-top:0}
 .wdg .h.wxt,.wdg .h.clk{font-size:150px;font-weight:800;letter-spacing:-.045em;line-height:.95;font-variant-numeric:tabular-nums}
 .wdg .h.mus{font-size:64px;line-height:1.05}
@@ -415,13 +418,13 @@ const MONTHS = ['января','февраля','марта','апреля','м�
 const deg = t => (t > 0 ? '+' : t < 0 ? '−' : '') + Math.abs(Math.round(t)) + '°';
 TV.wxKey = f => (+f.wlat || 52.2873).toFixed(2) + ',' + (+f.wlon || 76.9674).toFixed(2);
 TV.nowKz = () => { const d = new Date(Date.now() + (new Date().getTimezoneOffset() + 300) * 60000); return d; };   // время Павлодара, UTC+5
-TV.widgetParts = (f) => {
+TV.widgetParts = (f, hero) => {
   const k = f.kind;
   if (k === 'weather') {
     const w = TV.LIVE.wx[TV.wxKey(f)];
     const top = `<div class="top"><span class="ic wxic">${w ? TV.WX[TV.wmo(w.code)[0]] : TV.WX.cloud}</span><span class="lt">${esc(f.wcity || 'Павлодар')}</span></div>`;
     let body = `<div class="wxn"><div class="h wxt">${w ? deg(w.t) : '—'}</div><div class="t">${w ? TV.wmo(w.code)[1] : 'Загружаю погоду…'}</div></div>`;
-    if (w && f.wmode !== 'now' && w.days && w.days.length) body += `<div class="wxd">${w.days.slice(1, 4).map(d => `<div><span>${DAYS[new Date(d.d + 'T12:00:00').getDay()]}</span><i>${TV.WX[TV.wmo(d.code)[0]]}</i><b>${deg(d.max)}</b><small>${deg(d.min)}</small></div>`).join('')}</div>`;
+    if (w && f.wmode !== 'now' && w.days && w.days.length) body += `<div class="wxd">${w.days.slice(1, hero ? 6 : 4).map(d => `<div><span>${DAYS[new Date(d.d + 'T12:00:00').getDay()]}</span><i>${TV.WX[TV.wmo(d.code)[0]]}</i><b>${deg(d.max)}</b><small>${deg(d.min)}</small></div>`).join('')}</div>`;
     return { top, body };
   }
   if (k === 'clock') {
@@ -457,7 +460,7 @@ TV.factHTML = (f, hero, idx, gx) => {
   if (f.valign && f.valign !== 'between') cls.push('va-' + f.valign);
   if (bgPhoto) style += `--dim:${Math.max(0, Math.min(90, +f.dim || 0)) / 100};`;
 
-  const wp = TV.widgetParts(f);
+  const wp = TV.widgetParts(f, hero);
   if (wp) {   // виджет: своё содержимое, но те же стили, цвета и размеры, что у обычных карточек
     cls.push('wdg', 'wdg-' + f.kind);
     let bgw = '';
