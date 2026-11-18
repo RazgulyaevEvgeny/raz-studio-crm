@@ -143,7 +143,9 @@ TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.a
 TV.normalize = (d) => {
   if (!d || !Array.isArray(d.screens)) d = JSON.parse(JSON.stringify(TV.DEFAULT));
   const show = Object.assign({ music:true, weather:true, clock:true }, d.show || {});
-  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'light' ? 'light' : 'dark', foot: d.foot == null ? 'Работаем с 11:00 до 19:00' : String(d.foot).slice(0, 120), bg: TV.normBg(d.bg), pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show,
+  const h0 = d.hdr || {}, sz = v => Math.max(0.6, Math.min(1.6, +v || 1)), ord = Array.isArray(h0.order) && h0.order.length === 3 && ['music','weather','clock'].every(k => h0.order.includes(k)) ? h0.order : ['music','weather','clock'];
+  const hdr = { music: sz(h0.music), weather: sz(h0.weather), clock: sz(h0.clock), order: ord, city: h0.city || 'Павлодар', lat: +h0.lat || 52.2873, lon: +h0.lon || 76.9674 };
+  return { slideSec: +d.slideSec || 20, fx: d.fx !== false, lite: d.lite !== false, theme: d.theme === 'light' ? 'light' : 'dark', foot: d.foot == null ? 'Работаем с 11:00 до 19:00' : String(d.foot).slice(0, 120), bg: TV.normBg(d.bg), pill: { bg: (d.pill && d.pill.bg) || '', fg: (d.pill && d.pill.fg) || '' }, show, hdr,
     screens: d.screens.map(s => { const sc = S(s || {}); sc.on = s.on !== false; if (!TV.LAYOUTS[sc.layout]) sc.layout = 'g3'; if (!TV.ANIMS[sc.anim]) sc.anim = 'spring';
       const src = s.facts || []; sc.facts = Array.from({ length: Math.max(4, Math.min(8, src.length)) }, (_, i) => i).map(i => F(src[i] || (i === 3 ? TV.newFact() : {}))); return sc; }) };
 };
@@ -192,7 +194,7 @@ TV.CSS = `
 @keyframes tvd3{to{transform:translate(480px,-340px) scale(1.2)}}@keyframes tvd4{to{transform:translate(-620px,-260px) scale(1.05)}}
 .nofx .bgfx{display:none}
 
-.scene{position:absolute;left:72px;right:72px;top:192px;bottom:112px;display:-webkit-box;display:flex;flex-direction:row;z-index:2;pointer-events:none;--sp:1;--st:.18s;--from:translateY(60px) scale(.94);--to:translateY(-40px) scale(.97);--ease:cubic-bezier(.2,1.25,.3,1)}
+.scene{position:absolute;left:72px;right:72px;top:192px;top:calc(88px + var(--hh,104px));bottom:112px;display:-webkit-box;display:flex;flex-direction:row;z-index:2;pointer-events:none;--sp:1;--st:.18s;--from:translateY(60px) scale(.94);--to:translateY(-40px) scale(.97);--ease:cubic-bezier(.2,1.25,.3,1)}
 .scene .f{opacity:0;transform:var(--from);transition:opacity calc(.7s * var(--sp)) ease,transform calc(.7s * var(--sp)) ease}
 .scene.on .f{opacity:1;transform:none;transition:opacity calc(.9s * var(--sp)) ease,transform calc(1.1s * var(--sp)) var(--ease)}
 .scene.out .f{opacity:0;transform:var(--to)}

@@ -68,7 +68,7 @@
   /* предпросмотр */
   .pv{position:relative;width:100%;aspect-ratio:16/9;border-radius:22px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px var(--line),0 20px 50px rgba(40,60,140,.12)}
   .pv .stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:#fff}
-  .pv .ph{position:absolute;left:72px;right:72px;top:48px;height:104px;display:flex;align-items:center;justify-content:space-between;z-index:3}
+  .pv .ph{position:absolute;left:72px;right:72px;top:48px;height:104px;height:var(--hh,104px);display:flex;align-items:center;justify-content:space-between;z-index:3}
   .pv .ph .logo{height:88px;color:#007aff}
   .pv .stage.dark .ph .logo{color:#fff}.pv .stage.dark{background:#000}.pv .stage.dark .ph .pl i{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.07)}
   .pv .ph .pl{display:flex;gap:16px}.pv .ph .pl i{display:block;height:104px;border-radius:26px;background:rgba(255,255,255,.66);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.9),0 10px 30px rgba(40,60,140,.07)}
@@ -77,6 +77,7 @@
 
   /* редакторы фактов */
   .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
+  .hdi{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:12px;background:var(--tile)}.hdrbox{display:flex;flex-direction:column;gap:8px}.hdi .ibtn[disabled]{opacity:.3}
   .wdgf{display:flex;flex-direction:column;gap:12px;padding:12px;border-radius:14px;background:var(--tile)}
   .fe.addc .addb{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;color:var(--blue,#007aff);font:600 16px var(--T)}.fe.addc .addb span{font-size:44px;line-height:1;font-weight:300}
   .addw{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}.addw button{all:unset;cursor:pointer;padding:8px 12px;border-radius:10px;background:var(--tile);color:var(--blue,#007aff);font:600 13px var(--T)}
@@ -180,8 +181,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611182045"></script>
-<script src="tv-video.js?v=202611182045"></script>
+<script src="tv-core.js?v=202611182110"></script>
+<script src="tv-video.js?v=202611182110"></script>
 </head>
 <body>
 <div class="bar">
@@ -227,9 +228,8 @@
       <h4 style="margin-top:4px">Сверху на экране</h4>
       <div class="row2">Фон плашек <span style="display:flex;align-items:center;gap:8px"><input type="color" id="pbg"><button type="button" class="linkbtn" data-preset="bg">авто</button></span></div>
       <div class="row2">Текст плашек <span style="display:flex;align-items:center;gap:8px"><input type="color" id="pfg"><button type="button" class="linkbtn" data-preset="fg">авто</button></span></div>
-      <label class="row2">Что играет <button class="sw2" data-show="music" type="button"></button></label>
-      <label class="row2">Погода <button class="sw2" data-show="weather" type="button"></button></label>
-      <label class="row2">Часы и дата <button class="sw2" data-show="clock" type="button"></button></label>
+      <div id="hdrbox" class="hdrbox"></div>
+      <span class="hint" style="margin-top:-6px">Ползунок — размер плашки, стрелки — порядок слева направо. Если плашки крупные, место под карточки станет меньше.</span>
     </div>
     <div class="settings" id="musicbox">
       <h4>Музыка на экране</h4>
@@ -308,7 +308,9 @@ async function loadWx(){
 }
 function preview(animate){
   $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); TV.THEME = D.theme; if (TV.bgApply) TV.bgApply($('stage'), D.bg, D.theme); $('pv').style.background = D.theme === 'dark' ? '#000' : ''; $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? '#1c1c1e' : ''));
-  $('stage').querySelectorAll('[data-p]').forEach(i => i.style.display = D.show[i.dataset.p] ? '' : 'none');
+  { const W = { music: 390, weather: 355, clock: 330 }; let mx = 0;
+    $('stage').querySelectorAll('[data-p]').forEach(i => { const k = i.dataset.p, z = D.hdr[k] || 1; i.style.display = D.show[k] ? '' : 'none'; i.style.width = Math.round(W[k] * z) + 'px'; i.style.height = Math.round(104 * z) + 'px'; i.style.order = D.hdr.order.indexOf(k); if (D.show[k]) mx = Math.max(mx, z); });
+    $('stage').style.setProperty('--hh', Math.round(104 * (mx || 1)) + 'px'); }
   const s = D.screens[sel]; if (!s) { $('pvs').innerHTML = ''; return; }
   $('pvs').innerHTML = TV.sceneHTML(s);
   const el = $('pvs').firstElementChild;
@@ -468,6 +470,24 @@ $('pfg').oninput = () => { D.pill.fg = $('pfg').value; markDirty(); preview(fals
 document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { D.pill[b.dataset.preset] = ''; markDirty(); renderSettings(); preview(false); });
 $('lite').onclick = () => { D.lite = !D.lite; markDirty(); renderSettings(); preview(true); };
 $('fx').onclick = () => { D.fx = !D.fx; markDirty(); renderSettings(); preview(false); };
+/* плашки сверху: показать, размер, порядок, город погоды */
+const HDR_N = { music: 'Что играет', weather: 'Погода', clock: 'Часы и дата' };
+function renderHdr(){
+  const h = D.hdr;
+  $('hdrbox').innerHTML = h.order.map((k, i) => `<div class="hdi" data-hk="${k}">
+      <div class="row2"><b>${HDR_N[k]}</b><span style="display:flex;gap:6px;align-items:center">
+        <button type="button" class="ibtn" data-hmv="-1" ${i === 0 ? 'disabled' : ''} title="Левее">←</button><button type="button" class="ibtn" data-hmv="1" ${i === 2 ? 'disabled' : ''} title="Правее">→</button>
+        <button class="sw2 ${D.show[k] ? 'on' : ''}" data-show="${k}" type="button"></button></span></div>
+      <label class="fld"><span>Размер: ${Math.round(h[k] * 100)}%</span><input type="range" min="60" max="160" step="5" value="${Math.round(h[k] * 100)}" data-hsz="${k}"></label>
+      ${k === 'weather' ? `<div class="two"><input type="text" id="hcity" value="${esc(h.city)}" placeholder="Город"><button type="button" class="btn" id="hgeo">Найти</button></div>` : ''}
+    </div>`).join('');
+  $('hdrbox').querySelectorAll('[data-show]').forEach(b => b.onclick = () => { const k = b.dataset.show; D.show[k] = !D.show[k]; markDirty(); renderHdr(); preview(false); });
+  $('hdrbox').querySelectorAll('[data-hsz]').forEach(r => r.oninput = () => { D.hdr[r.dataset.hsz] = +r.value / 100; r.previousElementSibling.textContent = 'Размер: ' + r.value + '%'; markDirty(); preview(false); });
+  $('hdrbox').querySelectorAll('[data-hmv]').forEach(b => b.onclick = () => { const k = b.closest('[data-hk]').dataset.hk, o = D.hdr.order, i = o.indexOf(k), j = i + +b.dataset.hmv; if (j < 0 || j > 2) return; o[i] = o[j]; o[j] = k; markDirty(); renderHdr(); preview(false); });
+  const g = $('hgeo'); if (g) g.onclick = () => { const name = $('hcity').value.trim(); if (!name) return;
+    fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=ru&name=' + encodeURIComponent(name)).then(r => r.json()).then(j => { const c = j.results && j.results[0]; if (!c) { toast('Город не найден'); return; }
+      D.hdr.city = c.name; D.hdr.lat = +c.latitude.toFixed(4); D.hdr.lon = +c.longitude.toFixed(4); toast('Погода сверху: ' + c.name); markDirty(); renderHdr(); }).catch(() => toast('Нет связи с сервисом погоды')); };
+}
 document.querySelectorAll('[data-show]').forEach(b => b.onclick = () => { const k = b.dataset.show; D.show[k] = !D.show[k]; markDirty(); renderSettings(); preview(false); });
 /* фон экрана */
 const bgTheme = () => TV.BG_DEF[D.theme === 'light' ? 'light' : 'dark'];
@@ -487,7 +507,7 @@ $('foot').oninput = () => { D.foot = $('foot').value; markDirty(); };
 function renderSettings(){
   renderBg(); $('foot').value = D.foot || '';
   $('sec').value = D.slideSec; $('fx').classList.toggle('on', D.fx); $('lite').classList.toggle('on', D.lite); $('pbg').value = D.pill.bg || '#ffffff'; $('pfg').value = D.pill.fg || '#1d1d1f'; [...$('theme').children].forEach(b => b.classList.toggle('on', b.dataset.th === D.theme));
-  document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', !!D.show[b.dataset.show]));
+  document.querySelectorAll('[data-show]').forEach(b => b.classList.toggle('on', !!D.show[b.dataset.show])); renderHdr();
 }
 
 /* ---------- редактор карточки ---------- */
@@ -822,14 +842,14 @@ $('save').onclick = async () => {
     // перед записью кладём текущую версию из базы в историю
     const cur = (await db.ref('pub/' + TV.KEY).get()).val();
     if (cur && cur.screens) { const b = Object.assign({}, cur); delete b.auto; delete b.music; await db.ref('pub/' + BAK + '/' + Date.now()).set(b); loadBaks(); }
-    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), foot: D.foot || '', pill: D.pill, show: D.show, screens: D.screens, upd: Date.now() })));
+    await db.ref('pub/' + TV.KEY).update(JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), foot: D.foot || '', pill: D.pill, show: D.show, hdr: D.hdr, screens: D.screens, upd: Date.now() })));
     markClean(); toast('Сохранено — экран обновится через пару секунд');
   } catch (e) { $('save').disabled = false; toast('Не сохранилось: ' + (e.code || e.message)); }
 };
 
 /* ---------- пресеты: именованные наборы экранов и настроек ---------- */
 const PRE = 'tvpre_' + TV.KEY.split('_').pop(); let PRES = {};
-const snapshot = () => JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), foot: D.foot || '', pill: D.pill, show: D.show, screens: D.screens }));
+const snapshot = () => JSON.parse(JSON.stringify({ slideSec: D.slideSec, fx: D.fx, lite: D.lite, theme: D.theme, bg: TV.normBg(D.bg), foot: D.foot || '', pill: D.pill, show: D.show, hdr: D.hdr, screens: D.screens }));
 async function loadPres(){
   try { PRES = (await db.ref('pub/' + PRE).get()).val() || {}; } catch (e) { PRES = {}; }
   const ks = Object.keys(PRES).sort((a, b) => (PRES[b].at || 0) - (PRES[a].at || 0));
