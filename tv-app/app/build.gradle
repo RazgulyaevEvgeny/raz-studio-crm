@@ -1,0 +1,27 @@
+plugins { id 'com.android.application' }
+// номер версии растёт с каждой сборкой на GitHub — по нему приставки понимают, что вышло обновление
+def runNo = (System.getenv('GITHUB_RUN_NUMBER') ?: '0') as int
+def ks = System.getenv('KS_FILE')
+android {
+  namespace 'kz.raz.tv'
+  compileSdk 35
+  defaultConfig {
+    applicationId 'kz.raz.tv'
+    minSdk 23
+    targetSdk 34
+    versionCode 300 + runNo
+    versionName "3.1." + runNo
+  }
+  signingConfigs {
+    // постоянный ключ подписи (из секретов GitHub) — без него обновление не встанет поверх старой версии
+    studio { if (ks) { storeFile file(ks); storePassword System.getenv('KS_PASS'); keyAlias 'studio'; keyPassword System.getenv('KS_PASS') } }
+  }
+  buildTypes {
+    release { minifyEnabled false; signingConfig ks ? signingConfigs.studio : signingConfigs.debug }
+  }
+  buildFeatures { buildConfig true }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies {
+  implementation 'androidx.media3:media3-exoplayer:1.4.1'
+}

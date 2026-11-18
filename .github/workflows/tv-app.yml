@@ -1,0 +1,34 @@
+name: TV app (APK)
+on:
+  push:
+    paths: ['tv-app/**', '.github/workflows/tv-app.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Ключ подписи
+        env: { STUDIO_KS: '${{ secrets.STUDIO_KS }}' }
+        run: |
+          if [ -n "$STUDIO_KS" ]; then echo "$STUDIO_KS" | base64 -d > "$RUNNER_TEMP/studio.jks"; echo "KS_FILE=$RUNNER_TEMP/studio.jks" >> "$GITHUB_ENV"; echo "ключ есть"; else echo "ключа нет — сборка с временным ключом, обновление по воздуху не встанет"; fi
+      - run: gradle --no-daemon :app:assembleRelease
+        working-directory: tv-app
+        env: { KS_PASS: '${{ secrets.STUDIO_KS_PASS }}' }
+      - run: cp tv-app/app/build/outputs/apk/release/app-release.apk raz-tv.apk && ls -la raz-tv.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: raz-tv-apk, path: raz-tv.apk }
+      # выпуск для обновления по воздуху: только из main и только с постоянным ключом
+      - name: Выпуск для приставок
+        if: github.ref == 'refs/heads/main' && env.KS_FILE != ''
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          CODE=$((300 + ${{ github.run_number }}))
+          cp raz-tv.apk studio.apk
+          gh release create "tv-$CODE" studio.apk --title "Студия 3.1.${{ github.run_number }}" --notes "Обновление приложения «Студия» для ТВ. Приставки установят его сами." --target "${{ github.sha }}"
