@@ -7656,6 +7656,8 @@ function tvAutoSync(){clearTimeout(tvAutoT);tvAutoT=setTimeout(async()=>{try{
   const a={orders:orders.filter(o=>o.status==='done').length,
     clients:new Set(orders.map(o=>String(o.phone||'').replace(/\D/g,'').slice(-10)||String(o.client||'').trim().toLowerCase()).filter(Boolean)).size};
   if(kaspiLoaded)a.kaspi=(kaspiOrders||[]).filter(k=>kStage(k)==='sold').length;
+  // города доставок Kaspi — для карты Казахстана на экране (только город и число заказов, без имён)
+  if(kaspiLoaded){const t={};(kaspiOrders||[]).filter(k=>['shipped','sold'].includes(kStage(k))&&k.town).forEach(k=>{const n=String(k.town).trim().slice(0,40).replace(/[.#$\[\]\/]/g,' ');if(n)t[n]=(t[n]||0)+1});a.towns=t}
   const j=JSON.stringify(a);if(j===tvAutoLast)return;
   await r.ref('pub/'+TV_PUB+'/auto').set({...a,at:Date.now()});tvAutoLast=j;
 }catch(_){}},5000)}
