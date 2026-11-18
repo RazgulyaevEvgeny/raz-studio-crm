@@ -271,6 +271,12 @@ TV.CSS = `
 .hero.wdg .h.wxt,.hero.wdg .h.clk{font-size:300px}.hero.wdg .wxn .t,.hero.wdg-clock .t{font-size:64px}.hero.wdg .h.mus{font-size:110px}.hero.wdg .t{font-size:52px}
 .hero .wxic{width:110px;height:110px}.hero .wxic svg{width:110px;height:110px}.hero.wdg .top .lt{font-size:52px}
 .hero .wxd{gap:64px}.hero .wxd>div{font-size:40px}.hero .wxd i,.hero .wxd i svg{width:96px;height:96px}.hero .wxd i{margin:10px 0}.hero .wxd b{font-size:60px}.hero .wxd small{font-size:40px}
+.wdg-kzmap .fb{flex:1 1 auto;min-height:0;display:flex}.kzw{flex:1;display:flex;flex-direction:column;gap:22px;min-height:0}
+.kzm{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center}.kzsvg{width:100%;height:100%;max-height:100%;overflow:visible}
+.kzb{fill:rgba(127,127,127,.18);stroke:rgba(127,127,127,.55);stroke-width:2.5;stroke-linejoin:round}.on-color .kzb{fill:rgba(255,255,255,.14);stroke:rgba(255,255,255,.55)}
+.kza{fill:none;stroke:#ff9f0a;stroke-width:3;stroke-linecap:round}.kzg{fill:#ff9f0a;opacity:.22}.kzd{fill:#ff9f0a;stroke:#fff;stroke-width:3}.kzh{fill:#0a84ff;stroke:#fff;stroke-width:4}
+.kzs{flex:0 0 auto;display:flex;align-items:baseline;gap:22px 28px;flex-wrap:wrap}.wdg .h.kzn{font-size:96px;font-weight:800;line-height:1;letter-spacing:-.04em}.kzs .t{font-size:40px}.kzl{display:flex;gap:28px;flex-wrap:wrap;margin-left:auto}
+.kzt{display:flex;gap:12px;font-size:32px;color:var(--fg2);white-space:nowrap}.kzt b{color:var(--fg);font-weight:800}
 .qrw{display:flex;align-items:center;gap:40px}.qri .qrs{display:block;width:100%;height:100%}.qrt .cap b{color:var(--fg)}.qri{width:calc(300px * var(--fz,1));height:calc(300px * var(--fz,1));flex:none;background:#fff;border-radius:24px;padding:calc(18px * var(--fz,1));box-sizing:border-box;object-fit:contain}
 .qre{display:flex;align-items:center;justify-content:center;color:#8e8e93;font-size:60px;font-weight:800}.hero .qri{width:calc(400px * var(--fz,1));height:calc(400px * var(--fz,1))}
 .qrt{min-width:0}.wdg .qrt .h{font-size:calc(60px * var(--fz,1))!important;line-height:1.1;-webkit-hyphens:none;hyphens:none;overflow-wrap:normal;word-break:normal;letter-spacing:-.02em}.hero.wdg .qrt .h{font-size:calc(76px * var(--fz,1))!important}.wdg .qrt .cap{margin-top:18px}
@@ -473,9 +479,32 @@ TV.qr = (function(){
   };
 })();
 
+/* ---------- карта Казахстана: контур (упрощённый) и города ---------- */
+TV.KZ_BORDER = [[49.2,46.4],[48.6,47.5],[46.6,48.4],[47.1,49.2],[46.8,49.9],[47.6,50.4],[48.7,50.6],[49.4,51.1],[50.8,51.7],[52.4,51.7],[54.5,51.0],[55.7,50.6],[57.5,51.1],[58.7,51.0],[59.5,50.6],[60.9,50.8],[61.6,51.3],[60.1,51.9],[61.0,52.9],[62.1,53.0],[61.2,53.4],[61.1,53.9],[62.6,54.0],[65.2,54.3],[68.2,54.9],[69.1,55.4],[70.8,55.3],[71.2,54.3],[72.2,54.4],[73.5,53.9],[76.4,54.2],[77.9,53.3],[79.1,52.5],[80.1,51.4],[81.5,50.8],[83.1,51.0],[84.0,50.4],[85.0,50.0],[86.2,49.5],[87.3,49.1],[86.6,48.6],[85.6,48.0],[85.5,47.1],[83.1,47.2],[82.3,45.5],[80.0,45.0],[80.4,43.1],[80.2,42.1],[78.6,42.8],[76.0,42.9],[74.5,43.1],[73.5,42.5],[71.8,42.8],[70.9,42.3],[69.1,41.4],[68.4,40.7],[67.9,41.2],[66.6,41.2],[66.0,42.9],[64.5,43.6],[62.0,43.5],[61.0,44.4],[58.6,45.6],[56.0,45.0],[56.0,41.3],[55.0,41.3],[53.0,42.1],[52.5,41.8],[52.7,42.6],[51.3,43.2],[50.3,44.3],[50.9,44.6],[51.4,45.4],[53.0,45.3],[53.2,46.7],[51.2,47.0],[49.2,46.4]];
+TV.KZ_CITIES = { 'алматы':[76.95,43.24],'астана':[71.43,51.13],'нур-султан':[71.43,51.13],'шымкент':[69.6,42.32],'караганда':[73.1,49.8],'караганды':[73.1,49.8],'актобе':[57.17,50.28],'тараз':[71.37,42.9],'павлодар':[76.95,52.29],
+  'усть-каменогорск':[82.6,49.95],'оскемен':[82.6,49.95],'өскемен':[82.6,49.95],'семей':[80.23,50.41],'семипалатинск':[80.23,50.41],'атырау':[51.88,47.1],'костанай':[63.62,53.21],'кызылорда':[65.5,44.85],'уральск':[51.37,51.23],'орал':[51.37,51.23],
+  'петропавловск':[69.15,54.87],'актау':[51.17,43.65],'темиртау':[72.96,50.06],'туркестан':[68.25,43.3],'кокшетау':[69.39,53.28],'талдыкорган':[78.37,45.02],'экибастуз':[75.32,51.72],'жезказган':[67.71,47.78],'балхаш':[74.98,46.85],
+  'конаев':[77.07,43.87],'капшагай':[77.07,43.87],'каскелен':[76.62,43.2],'рудный':[63.12,52.96],'сатпаев':[67.53,47.9],'аксу':[76.5,52.04],'степногорск':[71.89,52.35],'щучинск':[70.2,52.93],'жанаозен':[52.8,43.34],'кульсары':[53.97,46.95],
+  'талгар':[77.24,43.3],'есик':[77.45,43.36],'риддер':[83.51,50.34],'аягоз':[80.44,47.97],'лисаковск':[62.49,52.54],'арыс':[68.8,42.43],'жаркент':[80.0,44.17],'шахтинск':[72.59,49.71],'сарань':[72.85,49.79],'байконур':[63.31,45.62],
+  'кентау':[68.51,43.52],'хромтау':[58.44,50.25],'косшы':[71.55,51.0],'зыряновск':[84.27,49.73],'алтай':[84.27,49.73],'текели':[78.82,44.83],'житикара':[61.2,52.19],'аральск':[61.67,46.8],'приозерск':[73.72,46.04],'курчатов':[78.54,50.76] };
+TV.kzTown = n => { const k = String(n || '').toLowerCase().replace(/ё/g, 'е').replace(/^(г\.|город|с\.|п\.)\s*/, '').replace(/\s*(г\.|город)$/, '').trim(); return TV.KZ_CITIES[k] || TV.KZ_CITIES[k.split(/[\s,(]/)[0]] || null; };
+TV.kzMap = (towns) => {
+  const W = 1000, lon0 = 46.2, lon1 = 87.6, lat0 = 40.4, lat1 = 55.6, k = Math.cos(48 * Math.PI / 180);
+  const sx = (W - 20) / ((lon1 - lon0) * k), H = Math.round((lat1 - lat0) * sx + 20);
+  const P = ([lo, la]) => [10 + (lo - lon0) * k * sx, 10 + (lat1 - la) * sx];
+  const path = TV.KZ_BORDER.map((p, i) => (i ? 'L' : 'M') + P(p).map(v => v.toFixed(1)).join(' ')).join('') + 'Z';
+  const home = P(TV.KZ_CITIES['павлодар']); let max = 1; const pts = [];
+  Object.keys(towns || {}).forEach(t => { const c = TV.kzTown(t); if (!c) return; const n = +towns[t] || 0; if (!n) return; const p = P(c); const ex = pts.find(q => Math.abs(q.p[0] - p[0]) < 1 && Math.abs(q.p[1] - p[1]) < 1); if (ex) ex.n += n; else pts.push({ p, n }); });
+  pts.forEach(q => max = Math.max(max, q.n)); pts.sort((a, b) => a.n - b.n);
+  const arcs = pts.filter(q => Math.hypot(q.p[0] - home[0], q.p[1] - home[1]) > 8).map(q => { const mx = (q.p[0] + home[0]) / 2, my = (q.p[1] + home[1]) / 2 - Math.hypot(q.p[0] - home[0], q.p[1] - home[1]) * .22;
+    return `<path d="M${home[0].toFixed(1)} ${home[1].toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${q.p[0].toFixed(1)} ${q.p[1].toFixed(1)}" class="kza" style="opacity:${(.25 + .55 * Math.sqrt(q.n / max)).toFixed(2)}"/>`; }).join('');
+  const dots = pts.map(q => { const r = 6 + 20 * Math.sqrt(q.n / max); return `<circle cx="${q.p[0].toFixed(1)}" cy="${q.p[1].toFixed(1)}" r="${(r * 1.9).toFixed(1)}" class="kzg"/><circle cx="${q.p[0].toFixed(1)}" cy="${q.p[1].toFixed(1)}" r="${r.toFixed(1)}" class="kzd"/>`; }).join('');
+  return `<svg class="kzsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="${path}" class="kzb"/>${arcs}${dots}<circle cx="${home[0].toFixed(1)}" cy="${home[1].toFixed(1)}" r="13" class="kzh"/><circle cx="${home[0].toFixed(1)}" cy="${home[1].toFixed(1)}" r="5" fill="#fff"/></svg>`;
+};
+
 /* ---------- виджеты: погода, часы, «сейчас играет» ---------- */
 TV.LIVE = { wx: {}, track: null };   // живые данные: погода по городам, текущий трек
-TV.WIDGETS = { '': 'Обычная карточка', weather: 'Погода', clock: 'Часы', music: 'Сейчас играет', qr: 'QR-код', wifi: 'Wi-Fi для гостей', fx: 'Курс валют', countdown: 'Обратный отсчёт', goal: 'Цель с прогрессом' };
+TV.WIDGETS = { '': 'Обычная карточка', weather: 'Погода', clock: 'Часы', music: 'Сейчас играет', kzmap: 'Карта доставок Kaspi', qr: 'QR-код', wifi: 'Wi-Fi для гостей', fx: 'Курс валют', countdown: 'Обратный отсчёт', goal: 'Цель с прогрессом' };
 TV.FX_NAMES = { USD: 'Доллар', EUR: 'Евро', RUB: 'Рубль', CNY: 'Юань', KGS: 'Сом', UZS: 'Сум', TRY: 'Лира', AED: 'Дирхам', GBP: 'Фунт' };
 const DAYS = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'], DAYS_FULL = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
@@ -494,6 +523,14 @@ TV.widgetParts = (f, hero) => {
   if (k === 'clock') {
     const d = TV.nowKz(), hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
     return { top: `<div class="top"><span class="lt">${DAYS_FULL[d.getDay()]}</span></div>`, body: `<div class="h clk">${hm}</div><div class="t">${d.getDate()} ${MONTHS[d.getMonth()]}</div>` };
+  }
+  if (k === 'kzmap') {   // карта доставок Kaspi: города из учёта, дуги из Павлодара
+    const towns = (TV.AUTO && TV.AUTO.towns) || {}, list = Object.keys(towns).map(t => [t, +towns[t] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
+    const total = list.reduce((s, x) => s + x[1], 0), cities = list.length, n = v => v.toLocaleString('ru-RU');
+    const pl = (v, a, b, c2) => v % 10 === 1 && v % 100 !== 11 ? a : v % 10 >= 2 && v % 10 <= 4 && (v % 100 < 10 || v % 100 >= 20) ? b : c2;
+    const top = list.slice(0, hero ? 4 : 3).map(x => `<div class="kzt"><span>${esc(x[0])}</span><b>${n(x[1])}</b></div>`).join('');
+    return { top: `<div class="top"><span class="lt">${esc(f.label || 'Доставили по Казахстану')}</span></div>`,
+      body: `<div class="kzw"><div class="kzm">${TV.kzMap(towns)}</div><div class="kzs">${cities ? `<div class="h kzn">${n(cities)}</div><div class="t">${pl(cities, 'город', 'города', 'городов')} · ${n(total)} ${pl(total, 'заказ', 'заказа', 'заказов')}</div><div class="kzl">${top}</div>` : `<div class="t">Города появятся, когда учёт студии обновит данные Kaspi</div>`}${f.caption ? `<div class="cap">${esc(f.caption)}</div>` : ''}</div></div>` };
   }
   if (k === 'qr') {
     const u = String(f.qrUrl || '').trim();
