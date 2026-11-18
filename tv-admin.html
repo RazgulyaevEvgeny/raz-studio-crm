@@ -77,7 +77,10 @@
 
   /* редакторы фактов */
   .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
-  .fe.addc{align-items:center;justify-content:center;min-height:180px;border:2px dashed var(--line,#c7c7cc);background:transparent;color:var(--blue,#007aff);font:600 16px var(--T);cursor:pointer}.fe.addc span{font-size:44px;line-height:1;font-weight:300}
+  .wdgf{display:flex;flex-direction:column;gap:12px;padding:12px;border-radius:14px;background:var(--tile)}
+  .fe.addc .addb{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;color:var(--blue,#007aff);font:600 16px var(--T)}.fe.addc .addb span{font-size:44px;line-height:1;font-weight:300}
+  .addw{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px}.addw button{all:unset;cursor:pointer;padding:8px 12px;border-radius:10px;background:var(--tile);color:var(--blue,#007aff);font:600 13px var(--T)}
+  .fe.addc{flex-direction:column;align-items:center;justify-content:center;min-height:180px;border:2px dashed var(--line,#c7c7cc);background:transparent;color:var(--blue,#007aff);font:600 16px var(--T);cursor:pointer}.fe.addc span{font-size:44px;line-height:1;font-weight:300}
   .fe .szr{background:#fff;border-radius:14px;padding:10px 12px}.dark .fe .szr{background:rgba(255,255,255,.06)}
   #pvs .rzh{position:absolute;right:18px;bottom:18px;width:64px;height:64px;border-radius:50%;z-index:6;pointer-events:auto;cursor:nwse-resize;background:rgba(255,255,255,.92);box-shadow:0 6px 20px rgba(0,0,0,.35);opacity:.0;transition:opacity .15s}
   #pvs .rzh::after{content:'';position:absolute;left:19px;top:19px;width:22px;height:22px;border-right:6px solid #007aff;border-bottom:6px solid #007aff;border-radius:0 0 6px 0}
@@ -177,8 +180,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611171900"></script>
-<script src="tv-video.js?v=202611171900"></script>
+<script src="tv-core.js?v=202611182045"></script>
+<script src="tv-video.js?v=202611182045"></script>
 </head>
 <body>
 <div class="bar">
@@ -291,6 +294,18 @@ const collectImgs = () => { const s = new Set(); D.screens.forEach(sc => sc.fact
 $('stage').innerHTML = '<div class="bgfx"><i></i><i></i><i></i><i></i></div><div class="ph">' + LOGO + '<div class="pl"><i data-p="music" style="width:390px"></i><i data-p="weather" style="width:355px"></i><i data-p="clock" style="width:330px"></i></div></div><div id="pvs" style="position:absolute;inset:0;z-index:2"></div>';
 function fitPv(){ $('stage').style.transform = 'scale(' + ($('pv').clientWidth / 1920) + ')'; }
 new ResizeObserver(fitPv).observe($('pv'));
+/* живые данные для предпросмотра виджетов */
+TV.LIVE.track = TV.LIVE.track || { title: 'Название трека', artist: 'Исполнитель · Моя волна', cover: '' };
+let wxBusy = false;
+async function loadWx(){
+  if (wxBusy || !D || !D.screens) return; wxBusy = true; const keys = {};
+  D.screens.forEach(s => s.facts.forEach(f => { if (f.kind === 'weather') keys[TV.wxKey(f)] = [+f.wlat || 52.2873, +f.wlon || 76.9674]; }));
+  for (const k in keys) { if (TV.LIVE.wx[k]) continue; try { const [la, lo] = keys[k];
+    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=auto`)).json();
+    TV.LIVE.wx[k] = { t: j.current.temperature_2m, code: j.current.weather_code, days: (j.daily.time || []).map((d, i) => ({ d, code: j.daily.weather_code[i], max: j.daily.temperature_2m_max[i], min: j.daily.temperature_2m_min[i] })) };
+  } catch (e) {} }
+  wxBusy = false; preview(false);
+}
 function preview(animate){
   $('stage').classList.toggle('nofx', !D.fx); $('stage').classList.toggle('lite', D.lite); TV.LITE = D.lite; $('stage').classList.toggle('dark', D.theme === 'dark'); TV.THEME = D.theme; if (TV.bgApply) TV.bgApply($('stage'), D.bg, D.theme); $('pv').style.background = D.theme === 'dark' ? '#000' : ''; $('stage').querySelectorAll('[data-p]').forEach(i => i.style.background = D.pill.bg || (D.theme === 'dark' ? '#1c1c1e' : ''));
   $('stage').querySelectorAll('[data-p]').forEach(i => i.style.display = D.show[i.dataset.p] ? '' : 'none');
@@ -480,6 +495,19 @@ const VIS = [['', 'Значок'], ['flag-it','Флаг Италии'], ['swatch
 const seg = (field, cur, opts, cls='') => `<div class="seg full ${cls}" data-seg="${field}">${opts.map(([v,t]) => `<button type="button" data-v="${v}" class="${String(cur)===String(v)?'on':''}">${t}</button>`).join('')}</div>`;
 const AL = [['left','<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h16"/></svg>'],['center','<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M6 12h12M4 18h16"/></svg>'],['right','<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M9 12h12M5 18h16"/></svg>']];
 const openState = {};
+/* настройки виджета (погода, часы, музыка) — показываются вместо текста карточки */
+function widgetForm(f){
+  if (f.kind === 'weather') return `<div class="wdgf">
+      <div class="fld"><span>Город</span><div class="two"><input type="text" data-wcity value="${esc(f.wcity || 'Павлодар')}" placeholder="например: Астана"><button type="button" class="btn" data-geo="1">Найти</button></div></div>
+      <div class="fld"><span>Что показывать</span>${seg('wmode', f.wmode || 'days', [['now', 'Сейчас'], ['days', 'Сейчас + 3 дня']])}</div>
+      <span class="hint">Погода обновляется на экране каждые 15 минут. Цвет и размер — в «Оформлении» ниже.</span></div>`;
+  if (f.kind === 'clock') return `<div class="wdgf"><span class="hint">Часы и дата по времени Павлодара, обновляются каждую минуту. Цвет и размер — в «Оформлении» ниже.</span></div>`;
+  if (f.kind === 'music') return `<div class="wdgf">
+      <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Сейчас играет"></label>
+      <label class="chk"><input type="checkbox" data-f="wcover" ${f.wcover !== false ? 'checked' : ''}> Обложка трека на фоне карточки</label>
+      <span class="hint">Показывает трек, который играет на экране прямо сейчас.</span></div>`;
+  return '';
+}
 function factForm(f, k){
   const s = D.screens[sel];
   const hero = (s.layout==='g12'&&k===0)||(s.layout==='g21'&&k===2)||s.layout==='g1';
@@ -495,6 +523,8 @@ function factForm(f, k){
         ? `<label class="fld szr"><span>Ширина: ${+f.gw || 33}% ряда (если не влезает — карточка уходит в следующий ряд)</span><input type="range" min="15" max="100" step="1" data-f="gw" value="${+f.gw || 33}"></label>`
         : `<label class="fld szr"><span>Размер: ×${(+f.w || 1).toFixed(2).replace(/\.?0+$/, '')} от соседних (ширина в ряду, высота в колонке)</span><input type="range" min="0.5" max="3" step="0.05" data-f="w" value="${+f.w || 1}"></label>`}
 
+    <label class="fld szr"><span>Что в карточке</span><select data-f="kind">${Object.entries(TV.WIDGETS).map(([v, n]) => `<option value="${v}" ${(f.kind || '') === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    ${widgetForm(f)}
     <details data-sec="text" ${o('text', true)}><summary>Текст</summary><div class="in">
       <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="например: Вышивка"></label>
       <div class="fld"><span>Крупно — число или слова</span><div class="two"><input type="text" data-f="big" value="${esc(f.big)}" placeholder="1500 или «Всегда в срок»"><input type="text" data-f="unit" value="${esc(f.unit)}" placeholder="км, кг"></div></div>
@@ -554,7 +584,7 @@ function renderFacts(){
   const s = D.screens[sel], n = TV.cnt(s), gx = s.layout === 'gx';
   if (gx) while (s.facts.length < n) s.facts.push(TV.F({}));
   $('facts').className = 'facts n' + (gx ? Math.min(n + (n < 8 ? 1 : 0), 4) : n);
-  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<button type="button" class="fe addc" data-add="1"><span>+</span>Добавить карточку</button>' : '');
+  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<div class="fe addc"><button type="button" class="addb" data-add="1"><span>+</span>Карточка</button><div class="addw"><button type="button" data-addw="weather">+ Погода</button><button type="button" data-addw="clock">+ Часы</button><button type="button" data-addw="music">+ Сейчас играет</button></div></div>' : '');
   TV.hydrate($('facts'));
 }
 const factOf = el => D.screens[sel].facts[+el.closest('.fe').dataset.k];
@@ -566,6 +596,7 @@ $('facts').addEventListener('input', e => {
   if (k === 'big') t.closest('.fe').querySelectorAll('[data-numonly]').forEach(x => x.classList.toggle('hide', !TV.isNum(t.value)));
   if (k === 'auto') { f.autoFrom = f.auto && TV.AUTO[f.auto] != null ? +TV.AUTO[f.auto] : 0; renderFacts(); }
   if (k === 'visual') renderFacts();
+  if (k === 'kind') { if (f.kind === 'weather') loadWx(); if (f.kind && !f.style || f.kind && f.style === 'plain') f.style = f.kind === 'weather' ? 'blue' : f.kind === 'clock' ? 'dark' : 'plain'; renderFacts(); }
   if (k === 'gw' || k === 'w') { const sp = t.closest('label').firstElementChild; sp.textContent = k === 'gw' ? `Ширина: ${t.value}% ряда (если не влезает — карточка уходит в следующий ряд)` : `Размер: ×${(+t.value).toFixed(2).replace(/\.?0+$/, '')} от соседних (ширина в ряду, высота в колонке)`; requestAnimationFrame(fillSizes); }
   if (/^o[A-Z]/.test(k) && t.type === 'range') t.nextElementSibling.textContent = t.value + '%';
   if (k === 'dim') t.previousElementSibling.textContent = 'Затемнение для читаемости текста: ' + t.value + '%';
@@ -573,6 +604,15 @@ $('facts').addEventListener('input', e => {
 });
 $('facts').addEventListener('change', e => { if (e.target.dataset.act === 'upload') upload(e.target); if (['fg','bg','cLabel','cBig','cTitle','cCap','cList','icBg','icFg','oLabel','oBig','oTitle','oCap','oList'].includes(e.target.dataset.f)) renderFacts(); });
 $('facts').addEventListener('click', e => {
+  const geo = e.target.closest('[data-geo]');
+  if (geo) { const f = factOf(geo), name = geo.closest('.fe').querySelector('[data-wcity]').value.trim(); if (!name) return;
+    fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=ru&name=' + encodeURIComponent(name)).then(r => r.json()).then(j => {
+      const g = j.results && j.results[0]; if (!g) { toast('Город не найден — проверьте название'); return; }
+      f.wcity = g.name; f.wlat = +g.latitude.toFixed(4); f.wlon = +g.longitude.toFixed(4); toast('Город: ' + g.name + (g.admin1 ? ', ' + g.admin1 : '')); markDirty(); loadWx(); renderFacts(); preview(false);
+    }).catch(() => toast('Нет связи с сервисом погоды')); return; }
+  const wa = e.target.closest('[data-addw]');
+  if (wa) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); const kd = wa.dataset.addw;
+      s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33, kind: kd, style: kd === 'weather' ? 'blue' : kd === 'clock' ? 'dark' : 'plain', label: '' })); if (kd === 'weather') loadWx(); change(); } return; }
   if (e.target.closest('[data-add]')) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33 })); change(); } return; }
   const rm = e.target.closest('[data-rm]'); if (rm) { const s = D.screens[sel], k = +rm.closest('.fe').dataset.k; if (TV.cnt(s) > 1 && confirm('Убрать эту карточку с экрана?')) { s.facts.splice(k, 1); s.cnt = TV.cnt(s) - 1; while (s.facts.length < 4) s.facts.push(TV.F({})); change(); } return; }
   const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
@@ -765,7 +805,7 @@ renderMusic(); loadStations();
 function renderAll(animate){
   sel = Math.max(0, Math.min(sel, D.screens.length - 1));
   $('ttl').textContent = 'Экран ' + (sel+1);
-  renderSettings(); renderBar(); renderList(); renderFacts(); preview(animate);
+  renderSettings(); renderBar(); renderList(); renderFacts(); preview(animate); loadWx();
 }
 function change(animate){ markDirty(); renderAll(animate); }
 function markDirty(){ dirty = true; $('state').className = 'state dirty'; $('state').lastChild.textContent = 'Есть изменения'; $('save').disabled = !(loaded || demo); }

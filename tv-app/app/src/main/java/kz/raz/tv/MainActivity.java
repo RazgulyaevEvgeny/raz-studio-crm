@@ -108,10 +108,11 @@ public class MainActivity extends Activity {
   private boolean chromeQueued;
 
   static class Card { boolean kb; int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
-  static class Scene { int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
+  static class Scene { boolean live; int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
 
   private final Runnable fire = () -> { due = true; if (pending != null) showPending(); };
-  private final Runnable askNext = () -> { if (count <= 1) return; int n = (cur + 1) % count; Scene c = cache.get(n); if (c != null) ready(c); else { want = n; js("razScene(" + n + ")"); } };
+  private final Runnable askNext = () -> { if (count <= 1) return; int n = (cur + 1) % count; Scene c = cache.get(n); if (c != null && !c.live) ready(c); else { want = n;   // экраны с виджетами (погода, часы, трек) снимаем свежими каждый раз
+ js("razScene(" + n + ")"); } };
   /** Сторож показа: если следующий экран не готов вовремя (страница задумалась) — показываем готовый из памяти. Слайды не встают никогда. */
   private final Runnable guard = new Runnable() { @Override public void run() {
     h.postDelayed(this, 4000);
@@ -294,7 +295,7 @@ public class MainActivity extends Activity {
     if ("scene".equals(kind)) {
       JSONObject o = new JSONObject(json);
       Scene sc = new Scene();
-      sc.i = o.optInt("i"); sc.sec = o.optDouble("sec", 20); sc.anim = o.optString("anim", "spring"); sc.tanim = o.optString("tanim", "fade"); sc.shift = o.optInt("shift", 40);
+      sc.i = o.optInt("i"); sc.live = o.optBoolean("live", false); sc.sec = o.optDouble("sec", 20); sc.anim = o.optString("anim", "spring"); sc.tanim = o.optString("tanim", "fade"); sc.shift = o.optInt("shift", 40);
       JSONArray cs = o.getJSONArray("cards");
       boolean hasVid = false;
       for (int k = 0; k < cs.length(); k++) {

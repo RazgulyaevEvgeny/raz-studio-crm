@@ -59,6 +59,7 @@ TV.icon = (name) => TV.ICONS[name] ? `<svg viewBox="0 0 24 24" fill="none" strok
 /* ---------- значения по умолчанию ---------- */
 const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
+  kind:'', wcity:'Павлодар', wlat:52.2873, wlon:76.9674, wmode:'days',
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
   sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', video:'', stars:0, oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
@@ -264,6 +265,12 @@ TV.CSS = `
 .f.has-bg{--fg:#fff;--fg2:rgba(255,255,255,.88)}
 .f .pic{display:block;flex:1 1 auto;min-height:120px;border-radius:26px;background:#e5e5ea center/cover no-repeat}
 .f .pic.contain{background-size:contain;background-color:transparent}
+.wxic{background:transparent!important;width:76px;height:76px}.wxic svg{width:76px;height:76px}
+.wdg-weather .fb{display:flex;align-items:flex-end;justify-content:space-between;gap:40px;flex-wrap:wrap}.wdg-weather .wxd{margin-top:0}
+.wdg .h.wxt,.wdg .h.clk{font-size:150px;font-weight:800;letter-spacing:-.045em;line-height:.95;font-variant-numeric:tabular-nums}
+.wdg .h.mus{font-size:64px;line-height:1.05}
+.wxd{display:flex;gap:34px;margin-top:26px}.wxd>div{display:flex;flex-direction:column;align-items:center;font-size:28px;color:var(--fg2)}
+.wxd i{display:block;width:52px;height:52px;margin:4px 0}.wxd i svg{width:52px;height:52px}.wxd b{font-size:32px;color:var(--fg)}.wxd small{font-size:24px;opacity:.75}
 .ic{width:80px;height:80px;border-radius:22px;display:flex;align-items:center;justify-content:center;color:#fff;flex:none}.top .ic{margin-right:22px}.ic svg{width:44px;height:44px}
 .top{display:flex;align-items:center;font-size:34px;font-weight:600;color:var(--fg2);min-height:80px}
 .num{display:inline-block;font-family:"Inter Tight",Inter,system-ui,sans-serif;font-weight:800;letter-spacing:-.045em;line-height:.92;font-variant-numeric:tabular-nums;font-size:150px;color:var(--fg)}
@@ -391,6 +398,44 @@ const LIST_COLORS = ['purple','indigo','orange','red','blue','green','teal','pin
 const LIST_ICONS = { 'dtf':'printer','вышив':'needle','3d':'cube','накле':'car','авто':'car','вывес':'sign','таблич':'sign','топпер':'cup','футбол':'shirt' };
 const listIcon = t => { const l = t.toLowerCase(); for (const k in LIST_ICONS) if (l.includes(k)) return LIST_ICONS[k]; return 'check'; };
 
+TV.WX={sun:'<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="13" fill="#ffcc00"/><g stroke="#ffcc00" stroke-width="4" stroke-linecap="round"><path d="M32 5v7M32 52v7M5 32h7M52 32h7M13 13l5 5M46 46l5 5M13 51l5-5M46 18l5-5"/></g></svg>',
+ cloud:'<svg viewBox="0 0 64 64"><circle cx="24" cy="26" r="10" fill="#ffcc00"/><path d="M20 50h28a10 10 0 0 0 0-20 14 14 0 0 0-27 3A8.5 8.5 0 0 0 20 50z" fill="#c7c7cc"/></svg>',
+ overcast:'<svg viewBox="0 0 64 64"><path d="M16 48h32a11 11 0 0 0 0-22 15 15 0 0 0-29 3A9.5 9.5 0 0 0 16 48z" fill="#aeaeb2"/></svg>',
+ snow:'<svg viewBox="0 0 64 64"><path d="M16 38h32a10 10 0 0 0 0-20 14 14 0 0 0-27 3A8.5 8.5 0 0 0 16 38z" fill="#aeaeb2"/><g fill="#5ac8fa"><circle cx="22" cy="48" r="3"/><circle cx="34" cy="52" r="3"/><circle cx="46" cy="48" r="3"/></g></svg>',
+ rain:'<svg viewBox="0 0 64 64"><path d="M16 38h32a10 10 0 0 0 0-20 14 14 0 0 0-27 3A8.5 8.5 0 0 0 16 38z" fill="#aeaeb2"/><g stroke="#007aff" stroke-width="4" stroke-linecap="round"><path d="M22 44l-3 8M34 44l-3 8M46 44l-3 8"/></g></svg>',
+ fog:'<svg viewBox="0 0 64 64"><g stroke="#aeaeb2" stroke-width="5" stroke-linecap="round"><path d="M12 24h40M8 34h48M14 44h36"/></g></svg>'};
+TV.wmo=function(c){if(c===0)return['sun','Ясно'];if(c<=2)return['cloud','Малооблачно'];if(c===3)return['overcast','Пасмурно'];
+ if(c<=48)return['fog','Туман'];if(c<=67||(c>=80&&c<=82))return['rain','Дождь'];if(c<=77||c===85||c===86)return['snow','Снег'];return['rain','Гроза']}
+
+/* ---------- виджеты: погода, часы, «сейчас играет» ---------- */
+TV.LIVE = { wx: {}, track: null };   // живые данные: погода по городам, текущий трек
+TV.WIDGETS = { '': 'Обычная карточка', weather: 'Погода', clock: 'Часы', music: 'Сейчас играет' };
+const DAYS = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'], DAYS_FULL = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const deg = t => (t > 0 ? '+' : t < 0 ? '−' : '') + Math.abs(Math.round(t)) + '°';
+TV.wxKey = f => (+f.wlat || 52.2873).toFixed(2) + ',' + (+f.wlon || 76.9674).toFixed(2);
+TV.nowKz = () => { const d = new Date(Date.now() + (new Date().getTimezoneOffset() + 300) * 60000); return d; };   // время Павлодара, UTC+5
+TV.widgetParts = (f) => {
+  const k = f.kind;
+  if (k === 'weather') {
+    const w = TV.LIVE.wx[TV.wxKey(f)];
+    const top = `<div class="top"><span class="ic wxic">${w ? TV.WX[TV.wmo(w.code)[0]] : TV.WX.cloud}</span><span class="lt">${esc(f.wcity || 'Павлодар')}</span></div>`;
+    let body = `<div class="wxn"><div class="h wxt">${w ? deg(w.t) : '—'}</div><div class="t">${w ? TV.wmo(w.code)[1] : 'Загружаю погоду…'}</div></div>`;
+    if (w && f.wmode !== 'now' && w.days && w.days.length) body += `<div class="wxd">${w.days.slice(1, 4).map(d => `<div><span>${DAYS[new Date(d.d + 'T12:00:00').getDay()]}</span><i>${TV.WX[TV.wmo(d.code)[0]]}</i><b>${deg(d.max)}</b><small>${deg(d.min)}</small></div>`).join('')}</div>`;
+    return { top, body };
+  }
+  if (k === 'clock') {
+    const d = TV.nowKz(), hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    return { top: `<div class="top"><span class="lt">${DAYS_FULL[d.getDay()]}</span></div>`, body: `<div class="h clk">${hm}</div><div class="t">${d.getDate()} ${MONTHS[d.getMonth()]}</div>` };
+  }
+  if (k === 'music') {
+    const t = TV.LIVE.track || {};
+    return { top: `<div class="top"><span class="lt">${esc(f.label || 'Сейчас играет')}</span></div>`,
+      body: `<div class="h mus">${esc(t.title || 'Музыка')}</div><div class="t">${esc(t.artist || 'Яндекс Музыка')}</div>`, cover: t.cover || '' };
+  }
+  return null;
+};
+
 TV.factHTML = (f, hero, idx, gx) => {
   const col = TV.col(f.color) || TV.col('blue');
   const bgPhoto = f.photo && f.photoMode === 'bg';
@@ -412,6 +457,13 @@ TV.factHTML = (f, hero, idx, gx) => {
   if (f.valign && f.valign !== 'between') cls.push('va-' + f.valign);
   if (bgPhoto) style += `--dim:${Math.max(0, Math.min(90, +f.dim || 0)) / 100};`;
 
+  const wp = TV.widgetParts(f);
+  if (wp) {   // виджет: своё содержимое, но те же стили, цвета и размеры, что у обычных карточек
+    cls.push('wdg', 'wdg-' + f.kind);
+    let bgw = '';
+    if (wp.cover && f.wcover !== false) { cls.push('has-bg', 'on-color'); bgw = `<div class="bgph" style="background-image:url('${esc(wp.cover.replace('200x200', '600x600'))}')"></div><div class="shade"></div>`; style += '--dim:.5;'; }
+    return `<div class="${cls.join(' ')}" data-w="${f.kind}" style="${style}">${bgw}<div class="ft">${wp.top}</div><div class="fb">${wp.body}</div></div>`;
+  }
   const photoTop = f.photo && f.photoMode === 'top';
   const vis = ['flag-it','swatch','insta'].includes(f.visual) ? f.visual : '';
   let visual = '';
