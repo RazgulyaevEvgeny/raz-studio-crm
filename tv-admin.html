@@ -181,8 +181,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611182130"></script>
-<script src="tv-video.js?v=202611182130"></script>
+<script src="tv-core.js?v=202611182150"></script>
+<script src="tv-video.js?v=202611182150"></script>
 </head>
 <body>
 <div class="bar">
@@ -529,6 +529,13 @@ function widgetForm(f){
       <label class="fld"><span>Крупно рядом с кодом</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="Наш Instagram"></label>
       <label class="fld"><span>Пояснение</span><input type="text" data-f="caption" value="${esc(f.caption)}" placeholder="работы, акции, отзывы"></label>
       <span class="hint">Подойдёт любая ссылка: Instagram, 2ГИС, WhatsApp (wa.me/7…), Kaspi-магазин, сайт.</span></div>`;
+  if (f.kind === 'wifi') return `<div class="wdgf">
+      <label class="fld"><span>Название сети (как в списке Wi-Fi)</span><input type="text" data-f="wifiSsid" value="${esc(f.wifiSsid)}" placeholder="Razgulyaev Guest" autocomplete="off"></label>
+      <div class="fld"><span>Защита</span>${seg('wifiSec', f.wifiSec || 'WPA', [['WPA', 'С паролем'], ['nopass', 'Открытая сеть']])}</div>
+      ${f.wifiSec === 'nopass' ? '' : `<label class="fld"><span>Пароль</span><input type="text" data-f="wifiPass" value="${esc(f.wifiPass)}" autocomplete="off" spellcheck="false"></label>
+      <label class="chk"><input type="checkbox" data-f="wifiShow" ${f.wifiShow !== false ? 'checked' : ''}> Показывать пароль текстом под кодом</label>`}
+      <label class="fld"><span>Крупно рядом с кодом</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="Наведите камеру — и вы в сети"></label>
+      <span class="hint">Пароль виден на экране всем гостям и хранится вместе с экранами — указывайте только гостевую сеть, не рабочую.</span></div>`;
   if (f.kind === 'fx') return `<div class="wdgf">
       <label class="fld"><span>Валюты через запятую</span><input type="text" data-f="fxList" value="${esc(f.fxList)}" placeholder="USD, EUR, RUB, CNY"></label>
       <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Курс тенге"></label>
@@ -626,7 +633,7 @@ function renderFacts(){
   const s = D.screens[sel], n = TV.cnt(s), gx = s.layout === 'gx';
   if (gx) while (s.facts.length < n) s.facts.push(TV.F({}));
   $('facts').className = 'facts n' + (gx ? Math.min(n + (n < 8 ? 1 : 0), 4) : n);
-  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<div class="fe addc"><button type="button" class="addb" data-add="1"><span>+</span>Карточка</button><div class="addw"><button type="button" data-addw="weather">+ Погода</button><button type="button" data-addw="clock">+ Часы</button><button type="button" data-addw="music">+ Сейчас играет</button><button type="button" data-addw="qr">+ QR-код</button><button type="button" data-addw="fx">+ Курс валют</button><button type="button" data-addw="countdown">+ Отсчёт</button><button type="button" data-addw="goal">+ Цель</button></div></div>' : '');
+  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<div class="fe addc"><button type="button" class="addb" data-add="1"><span>+</span>Карточка</button><div class="addw"><button type="button" data-addw="weather">+ Погода</button><button type="button" data-addw="clock">+ Часы</button><button type="button" data-addw="music">+ Сейчас играет</button><button type="button" data-addw="wifi">+ Wi-Fi</button><button type="button" data-addw="qr">+ QR-код</button><button type="button" data-addw="fx">+ Курс валют</button><button type="button" data-addw="countdown">+ Отсчёт</button><button type="button" data-addw="goal">+ Цель</button></div></div>' : '');
   TV.hydrate($('facts'));
 }
 const factOf = el => D.screens[sel].facts[+el.closest('.fe').dataset.k];
@@ -655,7 +662,7 @@ $('facts').addEventListener('click', e => {
     }).catch(() => toast('Нет связи с сервисом погоды')); return; }
   const wa = e.target.closest('[data-addw]');
   if (wa) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); const kd = wa.dataset.addw;
-      s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33, kind: kd, style: kd === 'weather' || kd === 'goal' ? 'blue' : kd === 'clock' || kd === 'fx' ? 'dark' : 'plain', label: '', big: '', title: '', caption: '', icon: '' })); if (kd === 'weather' || kd === 'fx') loadWx(); change(); } return; }
+      s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33, kind: kd, style: kd === 'weather' || kd === 'goal' ? 'blue' : kd === 'wifi' ? 'plain' : kd === 'clock' || kd === 'fx' ? 'dark' : 'plain', label: '', big: '', title: '', caption: '', icon: '' })); if (kd === 'weather' || kd === 'fx') loadWx(); change(); } return; }
   if (e.target.closest('[data-add]')) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33 })); change(); } return; }
   const rm = e.target.closest('[data-rm]'); if (rm) { const s = D.screens[sel], k = +rm.closest('.fe').dataset.k; if (TV.cnt(s) > 1 && confirm('Убрать эту карточку с экрана?')) { s.facts.splice(k, 1); s.cnt = TV.cnt(s) - 1; while (s.facts.length < 4) s.facts.push(TV.F({})); change(); } return; }
   const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
