@@ -295,6 +295,7 @@ public class Music {
   }
 
   // ---------- журнал ----------
+  public void note(String t) { l(t); }
   private void l(String t) { synchronized (log) { log.add(new SimpleDateFormat("HH:mm:ss", Locale.US).format(new java.util.Date()) + "  " + t); if (log.size() > 80) log.removeFirst(); } }
   public String journal() {
     StringBuilder b = new StringBuilder();

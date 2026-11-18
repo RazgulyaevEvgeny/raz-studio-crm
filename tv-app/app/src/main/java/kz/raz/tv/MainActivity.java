@@ -101,6 +101,7 @@ public class MainActivity extends Activity {
   /** Ролики качаются по одному в фоне, чтобы не забивать память и сеть. */
   private final ExecutorService dl = Executors.newSingleThreadExecutor();
   private Music music;
+  private Updater updater;
   private FrameLayout root;
   private int want = -1;                 // какой экран ждём от страницы для показа
   private long pong = 0, chromeAt = 0;   // последний ответ страницы; последняя съёмка шапки
@@ -168,6 +169,7 @@ public class MainActivity extends Activity {
     });
     pong = System.currentTimeMillis();
     h.postDelayed(guard, 4000); h.postDelayed(ping, 15000);
+    updater = new Updater(this, t -> { if (music != null) music.note(t); }); updater.start();
     askAutostart();
   }
 
@@ -512,7 +514,7 @@ public class MainActivity extends Activity {
       if (up) showLog(); return true;
     }
     if (k == KeyEvent.KEYCODE_DPAD_DOWN) { if (up && logV != null) logV.setVisibility(View.GONE); return true; }
-    if (k == KeyEvent.KEYCODE_MENU) { if (up) { started = false; say("Перезагружаю…"); web.reload(); } return true; }
+    if (k == KeyEvent.KEYCODE_MENU) { if (up) { started = false; say("Перезагружаю…"); web.reload(); if (updater != null) updater.check(true); } return true; }
     if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_NUMPAD_ENTER
         || k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE || k == KeyEvent.KEYCODE_SPACE) {
       if (up && music != null) { String r = music.togglePause();
@@ -529,7 +531,7 @@ public class MainActivity extends Activity {
     if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) { Scene c = cache.get(cur); cache.clear(); if (c != null) cache.put(cur, c); }
   }
 
-  @Override protected void onDestroy() { if (music != null) music.release(); h.removeCallbacksAndMessages(null); for (Vid v : vids) v.release(); dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
+  @Override protected void onDestroy() { if (updater != null) updater.stop(); if (music != null) music.release(); h.removeCallbacksAndMessages(null); for (Vid v : vids) v.release(); dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
 
   @Override public void onWindowFocusChanged(boolean f) {
     super.onWindowFocusChanged(f);
