@@ -192,7 +192,7 @@ async function wxWidgets(){
   const keys = {};
   (DATA.screens || []).forEach(s => s.on !== false && s.facts.slice(0, TV.cnt(s)).forEach(f => { if (f.kind === 'weather') keys[TV.wxKey(f)] = [+f.wlat || 52.2873, +f.wlon || 76.9674]; }));
   for (const k in keys) { try { const [la, lo] = keys[k];
-    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=auto`)).json();
+    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=6&timezone=auto`)).json();
     TV.LIVE.wx[k] = { t: j.current.temperature_2m, code: j.current.weather_code, days: (j.daily.time || []).map((d, i) => ({ d, code: j.daily.weather_code[i], max: j.daily.temperature_2m_max[i], min: j.daily.temperature_2m_min[i] })) };
   } catch (e) {} }
   refreshWidgets();
