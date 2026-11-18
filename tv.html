@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611171900"></script>
+<script src="tv-core.js?v=202611182045"></script>
 </head>
 <body>
 <div id="stage">
@@ -180,20 +180,33 @@ function tick(){const d=kz(),p=n=>(n<10?'0':'')+n;
 tick();setInterval(tick,15000);
 
 // погода (Open-Meteo, бесплатно, без ключа)
-const WX={sun:'<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="13" fill="#ffcc00"/><g stroke="#ffcc00" stroke-width="4" stroke-linecap="round"><path d="M32 5v7M32 52v7M5 32h7M52 32h7M13 13l5 5M46 46l5 5M13 51l5-5M46 18l5-5"/></g></svg>',
- cloud:'<svg viewBox="0 0 64 64"><circle cx="24" cy="26" r="10" fill="#ffcc00"/><path d="M20 50h28a10 10 0 0 0 0-20 14 14 0 0 0-27 3A8.5 8.5 0 0 0 20 50z" fill="#c7c7cc"/></svg>',
- overcast:'<svg viewBox="0 0 64 64"><path d="M16 48h32a11 11 0 0 0 0-22 15 15 0 0 0-29 3A9.5 9.5 0 0 0 16 48z" fill="#aeaeb2"/></svg>',
- snow:'<svg viewBox="0 0 64 64"><path d="M16 38h32a10 10 0 0 0 0-20 14 14 0 0 0-27 3A8.5 8.5 0 0 0 16 38z" fill="#aeaeb2"/><g fill="#5ac8fa"><circle cx="22" cy="48" r="3"/><circle cx="34" cy="52" r="3"/><circle cx="46" cy="48" r="3"/></g></svg>',
- rain:'<svg viewBox="0 0 64 64"><path d="M16 38h32a10 10 0 0 0 0-20 14 14 0 0 0-27 3A8.5 8.5 0 0 0 16 38z" fill="#aeaeb2"/><g stroke="#007aff" stroke-width="4" stroke-linecap="round"><path d="M22 44l-3 8M34 44l-3 8M46 44l-3 8"/></g></svg>',
- fog:'<svg viewBox="0 0 64 64"><g stroke="#aeaeb2" stroke-width="5" stroke-linecap="round"><path d="M12 24h40M8 34h48M14 44h36"/></g></svg>'};
-function wmo(c){if(c===0)return['sun','Ясно'];if(c<=2)return['cloud','Малооблачно'];if(c===3)return['overcast','Пасмурно'];
- if(c<=48)return['fog','Туман'];if(c<=67||(c>=80&&c<=82))return['rain','Дождь'];if(c<=77||c===85||c===86)return['snow','Снег'];return['rain','Гроза']}
+const WX = TV.WX, wmo = TV.wmo;
 function setWx(t,c){const[i,txt]=wmo(c);document.getElementById('wxi').innerHTML=WX[i];
  document.getElementById('temp').textContent=(t>0?'+':t<0?'−':'')+Math.abs(Math.round(t))+'°';document.getElementById('wxt').textContent=txt}
 setWx(-6,3);
 async function weather(){try{const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${CITY.lat}&longitude=${CITY.lon}&current=temperature_2m,weather_code&timezone=auto`);
   const j=await r.json();setWx(j.current.temperature_2m,j.current.weather_code)}catch(e){}}
 weather();setInterval(weather,15*60*1000);
+/* виджеты на экранах: погода в своих городах (с прогнозом), часы, текущий трек */
+async function wxWidgets(){
+  const keys = {};
+  (DATA.screens || []).forEach(s => s.on !== false && s.facts.slice(0, TV.cnt(s)).forEach(f => { if (f.kind === 'weather') keys[TV.wxKey(f)] = [+f.wlat || 52.2873, +f.wlon || 76.9674]; }));
+  for (const k in keys) { try { const [la, lo] = keys[k];
+    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=auto`)).json();
+    TV.LIVE.wx[k] = { t: j.current.temperature_2m, code: j.current.weather_code, days: (j.daily.time || []).map((d, i) => ({ d, code: j.daily.weather_code[i], max: j.daily.temperature_2m_max[i], min: j.daily.temperature_2m_min[i] })) };
+  } catch (e) {} }
+  refreshWidgets();
+}
+/* перерисовать виджеты на месте (размеры и раскладка не меняются) */
+function refreshWidgets(){
+  [...box.children].forEach((s, i) => { const sc0 = LIST[i]; if (!sc0) return; let any = false;
+    [...s.querySelectorAll('.f:not(.shd)')].forEach((el, k) => { const f = sc0.facts[k]; if (!f || !f.kind) return; any = true;
+      const tmp = document.createElement('div'); tmp.innerHTML = TV.factHTML(f, el.classList.contains('hero'), k, 0); const n = tmp.firstElementChild;
+      el.innerHTML = n.innerHTML; ['has-bg', 'on-color'].forEach(c => el.classList.toggle(c, n.classList.contains(c))); });
+    if (any && s.offsetParent !== null) TV.fitText(s); });
+}
+setInterval(wxWidgets, 15 * 60 * 1000);
+setInterval(() => { if (document.querySelector('.f[data-w="clock"]')) refreshWidgets(); }, 20000);
 
 /* ===== МУЗЫКА: Яндекс Музыка через воркер ym-wave; что играть — выбирается в админке ===== */
 const YM = TV.YM;
@@ -201,7 +214,7 @@ const MOOD_NAMES = { all:'Любое', calm:'Спокойное', fun:'Весё�
 let MUSIC = TV.normalizeMusic(null);
 const audio = new Audio(); audio.volume = MUSIC.vol / 100; audio.preload = 'auto';
 let queue = [], cur = null, batch = '', lastId = '', needTap = false, busy = false, gen = 0;
-function showTrack(t){ document.getElementById('title').textContent=t.title; document.getElementById('artist').textContent=t.artist;
+function showTrack(t){ TV.LIVE.track = { title: t.title, artist: t.artist, cover: t.cover || '' }; setTimeout(() => { try { refreshWidgets(); } catch (e) {} }, 0);  document.getElementById('title').textContent=t.title; document.getElementById('artist').textContent=t.artist;
   const a=document.getElementById('art'); if(t.cover){a.src=t.cover;a.style.display='block'}else a.style.display='none'; }
 function showStation(){ document.getElementById('station').textContent = MUSIC.st === 'user:onyourwave' ? 'Моя волна · ' + (MOOD_NAMES[MUSIC.mood] || '') : (MUSIC.name || 'Яндекс Музыка'); }
 const api = (p,o) => fetch(`${YM.worker}${p}${p.indexOf('?')>=0?'&':'?'}k=${encodeURIComponent(YM.key)}`, o).then(r=>r.json());
@@ -329,12 +342,13 @@ function applySettings(){
   if (pills[1]) pills[1].style.display = DATA.show.weather ? '' : 'none';
   if (pills[2]) pills[2].style.display = DATA.show.clock ? '' : 'none';
 }
+let wxP = Promise.resolve();
 function build(){
   applySettings();
   LIST = DATA.screens.filter(s => s.on);
   box.innerHTML = LIST.map(TV.sceneHTML).join('');
   pager.innerHTML = LIST.map(() => '<i></i>').join('');
-  TV.preloadAll(LIST);
+  TV.preloadAll(LIST); wxP = wxWidgets();
   sc = -1; clearTimeout(timer);
   if (NATIVE) { nmode('m-chrome');
     // приложению — список всех роликов, чтобы оно заранее скачало их в память приставки
@@ -358,7 +372,8 @@ window.razScene = (i) => (nq = nq.then(async () => {
   const s = box.children[i], sc0 = LIST[i]; if (!s || !sc0) return;
   [...box.children].forEach(x => x.classList.remove('nshow'));
   await Promise.race([TV.preloadAll([sc0]), new Promise(r => setTimeout(r, 12000))]);
-  TV.hydrate(s); s.classList.add('nshow');
+  if (sc0.facts.some(f => f.kind === 'weather')) await Promise.race([wxP, new Promise(r => setTimeout(r, 4000))]);
+  TV.hydrate(s); try { refreshWidgets(); } catch (e) {} s.classList.add('nshow');
   const L = TV.LITE; TV.LITE = true; s.querySelectorAll('.num[data-to]').forEach(el => TV.countUp(el)); TV.LITE = L;
   nmode('m-scene'); nstage().classList.add('notext'); await settle(120); TV.fitText(s); await settle(120);
   const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1);
@@ -366,7 +381,7 @@ window.razScene = (i) => (nq = nq.then(async () => {
     const d = f.classList.contains('shd') ? {} : (sc0.facts[k] || {});
     return { kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
   const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';
-  await shot('scene', JSON.stringify({ i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
+  await shot('scene', JSON.stringify({ live: sc0.facts.slice(0, TV.cnt(sc0)).some(f => f.kind), i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
   st.classList.remove('notext'); st.classList.add('novid'); await settle(120); await shot('over'); st.classList.remove('novid');
   nmode('m-chrome');
 }).catch(() => {}));
