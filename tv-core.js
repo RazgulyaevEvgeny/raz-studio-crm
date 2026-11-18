@@ -59,7 +59,7 @@ TV.icon = (name) => TV.ICONS[name] ? `<svg viewBox="0 0 24 24" fill="none" strok
 /* ---------- значения по умолчанию ---------- */
 const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
-  kind:'', wcity:'Павлодар', wlat:52.2873, wlon:76.9674, wmode:'days',
+  kind:'', wcity:'Павлодар', wlat:52.2873, wlon:76.9674, wmode:'days', qrUrl:'', fxList:'USD,EUR,RUB,CNY', cdDate:'', goalTo:0,
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
   sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', video:'', stars:0, oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
@@ -268,6 +268,17 @@ TV.CSS = `
 .f .pic{display:block;flex:1 1 auto;min-height:120px;border-radius:26px;background:#e5e5ea center/cover no-repeat}
 .f .pic.contain{background-size:contain;background-color:transparent}
 .wxic{background:transparent!important;width:76px;height:76px}.wxic svg{width:76px;height:76px}
+.hero.wdg .h.wxt,.hero.wdg .h.clk{font-size:300px}.hero.wdg .wxn .t,.hero.wdg-clock .t{font-size:64px}.hero.wdg .h.mus{font-size:110px}.hero.wdg .t{font-size:52px}
+.hero .wxic{width:110px;height:110px}.hero .wxic svg{width:110px;height:110px}.hero.wdg .top .lt{font-size:52px}
+.hero .wxd{gap:64px}.hero .wxd>div{font-size:40px}.hero .wxd i,.hero .wxd i svg{width:96px;height:96px}.hero .wxd i{margin:10px 0}.hero .wxd b{font-size:60px}.hero .wxd small{font-size:40px}
+.qrw{display:flex;align-items:center;gap:40px}.qri{width:calc(300px * var(--fz,1));height:calc(300px * var(--fz,1));flex:none;background:#fff;border-radius:24px;padding:calc(18px * var(--fz,1));box-sizing:border-box;object-fit:contain}
+.qre{display:flex;align-items:center;justify-content:center;color:#8e8e93;font-size:60px;font-weight:800}.hero .qri{width:calc(460px * var(--fz,1));height:calc(460px * var(--fz,1))}
+.qrt{min-width:0}.qrt .h{font-size:64px;line-height:1.05}
+.fxl{display:flex;flex-direction:column;gap:14px}.fxr{display:flex;justify-content:space-between;align-items:baseline;gap:24px;font-size:40px;color:var(--fg2)}.fxr b{color:var(--fg);font-weight:800}
+.fxr i{font-style:normal;font-size:56px;font-weight:800;color:var(--fg);font-variant-numeric:tabular-nums;white-space:nowrap}.hero .fxr{font-size:56px}.hero .fxr i{font-size:84px}
+.wdg .h.cdn{font-size:120px;font-weight:800;letter-spacing:-.03em;line-height:1}.hero.wdg .h.cdn{font-size:220px}
+.wdg .h.gln{font-size:120px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}.wdg .h.gln small{font-size:.38em;opacity:.7;font-weight:600}
+.glb{height:28px;border-radius:14px;background:rgba(127,127,127,.25);margin:26px 0 18px;overflow:hidden}.glb i{display:block;height:100%;border-radius:14px;background:currentColor;opacity:.9}
 .wdg-weather .fb{display:flex;align-items:flex-end;justify-content:space-between;gap:40px;flex-wrap:wrap}.wdg-weather .wxd{margin-top:0}
 .wdg .h.wxt,.wdg .h.clk{font-size:150px;font-weight:800;letter-spacing:-.045em;line-height:.95;font-variant-numeric:tabular-nums}
 .wdg .h.mus{font-size:64px;line-height:1.05}
@@ -411,24 +422,52 @@ TV.wmo=function(c){if(c===0)return['sun','Ясно'];if(c<=2)return['cloud','М�
 
 /* ---------- виджеты: погода, часы, «сейчас играет» ---------- */
 TV.LIVE = { wx: {}, track: null };   // живые данные: погода по городам, текущий трек
-TV.WIDGETS = { '': 'Обычная карточка', weather: 'Погода', clock: 'Часы', music: 'Сейчас играет' };
+TV.WIDGETS = { '': 'Обычная карточка', weather: 'Погода', clock: 'Часы', music: 'Сейчас играет', qr: 'QR-код', fx: 'Курс валют', countdown: 'Обратный отсчёт', goal: 'Цель с прогрессом' };
+TV.FX_NAMES = { USD: 'Доллар', EUR: 'Евро', RUB: 'Рубль', CNY: 'Юань', KGS: 'Сом', UZS: 'Сум', TRY: 'Лира', AED: 'Дирхам', GBP: 'Фунт' };
 const DAYS = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'], DAYS_FULL = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const deg = t => (t > 0 ? '+' : t < 0 ? '−' : '') + Math.abs(Math.round(t)) + '°';
 TV.wxKey = f => (+f.wlat || 52.2873).toFixed(2) + ',' + (+f.wlon || 76.9674).toFixed(2);
 TV.nowKz = () => { const d = new Date(Date.now() + (new Date().getTimezoneOffset() + 300) * 60000); return d; };   // время Павлодара, UTC+5
-TV.widgetParts = (f) => {
+TV.widgetParts = (f, hero) => {
   const k = f.kind;
   if (k === 'weather') {
     const w = TV.LIVE.wx[TV.wxKey(f)];
     const top = `<div class="top"><span class="ic wxic">${w ? TV.WX[TV.wmo(w.code)[0]] : TV.WX.cloud}</span><span class="lt">${esc(f.wcity || 'Павлодар')}</span></div>`;
     let body = `<div class="wxn"><div class="h wxt">${w ? deg(w.t) : '—'}</div><div class="t">${w ? TV.wmo(w.code)[1] : 'Загружаю погоду…'}</div></div>`;
-    if (w && f.wmode !== 'now' && w.days && w.days.length) body += `<div class="wxd">${w.days.slice(1, 4).map(d => `<div><span>${DAYS[new Date(d.d + 'T12:00:00').getDay()]}</span><i>${TV.WX[TV.wmo(d.code)[0]]}</i><b>${deg(d.max)}</b><small>${deg(d.min)}</small></div>`).join('')}</div>`;
+    if (w && f.wmode !== 'now' && w.days && w.days.length) body += `<div class="wxd">${w.days.slice(1, hero ? 6 : 4).map(d => `<div><span>${DAYS[new Date(d.d + 'T12:00:00').getDay()]}</span><i>${TV.WX[TV.wmo(d.code)[0]]}</i><b>${deg(d.max)}</b><small>${deg(d.min)}</small></div>`).join('')}</div>`;
     return { top, body };
   }
   if (k === 'clock') {
     const d = TV.nowKz(), hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
     return { top: `<div class="top"><span class="lt">${DAYS_FULL[d.getDay()]}</span></div>`, body: `<div class="h clk">${hm}</div><div class="t">${d.getDate()} ${MONTHS[d.getMonth()]}</div>` };
+  }
+  if (k === 'qr') {
+    const u = String(f.qrUrl || '').trim();
+    const img = u ? `<img class="qri" alt="" src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=0&ecc=M&data=${encodeURIComponent(u)}">` : '<div class="qri qre">QR</div>';
+    return { top: `<div class="top"><span class="lt">${esc(f.label || 'Наведите камеру телефона')}</span></div>`,
+      body: `<div class="qrw">${img}<div class="qrt">${f.title ? `<div class="h">${esc(f.title)}</div>` : ''}${f.caption ? `<div class="cap">${esc(f.caption)}</div>` : ''}</div></div>` };
+  }
+  if (k === 'fx') {
+    const r = TV.LIVE.fx || {}, list = String(f.fxList || 'USD,EUR,RUB').toUpperCase().split(/[\s,;]+/).filter(Boolean).slice(0, 5);
+    const fmt = v => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1).replace('.', ',') : v.toFixed(2).replace('.', ',');
+    return { top: `<div class="top"><span class="lt">${esc(f.label || 'Курс тенге')}</span></div>`,
+      body: `<div class="fxl">${list.map(c => `<div class="fxr"><span><b>${esc(c)}</b> ${esc(TV.FX_NAMES[c] || '')}</span><i>${r[c] ? fmt(r[c]) + ' ₸' : '—'}</i></div>`).join('')}</div>` };
+  }
+  if (k === 'countdown') {
+    const end = f.cdDate ? new Date(f.cdDate + (f.cdDate.length <= 10 ? 'T00:00' : '') + ':00+05:00') : null, ms = end ? end - Date.now() : NaN;
+    let big = '—', sub = f.title || '';
+    if (!isNaN(ms) && ms > 0) { const d = Math.floor(ms / 864e5), h = Math.floor(ms % 864e5 / 36e5), m = Math.floor(ms % 36e5 / 6e4);
+      const pl = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? b : c;
+      big = d >= 1 ? d + ' ' + pl(d, 'день', 'дня', 'дней') + (d < 3 ? ' ' + h + ' ч' : '') : h + ' ч ' + m + ' мин'; }
+    else if (!isNaN(ms)) { big = f.caption || 'Уже началось!'; sub = ''; }
+    return { top: `<div class="top"><span class="lt">${esc(f.label || 'Осталось')}</span></div>`, body: `<div class="h cdn">${esc(big)}</div>${sub ? `<div class="t">${esc(sub)}</div>` : ''}` };
+  }
+  if (k === 'goal') {
+    const cur = TV.value(f), to = Math.max(1, +String(f.goalTo).replace(/\s/g, '') || 1), pc = Math.max(0, Math.min(100, cur / to * 100));
+    const n = v => Math.round(v).toLocaleString('ru-RU');
+    return { top: `<div class="top"><span class="lt">${esc(f.label || 'Наша цель')}</span></div>`,
+      body: `<div class="h gln">${n(cur)} <small>из ${n(to)}</small></div><div class="glb"><i style="width:${pc.toFixed(1)}%"></i></div><div class="t">${esc(f.title || (cur >= to ? 'Цель достигнута!' : 'осталось ' + n(to - cur)))}</div>` };
   }
   if (k === 'music') {
     const t = TV.LIVE.track || {};
@@ -459,7 +498,7 @@ TV.factHTML = (f, hero, idx, gx) => {
   if (f.valign && f.valign !== 'between') cls.push('va-' + f.valign);
   if (bgPhoto) style += `--dim:${Math.max(0, Math.min(90, +f.dim || 0)) / 100};`;
 
-  const wp = TV.widgetParts(f);
+  const wp = TV.widgetParts(f, hero);
   if (wp) {   // виджет: своё содержимое, но те же стили, цвета и размеры, что у обычных карточек
     cls.push('wdg', 'wdg-' + f.kind);
     let bgw = '';

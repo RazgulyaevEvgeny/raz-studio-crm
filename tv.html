@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611182110"></script>
+<script src="tv-core.js?v=202611182130"></script>
 </head>
 <body>
 <div id="stage">
@@ -192,7 +192,7 @@ async function wxWidgets(){
   const keys = {};
   (DATA.screens || []).forEach(s => s.on !== false && s.facts.slice(0, TV.cnt(s)).forEach(f => { if (f.kind === 'weather') keys[TV.wxKey(f)] = [+f.wlat || 52.2873, +f.wlon || 76.9674]; }));
   for (const k in keys) { try { const [la, lo] = keys[k];
-    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=auto`)).json();
+    const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=6&timezone=auto`)).json();
     TV.LIVE.wx[k] = { t: j.current.temperature_2m, code: j.current.weather_code, days: (j.daily.time || []).map((d, i) => ({ d, code: j.daily.weather_code[i], max: j.daily.temperature_2m_max[i], min: j.daily.temperature_2m_min[i] })) };
   } catch (e) {} }
   refreshWidgets();
@@ -206,7 +206,11 @@ function refreshWidgets(){
     if (any && s.offsetParent !== null) TV.fitText(s); });
 }
 setInterval(wxWidgets, 15 * 60 * 1000);
-setInterval(() => { if (document.querySelector('.f[data-w="clock"]')) refreshWidgets(); }, 20000);
+/* курс валют для виджета: сколько тенге за 1 единицу (open.er-api.com, раз в час) */
+async function fxWidgets(){ if (!(DATA.screens || []).some(s => s.facts.some(f => f.kind === 'fx'))) return;
+  try { const j = await (await fetch('https://open.er-api.com/v6/latest/KZT')).json(); const o = {}; for (const c in j.rates) if (j.rates[c]) o[c] = 1 / j.rates[c]; TV.LIVE.fx = o; refreshWidgets(); } catch (e) {} }
+setInterval(fxWidgets, 60 * 60 * 1000);
+setInterval(() => { if (document.querySelector('.f[data-w="clock"],.f[data-w="countdown"],.f[data-w="goal"]')) refreshWidgets(); }, 20000);
 
 /* ===== МУЗЫКА: Яндекс Музыка через воркер ym-wave; что играть — выбирается в админке ===== */
 const YM = TV.YM;
@@ -353,7 +357,7 @@ function build(){
   LIST = DATA.screens.filter(s => s.on);
   box.innerHTML = LIST.map(TV.sceneHTML).join('');
   pager.innerHTML = LIST.map(() => '<i></i>').join('');
-  TV.preloadAll(LIST); wxP = wxWidgets();
+  TV.preloadAll(LIST); wxP = Promise.all([wxWidgets(), fxWidgets()]);
   sc = -1; clearTimeout(timer);
   if (NATIVE) { nmode('m-chrome');
     // приложению — список всех роликов, чтобы оно заранее скачало их в память приставки
@@ -377,7 +381,7 @@ window.razScene = (i) => (nq = nq.then(async () => {
   const s = box.children[i], sc0 = LIST[i]; if (!s || !sc0) return;
   [...box.children].forEach(x => x.classList.remove('nshow'));
   await Promise.race([TV.preloadAll([sc0]), new Promise(r => setTimeout(r, 12000))]);
-  if (sc0.facts.some(f => f.kind === 'weather')) await Promise.race([wxP, new Promise(r => setTimeout(r, 4000))]);
+  if (sc0.facts.some(f => f.kind === 'weather' || f.kind === 'fx')) await Promise.race([wxP, new Promise(r => setTimeout(r, 4000))]);
   TV.hydrate(s); try { refreshWidgets(); } catch (e) {} s.classList.add('nshow');
   const L = TV.LITE; TV.LITE = true; s.querySelectorAll('.num[data-to]').forEach(el => TV.countUp(el)); TV.LITE = L;
   nmode('m-scene'); nstage().classList.add('notext'); await settle(120); TV.fitText(s); await settle(120);
