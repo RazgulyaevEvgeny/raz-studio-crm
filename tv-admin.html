@@ -181,8 +181,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611182110"></script>
-<script src="tv-video.js?v=202611182110"></script>
+<script src="tv-core.js?v=202611182130"></script>
+<script src="tv-video.js?v=202611182130"></script>
 </head>
 <body>
 <div class="bar">
@@ -304,6 +304,7 @@ async function loadWx(){
     const j = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=6&timezone=auto`)).json();
     TV.LIVE.wx[k] = { t: j.current.temperature_2m, code: j.current.weather_code, days: (j.daily.time || []).map((d, i) => ({ d, code: j.daily.weather_code[i], max: j.daily.temperature_2m_max[i], min: j.daily.temperature_2m_min[i] })) };
   } catch (e) {} }
+  if (D.screens.some(s => s.facts.some(f => f.kind === 'fx')) && !TV.LIVE.fx) try { const j = await (await fetch('https://open.er-api.com/v6/latest/KZT')).json(); const o = {}; for (const c in j.rates) if (j.rates[c]) o[c] = 1 / j.rates[c]; TV.LIVE.fx = o; } catch (e) {}
   wxBusy = false; preview(false);
 }
 function preview(animate){
@@ -522,6 +523,27 @@ function widgetForm(f){
       <div class="fld"><span>Что показывать</span>${seg('wmode', f.wmode || 'days', [['now', 'Сейчас'], ['days', 'Сейчас + 3 дня']])}</div>
       <span class="hint">Погода обновляется на экране каждые 15 минут. Цвет и размер — в «Оформлении» ниже.</span></div>`;
   if (f.kind === 'clock') return `<div class="wdgf"><span class="hint">Часы и дата по времени Павлодара, обновляются каждую минуту. Цвет и размер — в «Оформлении» ниже.</span></div>`;
+  if (f.kind === 'qr') return `<div class="wdgf">
+      <label class="fld"><span>Ссылка для QR-кода</span><input type="text" data-f="qrUrl" value="${esc(f.qrUrl)}" placeholder="https://instagram.com/raz.brandstudio"></label>
+      <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Наведите камеру телефона"></label>
+      <label class="fld"><span>Крупно рядом с кодом</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="Наш Instagram"></label>
+      <label class="fld"><span>Пояснение</span><input type="text" data-f="caption" value="${esc(f.caption)}" placeholder="работы, акции, отзывы"></label>
+      <span class="hint">Подойдёт любая ссылка: Instagram, 2ГИС, WhatsApp (wa.me/7…), Kaspi-магазин, сайт.</span></div>`;
+  if (f.kind === 'fx') return `<div class="wdgf">
+      <label class="fld"><span>Валюты через запятую</span><input type="text" data-f="fxList" value="${esc(f.fxList)}" placeholder="USD, EUR, RUB, CNY"></label>
+      <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Курс тенге"></label>
+      <span class="hint">Сколько тенге за 1 единицу валюты. Обновляется раз в час (open.er-api.com), это рыночный курс, а не курс обменника.</span></div>`;
+  if (f.kind === 'countdown') return `<div class="wdgf">
+      <label class="fld"><span>Дата и время события</span><input type="datetime-local" data-f="cdDate" value="${esc(f.cdDate)}"></label>
+      <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Осталось"></label>
+      <label class="fld"><span>Под цифрами</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="до конца акции"></label>
+      <label class="fld"><span>Когда время вышло</span><input type="text" data-f="caption" value="${esc(f.caption)}" placeholder="Уже началось!"></label></div>`;
+  if (f.kind === 'goal') return `<div class="wdgf">
+      <label class="fld"><span>Цель (число)</span><input type="text" data-f="goalTo" value="${esc(f.goalTo || '')}" placeholder="2000"></label>
+      <label class="fld"><span>Сколько уже есть — берём из CRM</span><select data-f="auto"><option value="">Не брать, ввести вручную</option>${Object.entries(TV.AUTO_SRC).map(([v, n]) => `<option value="${v}" ${f.auto === v ? 'selected' : ''}>${n}${TV.AUTO[v] != null ? ' — сейчас ' + TV.AUTO[v] : ''}</option>`).join('')}</select></label>
+      <label class="fld"><span>${f.auto ? 'Добавить к числу из CRM' : 'Сколько уже есть'}</span><input type="text" data-f="big" value="${esc(f.big)}" placeholder="0"></label>
+      <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Наша цель"></label>
+      <label class="fld"><span>Под полоской</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="по умолчанию — «осталось …»"></label></div>`;
   if (f.kind === 'music') return `<div class="wdgf">
       <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Сейчас играет"></label>
       <label class="chk"><input type="checkbox" data-f="wcover" ${f.wcover !== false ? 'checked' : ''}> Обложка трека на фоне карточки</label>
@@ -604,7 +626,7 @@ function renderFacts(){
   const s = D.screens[sel], n = TV.cnt(s), gx = s.layout === 'gx';
   if (gx) while (s.facts.length < n) s.facts.push(TV.F({}));
   $('facts').className = 'facts n' + (gx ? Math.min(n + (n < 8 ? 1 : 0), 4) : n);
-  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<div class="fe addc"><button type="button" class="addb" data-add="1"><span>+</span>Карточка</button><div class="addw"><button type="button" data-addw="weather">+ Погода</button><button type="button" data-addw="clock">+ Часы</button><button type="button" data-addw="music">+ Сейчас играет</button></div></div>' : '');
+  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<div class="fe addc"><button type="button" class="addb" data-add="1"><span>+</span>Карточка</button><div class="addw"><button type="button" data-addw="weather">+ Погода</button><button type="button" data-addw="clock">+ Часы</button><button type="button" data-addw="music">+ Сейчас играет</button><button type="button" data-addw="qr">+ QR-код</button><button type="button" data-addw="fx">+ Курс валют</button><button type="button" data-addw="countdown">+ Отсчёт</button><button type="button" data-addw="goal">+ Цель</button></div></div>' : '');
   TV.hydrate($('facts'));
 }
 const factOf = el => D.screens[sel].facts[+el.closest('.fe').dataset.k];
@@ -614,9 +636,10 @@ $('facts').addEventListener('input', e => {
   const f = factOf(t);
   f[k] = t.type === 'checkbox' ? t.checked : t.type === 'range' ? +t.value : t.value;
   if (k === 'big') t.closest('.fe').querySelectorAll('[data-numonly]').forEach(x => x.classList.toggle('hide', !TV.isNum(t.value)));
-  if (k === 'auto') { f.autoFrom = f.auto && TV.AUTO[f.auto] != null ? +TV.AUTO[f.auto] : 0; renderFacts(); }
+  if (k === 'auto' && f.kind === 'goal') { f.autoFrom = 0; renderFacts(); }
+  else if (k === 'auto') { f.autoFrom = f.auto && TV.AUTO[f.auto] != null ? +TV.AUTO[f.auto] : 0; renderFacts(); }
   if (k === 'visual') renderFacts();
-  if (k === 'kind') { if (f.kind === 'weather') loadWx(); if (f.kind && !f.style || f.kind && f.style === 'plain') f.style = f.kind === 'weather' ? 'blue' : f.kind === 'clock' ? 'dark' : 'plain'; renderFacts(); }
+  if (k === 'kind') { if (f.kind === 'weather' || f.kind === 'fx') loadWx(); if (f.kind && f.kind !== 'music') { f.icon = ''; } if (f.kind && !f.style || f.kind && f.style === 'plain') f.style = f.kind === 'weather' ? 'blue' : f.kind === 'clock' ? 'dark' : 'plain'; renderFacts(); }
   if (k === 'gw' || k === 'w') { const sp = t.closest('label').firstElementChild; sp.textContent = k === 'gw' ? `Ширина: ${t.value}% ряда (если не влезает — карточка уходит в следующий ряд)` : `Размер: ×${(+t.value).toFixed(2).replace(/\.?0+$/, '')} от соседних (ширина в ряду, высота в колонке)`; requestAnimationFrame(fillSizes); }
   if (/^o[A-Z]/.test(k) && t.type === 'range') t.nextElementSibling.textContent = t.value + '%';
   if (k === 'dim') t.previousElementSibling.textContent = 'Затемнение для читаемости текста: ' + t.value + '%';
@@ -632,7 +655,7 @@ $('facts').addEventListener('click', e => {
     }).catch(() => toast('Нет связи с сервисом погоды')); return; }
   const wa = e.target.closest('[data-addw]');
   if (wa) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); const kd = wa.dataset.addw;
-      s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33, kind: kd, style: kd === 'weather' ? 'blue' : kd === 'clock' ? 'dark' : 'plain', label: '' })); if (kd === 'weather') loadWx(); change(); } return; }
+      s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33, kind: kd, style: kd === 'weather' || kd === 'goal' ? 'blue' : kd === 'clock' || kd === 'fx' ? 'dark' : 'plain', label: '', big: '', title: '', caption: '', icon: '' })); if (kd === 'weather' || kd === 'fx') loadWx(); change(); } return; }
   if (e.target.closest('[data-add]')) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33 })); change(); } return; }
   const rm = e.target.closest('[data-rm]'); if (rm) { const s = D.screens[sel], k = +rm.closest('.fe').dataset.k; if (TV.cnt(s) > 1 && confirm('Убрать эту карточку с экрана?')) { s.facts.splice(k, 1); s.cnt = TV.cnt(s) - 1; while (s.facts.length < 4) s.facts.push(TV.F({})); change(); } return; }
   const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
