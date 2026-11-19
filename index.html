@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261117110500">
+<meta name="app-build" content="20261119094000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -6172,17 +6172,33 @@ async function kInkBoxes(bytes){
     const cx=cv.getContext('2d',{willReadFrequently:true});cx.fillStyle='#fff';cx.fillRect(0,0,W,H);
     await pg.render({canvasContext:cx,viewport:vp}).promise;
     const d=cx.getImageData(0,0,W,H).data,eg=Math.round(Math.min(W,H)*.015);
-    const find=lim=>{
-      const rows=new Uint32Array(H),cols=new Uint32Array(W);
-      for(let y=eg;y<H-eg;y++)for(let x=eg;x<W-eg;x++){
-        const i=(y*W+x)*4;
-        if(d[i]*.3+d[i+1]*.59+d[i+2]*.11<lim){rows[y]++;cols[x]++}
+    /* Печать на листе делим на куски (разрыв больше ~4% листа = новый кусок). Мелкие куски вдали
+       (меньше 4% всей печати: колонтитулы, номера страниц, служебные метки) отбрасываем,
+       иначе рамка растягивается на весь лист и накладная выходит мелкой. Крупные части накладной остаются все. */
+    const dark=new Uint8Array(W*H);
+    const mark=lim=>{for(let y=eg;y<H-eg;y++)for(let x=eg;x<W-eg;x++){const i=(y*W+x)*4;dark[y*W+x]=d[i]*.3+d[i+1]*.59+d[i+2]*.11<lim?1:0}};
+    const best=(cnt,gap)=>{
+      const seg=[];let cur=null,last=-1e9,tot=0;
+      for(let k=0;k<cnt.length;k++){
+        if(cnt[k]<2)continue;
+        if(!cur||k-last>gap){cur={s:k,e:k,w:0};seg.push(cur)}
+        cur.e=k;cur.w+=cnt[k];last=k;tot+=cnt[k];
       }
-      /* строка или столбец считается занятой, если в ней хотя бы 2 тёмные точки (одиночные пятнышки пропускаем) */
-      let y0=-1,y1=-1,x0=-1,x1=-1;
-      for(let y=0;y<H;y++)if(rows[y]>=2){if(y0<0)y0=y;y1=y}
-      for(let x=0;x<W;x++)if(cols[x]>=2){if(x0<0)x0=x;x1=x}
-      return y0<0||x0<0?null:{x0,y0,x1,y1};
+      const keep=seg.filter(g=>g.w>=tot*.04);
+      return keep.length?[keep[0].s,keep[keep.length-1].e]:null;
+    };
+    const find=lim=>{
+      mark(lim);
+      let ys=[0,H-1],xs=[0,W-1];
+      for(let it=0;it<3;it++){
+        const rows=new Uint32Array(H),cols=new Uint32Array(W);
+        for(let y=ys[0];y<=ys[1];y++)for(let x=xs[0];x<=xs[1];x++)if(dark[y*W+x]){rows[y]++;cols[x]++}
+        const ny=best(rows,Math.round(H*.04)),nx=best(cols,Math.round(W*.04));
+        if(!ny||!nx)return null;
+        if(ny[0]===ys[0]&&ny[1]===ys[1]&&nx[0]===xs[0]&&nx[1]===xs[1])break;
+        ys=ny;xs=nx;
+      }
+      return {x0:xs[0],y0:ys[0],x1:xs[1],y1:ys[1]};
     };
     let r=find(200);
     if(r&&(r.x1-r.x0)*(r.y1-r.y0)>W*H*.9)r=find(120)||r;
