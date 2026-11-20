@@ -46,6 +46,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -162,7 +164,7 @@ public class MainActivity extends Activity {
     root.addView(status, new FrameLayout.LayoutParams(-1, -1));
     setContentView(root);
     say("Студия запускается…");
-    h.postDelayed(() -> { if (!started) say("Экран долго не загружается.\nНажмите «Меню» на пульте, чтобы перезагрузить."); }, 60000);
+    h.postDelayed(() -> { if (!started) say("Экран долго не загружается.\nНажмите ↑ на пульте три раза подряд — откроется окно с кнопкой «Перезагрузить»."); }, 60000);
     web.loadUrl(PAGE);
     music = new Music(this, new Music.Ui() {
       @Override public void now(JSONObject t, String how) { js("window.razNow&&razNow(" + t.toString() + ")"); }
@@ -170,7 +172,12 @@ public class MainActivity extends Activity {
     });
     pong = System.currentTimeMillis();
     h.postDelayed(guard, 4000); h.postDelayed(ping, 15000);
-    updater = new Updater(this, t -> { if (music != null) music.note(t); }); updater.start();
+    updater = new Updater(this, t -> { if (music != null) music.note(t); }, this::banner); updater.start();
+    try {   // после обновления по воздуху — показать, что новая версия встала
+      android.content.SharedPreferences sp = getSharedPreferences("app", MODE_PRIVATE); int was = sp.getInt("ver", 0);
+      if (was != 0 && was < BuildConfig.VERSION_CODE) h.postDelayed(() -> banner("Обновлено до версии " + BuildConfig.VERSION_NAME + " ✓", -1, 12000), 4000);
+      sp.edit().putInt("ver", BuildConfig.VERSION_CODE).apply();
+    } catch (Exception ignored) {}
     askAutostart();
   }
 
@@ -223,11 +230,78 @@ public class MainActivity extends Activity {
     Runtime rt = Runtime.getRuntime();
     android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
     try { ((android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mi); } catch (Exception ignored) {}
-    String t = "СТУДИЯ " + BuildConfig.VERSION_NAME + " — журнал (↓ скрыть)\nпамять приложения " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ · свободно в приставке " + (mi.availMem >> 20) + " из " + (mi.totalMem >> 20) + " МБ"
+    String t = "СТУДИЯ " + BuildConfig.VERSION_NAME + " — журнал (↓ скрыть · ↑↑↑ — обновления)\nпамять приложения " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ · свободно в приставке " + (mi.availMem >> 20) + " из " + (mi.totalMem >> 20) + " МБ"
       + " · экранов готово " + cache.size() + " из " + count + " · видео играет " + vids.size() + " · видео в памяти " + vidFiles() + (loading.isEmpty() ? "" : ", качается ещё " + loading.size()) + "\n" + (music != null ? music.journal() : "");
     logV.setText(t); logV.setVisibility(View.VISIBLE); logV.bringToFront();
     h.removeCallbacks(hideLog); h.postDelayed(hideLog, 30000);
   }
+
+  // ——— плашка обновления внизу экрана ———
+  private LinearLayout banV; private TextView banT; private ProgressBar banP;
+  private final Runnable hideBan = () -> { if (banV != null) banV.setVisibility(View.GONE); };
+  void banner(String t, int pct, long hideMs) {
+    if (banV == null) {
+      banV = new LinearLayout(this); banV.setOrientation(LinearLayout.VERTICAL); banV.setPadding(36, 22, 36, 24);
+      GradientDrawable g = new GradientDrawable(); g.setColor(0xEE101018); g.setCornerRadius(28); g.setStroke(2, 0x40FFFFFF); banV.setBackground(g);
+      banT = new TextView(this); banT.setTextColor(Color.WHITE); banT.setTextSize(18); banV.addView(banT);
+      banP = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal); banP.setMax(100);
+      LinearLayout.LayoutParams pl = new LinearLayout.LayoutParams(-1, 14); pl.topMargin = 14; banV.addView(banP, pl);
+      FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL); lp.bottomMargin = 48; lp.leftMargin = 60; lp.rightMargin = 60;
+      root.addView(banV, lp);
+    }
+    banT.setText("⟳ " + t);
+    banP.setVisibility(pct >= 0 ? View.VISIBLE : View.GONE); if (pct >= 0) banP.setProgress(pct);
+    banV.setVisibility(View.VISIBLE); banV.bringToFront();
+    h.removeCallbacks(hideBan); if (hideMs > 0) h.postDelayed(hideBan, hideMs);
+    if (updV != null && updV.getVisibility() == View.VISIBLE) fillUpdates();
+  }
+
+  // ——— окно «Обновления»: ↑ три раза подряд; кнопки — стрелками и OK, «Назад» — закрыть ———
+  private LinearLayout updV; private TextView updInfo; private long upAt; private int upN;
+  private TextView btn(String t, View.OnClickListener l) {
+    TextView b = new TextView(this); b.setText(t); b.setTextSize(18); b.setTextColor(Color.WHITE); b.setPadding(34, 18, 34, 18); b.setGravity(Gravity.CENTER);
+    android.graphics.drawable.StateListDrawable st = new android.graphics.drawable.StateListDrawable();
+    GradientDrawable on = new GradientDrawable(); on.setColor(0xFFFF5A1F); on.setCornerRadius(18);
+    GradientDrawable off = new GradientDrawable(); off.setColor(0x33FFFFFF); off.setCornerRadius(18);
+    st.addState(new int[]{ android.R.attr.state_focused }, on); st.addState(new int[]{}, off); b.setBackground(st);
+    b.setFocusable(true); b.setClickable(true); b.setOnClickListener(l); return b;
+  }
+  private void openUpdates() {
+    if (logV != null) logV.setVisibility(View.GONE);
+    if (updV == null) {
+      updV = new LinearLayout(this); updV.setOrientation(LinearLayout.VERTICAL); updV.setPadding(48, 40, 48, 40);
+      GradientDrawable g = new GradientDrawable(); g.setColor(0xF2101018); g.setCornerRadius(32); g.setStroke(2, 0x40FFFFFF); updV.setBackground(g);
+      TextView t = new TextView(this); t.setText("Обновления"); t.setTextColor(Color.WHITE); t.setTextSize(28); t.setTypeface(null, android.graphics.Typeface.BOLD); updV.addView(t);
+      updInfo = new TextView(this); updInfo.setTextColor(0xFFDADAE6); updInfo.setTextSize(16); updInfo.setLineSpacing(6, 1f);
+      LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(-1, -2); il.topMargin = 18; il.bottomMargin = 26; updV.addView(updInfo, il);
+      LinearLayout row = new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL);
+      TextView b1 = btn("Проверить и установить", v -> { updater.check(true); fillUpdates(); });
+      TextView b2 = btn("Перезагрузить экран", v -> { closeUpdates(); started = false; say("Перезагружаю…"); web.reload(); });
+      TextView b3 = btn("Закрыть", v -> closeUpdates());
+      LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(-2, -2); bl.rightMargin = 18;
+      row.addView(b1, bl); row.addView(b2, new LinearLayout.LayoutParams(bl)); row.addView(b3, new LinearLayout.LayoutParams(bl));
+      updV.addView(row);
+      TextView hint = new TextView(this); hint.setText("←  →  выбрать · OK — нажать · «Назад» — закрыть"); hint.setTextColor(0x99FFFFFF); hint.setTextSize(14);
+      LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(-2, -2); hl.topMargin = 20; updV.addView(hint, hl);
+      root.addView(updV, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
+    }
+    fillUpdates(); updV.setVisibility(View.VISIBLE); updV.bringToFront();
+    if (banV != null) banV.bringToFront();
+    ((LinearLayout) updV.getChildAt(2)).getChildAt(0).requestFocus();
+    if (!updater.busy() && updater.list.isEmpty()) updater.check(false);   // подтянуть список версий
+  }
+  private void fillUpdates() {
+    StringBuilder b = new StringBuilder("Установлена версия " + BuildConfig.VERSION_NAME + "\nСостояние: " + updater.state + "\n\nВерсии:\n");
+    synchronized (updater.list) {
+      if (updater.list.isEmpty()) b.append("  загружаю список…\n");
+      int n = 0; for (String[] r : updater.list) { if (n++ >= 6) break; int code = Integer.parseInt(r[0]);
+        b.append(code == BuildConfig.VERSION_CODE ? "  ✓ " : code > BuildConfig.VERSION_CODE ? "  ★ " : "     ").append(r[1]).append("   ").append(r[2])
+         .append(code == BuildConfig.VERSION_CODE ? "   — стоит сейчас" : code > BuildConfig.VERSION_CODE ? "   — новая" : "").append("\n"); }
+    }
+    updInfo.setText(b.toString());
+  }
+  private void closeUpdates() { if (updV != null) updV.setVisibility(View.GONE); }
+  private boolean updOpen() { return updV != null && updV.getVisibility() == View.VISIBLE; }
 
   private void say(String t) { status.setText(t); status.setVisibility(t.isEmpty() ? View.GONE : View.VISIBLE); }
   private void js(String code) { try { web.evaluateJavascript("try{" + code + "}catch(e){}", null); } catch (Exception ignored) {} }
@@ -513,15 +587,22 @@ public class MainActivity extends Activity {
 
   @Override public boolean dispatchKeyEvent(KeyEvent e) {
     int k = e.getKeyCode(); boolean up = e.getAction() == KeyEvent.ACTION_UP;
+    if (updOpen()) {   // открыто окно обновлений: кнопки работают как обычно, «Назад» закрывает
+      if (k == KeyEvent.KEYCODE_BACK) { if (up) closeUpdates(); return true; }
+      if (k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_DPAD_DOWN) return true;
+      return super.dispatchKeyEvent(e);
+    }
     if (k == KeyEvent.KEYCODE_BACK) {
       if (up) { long now = System.currentTimeMillis(); if (now - backAt < 2000) finish(); else { backAt = now; Toast.makeText(this, "Нажмите «Назад» ещё раз, чтобы выйти", Toast.LENGTH_SHORT).show(); } }
       return true;
     }
     if (k == KeyEvent.KEYCODE_DPAD_UP || k == KeyEvent.KEYCODE_INFO || k == KeyEvent.KEYCODE_GUIDE) {
-      if (up) showLog(); return true;
+      if (up) { long now = System.currentTimeMillis(); upN = now - upAt < 900 ? upN + 1 : 1; upAt = now;
+        if (upN >= 3) { upN = 0; openUpdates(); } else showLog(); }
+      return true;
     }
     if (k == KeyEvent.KEYCODE_DPAD_DOWN) { if (up && logV != null) logV.setVisibility(View.GONE); return true; }
-    if (k == KeyEvent.KEYCODE_MENU) { if (up) { started = false; say("Перезагружаю…"); web.reload(); if (updater != null) updater.check(true); } return true; }
+    if (k == KeyEvent.KEYCODE_MENU) { if (up) openUpdates(); return true; }
     if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_NUMPAD_ENTER
         || k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE || k == KeyEvent.KEYCODE_SPACE) {
       if (up && music != null) { String r = music.togglePause();
