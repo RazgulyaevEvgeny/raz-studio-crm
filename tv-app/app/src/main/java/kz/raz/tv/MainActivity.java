@@ -224,7 +224,7 @@ public class MainActivity extends Activity {
     android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
     try { ((android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mi); } catch (Exception ignored) {}
     String t = "СТУДИЯ " + BuildConfig.VERSION_NAME + " — журнал (↓ скрыть)\nпамять приложения " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ · свободно в приставке " + (mi.availMem >> 20) + " из " + (mi.totalMem >> 20) + " МБ"
-      + " · экранов готово " + cache.size() + " из " + count + " · видео играет " + vids.size() + "\n" + (music != null ? music.journal() : "");
+      + " · экранов готово " + cache.size() + " из " + count + " · видео играет " + vids.size() + " · видео в памяти " + vidFiles() + (loading.isEmpty() ? "" : ", качается ещё " + loading.size()) + "\n" + (music != null ? music.journal() : "");
     logV.setText(t); logV.setVisibility(View.VISIBLE); logV.bringToFront();
     h.removeCallbacks(hideLog); h.postDelayed(hideLog, 30000);
   }
@@ -250,7 +250,10 @@ public class MainActivity extends Activity {
       Set<String> keep = new HashSet<>();
       for (int k = 0; k < vl.length(); k++) { JSONObject v = vl.optJSONObject(k); if (v == null) continue; String id = v.optString("id"); keep.add("v_" + id + ".mp4"); }
       File[] fs = getFilesDir().listFiles();
-      if (fs != null) for (File f : fs) { String nm = f.getName(); if ((nm.startsWith("v_") && nm.endsWith(".mp4") && !keep.contains(nm)) || nm.endsWith(".tmp")) f.delete(); }
+      if (fs != null) for (File f : fs) { String nm = f.getName(); if (nm.startsWith("v_") && (nm.endsWith(".mp4") || nm.endsWith(".tmp"))) {
+        String id = nm.substring(2, nm.length() - 4);
+        if (loading.contains(id)) continue;   // ролик сейчас качается — не трогаем (раньше каждое обновление экрана стирало недокачанный файл, и видео не появлялись)
+        if (nm.endsWith(".tmp") || !keep.contains(nm)) f.delete(); } }
       for (int k = 0; k < vl.length(); k++) { JSONObject v = vl.optJSONObject(k); if (v != null) fetchVideo(v.optString("id"), v.optString("url")); }
     }
     h.removeCallbacks(fire); h.removeCallbacks(askNext);
@@ -464,10 +467,12 @@ public class MainActivity extends Activity {
         loading.remove(id);
         if (ok) { for (Vid v : vids) if (v.id.equals(id)) v.later(100); return; }
         int t = tries.containsKey(id) ? tries.get(id) + 1 : 1; tries.put(id, t);
-        if (t < 6) h.postDelayed(() -> fetchVideo(id, url), 20000L * t);   // сеть моргнула — попробуем ещё
+        if (t < 8) h.postDelayed(() -> fetchVideo(id, url), 5000L * t);   // сеть моргнула — попробуем ещё
       });
     });
   }
+
+  private int vidFiles() { File[] fs = getFilesDir().listFiles(); int n = 0; if (fs != null) for (File f : fs) if (f.getName().startsWith("v_") && f.getName().endsWith(".mp4")) n++; return n; }
 
   private boolean download(String id, String url, File f) {
     File tmp = new File(getFilesDir(), "v_" + id + ".tmp");
