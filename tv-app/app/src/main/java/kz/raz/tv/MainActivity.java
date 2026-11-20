@@ -271,7 +271,7 @@ public class MainActivity extends Activity {
     return scratch;
   }
   private Bitmap opaque(Bitmap b) {   // фон карточки без прозрачности — в 2 раза меньше памяти
-    if (b == null) return null; try { Bitmap c = b.copy(Bitmap.Config.RGB_565, false); if (c != null && b != scratch) b.recycle(); return c != null ? c : b; } catch (Throwable e) { return b; } }
+    return b; }   // карточки храним в полном цвете (32 бита): 16-битное сжатие давало полосы и рябь на заливках
 
   private Bitmap crop(Bitmap src, int x, int y, int w, int hh) {
     x = Math.max(0, x); y = Math.max(0, y);
