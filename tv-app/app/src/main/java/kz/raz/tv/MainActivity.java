@@ -515,9 +515,14 @@ public class MainActivity extends Activity {
     ExoPlayer p = new ExoPlayer.Builder(this, new androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)).build();
     p.setTrackSelectionParameters(p.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
     p.setVolume(0f); p.setRepeatMode(Player.REPEAT_MODE_ONE);
+    p.addAnalyticsListener(new androidx.media3.exoplayer.analytics.AnalyticsListener() {
+      @Override public void onVideoDecoderInitialized(androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime t, String name, long a1, long a2) { vnote(k, "декодер " + name); }
+      @Override public void onDroppedVideoFrames(androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime t, int n, long ms) { vnote(k, "пропущено кадров " + n); }
+    });
     p.addListener(new Player.Listener() {
-      @Override public void onVideoSizeChanged(VideoSize vs) { Vid v = owner[k]; if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
-      @Override public void onRenderedFirstFrame() { Vid v = owner[k]; slotErrs[k] = 0; if (v != null) { v.on = true; v.tv.animate().alpha(1f).setDuration(350).start(); } }
+      @Override public void onPlaybackStateChanged(int st) { vnote(k, st == Player.STATE_READY ? "готов" : st == Player.STATE_BUFFERING ? "загружается" : st == Player.STATE_ENDED ? "закончился" : "остановлен"); }
+      @Override public void onVideoSizeChanged(VideoSize vs) { Vid v = owner[k]; vnote(k, "размер " + vs.width + "×" + vs.height); if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
+      @Override public void onRenderedFirstFrame() { Vid v = owner[k]; slotErrs[k] = 0; vnote(k, "первый кадр показан ✓"); if (v != null) { v.on = true; v.tv.animate().alpha(1f).setDuration(350).start(); } }
       @Override public void onPlayerError(PlaybackException e) {
         Vid v = owner[k]; owner[k] = null; slotErrs[k]++;
         if (music != null) music.note("видео" + (v != null ? " " + v.id.substring(0, Math.min(6, v.id.length())) : "") + ": ошибка " + e.getErrorCodeName() + (e.getCause() != null ? " — " + e.getCause().getMessage() : ""));
@@ -530,6 +535,8 @@ public class MainActivity extends Activity {
     return pool[k] = p;
   }
 
+  private void vnote(int k, String t) { Vid v = owner[k]; if (music != null) music.note("видео" + (k + 1) + (v != null ? " " + v.id.substring(0, Math.min(6, v.id.length())) : "") + ": " + t); }
+
   class Vid {
     final String id; final TextureView tv; int slot = -1; boolean dead, on; int errs;
     Vid(String id, TextureView tv, long delay) { this.id = id; this.tv = tv; later(delay); }
@@ -537,10 +544,13 @@ public class MainActivity extends Activity {
     final Runnable start = this::tryStart;
     void later(long ms) { h.removeCallbacks(start); h.postDelayed(start, ms); }
     void tryStart() {
-      if (dead || slot >= 0 || loading.contains(id)) return;
-      if (!file().exists()) return;
+      if (dead || slot >= 0) return;
+      String sid = id.substring(0, Math.min(6, id.length()));
+      if (loading.contains(id)) { if (music != null) music.note("видео " + sid + ": ещё качается"); return; }
+      if (!file().exists()) { if (music != null) music.note("видео " + sid + ": файла нет в памяти"); return; }
       int k = owner[0] == null ? 0 : owner[1] == null ? 1 : -1;
-      if (k < 0) { later(2000); return; }   // оба плеера заняты — подождём
+      if (k < 0) { if (music != null) music.note("видео " + sid + ": оба плеера заняты"); later(2000); return; }   // оба плеера заняты — подождём
+      if (music != null) music.note("видео " + sid + ": запускаю в плеере " + (k + 1) + ", файл " + (file().length() >> 10) + " КБ, картинка " + (tv.isAvailable() ? "готова" : "ещё не готова") + " " + tv.getWidth() + "×" + tv.getHeight());
       try {
         ExoPlayer p = player(k); owner[k] = this; slot = k;
         p.setVideoTextureView(tv);
@@ -574,7 +584,8 @@ public class MainActivity extends Activity {
       boolean ok = download(id, url, f);
       h.post(() -> {
         loading.remove(id);
-        if (ok) { for (Vid v : vids) if (v.id.equals(id)) v.later(100); return; }
+        if (ok) { if (music != null) music.note("видео " + id.substring(0, Math.min(6, id.length())) + ": скачано " + (f.length() >> 10) + " КБ"); for (Vid v : vids) if (v.id.equals(id)) v.later(100); return; }
+        if (music != null) music.note("видео " + id.substring(0, Math.min(6, id.length())) + ": не скачалось — " + dlErr);
         int t = tries.containsKey(id) ? tries.get(id) + 1 : 1; tries.put(id, t);
         if (t < 8) h.postDelayed(() -> fetchVideo(id, url), 5000L * t);   // сеть моргнула — попробуем ещё
       });
@@ -584,6 +595,7 @@ public class MainActivity extends Activity {
   private int playing() { int n = 0; for (Vid v : vids) if (v.playing()) n++; return n; }
   private int vidFiles() { File[] fs = getFilesDir().listFiles(); int n = 0; if (fs != null) for (File f : fs) if (f.getName().startsWith("v_") && f.getName().endsWith(".mp4")) n++; return n; }
 
+  private volatile String dlErr = "";
   private boolean download(String id, String url, File f) {
     File tmp = new File(getFilesDir(), "v_" + id + ".tmp");
     try (OutputStream out = new BufferedOutputStream(new FileOutputStream(tmp), 1 << 16)) {
@@ -593,8 +605,8 @@ public class MainActivity extends Activity {
       feed(out, carry, d0.substring(d0.indexOf(',') + 1)); d0 = null;
       for (int k = 1; k < n; k++) feed(out, carry, (String) new JSONTokener(http(url + "_p" + k + "/d.json")).nextValue());
       if (carry.length() > 0) out.write(Base64.decode(carry.toString(), Base64.DEFAULT));
-    } catch (Throwable e) { tmp.delete(); return false; }
-    if (tmp.length() < 1000) { tmp.delete(); return false; }
+    } catch (Throwable e) { tmp.delete(); dlErr = String.valueOf(e); return false; }
+    if (tmp.length() < 1000) { tmp.delete(); dlErr = "пустой файл"; return false; }
     return tmp.renameTo(f);
   }
 
