@@ -584,7 +584,8 @@ public class MainActivity extends Activity {
       boolean ok = download(id, url, f);
       h.post(() -> {
         loading.remove(id);
-        if (ok) { for (Vid v : vids) if (v.id.equals(id)) v.later(100); return; }
+        if (ok) { if (music != null) music.note("видео " + id.substring(0, Math.min(6, id.length())) + ": скачано " + (f.length() >> 10) + " КБ"); for (Vid v : vids) if (v.id.equals(id)) v.later(100); return; }
+        if (music != null) music.note("видео " + id.substring(0, Math.min(6, id.length())) + ": не скачалось — " + dlErr);
         int t = tries.containsKey(id) ? tries.get(id) + 1 : 1; tries.put(id, t);
         if (t < 8) h.postDelayed(() -> fetchVideo(id, url), 5000L * t);   // сеть моргнула — попробуем ещё
       });
@@ -594,6 +595,7 @@ public class MainActivity extends Activity {
   private int playing() { int n = 0; for (Vid v : vids) if (v.playing()) n++; return n; }
   private int vidFiles() { File[] fs = getFilesDir().listFiles(); int n = 0; if (fs != null) for (File f : fs) if (f.getName().startsWith("v_") && f.getName().endsWith(".mp4")) n++; return n; }
 
+  private volatile String dlErr = "";
   private boolean download(String id, String url, File f) {
     File tmp = new File(getFilesDir(), "v_" + id + ".tmp");
     try (OutputStream out = new BufferedOutputStream(new FileOutputStream(tmp), 1 << 16)) {
@@ -603,8 +605,8 @@ public class MainActivity extends Activity {
       feed(out, carry, d0.substring(d0.indexOf(',') + 1)); d0 = null;
       for (int k = 1; k < n; k++) feed(out, carry, (String) new JSONTokener(http(url + "_p" + k + "/d.json")).nextValue());
       if (carry.length() > 0) out.write(Base64.decode(carry.toString(), Base64.DEFAULT));
-    } catch (Throwable e) { tmp.delete(); return false; }
-    if (tmp.length() < 1000) { tmp.delete(); return false; }
+    } catch (Throwable e) { tmp.delete(); dlErr = String.valueOf(e); return false; }
+    if (tmp.length() < 1000) { tmp.delete(); dlErr = "пустой файл"; return false; }
     return tmp.renameTo(f);
   }
 
