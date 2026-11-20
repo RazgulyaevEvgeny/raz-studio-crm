@@ -181,8 +181,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="firebase-config.js?v=202611132238"></script>
-<script src="tv-core.js?v=202611201300"></script>
-<script src="tv-video.js?v=202611201300"></script>
+<script src="tv-core.js?v=202611201700"></script>
+<script src="tv-video.js?v=202611201700"></script>
 </head>
 <body>
 <div class="bar">
@@ -525,8 +525,7 @@ function widgetForm(f){
   if (f.kind === 'clock') return `<div class="wdgf"><span class="hint">Часы и дата по времени Павлодара, обновляются каждую минуту. Цвет и размер — в «Оформлении» ниже.</span></div>`;
   if (f.kind === 'qr') return `<div class="wdgf">
       <label class="fld"><span>Ссылка для QR-кода</span><input type="text" data-f="qrUrl" value="${esc(f.qrUrl)}" placeholder="https://instagram.com/raz.brandstudio"></label>
-      <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Наведите камеру телефона"></label>
-      <label class="fld"><span>Крупно рядом с кодом</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="Наш Instagram"></label>
+      <label class="fld"><span>Крупно рядом с кодом (по умолчанию — сама ссылка)</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="razstudio.kz"></label>
       <label class="fld"><span>Пояснение</span><input type="text" data-f="caption" value="${esc(f.caption)}" placeholder="работы, акции, отзывы"></label>
       <span class="hint">Подойдёт любая ссылка: Instagram, 2ГИС, WhatsApp (wa.me/7…), Kaspi-магазин, сайт.</span></div>`;
   if (f.kind === 'kzmap') { const tw = (TV.AUTO && TV.AUTO.towns) || {}, kn = Object.keys(tw), miss = kn.filter(x => !TV.kzTown(x));
@@ -534,12 +533,22 @@ function widgetForm(f){
       <label class="fld"><span>Подпись сверху</span><input type="text" data-f="label" value="${esc(f.label)}" placeholder="Доставили по Казахстану"></label>
       <label class="fld"><span>Пояснение под цифрами</span><input type="text" data-f="caption" value="${esc(f.caption)}" placeholder="заказы Kaspi с доставкой"></label>
       <span class="hint">${kn.length ? 'Города из учёта студии: ' + kn.length + '. Обновляются сами, когда в учёте появляются новые заказы Kaspi.' + (miss.length ? ' Не нашёл на карте: ' + esc(miss.slice(0, 6).join(', ')) + ' — напишите, добавлю.' : '') : 'Данных пока нет: откройте учёт студии (раздел Kaspi), он сам отправит города на экран.'}</span></div>`; }
+  if (f.kind === 'insta' || f.kind === 'wa' || f.kind === 'mail') { const C = TV.CONTACT[f.kind];
+    const fld = f.kind === 'insta' ? ['Ник или ссылка на профиль', 'raz.brandstudio'] : f.kind === 'wa' ? ['Номер WhatsApp', '+7 777 123 45 67'] : ['Адрес почты', 'hello@razstudio.kz'];
+    return `<div class="wdgf">
+      <label class="fld"><span>${fld[0]}</span><input type="text" data-f="ct" value="${esc(f.ct)}" placeholder="${fld[1]}" autocomplete="off" spellcheck="false"></label>
+      ${f.kind === 'wa' ? `<label class="fld"><span>Готовое сообщение в чате (необязательно)</span><input type="text" data-f="ctMsg" value="${esc(f.ctMsg)}" placeholder="Здравствуйте! Хочу заказать брендирование"></label>` : ''}
+      ${f.kind === 'mail' ? `<label class="fld"><span>Тема письма (необязательно)</span><input type="text" data-f="ctMsg" value="${esc(f.ctMsg)}" placeholder="Заказ из студии"></label>` : ''}
+      <label class="fld"><span>Пояснение под ${f.kind === 'insta' ? 'ником' : f.kind === 'wa' ? 'номером' : 'адресом'}</span><input type="text" data-f="caption" value="${esc(f.caption)}" placeholder="${esc(C.cap)}"></label>
+      <label class="chk"><input type="checkbox" data-f="ctBrand" ${f.ctBrand !== false ? 'checked' : ''}> Фирменный цвет ${esc(C.name)} (иначе — цвет из «Оформления»)</label>
+      <span class="hint">QR-код на экране открывает ${f.kind === 'insta' ? 'профиль в Instagram' : f.kind === 'wa' ? 'чат WhatsApp с этим номером' : 'новое письмо на этот адрес'}. Текст подстраивается под размер карточки сам.</span></div>`; }
   if (f.kind === 'wifi') return `<div class="wdgf">
       <label class="fld"><span>Название сети (как в списке Wi-Fi)</span><input type="text" data-f="wifiSsid" value="${esc(f.wifiSsid)}" placeholder="Razgulyaev Guest" autocomplete="off"></label>
       <div class="fld"><span>Защита</span>${seg('wifiSec', f.wifiSec || 'WPA', [['WPA', 'С паролем'], ['nopass', 'Открытая сеть']])}</div>
       ${f.wifiSec === 'nopass' ? '' : `<label class="fld"><span>Пароль</span><input type="text" data-f="wifiPass" value="${esc(f.wifiPass)}" autocomplete="off" spellcheck="false"></label>
       <label class="chk"><input type="checkbox" data-f="wifiShow" ${f.wifiShow !== false ? 'checked' : ''}> Показывать пароль текстом под кодом</label>`}
-      <label class="fld"><span>Крупно рядом с кодом</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="Наведите камеру — и вы в сети"></label>
+      <label class="fld"><span>Пояснение под названием сети</span><input type="text" data-f="title" value="${esc(f.title)}" placeholder="Наведите камеру — и вы в сети"></label>
+      <label class="chk"><input type="checkbox" data-f="ctBrand" ${f.ctBrand !== false ? 'checked' : ''}> Фирменный синий цвет</label>
       <span class="hint">Пароль виден на экране всем гостям и хранится вместе с экранами — указывайте только гостевую сеть, не рабочую.</span></div>`;
   if (f.kind === 'fx') return `<div class="wdgf">
       <label class="fld"><span>Валюты через запятую</span><input type="text" data-f="fxList" value="${esc(f.fxList)}" placeholder="USD, EUR, RUB, CNY"></label>
@@ -638,7 +647,7 @@ function renderFacts(){
   const s = D.screens[sel], n = TV.cnt(s), gx = s.layout === 'gx';
   if (gx) while (s.facts.length < n) s.facts.push(TV.F({}));
   $('facts').className = 'facts n' + (gx ? Math.min(n + (n < 8 ? 1 : 0), 4) : n);
-  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<div class="fe addc"><button type="button" class="addb" data-add="1"><span>+</span>Карточка</button><div class="addw"><button type="button" data-addw="weather">+ Погода</button><button type="button" data-addw="clock">+ Часы</button><button type="button" data-addw="music">+ Сейчас играет</button><button type="button" data-addw="kzmap">+ Карта доставок</button><button type="button" data-addw="wifi">+ Wi-Fi</button><button type="button" data-addw="qr">+ QR-код</button><button type="button" data-addw="fx">+ Курс валют</button><button type="button" data-addw="countdown">+ Отсчёт</button><button type="button" data-addw="goal">+ Цель</button></div></div>' : '');
+  $('facts').innerHTML = s.facts.slice(0, n).map(factForm).join('') + (gx && n < 8 ? '<div class="fe addc"><button type="button" class="addb" data-add="1"><span>+</span>Карточка</button><div class="addw"><button type="button" data-addw="weather">+ Погода</button><button type="button" data-addw="clock">+ Часы</button><button type="button" data-addw="music">+ Сейчас играет</button><button type="button" data-addw="kzmap">+ Карта доставок</button><button type="button" data-addw="insta">+ Instagram</button><button type="button" data-addw="wa">+ WhatsApp</button><button type="button" data-addw="mail">+ Почта</button><button type="button" data-addw="wifi">+ Wi-Fi</button><button type="button" data-addw="qr">+ QR-код</button><button type="button" data-addw="fx">+ Курс валют</button><button type="button" data-addw="countdown">+ Отсчёт</button><button type="button" data-addw="goal">+ Цель</button></div></div>' : '');
   TV.hydrate($('facts'));
 }
 const factOf = el => D.screens[sel].facts[+el.closest('.fe').dataset.k];
@@ -667,7 +676,7 @@ $('facts').addEventListener('click', e => {
     }).catch(() => toast('Нет связи с сервисом погоды')); return; }
   const wa = e.target.closest('[data-addw]');
   if (wa) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); const kd = wa.dataset.addw;
-      s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33, kind: kd, style: kd === 'weather' || kd === 'goal' ? 'blue' : kd === 'wifi' || kd === 'kzmap' ? 'plain' : kd === 'clock' || kd === 'fx' ? 'dark' : 'plain', label: '', big: '', title: '', caption: '', icon: '' })); if (kd === 'weather' || kd === 'fx') loadWx(); change(); } return; }
+      s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33, kind: kd, style: kd === 'weather' || kd === 'goal' ? 'blue' : ['wifi', 'kzmap', 'insta', 'wa', 'mail', 'qr'].includes(kd) ? 'plain' : kd === 'clock' || kd === 'fx' ? 'dark' : 'plain', label: '', big: '', title: '', caption: '', icon: '' })); if (kd === 'weather' || kd === 'fx') loadWx(); change(); } return; }
   if (e.target.closest('[data-add]')) { const s = D.screens[sel], n = TV.cnt(s); if (n < 8) { s.cnt = n + 1; while (s.facts.length < s.cnt) s.facts.push(TV.F({})); s.facts[n] = TV.F(Object.assign({}, TV.newFact(), { gw: 33 })); change(); } return; }
   const rm = e.target.closest('[data-rm]'); if (rm) { const s = D.screens[sel], k = +rm.closest('.fe').dataset.k; if (TV.cnt(s) > 1 && confirm('Убрать эту карточку с экрана?')) { s.facts.splice(k, 1); s.cnt = TV.cnt(s) - 1; while (s.facts.length < 4) s.facts.push(TV.F({})); change(); } return; }
   const rs = e.target.closest('[data-reset]'); if (rs) { factOf(rs)[rs.dataset.reset] = ''; change(); return; }
@@ -717,6 +726,8 @@ async function putVideo(data, poster){
 const blobURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
 async function uploadVideo(input, file, f){
   const fe = input.closest('.fe');
+  { const s = D.screens[sel], n = s.facts.slice(0, TV.cnt(s)).filter(x => x !== f && x.video).length;
+    if (n >= 2) { toast('На одном экране — не больше 2 видео: приставка не тянет больше одновременно. Уберите видео из другой карточки этого экрана.'); input.value = ''; return; } }
   if (window.TVV && TVV.supported()) {
     try {
       toast('Готовлю видео для приставки… 0%');
