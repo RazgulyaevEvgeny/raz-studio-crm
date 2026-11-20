@@ -515,9 +515,14 @@ public class MainActivity extends Activity {
     ExoPlayer p = new ExoPlayer.Builder(this, new androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)).build();
     p.setTrackSelectionParameters(p.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
     p.setVolume(0f); p.setRepeatMode(Player.REPEAT_MODE_ONE);
+    p.addAnalyticsListener(new androidx.media3.exoplayer.analytics.AnalyticsListener() {
+      @Override public void onVideoDecoderInitialized(androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime t, String name, long a1, long a2) { vnote(k, "декодер " + name); }
+      @Override public void onDroppedVideoFrames(androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime t, int n, long ms) { vnote(k, "пропущено кадров " + n); }
+    });
     p.addListener(new Player.Listener() {
-      @Override public void onVideoSizeChanged(VideoSize vs) { Vid v = owner[k]; if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
-      @Override public void onRenderedFirstFrame() { Vid v = owner[k]; slotErrs[k] = 0; if (v != null) { v.on = true; v.tv.animate().alpha(1f).setDuration(350).start(); } }
+      @Override public void onPlaybackStateChanged(int st) { vnote(k, st == Player.STATE_READY ? "готов" : st == Player.STATE_BUFFERING ? "загружается" : st == Player.STATE_ENDED ? "закончился" : "остановлен"); }
+      @Override public void onVideoSizeChanged(VideoSize vs) { Vid v = owner[k]; vnote(k, "размер " + vs.width + "×" + vs.height); if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
+      @Override public void onRenderedFirstFrame() { Vid v = owner[k]; slotErrs[k] = 0; vnote(k, "первый кадр показан ✓"); if (v != null) { v.on = true; v.tv.animate().alpha(1f).setDuration(350).start(); } }
       @Override public void onPlayerError(PlaybackException e) {
         Vid v = owner[k]; owner[k] = null; slotErrs[k]++;
         if (music != null) music.note("видео" + (v != null ? " " + v.id.substring(0, Math.min(6, v.id.length())) : "") + ": ошибка " + e.getErrorCodeName() + (e.getCause() != null ? " — " + e.getCause().getMessage() : ""));
@@ -530,6 +535,8 @@ public class MainActivity extends Activity {
     return pool[k] = p;
   }
 
+  private void vnote(int k, String t) { Vid v = owner[k]; if (music != null) music.note("видео" + (k + 1) + (v != null ? " " + v.id.substring(0, Math.min(6, v.id.length())) : "") + ": " + t); }
+
   class Vid {
     final String id; final TextureView tv; int slot = -1; boolean dead, on; int errs;
     Vid(String id, TextureView tv, long delay) { this.id = id; this.tv = tv; later(delay); }
@@ -537,10 +544,13 @@ public class MainActivity extends Activity {
     final Runnable start = this::tryStart;
     void later(long ms) { h.removeCallbacks(start); h.postDelayed(start, ms); }
     void tryStart() {
-      if (dead || slot >= 0 || loading.contains(id)) return;
-      if (!file().exists()) return;
+      if (dead || slot >= 0) return;
+      String sid = id.substring(0, Math.min(6, id.length()));
+      if (loading.contains(id)) { if (music != null) music.note("видео " + sid + ": ещё качается"); return; }
+      if (!file().exists()) { if (music != null) music.note("видео " + sid + ": файла нет в памяти"); return; }
       int k = owner[0] == null ? 0 : owner[1] == null ? 1 : -1;
-      if (k < 0) { later(2000); return; }   // оба плеера заняты — подождём
+      if (k < 0) { if (music != null) music.note("видео " + sid + ": оба плеера заняты"); later(2000); return; }   // оба плеера заняты — подождём
+      if (music != null) music.note("видео " + sid + ": запускаю в плеере " + (k + 1) + ", файл " + (file().length() >> 10) + " КБ, картинка " + (tv.isAvailable() ? "готова" : "ещё не готова") + " " + tv.getWidth() + "×" + tv.getHeight());
       try {
         ExoPlayer p = player(k); owner[k] = this; slot = k;
         p.setVideoTextureView(tv);
