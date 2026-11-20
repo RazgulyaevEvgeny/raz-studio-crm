@@ -520,8 +520,7 @@ public class MainActivity extends Activity {
       @Override public void onDroppedVideoFrames(androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime t, int n, long ms) { vnote(k, "пропущено кадров " + n); }
     });
     p.addListener(new Player.Listener() {
-      @Override public void onPlaybackStateChanged(int st) { vnote(k, st == Player.STATE_READY ? "готов" : st == Player.STATE_BUFFERING ? "загружается" : st == Player.STATE_ENDED ? "закончился" : "остановлен"); }
-      @Override public void onVideoSizeChanged(VideoSize vs) { Vid v = owner[k]; vnote(k, "размер " + vs.width + "×" + vs.height); if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
+      @Override public void onVideoSizeChanged(VideoSize vs) { Vid v = owner[k]; if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
       @Override public void onRenderedFirstFrame() { Vid v = owner[k]; slotErrs[k] = 0; vnote(k, "первый кадр показан ✓"); if (v != null) { v.on = true; v.tv.animate().alpha(1f).setDuration(350).start(); } }
       @Override public void onPlayerError(PlaybackException e) {
         Vid v = owner[k]; owner[k] = null; slotErrs[k]++;
