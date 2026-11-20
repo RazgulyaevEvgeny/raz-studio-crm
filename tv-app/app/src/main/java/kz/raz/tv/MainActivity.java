@@ -231,7 +231,7 @@ public class MainActivity extends Activity {
     android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
     try { ((android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mi); } catch (Exception ignored) {}
     String t = "СТУДИЯ " + BuildConfig.VERSION_NAME + " — журнал (↓ скрыть · ↑↑↑ — обновления)\nпамять приложения " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ · свободно в приставке " + (mi.availMem >> 20) + " из " + (mi.totalMem >> 20) + " МБ"
-      + " · экранов готово " + cache.size() + " из " + count + " · видео играет " + vids.size() + " · видео в памяти " + vidFiles() + (loading.isEmpty() ? "" : ", качается ещё " + loading.size()) + "\n" + (music != null ? music.journal() : "");
+      + " · экранов готово " + cache.size() + " из " + count + " · видео на экране " + vids.size() + ", из них идёт " + playing() + " · видео в памяти " + vidFiles() + (loading.isEmpty() ? "" : ", качается ещё " + loading.size()) + "\n" + (music != null ? music.journal() : "");
     logV.setText(t); logV.setVisibility(View.VISIBLE); logV.bringToFront();
     h.removeCallbacks(hideLog); h.postDelayed(hideLog, 30000);
   }
@@ -391,7 +391,7 @@ public class MainActivity extends Activity {
     }
     if ("over".equals(kind) && building != null) {
       for (Card cd : building.cards) cd.b = crop(s, cd.x, cd.y, cd.w, cd.hh);
-      Scene sc = building; building = null; cache.put(sc.i, sc);
+      Scene sc = building; building = null; cache.put(sc.i, sc); trimCache();
       if (sc.i == want || cur < 0) { want = -1; ready(sc); }
       h.removeCallbacks(prerender); h.postDelayed(prerender, 2500);
     }
@@ -414,15 +414,23 @@ public class MainActivity extends Activity {
   /** Остальные экраны готовим заранее, по одному, пока идёт показ — дальше всё крутится из памяти. */
   private final Runnable prerender = () -> {
     if (count <= 1 || building != null) return;
-    for (int k = 0; k < count; k++) if (!cache.containsKey(k) && k != cur && k != want) { js("razScene(" + k + ")"); return; }
+    if (cur < 0) return;
+    for (int k = 1; k <= 2 && k < count; k++) { int n = (cur + k) % count; if (!cache.containsKey(n) && n != want) { js("razScene(" + n + ")"); return; } }
   };
+  /** В памяти держим только текущий и 2 следующих экрана: 9 экранов в полном цвете съедали память,
+   *  и приставке не хватало её на декодер видео — ролики стояли кадром. */
+  private void trimCache() {
+    if (cur < 0 || count <= 3) return;
+    Set<Integer> keep = new HashSet<>(); keep.add(cur); keep.add((cur + 1) % count); keep.add((cur + 2) % count); if (want >= 0) keep.add(want);
+    cache.keySet().retainAll(keep);
+  }
 
   private void ready(Scene sc) { pending = sc; if (due) showPending(); }
 
   private void showPending() {
     final Scene sc = pending; pending = null; due = false;
     if (!started) { started = true; say(""); }
-    cur = sc.i;
+    cur = sc.i; trimCache();
     slideAt = System.currentTimeMillis(); slideMs = (long) (Math.max(5, sc.sec) * 1000);
     prog.animate().cancel(); prog.setScaleX(0f);
     transition(sc);
@@ -497,7 +505,7 @@ public class MainActivity extends Activity {
   /** Видео в карточке: ExoPlayer (тот же движок, что в YouTube для Android) с аппаратным декодером,
    *  по кругу без шва, звуковая дорожка ролика отключена полностью — музыке не мешает. */
   class Vid {
-    final String id; final TextureView tv; ExoPlayer p; boolean dead; int errs;
+    final String id; final TextureView tv; ExoPlayer p; boolean dead, on; int errs;
     Vid(String id, TextureView tv, long delay) { this.id = id; this.tv = tv; later(delay); }
     File file() { return new File(getFilesDir(), "v_" + id + ".mp4"); }
     final Runnable start = this::tryStart;
@@ -505,17 +513,19 @@ public class MainActivity extends Activity {
     void tryStart() {
       if (dead || p != null || !file().exists() || loading.contains(id)) return;
       try {
-        p = new ExoPlayer.Builder(MainActivity.this).build();
+        p = new ExoPlayer.Builder(MainActivity.this, new androidx.media3.exoplayer.DefaultRenderersFactory(MainActivity.this).setEnableDecoderFallback(true)).build();
         p.setTrackSelectionParameters(p.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
         p.setVolume(0f); p.setRepeatMode(Player.REPEAT_MODE_ONE);
         p.setVideoTextureView(tv);
         p.addListener(new Player.Listener() {
           @Override public void onVideoSizeChanged(VideoSize vs) { fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
-          @Override public void onRenderedFirstFrame() { tv.animate().alpha(1f).setDuration(350).start(); }
-          @Override public void onPlayerError(PlaybackException e) { drop(); if (!dead && ++errs < 4) later(1500L * errs); }
+          @Override public void onRenderedFirstFrame() { on = true; tv.animate().alpha(1f).setDuration(350).start(); }
+          @Override public void onPlayerError(PlaybackException e) { drop(); errs++;
+            if (music != null && (errs == 1 || errs % 10 == 0)) music.note("видео " + id.substring(0, Math.min(6, id.length())) + ": ошибка " + e.getErrorCodeName() + (e.getCause() != null ? " — " + e.getCause().getMessage() : ""));
+            if (!dead) later(Math.min(15000L, 1500L * errs)); }
         });
         p.setMediaItem(MediaItem.fromUri(Uri.fromFile(file()))); p.prepare(); p.play();
-      } catch (Throwable e) { drop(); if (!dead && ++errs < 4) later(1500L * errs); }
+      } catch (Throwable e) { drop(); errs++; if (music != null && errs == 1) music.note("видео: не запустилось — " + e); if (!dead) later(Math.min(15000L, 1500L * errs)); }
     }
     void fit(int vw, int vh, int rot) {   // заполнить карточку с обрезкой по центру, с учётом поворота ролика
       int w = tv.getWidth(), hh = tv.getHeight(); if (vw <= 0 || vh <= 0 || w <= 0 || hh <= 0) return;
@@ -546,6 +556,7 @@ public class MainActivity extends Activity {
     });
   }
 
+  private int playing() { int n = 0; for (Vid v : vids) if (v.on && v.p != null) n++; return n; }
   private int vidFiles() { File[] fs = getFilesDir().listFiles(); int n = 0; if (fs != null) for (File f : fs) if (f.getName().startsWith("v_") && f.getName().endsWith(".mp4")) n++; return n; }
 
   private boolean download(String id, String url, File f) {
