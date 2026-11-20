@@ -107,7 +107,7 @@ public class MainActivity extends Activity {
   private long pong = 0, chromeAt = 0;   // последний ответ страницы; последняя съёмка шапки
   private boolean chromeQueued;
 
-  static class Card { boolean kb; int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
+  static class Card { boolean kb, tr; int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
   static class Scene { boolean live; int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
 
   private final Runnable fire = () -> { due = true; if (pending != null) showPending(); };
@@ -301,8 +301,9 @@ public class MainActivity extends Activity {
       for (int k = 0; k < cs.length(); k++) {
         JSONObject c = cs.getJSONObject(k); JSONArray r = c.getJSONArray("r");
         Card cd = new Card();
-        cd.x = r.getInt(0); cd.y = r.getInt(1); cd.w = r.getInt(2); cd.hh = r.getInt(3); cd.rad = c.optInt("rad", 0); cd.kb = c.optBoolean("kb", false); cd.idx = c.optInt("i", k);
-        cd.a = opaque(crop(s, cd.x, cd.y, cd.w, cd.hh));
+        cd.x = r.getInt(0); cd.y = r.getInt(1); cd.w = r.getInt(2); cd.hh = r.getInt(3); cd.rad = c.optInt("rad", 0); cd.kb = c.optBoolean("kb", false); cd.tr = c.optBoolean("tr", false); cd.idx = c.optInt("i", k);
+        // заголовок экрана прозрачный — его нельзя сжимать без прозрачности, иначе он получает чёрный фон
+        cd.a = cd.tr ? crop(s, cd.x, cd.y, cd.w, cd.hh) : opaque(crop(s, cd.x, cd.y, cd.w, cd.hh));
         JSONObject v = c.optJSONObject("v");
         if (v != null) { JSONArray vr = v.getJSONArray("r"); cd.vid = v.getString("id"); cd.vurl = v.getString("url");
           cd.vx = vr.getInt(0); cd.vy = vr.getInt(1); cd.vw = vr.getInt(2); cd.vh = vr.getInt(3); hasVid = true; fetchVideo(cd.vid, cd.vurl); }
