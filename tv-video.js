@@ -115,12 +115,15 @@ TVV.optimize = async (src, opt = {}) => {
       let b = new Uint8Array(ch.byteLength); ch.copyTo(b); b = TVV.cleanSample(b); if (ch.type === 'key') keys.push(sizes.length); chunks.push(b); sizes.push(b.length); },
     error: e => { err = e; } });
   const bitrate = Math.round(Math.min(6e6, Math.max(1.5e6, w * h * fps * 0.11)));
-  let codec = null;
-  for (const cd of ['avc1.4d0028', 'avc1.42002a', 'avc1.640028', 'avc1.42001f']) {
-    const s = await VideoEncoder.isConfigSupported({ codec: cd, width: w, height: h, bitrate, framerate: fps, avc: { format: 'avc' } }).catch(() => null);
-    if (s && s.supported) { codec = cd; break; } }
-  if (!codec) throw new Error('браузер не умеет кодировать H.264');
-  enc.configure({ codec, width: w, height: h, bitrate, framerate: fps, avc: { format: 'avc' }, latencyMode: 'quality' });
+  // сначала аппаратный кодировщик компьютера (его поток приставки понимают лучше всего), потом программный
+  let cfg = null;
+  for (const hw of ['prefer-hardware', 'no-preference']) for (const cd of ['avc1.4d0028', 'avc1.42002a', 'avc1.640028', 'avc1.42001f']) {
+    if (cfg) break;
+    const c = { codec: cd, width: w, height: h, bitrate, framerate: fps, avc: { format: 'avc' }, latencyMode: 'quality', hardwareAcceleration: hw };
+    const s = await VideoEncoder.isConfigSupported(c).catch(() => null);
+    if (s && s.supported) cfg = c; }
+  if (!cfg) throw new Error('браузер не умеет кодировать H.264');
+  enc.configure(cfg);
   // ролик идёт в 2 раза медленнее, чтобы браузер точно успевал отдать каждый кадр
   v.playbackRate = 0.5; let idx = 0, poster = null;
   await new Promise((res, rej) => {
