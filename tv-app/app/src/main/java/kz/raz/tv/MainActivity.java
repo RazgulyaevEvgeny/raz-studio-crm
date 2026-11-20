@@ -504,28 +504,48 @@ public class MainActivity extends Activity {
 
   /** Видео в карточке: ExoPlayer (тот же движок, что в YouTube для Android) с аппаратным декодером,
    *  по кругу без шва, звуковая дорожка ролика отключена полностью — музыке не мешает. */
+  /** Два постоянных плеера на всё время работы. Раньше на каждом экране плеер создавался и уничтожался заново,
+   *  и аппаратный декодер приставки не успевал освободиться («Player release timed out») — новые ролики стояли кадром.
+   *  Теперь плееры не уничтожаются: на новом экране им просто дают другой ролик и другую картинку. */
+  private final ExoPlayer[] pool = new ExoPlayer[2];
+  private final Vid[] owner = new Vid[2];
+  private int slotErrs[] = new int[2];
+  private ExoPlayer player(final int k) {
+    if (pool[k] != null) return pool[k];
+    ExoPlayer p = new ExoPlayer.Builder(this, new androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)).build();
+    p.setTrackSelectionParameters(p.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
+    p.setVolume(0f); p.setRepeatMode(Player.REPEAT_MODE_ONE);
+    p.addListener(new Player.Listener() {
+      @Override public void onVideoSizeChanged(VideoSize vs) { Vid v = owner[k]; if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
+      @Override public void onRenderedFirstFrame() { Vid v = owner[k]; slotErrs[k] = 0; if (v != null) { v.on = true; v.tv.animate().alpha(1f).setDuration(350).start(); } }
+      @Override public void onPlayerError(PlaybackException e) {
+        Vid v = owner[k]; owner[k] = null; slotErrs[k]++;
+        if (music != null) music.note("видео" + (v != null ? " " + v.id.substring(0, Math.min(6, v.id.length())) : "") + ": ошибка " + e.getErrorCodeName() + (e.getCause() != null ? " — " + e.getCause().getMessage() : ""));
+        if (slotErrs[k] >= 3) { final ExoPlayer old = pool[k]; pool[k] = null; slotErrs[k] = 0;   // плеер сломался — заменяем новым, старый гасим в фоне
+          h.post(() -> { try { old.release(); } catch (Throwable ignored) {} }); }
+        else { try { pool[k].stop(); } catch (Throwable ignored) {} }
+        if (v != null) { v.slot = -1; v.errs++; if (!v.dead) v.later(Math.min(15000L, 2000L * v.errs)); }
+      }
+    });
+    return pool[k] = p;
+  }
+
   class Vid {
-    final String id; final TextureView tv; ExoPlayer p; boolean dead, on; int errs;
+    final String id; final TextureView tv; int slot = -1; boolean dead, on; int errs;
     Vid(String id, TextureView tv, long delay) { this.id = id; this.tv = tv; later(delay); }
     File file() { return new File(getFilesDir(), "v_" + id + ".mp4"); }
     final Runnable start = this::tryStart;
     void later(long ms) { h.removeCallbacks(start); h.postDelayed(start, ms); }
     void tryStart() {
-      if (dead || p != null || !file().exists() || loading.contains(id)) return;
+      if (dead || slot >= 0 || loading.contains(id)) return;
+      if (!file().exists()) return;
+      int k = owner[0] == null ? 0 : owner[1] == null ? 1 : -1;
+      if (k < 0) { later(2000); return; }   // оба плеера заняты — подождём
       try {
-        p = new ExoPlayer.Builder(MainActivity.this, new androidx.media3.exoplayer.DefaultRenderersFactory(MainActivity.this).setEnableDecoderFallback(true)).build();
-        p.setTrackSelectionParameters(p.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
-        p.setVolume(0f); p.setRepeatMode(Player.REPEAT_MODE_ONE);
+        ExoPlayer p = player(k); owner[k] = this; slot = k;
         p.setVideoTextureView(tv);
-        p.addListener(new Player.Listener() {
-          @Override public void onVideoSizeChanged(VideoSize vs) { fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
-          @Override public void onRenderedFirstFrame() { on = true; tv.animate().alpha(1f).setDuration(350).start(); }
-          @Override public void onPlayerError(PlaybackException e) { drop(); errs++;
-            if (music != null && (errs == 1 || errs % 10 == 0)) music.note("видео " + id.substring(0, Math.min(6, id.length())) + ": ошибка " + e.getErrorCodeName() + (e.getCause() != null ? " — " + e.getCause().getMessage() : ""));
-            if (!dead) later(Math.min(15000L, 1500L * errs)); }
-        });
         p.setMediaItem(MediaItem.fromUri(Uri.fromFile(file()))); p.prepare(); p.play();
-      } catch (Throwable e) { drop(); errs++; if (music != null && errs == 1) music.note("видео: не запустилось — " + e); if (!dead) later(Math.min(15000L, 1500L * errs)); }
+      } catch (Throwable e) { owner[k] = null; slot = -1; errs++; if (music != null && errs == 1) music.note("видео: не запустилось — " + e); if (!dead) later(Math.min(15000L, 2000L * errs)); }
     }
     void fit(int vw, int vh, int rot) {   // заполнить карточку с обрезкой по центру, с учётом поворота ролика
       int w = tv.getWidth(), hh = tv.getHeight(); if (vw <= 0 || vh <= 0 || w <= 0 || hh <= 0) return;
@@ -534,8 +554,13 @@ public class MainActivity extends Activity {
       float rw = rot % 180 == 0 ? vw : vh, rh = rot % 180 == 0 ? vh : vw, sc = Math.max(w / rw, hh / rh);
       m.postScale(sc, sc); m.postTranslate(w / 2f, hh / 2f); tv.setTransform(m);
     }
-    void drop() { if (p != null) { try { p.release(); } catch (Throwable ignored) {} p = null; } }
-    void release() { dead = true; h.removeCallbacks(start); drop(); }
+    boolean playing() { return on && slot >= 0; }
+    void release() {   // плеер не уничтожаем — останавливаем и отдаём следующему экрану
+      dead = true; h.removeCallbacks(start);
+      if (slot >= 0 && owner[slot] == this) { ExoPlayer p = pool[slot]; owner[slot] = null;
+        if (p != null) try { p.stop(); p.clearVideoTextureView(tv); } catch (Throwable ignored) {} }
+      slot = -1;
+    }
   }
 
   /** Скачать ролик в память приставки (один раз). В базе он лежит текстом base64 частями по 6 МБ —
@@ -556,7 +581,7 @@ public class MainActivity extends Activity {
     });
   }
 
-  private int playing() { int n = 0; for (Vid v : vids) if (v.on && v.p != null) n++; return n; }
+  private int playing() { int n = 0; for (Vid v : vids) if (v.playing()) n++; return n; }
   private int vidFiles() { File[] fs = getFilesDir().listFiles(); int n = 0; if (fs != null) for (File f : fs) if (f.getName().startsWith("v_") && f.getName().endsWith(".mp4")) n++; return n; }
 
   private boolean download(String id, String url, File f) {
@@ -630,7 +655,7 @@ public class MainActivity extends Activity {
     if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) { Scene c = cache.get(cur); cache.clear(); if (c != null) cache.put(cur, c); }
   }
 
-  @Override protected void onDestroy() { if (updater != null) updater.stop(); if (music != null) music.release(); h.removeCallbacksAndMessages(null); for (Vid v : vids) v.release(); dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
+  @Override protected void onDestroy() { if (updater != null) updater.stop(); if (music != null) music.release(); h.removeCallbacksAndMessages(null); for (Vid v : vids) v.release(); for (ExoPlayer p : pool) if (p != null) try { p.release(); } catch (Throwable ignored) {} dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
 
   @Override public void onWindowFocusChanged(boolean f) {
     super.onWindowFocusChanged(f);
