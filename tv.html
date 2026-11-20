@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611201300"></script>
+<script src="tv-core.js?v=202611201700"></script>
 </head>
 <body>
 <div id="stage">
@@ -385,8 +385,8 @@ window.razScene = (i) => (nq = nq.then(async () => {
   TV.hydrate(s); try { refreshWidgets(); } catch (e) {} s.classList.add('nshow');
   const L = TV.LITE; TV.LITE = true; s.querySelectorAll('.num[data-to]').forEach(el => TV.countUp(el)); TV.LITE = L;
   nmode('m-scene'); nstage().classList.add('notext'); await settle(120); TV.fitText(s); await settle(120);
-  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1);
-  const cards = [...s.querySelectorAll('.f')].map((f, k) => { const v = f.querySelector('video[data-vid]');
+  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1); let nv = 0;
+  const cards = [...s.querySelectorAll('.f')].map((f, k) => { let v = f.querySelector('video[data-vid]'); if (v && ++nv > 2) v = null;   // больше 2 видео на экране приставка не тянет — остальные показывают обложку
     const d = f.classList.contains('shd') ? {} : (sc0.facts[k] || {});
     return { tr: f.classList.contains('shd'), kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
   const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';
