@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611182220"></script>
+<script src="tv-core.js?v=202611201300"></script>
 </head>
 <body>
 <div id="stage">
@@ -388,7 +388,7 @@ window.razScene = (i) => (nq = nq.then(async () => {
   const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1);
   const cards = [...s.querySelectorAll('.f')].map((f, k) => { const v = f.querySelector('video[data-vid]');
     const d = f.classList.contains('shd') ? {} : (sc0.facts[k] || {});
-    return { kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
+    return { tr: f.classList.contains('shd'), kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
   const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';
   await shot('scene', JSON.stringify({ live: sc0.facts.slice(0, TV.cnt(sc0)).some(f => f.kind), i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
   st.classList.remove('notext'); st.classList.add('novid'); await settle(120); await shot('over'); st.classList.remove('novid');
