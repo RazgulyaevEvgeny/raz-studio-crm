@@ -172,7 +172,6 @@ public class MainActivity extends Activity {
     });
     pong = System.currentTimeMillis();
     h.postDelayed(guard, 4000); h.postDelayed(ping, 15000);
-    try { swDec = getSharedPreferences("app", MODE_PRIVATE).getBoolean("swdec", false); } catch (Exception ignored) {}
     updater = new Updater(this, t -> { if (music != null) music.note(t); }, this::banner); updater.start();
     try {   // после обновления по воздуху — показать, что новая версия встала
       android.content.SharedPreferences sp = getSharedPreferences("app", MODE_PRIVATE); int was = sp.getInt("ver", 0);
@@ -513,26 +512,18 @@ public class MainActivity extends Activity {
   private int slotErrs[] = new int[2];
   private ExoPlayer player(final int k) {
     if (pool[k] != null) return pool[k];
-    androidx.media3.exoplayer.DefaultRenderersFactory rf = new androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true);
-    if (swDec) rf.setMediaCodecSelector((mime, secure, tun) -> {   // программный декодер первым: аппаратный у этой приставки зависает
-      java.util.List<androidx.media3.exoplayer.mediacodec.MediaCodecInfo> l = androidx.media3.exoplayer.mediacodec.MediaCodecUtil.getDecoderInfos(mime, secure, tun), o = new ArrayList<>();
-      for (androidx.media3.exoplayer.mediacodec.MediaCodecInfo i : l) if (i.softwareOnly) o.add(i);
-      for (androidx.media3.exoplayer.mediacodec.MediaCodecInfo i : l) if (!i.softwareOnly) o.add(i);
-      return o; });
-    final ExoPlayer p = new ExoPlayer.Builder(this, rf).build();
+    ExoPlayer p = new ExoPlayer.Builder(this, new androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)).build();
     p.setTrackSelectionParameters(p.getTrackSelectionParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
     p.setVolume(0f); p.setRepeatMode(Player.REPEAT_MODE_ONE);
     p.addAnalyticsListener(new androidx.media3.exoplayer.analytics.AnalyticsListener() {
-      @Override public void onVideoDecoderInitialized(androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime t, String name, long a1, long a2) { if (pool[k] == p) vnote(k, "декодер " + name); }
+      @Override public void onVideoDecoderInitialized(androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime t, String name, long a1, long a2) { vnote(k, "декодер " + name); }
       @Override public void onDroppedVideoFrames(androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime t, int n, long ms) { vnote(k, "пропущено кадров " + n); }
     });
     p.addListener(new Player.Listener() {
-      @Override public void onPlaybackStateChanged(int st) { if (pool[k] != p) return; vnote(k, st == Player.STATE_READY ? "готов" : st == Player.STATE_BUFFERING ? "загружается" : st == Player.STATE_ENDED ? "закончился" : "остановлен"); }
-      @Override public void onVideoSizeChanged(VideoSize vs) { if (pool[k] != p) return; Vid v = owner[k]; vnote(k, "размер " + vs.width + "×" + vs.height); if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
-      @Override public void onRenderedFirstFrame() { if (pool[k] != p) return; Vid v = owner[k]; slotErrs[k] = 0; vnote(k, "первый кадр показан ✓"); if (v != null) { v.on = true; v.tv.animate().alpha(1f).setDuration(350).start(); } }
+      @Override public void onPlaybackStateChanged(int st) { vnote(k, st == Player.STATE_READY ? "готов" : st == Player.STATE_BUFFERING ? "загружается" : st == Player.STATE_ENDED ? "закончился" : "остановлен"); }
+      @Override public void onVideoSizeChanged(VideoSize vs) { Vid v = owner[k]; vnote(k, "размер " + vs.width + "×" + vs.height); if (v != null) v.fit(vs.width, vs.height, vs.unappliedRotationDegrees); }
+      @Override public void onRenderedFirstFrame() { Vid v = owner[k]; slotErrs[k] = 0; vnote(k, "первый кадр показан ✓"); if (v != null) { v.on = true; v.tv.animate().alpha(1f).setDuration(350).start(); } }
       @Override public void onPlayerError(PlaybackException e) {
-        if (pool[k] != p) return;   // ошибка от брошенного плеера — его уже заменили
-        if (!swDec && e.errorCode == PlaybackException.ERROR_CODE_TIMEOUT) { useSoftware("аппаратный декодер завис (" + (e.getMessage() != null ? e.getMessage() : "timeout") + ")"); return; }
         Vid v = owner[k]; owner[k] = null; slotErrs[k]++;
         if (music != null) music.note("видео" + (v != null ? " " + v.id.substring(0, Math.min(6, v.id.length())) : "") + ": ошибка " + e.getErrorCodeName() + (e.getCause() != null ? " — " + e.getCause().getMessage() : ""));
         if (slotErrs[k] >= 3) { final ExoPlayer old = pool[k]; pool[k] = null; slotErrs[k] = 0;   // плеер сломался — заменяем новым, старый гасим в фоне
@@ -542,25 +533,6 @@ public class MainActivity extends Activity {
       }
     });
     return pool[k] = p;
-  }
-
-  private boolean swDec;
-  /** Аппаратный декодер приставки зависает — переходим на программный (обычный процессор) насовсем. */
-  private void useSoftware(String why) {
-    if (swDec) return; swDec = true;
-    try { getSharedPreferences("app", MODE_PRIVATE).edit().putBoolean("swdec", true).apply(); } catch (Exception ignored) {}
-    if (music != null) music.note("видео: " + why + " — перехожу на программный декодер");
-    for (int k = 0; k < pool.length; k++) {
-      final ExoPlayer old = pool[k]; pool[k] = null; slotErrs[k] = 0; Vid v = owner[k]; owner[k] = null;
-      if (v != null) { v.slot = -1; v.on = false; if (!v.dead) v.later(400); }
-      if (old != null) h.post(() -> { try { old.release(); } catch (Throwable ignored) {} });
-    }
-  }
-  /** Сторож: ролик запущен, а первого кадра за 8 секунд нет — значит, декодер завис. */
-  private void watchStart(final Vid v, final int k) {
-    h.postDelayed(() -> { if (!v.dead && owner[k] == v && !v.on) {
-      if (!swDec) useSoftware("нет кадра за 8 сек");
-      else if (music != null) music.note("видео" + (k + 1) + ": нет кадра за 8 сек даже на программном декодере"); } }, 8000);
   }
 
   private void vnote(int k, String t) { Vid v = owner[k]; if (music != null) music.note("видео" + (k + 1) + (v != null ? " " + v.id.substring(0, Math.min(6, v.id.length())) : "") + ": " + t); }
@@ -582,7 +554,7 @@ public class MainActivity extends Activity {
       try {
         ExoPlayer p = player(k); owner[k] = this; slot = k;
         p.setVideoTextureView(tv);
-        p.setMediaItem(MediaItem.fromUri(Uri.fromFile(file()))); p.prepare(); p.play(); watchStart(this, k);
+        p.setMediaItem(MediaItem.fromUri(Uri.fromFile(file()))); p.prepare(); p.play();
       } catch (Throwable e) { owner[k] = null; slot = -1; errs++; if (music != null && errs == 1) music.note("видео: не запустилось — " + e); if (!dead) later(Math.min(15000L, 2000L * errs)); }
     }
     void fit(int vw, int vh, int rot) {   // заполнить карточку с обрезкой по центру, с учётом поворота ролика
