@@ -279,15 +279,15 @@ TV.CSS = `
 .kzt{display:flex;gap:12px;font-size:32px;color:var(--fg2);white-space:nowrap}.kzt b{color:var(--fg);font-weight:800}
 .ctq{--q:300px;justify-content:center!important}.ctq>.ft{display:none!important}.ctq>.fb{flex:1 1 auto;min-height:0;display:flex;align-items:center;margin:0!important}
 .ctq .ctop{display:flex;align-items:center;gap:calc(var(--q) * .06);min-width:0;margin:0 0 calc(var(--q) * .09)!important;min-height:0!important}
-.ctq .ctl{flex:none;width:calc(var(--q) * .24);height:calc(var(--q) * .24);border-radius:calc(var(--q) * .07);background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.12)}.ctq .ctl svg{width:62%;height:62%}
+.ctq .ctl{flex:none;width:calc(var(--q) * .2);height:calc(var(--q) * .2);border-radius:calc(var(--q) * .07);background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.12)}.ctq .ctl svg{width:62%;height:62%}
 .ctq .ctop .lt{font-size:calc(var(--q) * .1)!important;font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:var(--fg2)}.ctq.ctbrand .ctop .lt{color:#fff}
 .ctq .ctw{display:flex;align-items:center;gap:calc(var(--q) * .13);width:100%;min-width:0}
 .ctq .qri{flex:none;width:var(--q);height:var(--q);padding:calc(var(--q) * .055);border-radius:calc(var(--q) * .09);background:#fff;box-sizing:border-box;box-shadow:0 6px 24px rgba(0,0,0,.14)}.ctq .qri .qrs{display:block;width:100%;height:100%}
 .ctq .qre{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#8e8e93;font-size:calc(var(--q) * .12);font-weight:800;text-align:center}
-.ctq .ctt{flex:1;min-width:0}.ctq .ctn{font-size:calc(var(--q) * .175);font-weight:800;letter-spacing:-.02em;line-height:1.1;white-space:nowrap;overflow:hidden;color:inherit}
+.ctq .ctt{flex:1;min-width:0}.ctq .ctn{display:flex;align-items:center;gap:calc(var(--q) * .06);font-size:calc(var(--q) * .175);font-weight:800;letter-spacing:-.02em;line-height:1.1;min-width:0;color:inherit}.ctq .ctx{min-width:0;white-space:nowrap;overflow:hidden}
 .ctq .ctc{font-size:calc(var(--q) * .092);line-height:1.32;margin-top:calc(var(--q) * .05);color:var(--fg2);-webkit-hyphens:none;hyphens:none;word-break:normal;overflow-wrap:normal;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.ctq .ctc b{color:inherit;font-weight:800;opacity:1}
 .ctq.ctbrand .ctc{color:rgba(255,255,255,.88)}
-.ctq.ctv .ctw{flex-direction:column;text-align:center;gap:0}.ctq.ctv .ctt{display:contents}.ctq.ctv .ctop{order:-1;justify-content:center;max-width:100%;margin-bottom:calc(var(--q) * .12)!important}.ctq.ctv .qri{margin-bottom:calc(var(--q) * .12)}.ctq.ctv .ctn,.ctq.ctv .ctc{width:100%}
+.ctq.ctv .ctw{flex-direction:column;text-align:center;gap:0}.ctq.ctv .ctt{display:contents}.ctq.ctv .ctop{order:-1;justify-content:center;max-width:100%;margin-bottom:calc(var(--q) * .12)!important}.ctq.ctv .qri{margin-bottom:calc(var(--q) * .12)}.ctq.ctv .ctn,.ctq.ctv .ctc{width:100%}.ctq.ctv .ctn{justify-content:center}
 .qrw{display:flex;align-items:center;gap:40px}.qri .qrs{display:block;width:100%;height:100%}.qrt .cap b{color:var(--fg)}.qri{width:calc(300px * var(--fz,1));height:calc(300px * var(--fz,1));flex:none;background:#fff;border-radius:24px;padding:calc(18px * var(--fz,1));box-sizing:border-box;object-fit:contain}
 .qre{display:flex;align-items:center;justify-content:center;color:#8e8e93;font-size:60px;font-weight:800}.hero .qri{width:calc(400px * var(--fz,1));height:calc(400px * var(--fz,1))}
 .qrt{min-width:0}.wdg .qrt .h{font-size:calc(60px * var(--fz,1))!important;line-height:1.1;-webkit-hyphens:none;hyphens:none;overflow-wrap:normal;word-break:normal;letter-spacing:-.02em}.hero.wdg .qrt .h{font-size:calc(76px * var(--fz,1))!important}.wdg .qrt .cap{margin-top:18px}
@@ -539,7 +539,7 @@ TV.contactParts = (f, k) => {
   else if (k === 'mail') { const m = String(f.ct || '').trim(); if (m) link = 'mailto:' + m + (f.ctMsg ? '?subject=' + encodeURIComponent(f.ctMsg) : ''); title = m || 'почта@пример.kz'; }
   const qr = link ? TV.qr(link) : `<div class="qre">${esc(C.name)}</div>`;
   return { ct: k, top: '',
-    body: `<div class="ctw"><div class="qri">${qr}</div><div class="ctt"><div class="top ctop"><span class="ctl" style="color:${C.color}">${C.ic}</span><span class="lt">${esc(f.label || C.label)}</span></div><div class="ctn">${esc(title)}</div><div class="ctc">${k === 'wifi' ? cap : esc(cap)}</div></div></div>` };
+    body: `<div class="ctw"><div class="qri">${qr}</div><div class="ctt"><div class="ctn"><span class="ctl" style="color:${C.color}">${C.ic}</span><span class="ctx">${esc(title)}</span></div><div class="ctc">${k === 'wifi' ? cap : esc(cap)}</div></div></div>` };
 };
 
 /* ---------- виджеты: погода, часы, «сейчас играет» ---------- */
@@ -684,7 +684,7 @@ TV.fitText = (root) => {
       let q = vert ? Math.min(iw * .74, ih * .5) : Math.min(ih * .96, iw * .4);
       const pad = q < 230 ? Math.max(.55, q / 230) : 1;
       if (pad < 1) f.style.padding = Math.round(48 * pad) + 'px ' + Math.round(50 * pad) + 'px';
-      const fits = () => { const t = f.querySelector('.ctn'), lb = f.querySelector('.ctop .lt'), fr = f.getBoundingClientRect(), last = kids[kids.length - 1].getBoundingClientRect(); return (!t || t.scrollWidth <= t.clientWidth + 2) && (!lb || lb.scrollWidth <= lb.clientWidth + 2 || q < 160) && last.bottom <= fr.bottom - 10; };
+      const fits = () => { const t = f.querySelector('.ctn .ctx'), lb = null, fr = f.getBoundingClientRect(), last = kids[kids.length - 1].getBoundingClientRect(); return (!t || t.scrollWidth <= t.clientWidth + 2) && (!lb || lb.scrollWidth <= lb.clientWidth + 2 || q < 160) && last.bottom <= fr.bottom - 10; };
       for (let i = 0; i < 14; i++) { f.style.setProperty('--q', Math.round(q) + 'px'); if (fits() || q < 90) break; q *= .93; }
       return;
     }
