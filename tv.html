@@ -118,7 +118,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611211640"></script>
+<script src="tv-core.js?v=202611211700"></script>
 </head>
 <body>
 <div id="stage">
@@ -385,7 +385,14 @@ const settle = (ms) => new Promise(r => { let d = false; const f = () => { if (!
 const shot = (kind, json) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; r(); } }; window.razAck = f; setTimeout(f, 4000); try { RazApp.shot(kind, json || ''); } catch (e) { f(); } });
 const nrect = el => { const r = el.getBoundingClientRect(), k = window.devicePixelRatio || 1; return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };
 window.razBg = () => (nq = nq.then(async () => { nmode('m-bg'); await settle(); await shot('bg'); }).catch(() => {}));
-window.razChrome = (i) => (nq = nq.then(async () => { await fontsP; [...pager.children].forEach((d, j) => d.classList.toggle('on', j === i)); nmode('m-chrome'); await settle(); const dot = pager.children[i]; await shot('chrome', JSON.stringify({ dot: dot ? nrect(dot) : null, dark: DATA.theme === 'dark', hd: nrect(document.querySelector('header')), ft: nrect(document.querySelector('footer')) })); }).catch(() => {}));
+/* Шапка и низ снимаются без точек-страниц: точки рисует само приложение. Тогда смена экрана не требует
+   нового снимка (снимок на приставке тормозит видео), шапку переснимаем только когда в ней что-то поменялось. */
+window.razChrome = (i) => (nq = nq.then(async () => { await fontsP; [...pager.children].forEach(d => d.classList.remove('on')); nmode('m-chrome'); await settle();
+  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1), d0 = pager.children[0];
+  const pg = { r: nrect(pager), n: pager.children.length, z, c: d0 ? getComputedStyle(d0).backgroundColor : '' };
+  pager.style.visibility = 'hidden'; await settle();
+  await shot('chrome', JSON.stringify({ pg, dark: DATA.theme === 'dark', hd: nrect(document.querySelector('header')), ft: nrect(document.querySelector('footer')) }));
+  pager.style.visibility = ''; }).catch(() => { pager.style.visibility = ''; }));
 window.razScene = (i) => (nq = nq.then(async () => {
   const s = box.children[i], sc0 = LIST[i]; if (!s || !sc0) return;
   [...box.children].forEach(x => x.classList.remove('nshow'));
@@ -396,7 +403,7 @@ window.razScene = (i) => (nq = nq.then(async () => {
   await fontsP; if (!fontsOk()) fontsLate = true;
   nmode('m-scene'); nstage().classList.add('notext'); await settle(120); TV.fitText(s); await settle(120);
   const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1); let nv = 0;
-  const cards = [...s.querySelectorAll('.f')].map((f, k) => { let v = f.querySelector('video[data-vid]'); if (v && ++nv > 2) v = null;   // больше 2 видео на экране приставка не тянет — остальные показывают обложку
+  const cards = [...s.querySelectorAll('.f')].map((f, k) => { let v = f.querySelector('video[data-vid]');
     const d = f.classList.contains('shd') ? {} : (sc0.facts[k] || {});
     return { tr: f.classList.contains('shd'), kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
   const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';

@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
   private FrameLayout root;
   private int want = -1;                 // какой экран ждём от страницы для показа
   private long pong = 0, chromeAt = 0;   // последний ответ страницы; последняя съёмка шапки
-  private boolean chromeQueued;
+  private boolean chromeQueued, chromeDirty;
 
   static class Card { boolean kb, tr; int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
   static class Scene { boolean live; int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
@@ -324,9 +324,8 @@ public class MainActivity extends Activity {
   class Bridge {
     @JavascriptInterface public void built(String json) { h.post(() -> onBuilt(json)); }
     @JavascriptInterface public void shot(String kind, String json) { h.post(() -> { try { onShot(kind, json); } catch (Throwable t) { /* слой пропустим */ } js("window.razAck&&razAck()"); }); }
-    @JavascriptInterface public void chromeChanged() { h.post(() -> {   // шапку переснимаем не чаще раза в 8 сек — съёмка нагружает приставку
-      if (cur < 0 || chromeQueued) return; long w = 8000 - (System.currentTimeMillis() - chromeAt);
-      chromeQueued = true; h.postDelayed(chromeShot, Math.max(0, w)); }); }
+    // шапка поменялась (трек, время, погода): переснимем её при следующей смене экрана — пока идёт видео, снимки не делаем
+    @JavascriptInterface public void chromeChanged() { h.post(() -> chromeDirty = true); }
     @JavascriptInterface public void music(String json) { h.post(() -> { try { if (music != null) { music.settings(new JSONObject(json)); music.announce(); } } catch (Exception ignored) {} }); }
   }
 
@@ -380,7 +379,7 @@ public class MainActivity extends Activity {
     if ("bg".equals(kind)) { bgV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false)); return; }
     if ("chrome".equals(kind)) {
       chromeV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false));
-      try { JSONObject o = new JSONObject(json); JSONArray d = o.optJSONArray("dot"); if (d != null) placeProgress(d.getInt(0), d.getInt(1), d.getInt(2), d.getInt(3), o.optBoolean("dark", true)); } catch (Exception ignored) {}
+      try { JSONObject o = new JSONObject(json); JSONObject pg = o.optJSONObject("pg"); if (pg != null) buildPager(pg, o.optBoolean("dark", true)); } catch (Exception ignored) {}
       return;
     }
     if ("scene".equals(kind)) {
@@ -412,6 +411,32 @@ public class MainActivity extends Activity {
   }
 
   /** Полоска прогресса текущего слайда: заполняется за время показа. */
+  // ——— точки-страницы внизу рисует приложение (раньше — снимком страницы на каждой смене экрана) ———
+  private LinearLayout pagerV; private int pgX, pgY, pgN; private float pgZ = 1f; private boolean pgDark = true; private int pgColor = 0x29FFFFFF;
+  private void buildPager(JSONObject pg, boolean dark) throws Exception {
+    JSONArray r = pg.getJSONArray("r"); pgX = r.getInt(0); pgY = r.getInt(1); pgN = pg.optInt("n", count); pgZ = (float) pg.optDouble("z", 1); pgDark = dark;
+    pgColor = cssColor(pg.optString("c", ""), dark ? 0x29FFFFFF : 0x1F000000);
+    if (pagerV == null) { pagerV = new LinearLayout(this); pagerV.setOrientation(LinearLayout.HORIZONTAL); root.addView(pagerV, root.indexOfChild(prog), new FrameLayout.LayoutParams(-2, -2)); }
+    FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) pagerV.getLayoutParams(); lp.leftMargin = pgX; lp.topMargin = pgY; pagerV.setLayoutParams(lp);
+    pagerV.removeAllViews();
+    for (int k = 0; k < pgN; k++) { View d = new View(this); GradientDrawable g = new GradientDrawable(); g.setColor(pgColor); g.setCornerRadius(99 * pgZ); d.setBackground(g);
+      LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(Math.round(12 * pgZ), Math.round(12 * pgZ)); if (k > 0) dl.leftMargin = Math.round(12 * pgZ); pagerV.addView(d, dl); }
+    pagerV.setVisibility(pgN > 1 ? View.VISIBLE : View.GONE);
+    if (cur >= 0) setPager(cur);
+  }
+  private void setPager(int i) {
+    if (pagerV == null || pgN <= 1) { prog.setVisibility(View.GONE); return; }
+    int x = pgX;
+    for (int k = 0; k < pagerV.getChildCount(); k++) { View d = pagerV.getChildAt(k); LinearLayout.LayoutParams dl = (LinearLayout.LayoutParams) d.getLayoutParams();
+      int w = Math.round((k == i ? 90 : 12) * pgZ); if (dl.width != w) { dl.width = w; d.setLayoutParams(dl); }
+      if (k < i) x += Math.round(12 * pgZ) + Math.round(12 * pgZ); }
+    placeProgress(x, pgY, Math.round(90 * pgZ), Math.round(12 * pgZ), pgDark);
+  }
+  private static int cssColor(String c, int def) {   // "rgb(1, 2, 3)" / "rgba(1, 2, 3, 0.16)"
+    try { String[] p = c.substring(c.indexOf('(') + 1, c.indexOf(')')).split(","); int r = Integer.parseInt(p[0].trim()), g = Integer.parseInt(p[1].trim()), b = Integer.parseInt(p[2].trim());
+      int a = p.length > 3 ? Math.round(Float.parseFloat(p[3].trim()) * 255) : 255; return Color.argb(a, r, g, b); } catch (Exception e) { return def; }
+  }
+
   private void placeProgress(int x, int y, int w, int hh, boolean dark) {
     if (w <= 0 || hh <= 0) { prog.setVisibility(View.GONE); return; }
     FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) prog.getLayoutParams();
@@ -429,12 +454,12 @@ public class MainActivity extends Activity {
   private final Runnable prerender = () -> {
     if (count <= 1 || building != null) return;
     if (cur < 0) return;
-    for (int k = 1; k <= 2 && k < count; k++) { int n = (cur + k) % count; if (!cache.containsKey(n) && n != want) { js("razScene(" + n + ")"); return; } }
+    for (int k = 1; k < count; k++) { int n = (cur + k) % count; if (!cache.containsKey(n) && n != want) { js("razScene(" + n + ")"); return; } }
   };
   /** В памяти держим только текущий и 2 следующих экрана: 9 экранов в полном цвете съедали память,
    *  и приставке не хватало её на декодер видео — ролики стояли кадром. */
   private void trimCache() {
-    if (cur < 0 || count <= 3) return;
+    if (cur < 0 || count <= 32) return;   // все экраны держим в памяти: снимки во время показа тормозят видео
     Set<Integer> keep = new HashSet<>(); keep.add(cur); keep.add((cur + 1) % count); keep.add((cur + 2) % count); if (want >= 0) keep.add(want);
     cache.keySet().retainAll(keep);
   }
@@ -448,7 +473,8 @@ public class MainActivity extends Activity {
     slideAt = System.currentTimeMillis(); slideMs = (long) (Math.max(5, sc.sec) * 1000);
     prog.animate().cancel(); prog.setScaleX(0f);
     transition(sc);
-    js("razChrome(" + cur + ")");
+    setPager(cur);
+    if (chromeDirty) { chromeDirty = false; chromeAt = System.currentTimeMillis(); js("razChrome(" + cur + ")"); }
     h.removeCallbacks(fire); h.removeCallbacks(askNext);
     if (count > 1) { h.postDelayed(askNext, 2500); h.postDelayed(fire, (long) (Math.max(5, sc.sec) * 1000)); }
   }
@@ -521,9 +547,9 @@ public class MainActivity extends Activity {
   /** Два постоянных плеера на всё время работы. Раньше на каждом экране плеер создавался и уничтожался заново,
    *  и аппаратный декодер приставки не успевал освободиться («Player release timed out») — новые ролики стояли кадром.
    *  Теперь плееры не уничтожаются: на новом экране им просто дают другой ролик и другую картинку. */
-  private final ExoPlayer[] pool = new ExoPlayer[2];
-  private final Vid[] owner = new Vid[2];
-  private int slotErrs[] = new int[2];
+  private final ExoPlayer[] pool = new ExoPlayer[4];   // до 4 роликов на экране
+  private final Vid[] owner = new Vid[4];
+  private int slotErrs[] = new int[4];
   private ExoPlayer player(final int k) {
     if (pool[k] != null) return pool[k];
     ExoPlayer p = new ExoPlayer.Builder(this, new androidx.media3.exoplayer.DefaultRenderersFactory(this).setEnableDecoderFallback(true)).build();
@@ -561,8 +587,8 @@ public class MainActivity extends Activity {
       String sid = id.substring(0, Math.min(6, id.length()));
       if (loading.contains(id)) { if (music != null) music.note("видео " + sid + ": ещё качается"); return; }
       if (!file().exists()) { if (music != null) music.note("видео " + sid + ": файла нет в памяти"); return; }
-      int k = owner[0] == null ? 0 : owner[1] == null ? 1 : -1;
-      if (k < 0) { if (music != null) music.note("видео " + sid + ": оба плеера заняты"); later(2000); return; }   // оба плеера заняты — подождём
+      int k = -1; for (int j = 0; j < owner.length; j++) if (owner[j] == null) { k = j; break; }
+      if (k < 0) { if (music != null) music.note("видео " + sid + ": все плееры заняты"); later(2000); return; }   // оба плеера заняты — подождём
       if (music != null) music.note("видео " + sid + ": запускаю в плеере " + (k + 1) + ", файл " + (file().length() >> 10) + " КБ, картинка " + (tv.isAvailable() ? "готова" : "ещё не готова") + " " + tv.getWidth() + "×" + tv.getHeight());
       try {
         ExoPlayer p = player(k); owner[k] = this; slot = k;
