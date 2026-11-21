@@ -732,8 +732,6 @@ async function putVideo(data, poster){
 const blobURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
 async function uploadVideo(input, file, f){
   const fe = input.closest('.fe');
-  { const s = D.screens[sel], n = s.facts.slice(0, TV.cnt(s)).filter(x => x !== f && x.video).length;
-    if (n >= 2) { toast('На одном экране — не больше 2 видео: приставка не тянет больше одновременно. Уберите видео из другой карточки этого экрана.'); input.value = ''; return; } }
   if (window.TVV && TVV.supported()) {
     try {
       toast('Готовлю видео для приставки… 0%');
