@@ -173,6 +173,7 @@ public class MainActivity extends Activity {
     });
     pong = System.currentTimeMillis();
     h.postDelayed(guard, 4000); h.postDelayed(ping, 15000);
+    android.view.Choreographer.getInstance().postFrameCallback(stallCb);
     updater = new Updater(this, t -> { if (music != null) music.note(t); }, this::banner); updater.start();
     try {   // после обновления по воздуху — показать, что новая версия встала
       android.content.SharedPreferences sp = getSharedPreferences("app", MODE_PRIVATE); int was = sp.getInt("ver", 0);
@@ -196,6 +197,7 @@ public class MainActivity extends Activity {
     ws.setMediaPlaybackRequiresUserGesture(false);       // музыка без нажатия кнопки
     ws.setLoadWithOverviewMode(false);
     ws.setUseWideViewPort(false);
+    ws.setTextZoom(100);   // системный «размер шрифта» приставки не должен растягивать текст страницы
     web.addJavascriptInterface(new Bridge(), "RazApp");
     web.setWebViewClient(new WebViewClient() {
       @Override public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail d) {
@@ -326,6 +328,7 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void shot(String kind, String json) { h.post(() -> { try { onShot(kind, json); } catch (Throwable t) { /* слой пропустим */ } js("window.razAck&&razAck()"); }); }
     // шапка поменялась (трек, время, погода): переснимем её при следующей смене экрана — пока идёт видео, снимки не делаем
     @JavascriptInterface public void chromeChanged() { h.post(() -> chromeDirty = true); }
+    @JavascriptInterface public void log(String t) { h.post(() -> { if (music != null) music.note(t); }); }
     @JavascriptInterface public void music(String json) { h.post(() -> { try { if (music != null) { music.settings(new JSONObject(json)); music.announce(); } } catch (Exception ignored) {} }); }
   }
 
@@ -371,6 +374,11 @@ public class MainActivity extends Activity {
   }
 
   private void onShot(String kind, String json) throws Exception {
+    long t0 = android.os.SystemClock.uptimeMillis();
+    try { onShot0(kind, json); } finally { long ms = android.os.SystemClock.uptimeMillis() - t0;
+      if (music != null && ms > 30) music.note("снимок " + kind + (vids.isEmpty() ? "" : " во время видео") + ": " + ms + " мс"); }
+  }
+  private void onShot0(String kind, String json) throws Exception {
     int[][] clip = null;
     if ("chrome".equals(kind)) try { JSONObject o = new JSONObject(json); JSONArray hd = o.optJSONArray("hd"), ft = o.optJSONArray("ft");
       if (hd != null && ft != null) clip = new int[][] { { 0, 0, 0, hd.getInt(1) + hd.getInt(3) + 8 }, { 0, ft.getInt(1) - 8, 0, ft.getInt(1) + ft.getInt(3) + 8 } }; } catch (Exception ignored) {}
@@ -573,6 +581,14 @@ public class MainActivity extends Activity {
     });
     return pool[k] = p;
   }
+
+  // замер: кадр интерфейса задержался — значит, поток экрана был занят (видео в этот момент стоит)
+  private long lastFrameNs, stallLogAt; private int stalls;
+  private final android.view.Choreographer.FrameCallback stallCb = new android.view.Choreographer.FrameCallback() { @Override public void doFrame(long ns) {
+    if (lastFrameNs > 0) { long ms = (ns - lastFrameNs) / 1000000;
+      if (ms > 120 && !vids.isEmpty()) { stalls++; long now = System.currentTimeMillis();
+        if (music != null && now - stallLogAt > 3000) { stallLogAt = now; music.note("ЗАМИРАНИЕ " + ms + " мс (всего " + stalls + ")" + (pending != null ? " · готовится смена экрана" : "")); } } }
+    lastFrameNs = ns; android.view.Choreographer.getInstance().postFrameCallback(this); } };
 
   private void vnote(int k, String t) { Vid v = owner[k]; if (music != null) music.note("видео" + (k + 1) + (v != null ? " " + v.id.substring(0, Math.min(6, v.id.length())) : "") + ": " + t); }
 
