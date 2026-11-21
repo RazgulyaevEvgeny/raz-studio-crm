@@ -121,7 +121,7 @@ if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('c
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611211730"></script>
+<script src="tv-core.js?v=202611211800"></script>
 </head>
 <body>
 <div id="stage">
@@ -390,6 +390,9 @@ if (NATIVE) setTimeout(() => { try { const h = document.querySelector('.f .h, .f
 const fontsRedo = () => { if (NATIVE && fontsLate && fontsOk()) { fontsLate = false; try { build(); } catch (e) {} } };
 fontsP.then(fontsRedo); try { document.fonts.addEventListener('loadingdone', () => setTimeout(fontsRedo, 500)); } catch (e) {}
 const settle = (ms) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; setTimeout(r, ms || 60); } }; try { requestAnimationFrame(() => requestAnimationFrame(f)); } catch (e) {} setTimeout(f, 300); });
+// приложение снимает слой дважды — на чёрном и на белом фоне — и по разнице считает прозрачность
+window.razBgc = (c, t) => { [document.documentElement, document.body, nstage()].forEach(e => { if (c) e.style.setProperty('background', c, 'important'); else e.style.removeProperty('background'); });
+  if (t) requestAnimationFrame(() => requestAnimationFrame(() => { try { RazApp.painted(t); } catch (e) {} })); };
 const shot = (kind, json) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; r(); } }; window.razAck = f; setTimeout(f, 4000); try { RazApp.shot(kind, json || ''); } catch (e) { f(); } });
 const NK = () => (window.devicePixelRatio || 1) * (window.visualViewport ? visualViewport.scale : 1);   // CSS-пиксель → пиксель снимка
 const nrect = el => { const r = el.getBoundingClientRect(), k = NK(); return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };

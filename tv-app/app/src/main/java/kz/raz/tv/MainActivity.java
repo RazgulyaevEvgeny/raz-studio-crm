@@ -185,8 +185,10 @@ public class MainActivity extends Activity {
 
   /** Движок страницы (WebView): готовит картинки слоёв и данные. В показе не участвует. */
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+  private boolean offOk = true;   // второй экран работает; если нет — запасной путь: страница в главном окне и draw()
   private void makeWeb() {
-    web = new WebView(this);
+    if (offOk) try { ensureOff(); } catch (Throwable e) { offOk = false; if (music != null) music.note("второй экран недоступен: " + e); }
+    web = new WebView(offOk ? offPr.getContext() : this);
     web.setBackgroundColor(Color.TRANSPARENT);
     // раньше движок страницы работал в программном режиме (LAYER_TYPE_SOFTWARE) — в нём текст на новой приставке
     // выходил сжатым по ширине; теперь обычный режим, снимки делаются так же через draw()
@@ -213,12 +215,87 @@ public class MainActivity extends Activity {
         }
       }
     });
-    root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
+    if (offOk) offBox.addView(web, new FrameLayout.LayoutParams(-1, -1)); else root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
   }
 
   private void rebuildWeb() {
-    try { root.removeView(web); web.destroy(); } catch (Exception ignored) {}
+    try { ((android.view.ViewGroup) web.getParent()).removeView(web); web.destroy(); } catch (Exception ignored) {}
     makeWeb(); web.loadUrl(PAGE);
+  }
+
+  /* ——— Невидимый второй экран ———
+     Страница рисуется видеокартой на собственном виртуальном экране приложения (его не видно), а снимок —
+     это готовый кадр этого экрана. Раньше снимок делался программной перерисовкой WebView.draw() в потоке
+     интерфейса: текст в нём выходил сжатым по ширине, а видео на это время замирало. */
+  private android.hardware.display.VirtualDisplay offVd; private android.media.ImageReader offIr; private android.app.Presentation offPr;
+  private FrameLayout offBox; private android.os.HandlerThread offHt; private Handler offH;
+  private final Object offLock = new Object(); private android.media.Image offImg; private volatile long offFrames;
+  private int offW, offH0, offMiss;
+  private void ensureOff() {
+    if (offPr != null) return;
+    android.util.DisplayMetrics dm = new android.util.DisplayMetrics(); getWindowManager().getDefaultDisplay().getRealMetrics(dm);
+    offW = Math.max(dm.widthPixels, dm.heightPixels); offH0 = Math.min(dm.widthPixels, dm.heightPixels);
+    if (offW < 640) { offW = 1920; offH0 = 1080; }
+    offHt = new android.os.HandlerThread("off"); offHt.start(); offH = new Handler(offHt.getLooper());
+    offIr = android.media.ImageReader.newInstance(offW, offH0, android.graphics.PixelFormat.RGBA_8888, 3);
+    offIr.setOnImageAvailableListener(r -> { android.media.Image im = null; try { im = r.acquireLatestImage(); } catch (Exception ignored) {}
+      if (im == null) return; synchronized (offLock) { if (offImg != null) offImg.close(); offImg = im; } offFrames++; }, offH);
+    int dpi = Math.max(80, Math.round(160f * offW / 1920f));   // страница видит ровно 1920 точек по ширине
+    offVd = ((android.hardware.display.DisplayManager) getSystemService(DISPLAY_SERVICE)).createVirtualDisplay("raz-off", offW, offH0, dpi, offIr.getSurface(), 0);
+    offPr = new android.app.Presentation(this, offVd.getDisplay());
+    offBox = new FrameLayout(offPr.getContext());
+    offPr.setContentView(offBox);
+    offPr.setCancelable(false);
+    offPr.show();
+  }
+  /** Текущий кадр невидимого экрана в Bitmap (в фоновом потоке). */
+  private Bitmap offBitmap() {
+    synchronized (offLock) {
+      if (offImg == null) return null;
+      android.media.Image.Plane pl = offImg.getPlanes()[0]; java.nio.ByteBuffer buf = pl.getBuffer(); buf.rewind();
+      int ps = pl.getPixelStride(), rs = pl.getRowStride(), w = offImg.getWidth(), hh = offImg.getHeight();
+      Bitmap full = Bitmap.createBitmap(rs / ps, hh, Bitmap.Config.ARGB_8888); full.copyPixelsFromBuffer(buf);
+      if (full.getWidth() == w) return full;
+      Bitmap b = Bitmap.createBitmap(full, 0, 0, w, hh); full.recycle(); return b;
+    }
+  }
+  private interface Got { void got(Bitmap b); }
+  private int paintSeq; private final android.util.SparseArray<Runnable> paintWait = new android.util.SparseArray<>();
+  /** Подкрасить фон страницы (для вычисления прозрачности) и дождаться, пока она это нарисует. */
+  private void bgc(String c, Runnable after) {
+    final int t = ++paintSeq; if (after != null) paintWait.put(t, after);
+    js("window.razBgc&&razBgc('" + c + "'," + t + ")");
+    if (after != null) h.postDelayed(() -> painted(t), 1500);
+  }
+  private void painted(int t) { Runnable r = paintWait.get(t); if (r != null) { paintWait.remove(t); r.run(); } }
+  /** Взять кадр, когда видеокарта его точно дорисовала: ждём, пока кадры перестанут приходить (до 400 мс). */
+  private void takeFrame(final Got cb) {
+    h.postDelayed(new Runnable() { long last = -1; int n = 0; @Override public void run() {
+      long f = offFrames; if ((f == last && n >= 3) || n >= 20) { offH.post(() -> { Bitmap b = offBitmap(); h.post(() -> cb.got(b)); }); return; }
+      if (f != last) { last = f; n = Math.max(n, 1); } n++; h.postDelayed(this, 20); } }, 60);
+  }
+  /** Снимок слоя: фон — один кадр; остальные — два кадра (на чёрном и на белом), из них считается прозрачность. */
+  private void capture(String kind, final Got cb) {
+    if (!offOk) { Bitmap g = grab(); cb.got(g == null ? null : g.copy(Bitmap.Config.ARGB_8888, false)); return; }
+    if (offFrames == 0 && ++offMiss > 3) {   // второй экран не выдаёт кадров — переходим на запасной путь
+      offOk = false; if (music != null) music.note("второй экран не выдаёт кадров — снимаю по-старому");
+      try { offPr.dismiss(); } catch (Exception ignored) {} rebuildWeb(); cb.got(null); return; }
+    if ("bg".equals(kind)) { takeFrame(cb); return; }
+    bgc("#000", () -> takeFrame(B -> bgc("#fff", () -> takeFrame(W -> { bgc("", null);
+      if (B == null || W == null) { cb.got(B != null ? B : W); return; }
+      offH.post(() -> { Bitmap r = unAlpha(B, W); B.recycle(); W.recycle(); h.post(() -> cb.got(r)); }); }))));
+  }
+  private static Bitmap unAlpha(Bitmap B, Bitmap W) {
+    int w = Math.min(B.getWidth(), W.getWidth()), hh = Math.min(B.getHeight(), W.getHeight());
+    int[] b = new int[w * hh], ww = new int[w * hh];
+    B.getPixels(b, 0, w, 0, 0, w, hh); W.getPixels(ww, 0, w, 0, 0, w, hh);
+    for (int i = 0; i < b.length; i++) {
+      int pb = b[i], pw = ww[i];
+      int rb = (pb >> 16) & 255, gb = (pb >> 8) & 255, bb = pb & 255, rw = (pw >> 16) & 255, gw = (pw >> 8) & 255, bw = pw & 255;
+      int a = 255 - ((rw - rb) + (gw - gb) + (bw - bb)) / 3; if (a <= 0) { b[i] = 0; continue; } if (a > 255) a = 255;
+      b[i] = (a << 24) | (Math.min(255, rb * 255 / a) << 16) | (Math.min(255, gb * 255 / a) << 8) | Math.min(255, bb * 255 / a);
+    }
+    Bitmap out = Bitmap.createBitmap(w, hh, Bitmap.Config.ARGB_8888); out.setPixels(b, 0, w, 0, 0, w, hh); return out;
   }
 
   private TextView logV;
@@ -230,7 +307,7 @@ public class MainActivity extends Activity {
       logV = new TextView(this); logV.setTextColor(Color.WHITE); logV.setTextSize(12); logV.setPadding(28, 22, 28, 22);
       GradientDrawable g = new GradientDrawable(); g.setColor(0xE6000000); g.setCornerRadius(24); logV.setBackground(g);
       FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.LEFT); lp.leftMargin = 40; lp.topMargin = 40; lp.rightMargin = 40;
-      ((FrameLayout) web.getParent()).addView(logV, lp);
+      root.addView(logV, lp);
     }
     Runtime rt = Runtime.getRuntime();
     android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
@@ -282,10 +359,9 @@ public class MainActivity extends Activity {
       LinearLayout row = new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL);
       TextView b1 = btn("Проверить и установить", v -> { updater.check(true); fillUpdates(); });
       TextView b2 = btn("Перезагрузить экран", v -> { closeUpdates(); started = false; say("Перезагружаю…"); web.reload(); });
-      TextView b4 = btn("Страница без снимков", v -> { closeUpdates(); liveView(); });
       TextView b3 = btn("Закрыть", v -> closeUpdates());
       LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(-2, -2); bl.rightMargin = 18;
-      row.addView(b1, bl); row.addView(b2, new LinearLayout.LayoutParams(bl)); row.addView(b4, new LinearLayout.LayoutParams(bl)); row.addView(b3, new LinearLayout.LayoutParams(bl));
+      row.addView(b1, bl); row.addView(b2, new LinearLayout.LayoutParams(bl)); row.addView(b3, new LinearLayout.LayoutParams(bl));
       updV.addView(row);
       TextView hint = new TextView(this); hint.setText("←  →  выбрать · OK — нажать · «Назад» — закрыть · мышкой: клик по кнопке, колесо — закрыть"); hint.setTextColor(0x99FFFFFF); hint.setTextSize(14);
       LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(-2, -2); hl.topMargin = 20; updV.addView(hint, hl);
@@ -347,7 +423,9 @@ public class MainActivity extends Activity {
   /** Мост: страница сообщает, что слой готов к съёмке. */
   class Bridge {
     @JavascriptInterface public void built(String json) { h.post(() -> onBuilt(json)); }
-    @JavascriptInterface public void shot(String kind, String json) { h.post(() -> { try { onShot(kind, json); } catch (Throwable t) { /* слой пропустим */ } js("window.razAck&&razAck()"); }); }
+    @JavascriptInterface public void shot(String kind, String json) { h.post(() -> { final long t0 = android.os.SystemClock.uptimeMillis();
+      capture(kind, bm -> { try { onShot(kind, json, bm, t0); } catch (Throwable t) { /* слой пропустим */ } js("window.razAck&&razAck()"); }); }); }
+    @JavascriptInterface public void painted(int t) { h.post(() -> MainActivity.this.painted(t)); }
     // шапка поменялась (трек, время, погода): переснимем её при следующей смене экрана — пока идёт видео, снимки не делаем
     @JavascriptInterface public void chromeChanged() { h.post(() -> chromeDirty = true); }
     @JavascriptInterface public void log(String t) { h.post(() -> { if (t.startsWith("страница") || t.startsWith("ширина")) pageInfo += t + "\n"; if (music != null) music.note(t); }); }
@@ -395,20 +473,16 @@ public class MainActivity extends Activity {
     return Bitmap.createBitmap(src, x, y, w, hh);
   }
 
-  private void onShot(String kind, String json) throws Exception {
-    long t0 = android.os.SystemClock.uptimeMillis();
-    try { onShot0(kind, json); } finally { long ms = android.os.SystemClock.uptimeMillis() - t0;
-      if (music != null && ms > 30) music.note("снимок " + kind + (vids.isEmpty() ? "" : " во время видео") + ": " + ms + " мс"); }
+  private void onShot(String kind, String json, Bitmap s, long t0) throws Exception {
+    long u0 = android.os.SystemClock.uptimeMillis();
+    try { onShot0(kind, json, s); } finally { long ui = android.os.SystemClock.uptimeMillis() - u0;
+      if (music != null && ui > 30) music.note("снимок " + kind + ": поток экрана занят " + ui + " мс (всего " + (android.os.SystemClock.uptimeMillis() - t0) + " мс)"); }
   }
-  private void onShot0(String kind, String json) throws Exception {
-    int[][] clip = null;
-    if ("chrome".equals(kind)) try { JSONObject o = new JSONObject(json); JSONArray hd = o.optJSONArray("hd"), ft = o.optJSONArray("ft");
-      if (hd != null && ft != null) clip = new int[][] { { 0, 0, 0, hd.getInt(1) + hd.getInt(3) + 8 }, { 0, ft.getInt(1) - 8, 0, ft.getInt(1) + ft.getInt(3) + 8 } }; } catch (Exception ignored) {}
-    Bitmap s = grab(clip);
+  private void onShot0(String kind, String json, Bitmap s) throws Exception {
     if (s == null) return;
-    if ("bg".equals(kind)) { bgV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false)); return; }
+    if ("bg".equals(kind)) { bgV.setImageBitmap(s); return; }
     if ("chrome".equals(kind)) {
-      chromeV.setImageBitmap(s.copy(Bitmap.Config.ARGB_8888, false));
+      chromeV.setImageBitmap(s);
       try { JSONObject o = new JSONObject(json); JSONObject pg = o.optJSONObject("pg"); if (pg != null) buildPager(pg, o.optBoolean("dark", true)); } catch (Exception ignored) {}
       return;
     }
@@ -746,7 +820,8 @@ public class MainActivity extends Activity {
     if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) { Scene c = cache.get(cur); cache.clear(); if (c != null) cache.put(cur, c); }
   }
 
-  @Override protected void onDestroy() { if (updater != null) updater.stop(); if (music != null) music.release(); h.removeCallbacksAndMessages(null); for (Vid v : vids) v.release(); for (ExoPlayer p : pool) if (p != null) try { p.release(); } catch (Throwable ignored) {} dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
+  @Override protected void onDestroy() {
+    try { if (offPr != null) offPr.dismiss(); if (offVd != null) offVd.release(); if (offIr != null) offIr.close(); if (offHt != null) offHt.quitSafely(); } catch (Exception ignored) {} if (updater != null) updater.stop(); if (music != null) music.release(); h.removeCallbacksAndMessages(null); for (Vid v : vids) v.release(); for (ExoPlayer p : pool) if (p != null) try { p.release(); } catch (Throwable ignored) {} dl.shutdownNow(); try { web.destroy(); } catch (Exception ignored) {} super.onDestroy(); }
 
   @Override public void onWindowFocusChanged(boolean f) {
     super.onWindowFocusChanged(f);
