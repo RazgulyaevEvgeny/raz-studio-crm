@@ -223,6 +223,7 @@ public class MainActivity extends Activity {
   private TextView logV;
   private final Runnable hideLog = () -> { if (logV != null) logV.setVisibility(View.GONE); };
   /** Журнал музыки поверх экрана (кнопка ↑, скрыть — ↓). По нему видно, почему пропадал звук. */
+  private String pageInfo = "";
   private void showLog() {
     if (logV == null) {
       logV = new TextView(this); logV.setTextColor(Color.WHITE); logV.setTextSize(12); logV.setPadding(28, 22, 28, 22);
@@ -234,7 +235,7 @@ public class MainActivity extends Activity {
     android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
     try { ((android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mi); } catch (Exception ignored) {}
     String t = "СТУДИЯ " + BuildConfig.VERSION_NAME + " — журнал (клик — скрыть · колесо мышки или ↑↑↑ — обновления)\nпамять приложения " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ · свободно в приставке " + (mi.availMem >> 20) + " из " + (mi.totalMem >> 20) + " МБ"
-      + " · экранов готово " + cache.size() + " из " + count + " · видео на экране " + vids.size() + ", из них идёт " + playing() + " · видео в памяти " + vidFiles() + (loading.isEmpty() ? "" : ", качается ещё " + loading.size()) + "\n" + (music != null ? music.journal() : "");
+      + " · экранов готово " + cache.size() + " из " + count + " · видео на экране " + vids.size() + ", из них идёт " + playing() + " · видео в памяти " + vidFiles() + (loading.isEmpty() ? "" : ", качается ещё " + loading.size()) + "\n" + (pageInfo.isEmpty() ? "" : pageInfo) + (music != null ? music.journal() : "");
     logV.setText(t); logV.setVisibility(View.VISIBLE); logV.bringToFront();
     h.removeCallbacks(hideLog); h.postDelayed(hideLog, 30000);
   }
@@ -335,7 +336,7 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void shot(String kind, String json) { h.post(() -> { try { onShot(kind, json); } catch (Throwable t) { /* слой пропустим */ } js("window.razAck&&razAck()"); }); }
     // шапка поменялась (трек, время, погода): переснимем её при следующей смене экрана — пока идёт видео, снимки не делаем
     @JavascriptInterface public void chromeChanged() { h.post(() -> chromeDirty = true); }
-    @JavascriptInterface public void log(String t) { h.post(() -> { if (music != null) music.note(t); }); }
+    @JavascriptInterface public void log(String t) { h.post(() -> { if (t.startsWith("страница") || t.startsWith("ширина")) pageInfo += t + "\n"; if (music != null) music.note(t); }); }
     @JavascriptInterface public void music(String json) { h.post(() -> { try { if (music != null) { music.settings(new JSONObject(json)); music.announce(); } } catch (Exception ignored) {} }); }
   }
 
