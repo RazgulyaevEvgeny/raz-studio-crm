@@ -233,7 +233,7 @@ public class MainActivity extends Activity {
     Runtime rt = Runtime.getRuntime();
     android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
     try { ((android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE)).getMemoryInfo(mi); } catch (Exception ignored) {}
-    String t = "СТУДИЯ " + BuildConfig.VERSION_NAME + " — журнал (↓ скрыть · ↑↑↑ — обновления)\nпамять приложения " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ · свободно в приставке " + (mi.availMem >> 20) + " из " + (mi.totalMem >> 20) + " МБ"
+    String t = "СТУДИЯ " + BuildConfig.VERSION_NAME + " — журнал (клик — скрыть · колесо мышки или ↑↑↑ — обновления)\nпамять приложения " + ((rt.totalMemory() - rt.freeMemory()) >> 20) + " из " + (rt.maxMemory() >> 20) + " МБ · свободно в приставке " + (mi.availMem >> 20) + " из " + (mi.totalMem >> 20) + " МБ"
       + " · экранов готово " + cache.size() + " из " + count + " · видео на экране " + vids.size() + ", из них идёт " + playing() + " · видео в памяти " + vidFiles() + (loading.isEmpty() ? "" : ", качается ещё " + loading.size()) + "\n" + (music != null ? music.journal() : "");
     logV.setText(t); logV.setVisibility(View.VISIBLE); logV.bringToFront();
     h.removeCallbacks(hideLog); h.postDelayed(hideLog, 30000);
@@ -314,7 +314,14 @@ public class MainActivity extends Activity {
     return true;
   }
   @Override public boolean dispatchGenericMotionEvent(MotionEvent e) { if (midClick(e)) return true; return super.dispatchGenericMotionEvent(e); }
-  @Override public boolean dispatchTouchEvent(MotionEvent e) { if (midClick(e)) return true; return super.dispatchTouchEvent(e); }
+  @Override public boolean dispatchTouchEvent(MotionEvent e) {
+    if (midClick(e)) return true;
+    // левый клик мышкой (или касание) по экрану — показать/скрыть журнал; в окне обновлений клики идут по кнопкам
+    if (!updOpen() && e.getActionMasked() == MotionEvent.ACTION_UP) {
+      if (logV != null && logV.getVisibility() == View.VISIBLE) logV.setVisibility(View.GONE); else showLog();
+      return true; }
+    if (!updOpen()) return true;
+    return super.dispatchTouchEvent(e); }
 
   private void closeUpdates() { if (updV != null) updV.setVisibility(View.GONE); }
   private boolean updOpen() { return updV != null && updV.getVisibility() == View.VISIBLE; }
