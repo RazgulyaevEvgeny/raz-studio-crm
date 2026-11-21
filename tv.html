@@ -374,7 +374,7 @@ const NATIVE = !!window.RazApp;
 if (NATIVE) { document.documentElement.classList.add('native'); document.getElementById('stage').classList.add('native', 'm-chrome'); }
 let nq = Promise.resolve(), nbase = '';
 const nstage = () => document.getElementById('stage');
-const nmode = m => { const st = nstage(); st.classList.remove('m-bg', 'm-chrome', 'm-scene', 'novid'); st.classList.add(m); if (m === 'm-bg' && nbase) st.style.setProperty('background', nbase, 'important'); else st.style.removeProperty('background'); };
+const nmode = m => { if (liveOn) return; const st = nstage(); st.classList.remove('m-bg', 'm-chrome', 'm-scene', 'novid'); st.classList.add(m); if (m === 'm-bg' && nbase) st.style.setProperty('background', nbase, 'important'); else st.style.removeProperty('background'); };
 /* Шрифты Inter Tight / Inter грузятся из сети. Если снять экран раньше, текст выходит системным шрифтом
    (шире и другой формы), подгонка размера считается по нему — и в приложении текст «съезжает».
    Поэтому перед каждым снимком ждём шрифты (не дольше 8 сек). */
@@ -397,9 +397,10 @@ window.razBg = () => (nq = nq.then(async () => { nmode('m-bg'); await settle(); 
 /* Шапка и низ снимаются без точек-страниц: точки рисует само приложение. Тогда смена экрана не требует
    нового снимка (снимок на приставке тормозит видео), шапку переснимаем только когда в ней что-то поменялось. */
 // проверка из окна обновлений: показать экран i самой страницей, как в браузере
-window.razLive = (i) => { const st = nstage(); st.dataset.nc = st.className; st.classList.remove('native', 'm-bg', 'm-chrome', 'm-scene', 'novid', 'notext');
+let liveOn = false;
+window.razLive = (i) => { liveOn = true; const st = nstage(); st.dataset.nc = st.className; st.classList.remove('native', 'm-bg', 'm-chrome', 'm-scene', 'novid', 'notext');
   [...box.children].forEach(x => x.classList.remove('on', 'nshow')); const s = box.children[i]; if (s) { TV.hydrate(s); s.classList.add('on'); TV.fitText(s); } };
-window.razLiveEnd = () => { const st = nstage(); if (st.dataset.nc) st.className = st.dataset.nc; [...box.children].forEach(x => x.classList.remove('on')); };
+window.razLiveEnd = () => { liveOn = false; const st = nstage(); if (st.dataset.nc) st.className = st.dataset.nc; [...box.children].forEach(x => x.classList.remove('on')); };
 window.razChrome = (i) => (nq = nq.then(async () => { await fontsP; [...pager.children].forEach(d => d.classList.remove('on')); nmode('m-chrome'); await settle();
   const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * NK(), d0 = pager.children[0];
   const pg = { r: nrect(pager), n: pager.children.length, z, c: d0 ? getComputedStyle(d0).backgroundColor : '' };

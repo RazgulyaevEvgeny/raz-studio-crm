@@ -329,9 +329,14 @@ public class MainActivity extends Activity {
   /** Проверка: 12 секунд показываем саму страницу (как её рисует движок), без снимков приложения — для сравнения текста. */
   private void liveView() {
     final View[] layers = { bgV, chromeV, cardsV, pagerV, prog };
-    for (View v : layers) if (v != null) v.setVisibility(View.INVISIBLE);
-    js("razLive(" + Math.max(0, cur) + ")"); banner("Страница напрямую, без снимков — 12 секунд", -1, 12000);
-    h.postDelayed(() -> { js("razLiveEnd()"); for (View v : layers) if (v != null) v.setVisibility(View.VISIBLE); if (pagerV != null && pgN <= 1) pagerV.setVisibility(View.GONE); }, 12000);
+    h.removeCallbacks(prerender); h.removeCallbacks(askNext); h.removeCallbacks(fire);   // на время проверки снимки и смену экранов останавливаем
+    banner("Готовлю показ страницы без снимков…", -1, 2500);
+    h.postDelayed(() -> {   // 2 сек — дать закончиться снимку, который уже идёт
+      for (View v : layers) if (v != null) v.setVisibility(View.INVISIBLE);
+      js("razLive(" + Math.max(0, cur) + ")"); banner("Страница напрямую, без снимков — 12 секунд", -1, 12000);
+      h.postDelayed(() -> { js("razLiveEnd()"); for (View v : layers) if (v != null) v.setVisibility(View.VISIBLE); if (pagerV != null && pgN <= 1) pagerV.setVisibility(View.GONE);
+        h.postDelayed(prerender, 1500); if (count > 1) { h.postDelayed(askNext, 2500); h.postDelayed(fire, 6000); } }, 12000);
+    }, 2000);
   }
   private void closeUpdates() { if (updV != null) updV.setVisibility(View.GONE); }
   private boolean updOpen() { return updV != null && updV.getVisibility() == View.VISIBLE; }
