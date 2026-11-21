@@ -188,7 +188,8 @@ public class MainActivity extends Activity {
   private void makeWeb() {
     web = new WebView(this);
     web.setBackgroundColor(Color.TRANSPARENT);
-    web.setLayerType(View.LAYER_TYPE_SOFTWARE, null);   // страница только готовит картинки; рисовать её видеокартой не нужно
+    // раньше движок страницы работал в программном режиме (LAYER_TYPE_SOFTWARE) — в нём текст на новой приставке
+    // выходил сжатым по ширине; теперь обычный режим, снимки делаются так же через draw()
     web.setFocusable(false);
     WebSettings ws = web.getSettings();
     ws.setJavaScriptEnabled(true);
@@ -281,9 +282,10 @@ public class MainActivity extends Activity {
       LinearLayout row = new LinearLayout(this); row.setOrientation(LinearLayout.HORIZONTAL);
       TextView b1 = btn("Проверить и установить", v -> { updater.check(true); fillUpdates(); });
       TextView b2 = btn("Перезагрузить экран", v -> { closeUpdates(); started = false; say("Перезагружаю…"); web.reload(); });
+      TextView b4 = btn("Страница без снимков", v -> { closeUpdates(); liveView(); });
       TextView b3 = btn("Закрыть", v -> closeUpdates());
       LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(-2, -2); bl.rightMargin = 18;
-      row.addView(b1, bl); row.addView(b2, new LinearLayout.LayoutParams(bl)); row.addView(b3, new LinearLayout.LayoutParams(bl));
+      row.addView(b1, bl); row.addView(b2, new LinearLayout.LayoutParams(bl)); row.addView(b4, new LinearLayout.LayoutParams(bl)); row.addView(b3, new LinearLayout.LayoutParams(bl));
       updV.addView(row);
       TextView hint = new TextView(this); hint.setText("←  →  выбрать · OK — нажать · «Назад» — закрыть · мышкой: клик по кнопке, колесо — закрыть"); hint.setTextColor(0x99FFFFFF); hint.setTextSize(14);
       LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(-2, -2); hl.topMargin = 20; updV.addView(hint, hl);
@@ -324,6 +326,13 @@ public class MainActivity extends Activity {
     if (!updOpen()) return true;
     return super.dispatchTouchEvent(e); }
 
+  /** Проверка: 12 секунд показываем саму страницу (как её рисует движок), без снимков приложения — для сравнения текста. */
+  private void liveView() {
+    final View[] layers = { bgV, chromeV, cardsV, pagerV, prog };
+    for (View v : layers) if (v != null) v.setVisibility(View.INVISIBLE);
+    js("razLive(" + Math.max(0, cur) + ")"); banner("Страница напрямую, без снимков — 12 секунд", -1, 12000);
+    h.postDelayed(() -> { js("razLiveEnd()"); for (View v : layers) if (v != null) v.setVisibility(View.VISIBLE); if (pagerV != null && pgN <= 1) pagerV.setVisibility(View.GONE); }, 12000);
+  }
   private void closeUpdates() { if (updV != null) updV.setVisibility(View.GONE); }
   private boolean updOpen() { return updV != null && updV.getVisibility() == View.VISIBLE; }
 
