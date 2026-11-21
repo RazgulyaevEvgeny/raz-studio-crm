@@ -121,7 +121,7 @@ if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('c
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611211720"></script>
+<script src="tv-core.js?v=202611211730"></script>
 </head>
 <body>
 <div id="stage">
@@ -396,6 +396,10 @@ const nrect = el => { const r = el.getBoundingClientRect(), k = NK(); return [Ma
 window.razBg = () => (nq = nq.then(async () => { nmode('m-bg'); await settle(); await shot('bg'); }).catch(() => {}));
 /* Шапка и низ снимаются без точек-страниц: точки рисует само приложение. Тогда смена экрана не требует
    нового снимка (снимок на приставке тормозит видео), шапку переснимаем только когда в ней что-то поменялось. */
+// проверка из окна обновлений: показать экран i самой страницей, как в браузере
+window.razLive = (i) => { const st = nstage(); st.dataset.nc = st.className; st.classList.remove('native', 'm-bg', 'm-chrome', 'm-scene', 'novid', 'notext');
+  [...box.children].forEach(x => x.classList.remove('on', 'nshow')); const s = box.children[i]; if (s) { TV.hydrate(s); s.classList.add('on'); TV.fitText(s); } };
+window.razLiveEnd = () => { const st = nstage(); if (st.dataset.nc) st.className = st.dataset.nc; [...box.children].forEach(x => x.classList.remove('on')); };
 window.razChrome = (i) => (nq = nq.then(async () => { await fontsP; [...pager.children].forEach(d => d.classList.remove('on')); nmode('m-chrome'); await settle();
   const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * NK(), d0 = pager.children[0];
   const pg = { r: nrect(pager), n: pager.children.length, z, c: d0 ? getComputedStyle(d0).backgroundColor : '' };
