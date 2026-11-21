@@ -185,9 +185,10 @@ public class MainActivity extends Activity {
 
   /** Движок страницы (WebView): готовит картинки слоёв и данные. В показе не участвует. */
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+  private boolean offOk = true;   // второй экран работает; если нет — запасной путь: страница в главном окне и draw()
   private void makeWeb() {
-    ensureOff();
-    web = new WebView(offPr.getContext());
+    if (offOk) try { ensureOff(); } catch (Throwable e) { offOk = false; if (music != null) music.note("второй экран недоступен: " + e); }
+    web = new WebView(offOk ? offPr.getContext() : this);
     web.setBackgroundColor(Color.TRANSPARENT);
     // раньше движок страницы работал в программном режиме (LAYER_TYPE_SOFTWARE) — в нём текст на новой приставке
     // выходил сжатым по ширине; теперь обычный режим, снимки делаются так же через draw()
@@ -214,11 +215,11 @@ public class MainActivity extends Activity {
         }
       }
     });
-    offBox.addView(web, new FrameLayout.LayoutParams(-1, -1));
+    if (offOk) offBox.addView(web, new FrameLayout.LayoutParams(-1, -1)); else root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
   }
 
   private void rebuildWeb() {
-    try { offBox.removeView(web); web.destroy(); } catch (Exception ignored) {}
+    try { ((android.view.ViewGroup) web.getParent()).removeView(web); web.destroy(); } catch (Exception ignored) {}
     makeWeb(); web.loadUrl(PAGE);
   }
 
@@ -229,7 +230,7 @@ public class MainActivity extends Activity {
   private android.hardware.display.VirtualDisplay offVd; private android.media.ImageReader offIr; private android.app.Presentation offPr;
   private FrameLayout offBox; private android.os.HandlerThread offHt; private Handler offH;
   private final Object offLock = new Object(); private android.media.Image offImg; private volatile long offFrames;
-  private int offW, offH0;
+  private int offW, offH0, offMiss;
   private void ensureOff() {
     if (offPr != null) return;
     android.util.DisplayMetrics dm = new android.util.DisplayMetrics(); getWindowManager().getDefaultDisplay().getRealMetrics(dm);
@@ -245,7 +246,7 @@ public class MainActivity extends Activity {
     offBox = new FrameLayout(offPr.getContext());
     offPr.setContentView(offBox);
     offPr.setCancelable(false);
-    try { offPr.show(); } catch (Exception e) { if (music != null) music.note("второй экран не открылся: " + e); }
+    offPr.show();
   }
   /** Текущий кадр невидимого экрана в Bitmap (в фоновом потоке). */
   private Bitmap offBitmap() {
@@ -275,6 +276,10 @@ public class MainActivity extends Activity {
   }
   /** Снимок слоя: фон — один кадр; остальные — два кадра (на чёрном и на белом), из них считается прозрачность. */
   private void capture(String kind, final Got cb) {
+    if (!offOk) { Bitmap g = grab(); cb.got(g == null ? null : g.copy(Bitmap.Config.ARGB_8888, false)); return; }
+    if (offFrames == 0 && ++offMiss > 3) {   // второй экран не выдаёт кадров — переходим на запасной путь
+      offOk = false; if (music != null) music.note("второй экран не выдаёт кадров — снимаю по-старому");
+      try { offPr.dismiss(); } catch (Exception ignored) {} rebuildWeb(); cb.got(null); return; }
     if ("bg".equals(kind)) { takeFrame(cb); return; }
     bgc("#000", () -> takeFrame(B -> bgc("#fff", () -> takeFrame(W -> { bgc("", null);
       if (B == null || W == null) { cb.got(B != null ? B : W); return; }
