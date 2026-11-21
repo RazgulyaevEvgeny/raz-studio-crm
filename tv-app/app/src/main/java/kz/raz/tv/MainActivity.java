@@ -111,10 +111,10 @@ public class MainActivity extends Activity {
   private boolean chromeQueued, chromeDirty;
 
   static class Card { boolean kb, tr; int x, y, w, hh, rad, idx; Bitmap a, b; String vid, vurl; int vx, vy, vw, vh; }
-  static class Scene { boolean live; int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
+  static class Scene { boolean live; int liveLvl; long at = System.currentTimeMillis(); int i; double sec = 20; String anim = "spring", tanim = "fade"; int shift = 40; List<Card> cards = new ArrayList<>(); }
 
   private final Runnable fire = () -> { due = true; if (pending != null) showPending(); };
-  private final Runnable askNext = () -> { if (count <= 1) return; int n = (cur + 1) % count; Scene c = cache.get(n); if (c != null && !c.live) ready(c); else { want = n;   // экраны с виджетами (погода, часы, трек) снимаем свежими каждый раз
+  private final Runnable askNext = () -> { if (count <= 1) return; int n = (cur + 1) % count; Scene c = cache.get(n); if (c != null && !c.live && !(c.liveLvl == 1 && System.currentTimeMillis() - c.at > 600000)) ready(c); else { want = n;   // экраны с виджетами (погода, часы, трек) снимаем свежими каждый раз
  js("razScene(" + n + ")"); } };
   /** Сторож показа: если следующий экран не готов вовремя (страница задумалась) — показываем готовый из памяти. Слайды не встают никогда. */
   private final Runnable guard = new Runnable() { @Override public void run() {
@@ -195,8 +195,8 @@ public class MainActivity extends Activity {
     ws.setDomStorageEnabled(true);
     ws.setDatabaseEnabled(true);
     ws.setMediaPlaybackRequiresUserGesture(false);       // музыка без нажатия кнопки
-    ws.setLoadWithOverviewMode(false);
-    ws.setUseWideViewPort(false);
+    ws.setLoadWithOverviewMode(true);   // страница задаёт ширину 1920 — приставка масштабирует её сама, без CSS-масштаба
+    ws.setUseWideViewPort(true);
     ws.setTextZoom(100);   // системный «размер шрифта» приставки не должен растягивать текст страницы
     web.addJavascriptInterface(new Bridge(), "RazApp");
     web.setWebViewClient(new WebViewClient() {
@@ -401,7 +401,9 @@ public class MainActivity extends Activity {
     if ("scene".equals(kind)) {
       JSONObject o = new JSONObject(json);
       Scene sc = new Scene();
-      sc.i = o.optInt("i"); sc.live = o.optBoolean("live", false); sc.sec = o.optDouble("sec", 20); sc.anim = o.optString("anim", "spring"); sc.tanim = o.optString("tanim", "fade"); sc.shift = o.optInt("shift", 40);
+      sc.i = o.optInt("i"); Object lv = o.opt("live"); sc.liveLvl = lv instanceof Number ? ((Number) lv).intValue() : Boolean.TRUE.equals(lv) ? 2 : 0;
+      // часы и трек в карточке — снимаем свежими каждый показ; погода и курс — не чаще раза в 10 минут; QR, Instagram и т.п. — не переснимаем
+      sc.live = sc.liveLvl >= 2; sc.sec = o.optDouble("sec", 20); sc.anim = o.optString("anim", "spring"); sc.tanim = o.optString("tanim", "fade"); sc.shift = o.optInt("shift", 40);
       JSONArray cs = o.getJSONArray("cards");
       boolean hasVid = false;
       for (int k = 0; k < cs.length(); k++) {

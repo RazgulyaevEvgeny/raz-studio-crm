@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>/* в приложении страница сразу раскладывается на 1920 точек и приставка масштабирует её сама —
+  без CSS-масштаба, от которого в снимке текст выходил сжатым по ширине */
+if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('content', 'width=1920, initial-scale=' + (screen.width ? Math.min(1, screen.width / 1920) : 0.5));</script>
 <title>Разгуляев — экран для ТВ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -118,7 +121,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611211710"></script>
+<script src="tv-core.js?v=202611211720"></script>
 </head>
 <body>
 <div id="stage">
@@ -383,17 +386,18 @@ let fontsLate = false;   // шрифты пришли позже первых с
 if (NATIVE) setTimeout(() => { try { const h = document.querySelector('.f .h, .f .t, .f .cap, .shd .sh1'); const cs = h ? getComputedStyle(h) : null;
   const cv = document.createElement('canvas').getContext('2d'), mw = f => { cv.font = f; return Math.round(cv.measureText('Статистика заказов').width); };
   RazApp.log('ширина текста: Inter Tight ' + mw('800 68px "Inter Tight"') + ' · Inter ' + mw('800 68px Inter') + ' · системный ' + mw('800 68px sans-serif') + ' · узкий ' + mw('800 68px sans-serif-condensed'));
-  RazApp.log('страница: ' + innerWidth + '×' + innerHeight + ' dpr ' + (window.devicePixelRatio || 1) + ' · шрифты ' + (fontsOk() ? 'загружены' : 'НЕ загружены') + (cs ? ' · ' + cs.fontFamily.split(',')[0] + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' растяжение ' + cs.fontStretch + ' межбукв ' + cs.letterSpacing : '') + ' · ' + navigator.userAgent.replace(/.*Chrome\/(\d+).*/, 'Chrome $1')); } catch (e) {} }, 12000);
+  RazApp.log('страница: ' + innerWidth + '×' + innerHeight + ' dpr ' + (window.devicePixelRatio || 1) + ' масштаб ' + (window.visualViewport ? visualViewport.scale.toFixed(3) : '?') + ' · шрифты ' + (fontsOk() ? 'загружены' : 'НЕ загружены') + (cs ? ' · ' + cs.fontFamily.split(',')[0] + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' растяжение ' + cs.fontStretch + ' межбукв ' + cs.letterSpacing : '') + ' · ' + navigator.userAgent.replace(/.*Chrome\/(\d+).*/, 'Chrome $1')); } catch (e) {} }, 12000);
 const fontsRedo = () => { if (NATIVE && fontsLate && fontsOk()) { fontsLate = false; try { build(); } catch (e) {} } };
 fontsP.then(fontsRedo); try { document.fonts.addEventListener('loadingdone', () => setTimeout(fontsRedo, 500)); } catch (e) {}
 const settle = (ms) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; setTimeout(r, ms || 60); } }; try { requestAnimationFrame(() => requestAnimationFrame(f)); } catch (e) {} setTimeout(f, 300); });
 const shot = (kind, json) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; r(); } }; window.razAck = f; setTimeout(f, 4000); try { RazApp.shot(kind, json || ''); } catch (e) { f(); } });
-const nrect = el => { const r = el.getBoundingClientRect(), k = window.devicePixelRatio || 1; return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };
+const NK = () => (window.devicePixelRatio || 1) * (window.visualViewport ? visualViewport.scale : 1);   // CSS-пиксель → пиксель снимка
+const nrect = el => { const r = el.getBoundingClientRect(), k = NK(); return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };
 window.razBg = () => (nq = nq.then(async () => { nmode('m-bg'); await settle(); await shot('bg'); }).catch(() => {}));
 /* Шапка и низ снимаются без точек-страниц: точки рисует само приложение. Тогда смена экрана не требует
    нового снимка (снимок на приставке тормозит видео), шапку переснимаем только когда в ней что-то поменялось. */
 window.razChrome = (i) => (nq = nq.then(async () => { await fontsP; [...pager.children].forEach(d => d.classList.remove('on')); nmode('m-chrome'); await settle();
-  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1), d0 = pager.children[0];
+  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * NK(), d0 = pager.children[0];
   const pg = { r: nrect(pager), n: pager.children.length, z, c: d0 ? getComputedStyle(d0).backgroundColor : '' };
   pager.style.visibility = 'hidden'; await settle();
   await shot('chrome', JSON.stringify({ pg, dark: DATA.theme === 'dark', hd: nrect(document.querySelector('header')), ft: nrect(document.querySelector('footer')) }));
@@ -407,12 +411,12 @@ window.razScene = (i) => (nq = nq.then(async () => {
   const L = TV.LITE; TV.LITE = true; s.querySelectorAll('.num[data-to]').forEach(el => TV.countUp(el)); TV.LITE = L;
   await fontsP; if (!fontsOk()) fontsLate = true;
   nmode('m-scene'); nstage().classList.add('notext'); await settle(120); TV.fitText(s); await settle(120);
-  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1); let nv = 0;
+  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * NK(); let nv = 0;
   const cards = [...s.querySelectorAll('.f')].map((f, k) => { let v = f.querySelector('video[data-vid]');
     const d = f.classList.contains('shd') ? {} : (sc0.facts[k] || {});
     return { tr: f.classList.contains('shd'), kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
   const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';
-  await shot('scene', JSON.stringify({ live: sc0.facts.slice(0, TV.cnt(sc0)).some(f => f.kind), i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
+  await shot('scene', JSON.stringify({ live: sc0.facts.slice(0, TV.cnt(sc0)).reduce((m, f) => Math.max(m, f.kind === 'clock' || f.kind === 'music' ? 2 : f.kind === 'weather' || f.kind === 'fx' || f.kind === 'countdown' ? 1 : 0), 0), i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
   st.classList.remove('notext'); st.classList.add('novid'); await settle(120); await shot('over'); st.classList.remove('novid');
   nmode('m-chrome');
 }).catch(() => {}));
