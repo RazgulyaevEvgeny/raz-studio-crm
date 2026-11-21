@@ -848,7 +848,7 @@ function saveMusic(now){
   clearTimeout(musT);
   musT = setTimeout(async () => {
     if (demo) { toast('Демо: на сайте CRM музыка сразу сменится на телевизоре'); return; }
-    try { await db.ref('pub/' + TV.KEY + '/music').set(MUS); toast('Музыка на телевизоре обновлена'); } catch (e) { toast('Не сохранилось: ' + (e.code || e.message)); }
+    try { const mm = Object.assign({}, MUS); delete mm.cmd; await db.ref('pub/' + TV.KEY + '/music').update(mm); toast('Музыка на телевизоре обновлена'); } catch (e) { toast('Не сохранилось: ' + (e.code || e.message)); }
   }, now ? 0 : 500);
 }
 const stName = id => { const s = stations.find(x => x.id === id) || QUICK.map(([i,n]) => ({id:i,name:n})).find(x => x.id === id); return s ? s.name : ''; };

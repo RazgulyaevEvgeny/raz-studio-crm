@@ -10,6 +10,7 @@
  *   GET  /stations?k=KEY                                   → { stations:[{id, name, type}] } — все станции Яндекса для выбора в админке
  *   GET  /wave?k=KEY&st=STATION&mood=&div=&lang=&last=ID   → { batchId, tracks:[{id, albumId, title, artist, cover, durationMs}] }
  *   GET  /url?k=KEY&id=TRACK_ID                            → { url }
+ *   GET  /search?k=KEY&q=ТЕКСТ                             → { tracks:[…] } — поиск треков для пульта в телефоне
  *   POST /feedback?k=KEY                                   ← { st, type, trackId, albumId, batchId, played }
  *
  * API у Яндекс Музыки неофициальное. Если Яндекс что-то поменяет — правится здесь, экран трогать не нужно.
@@ -65,15 +66,16 @@ export default {
         const r = await ym(`/rotor/station/${st}/tracks?settings2=true${last ? '&queue=' + encodeURIComponent(last) : ''}`);
         const j = await r.json();
         const res = j.result || {};
-        const tracks = (res.sequence || []).map(s => s.track).filter(Boolean).map(t => ({
-          id: String(t.id),
-          albumId: t.albums && t.albums[0] ? String(t.albums[0].id) : '',
-          title: t.title + (t.version ? ` (${t.version})` : ''),
-          artist: (t.artists || []).map(a => a.name).join(', '),
-          cover: t.coverUri ? 'https://' + t.coverUri.replace('%%', '200x200') : '',
-          durationMs: t.durationMs || 0,
-        }));
+        const tracks = (res.sequence || []).map(s => s.track).filter(Boolean).map(mapTrack);
         return json({ batchId: res.batchId || '', tracks }, 200, cors);
+      }
+
+      if (url.pathname === '/search') {
+        const text = (q.get('q') || '').trim().slice(0, 100);
+        if (!text) return json({ tracks: [] }, 200, cors);
+        const j = await (await ym(`/search?text=${encodeURIComponent(text)}&type=track&page=0&nocorrect=false`)).json();
+        const list = (((j.result || {}).tracks || {}).results || []).filter(t => t && t.available !== false).slice(0, 30);
+        return json({ tracks: list.map(mapTrack) }, 200, cors);
       }
 
       if (url.pathname === '/url') {
@@ -106,6 +108,17 @@ export default {
     }
   },
 };
+
+function mapTrack(t) {
+  return {
+    id: String(t.id),
+    albumId: t.albums && t.albums[0] ? String(t.albums[0].id) : '',
+    title: t.title + (t.version ? ` (${t.version})` : ''),
+    artist: (t.artists || []).map(a => a.name).join(', '),
+    cover: t.coverUri ? 'https://' + t.coverUri.replace('%%', '200x200') : '',
+    durationMs: t.durationMs || 0,
+  };
+}
 
 function json(o, status, headers) {
   return new Response(JSON.stringify(o), { status, headers: { 'Content-Type': 'application/json', ...headers } });
