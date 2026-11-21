@@ -121,7 +121,7 @@ if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('c
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611211800"></script>
+<script src="tv-core.js?v=202611211900"></script>
 </head>
 <body>
 <div id="stage">
@@ -316,6 +316,8 @@ addEventListener('keydown', e => {
 function applyMusic(m){
   if (window.RazApp && RazApp.music) { MUSIC = TV.normalizeMusic(m); showStation(); nativeMusic(); return; }
   const n = TV.normalizeMusic(m), o = MUSIC; MUSIC = n; showStation();
+  if (n.cmd && n.cmd.id && o.cmd && n.cmd.id !== o.cmd.id && Date.now() - n.cmd.at < 120000) {   // пульт с телефона (в браузере — только основное)
+    if (n.cmd.do === 'next') playNext(); else if (n.cmd.do === 'prev') playNext(true); else if (n.cmd.do === 'toggle') togglePause(); }
   audio.volume = n.vol / 100;
   if (n.st !== o.st || n.mood !== o.mood || n.div !== o.div || n.lang !== o.lang) { queue = []; lastId = ''; batch = ''; fb('radioStarted'); busy = false; playNext(); return; }
   if (n.skip && n.skip !== o.skip) { if (cur) fb('skip',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.currentTime||0)}); busy = false; playNext(); }
@@ -324,7 +326,11 @@ showStation();
 let musicStarted = false;
 /* в приложении «Студия» музыку играет сама приставка (ExoPlayer) — страница только передаёт настройки и показывает трек */
 const nativeMusic = () => { try { RazApp.music(JSON.stringify(Object.assign({ worker: YM.worker, key: YM.key }, MUSIC))); } catch (e) {} };
-window.razNow = t => { try { showTrack(t || {}); showStation(); } catch (e) {} };
+window.razNow = t => { try { showTrack(t || {}); showStation(); } catch (e) {} reportNow(t); };
+/* что играет — для пульта в телефоне (CRM): пишем в базу не чаще раза в 2 сек */
+let nowT = 0, nowLast = null;
+function reportNow(t){ nowLast = t; if (nowT) return; nowT = setTimeout(() => { nowT = 0; const db = TV.DB(); if (!db || !nowLast) return;
+  fetch(db + '/pub/' + TV.KEY + '/now.json', { method: 'PUT', body: JSON.stringify(Object.assign({}, nowLast, { at: Date.now() })) }).catch(() => {}); }, 2000); }
 function startMusic(){ if (musicStarted || !YM.worker) return; if (window.RazApp && RazApp.music) { musicStarted = true; nativeMusic(); return; } musicStarted = true; fb('radioStarted'); playNext(); }
 setTimeout(startMusic, 4000); // если база не ответила — играем с настройками по умолчанию
 
@@ -482,7 +488,8 @@ async function runUpdate(){
   const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg, ft: d.foot, hd: d.hdr }); if (j === last) return; last = j; queueUpdate(d); };
   try {
     const es = new EventSource(url);
-    const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
+    const on = e => { try { const m = JSON.parse(e.data); if (m && m.path && m.path.indexOf('/now') === 0) return;   // это мы сами пишем «что играет»
+      if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
     es.addEventListener('put', on); es.addEventListener('patch', on);
     es.onerror = () => {}; // EventSource сам переподключается
   } catch (_) { setInterval(() => fetch(url).then(r => r.json()).then(apply).catch(() => {}), 60000); }

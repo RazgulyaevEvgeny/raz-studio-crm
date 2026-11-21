@@ -135,7 +135,8 @@ TV.normalizeMusic = (m) => { m = m || {}; return {
   mood: ['all','calm','fun','active','sad'].indexOf(m.mood) >= 0 ? m.mood : 'calm',
   div: ['default','favorite','popular','discover'].indexOf(m.div) >= 0 ? m.div : 'default',
   lang: ['any','russian','not-russian'].indexOf(m.lang) >= 0 ? m.lang : 'any',
-  vol: m.vol == null ? 60 : Math.max(0, Math.min(100, +m.vol || 0)), skip: +m.skip || 0 }; };
+  vol: m.vol == null ? 60 : Math.max(0, Math.min(100, +m.vol || 0)), skip: +m.skip || 0,
+  cmd: m.cmd && typeof m.cmd === 'object' ? { id: String(m.cmd.id || ''), do: String(m.cmd.do || ''), at: +m.cmd.at || 0, t: m.cmd.t || null, id2: String(m.cmd.id2 || '') } : null }; };
 TV.AUTO_SRC = { orders:'Выданные заказы студии', kaspi:'Продажи Kaspi', clients:'Клиенты студии' };
 TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.auto && TV.AUTO[f.auto] != null ? Math.max(0, +TV.AUTO[f.auto] - (+f.autoFrom || 0)) : 0; return b + v; };
 

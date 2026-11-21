@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Музыка на ТВ — пульт</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root{--bg:#000;--card:#1c1c1e;--card2:#2c2c2e;--sep:rgba(84,84,88,.45);--fg:#fff;--fg2:rgba(235,235,245,.6);--fg3:rgba(235,235,245,.3);--blue:#0a84ff;--pink:#ff375f;--green:#30d158}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{padding:calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 24px);max-width:560px;margin:0 auto}
+  .hide{display:none!important}
+  header{display:flex;align-items:center;justify-content:space-between;margin:6px 2px 14px}
+  header h1{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:0}
+  header a{color:var(--blue);text-decoration:none;font-size:16px}
+  .card{background:var(--card);border-radius:20px;padding:16px;margin-bottom:14px}
+  .now{display:flex;gap:14px;align-items:center}
+  .cov{width:84px;height:84px;border-radius:14px;background:var(--card2) center/cover no-repeat;flex:none;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .meta{min-width:0;flex:1}
+  .t1{font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .t2{color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .st{font-size:13px;color:var(--fg3);margin-top:6px}
+  .st.bad{color:#ff9f0a}
+  .bar{height:4px;border-radius:2px;background:var(--card2);margin:16px 0 6px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--fg);border-radius:2px}
+  .tm{display:flex;justify-content:space-between;font-size:12px;color:var(--fg3);font-variant-numeric:tabular-nums}
+  .ctl{display:flex;justify-content:space-around;align-items:center;margin:14px 0 4px}
+  .ctl button{background:none;border:0;color:var(--fg);width:72px;height:64px;border-radius:32px;display:flex;align-items:center;justify-content:center}
+  .ctl button:active{background:var(--card2)}
+  .ctl svg{width:34px;height:34px}.ctl .big svg{width:46px;height:46px}
+  .vol{display:flex;align-items:center;gap:12px;margin-top:10px;color:var(--fg2)}
+  .vol svg{width:20px;height:20px;flex:none}
+  input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:var(--card2);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+  h2{font-size:13px;font-weight:500;color:var(--fg2);text-transform:uppercase;letter-spacing:.04em;margin:22px 4px 8px}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chips button{flex:none;border:0;background:var(--card);color:var(--fg);padding:9px 14px;border-radius:18px;font:inherit;font-size:15px}
+  .chips button.on{background:var(--fg);color:#000;font-weight:600}
+  .search{position:relative}
+  .search input{width:100%;border:0;border-radius:12px;background:var(--card);color:var(--fg);font:inherit;font-size:17px;padding:12px 14px 12px 40px;outline:none}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--fg3)}
+  .list{background:var(--card);border-radius:16px;overflow:hidden;margin-top:10px}
+  .row{display:flex;align-items:center;gap:12px;padding:10px 12px;position:relative}
+  .row+.row::before{content:"";position:absolute;top:0;left:72px;right:0;height:.5px;background:var(--sep)}
+  .row .cv{width:48px;height:48px;border-radius:8px;background:var(--card2) center/cover no-repeat;flex:none}
+  .row .mt{flex:1;min-width:0}
+  .row .a{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .b{font-size:14px;color:var(--fg2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row .tag{font-size:12px;color:var(--pink)}
+  .row button{flex:none;border:0;background:var(--card2);color:var(--fg);width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center}
+  .row button.pl{background:var(--fg);color:#000}
+  .row button svg{width:20px;height:20px}
+  .empty{color:var(--fg3);text-align:center;padding:18px;font-size:15px}
+  #auth .card input{width:100%;border:0;border-radius:12px;background:var(--card2);color:var(--fg);font:inherit;padding:12px 14px;margin-bottom:10px;outline:none}
+  .btn{width:100%;border:0;border-radius:12px;background:var(--blue);color:#fff;font:inherit;font-weight:600;padding:13px}
+  .err{color:#ff453a;font-size:14px;min-height:18px;margin-top:6px}
+  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(20px);background:rgba(44,44,46,.96);color:#fff;padding:11px 18px;border-radius:22px;font-size:15px;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;text-align:center;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+  #toast.on{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<header><h1>Музыка на ТВ</h1><a href="index.html">Учёт</a></header>
+
+<div id="auth" class="hide">
+  <form class="card" id="authf">
+    <div style="font-weight:600;margin-bottom:12px">Войдите — как в учёте</div>
+    <input id="em" type="email" placeholder="Почта" autocomplete="username">
+    <input id="pw" type="password" placeholder="Пароль" autocomplete="current-password">
+    <button class="btn">Войти</button>
+    <div class="err" id="aerr"></div>
+  </form>
+</div>
+
+<main id="app" class="hide">
+  <section class="card">
+    <div class="now">
+      <div class="cov" id="cov"></div>
+      <div class="meta"><div class="t1" id="t1">—</div><div class="t2" id="t2">Ждём телевизор…</div><div class="st" id="st"></div></div>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="tm"><span id="tpos">0:00</span><span id="tlen">0:00</span></div>
+    <div class="ctl">
+      <button type="button" data-c="prev" aria-label="Предыдущий"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5v14L9.5 12z"/></svg></button>
+      <button type="button" data-c="toggle" class="big" aria-label="Пауза или воспроизведение" id="pp"></button>
+      <button type="button" data-c="next" aria-label="Следующий"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5v14l10.5-7z"/></svg></button>
+    </div>
+    <div class="vol">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 4V5L8 9z"/></svg>
+      <input type="range" id="vol" min="0" max="100" step="1">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 4V5L8 9zM16 8.5a5 5 0 0 1 0 7l-1.2-1.2a3.3 3.3 0 0 0 0-4.6zM18.6 5.9a8.6 8.6 0 0 1 0 12.2l-1.2-1.2a6.9 6.9 0 0 0 0-9.8z"/></svg>
+    </div>
+  </section>
+
+  <h2>Поиск в Яндекс Музыке</h2>
+  <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Трек или исполнитель" enterkeyhint="search" autocomplete="off"></div>
+  <div id="res"></div>
+
+  <h2>Дальше на ТВ</h2>
+  <div class="list" id="up"><div class="empty">Очередь появится, когда телевизор начнёт играть</div></div>
+
+  <h2>Волна</h2>
+  <div class="chips" id="sts"></div>
+  <div class="chips" id="moods"></div>
+</main>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js?v=202611132238"></script>
+<script src="tv-core.js?v=202611211900"></script>
+<script>
+/* Пульт музыки на телевизоре в студии: пауза, назад/вперёд, громкость, поиск и выбор треков,
+   очередь, волна и настроение. Команды уходят в базу (pub/<ключ>/music/cmd), приставка их выполняет
+   и сообщает обратно, что играет (pub/<ключ>/now). */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const STATIONS = [['user:onyourwave', 'Моя волна'], ['genre:lounge', 'Лаундж'], ['genre:smoothjazz', 'Смус-джаз'], ['genre:conjazz', 'Совр. джаз'], ['genre:ambientgenre', 'Эмбиент'], ['genre:newage', 'Нью-эйдж'], ['genre:pop', 'Поп'], ['genre:rnb', 'R&B'], ['genre:rusrap', 'Рэп']];
+const MOODS = [['calm', 'Спокойное'], ['fun', 'Весёлое'], ['active', 'Бодрое'], ['sad', 'Грустное'], ['all', 'Любое']];
+const IC = {
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15L20 12z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>',
+  add: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+};
+let db, MUS = TV.normalizeMusic(null), NOW = null, found = [];
+let toastT = 0;
+const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); };
+const fmt = ms => { const s = Math.max(0, Math.round((ms || 0) / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+function cmd(d, extra){
+  const c = Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), do: d, at: firebase.database.ServerValue ? Date.now() : Date.now() }, extra || {});
+  return db.ref('pub/' + TV.KEY + '/music/cmd').set(c).catch(e => toast('Не отправилось: ' + (e.code || e.message)));
+}
+function saveMusic(){ const m = Object.assign({}, MUS); delete m.cmd; return db.ref('pub/' + TV.KEY + '/music').update(m).catch(e => toast('Не сохранилось: ' + (e.code || e.message))); }
+
+/* ---------- что играет ---------- */
+function renderNow(){
+  const n = NOW;
+  if (!n || !n.title) { $('t1').textContent = '—'; $('t2').textContent = 'Ждём телевизор…'; $('pp').innerHTML = IC.play; return; }
+  $('cov').style.backgroundImage = n.cover ? `url("${n.cover.replace('200x200', '400x400')}")` : '';
+  $('t1').textContent = n.title; $('t2').textContent = n.artist || '';
+  const age = Date.now() - (n.at || 0);
+  $('st').textContent = age > 10 * 60000 ? 'Телевизор давно не отвечал — возможно, выключен' : n.paused ? 'На паузе' : 'Играет на телевизоре';
+  $('st').classList.toggle('bad', age > 10 * 60000);
+  $('pp').innerHTML = n.paused ? IC.play : IC.pause;
+  const up = n.next || [];
+  $('up').innerHTML = up.length ? up.map(t => `<div class="row"><div class="cv" style="background-image:url('${esc(t.cover)}')"></div><div class="mt"><div class="a">${esc(t.title)}</div><div class="b">${t.mine ? '<span class="tag">с телефона · </span>' : ''}${esc(t.artist)}</div></div>${t.mine ? `<button type="button" data-un="${esc(t.id)}" aria-label="Убрать">${IC.del}</button>` : ''}</div>`).join('') : '<div class="empty">Очередь пока пустая</div>';
+  tick();
+}
+function tick(){
+  const n = NOW; if (!n || !n.ms) { $('bar').style.width = '0'; return; }
+  const pos = Math.min(n.ms, (n.pos || 0) + (n.paused ? 0 : Date.now() - (n.at || Date.now())));
+  $('bar').style.width = (pos / n.ms * 100).toFixed(2) + '%'; $('tpos').textContent = fmt(pos); $('tlen').textContent = fmt(n.ms);
+}
+setInterval(tick, 1000);
+
+/* ---------- волна ---------- */
+function renderWave(){
+  $('sts').innerHTML = STATIONS.map(([k, t]) => `<button type="button" data-st="${k}" class="${MUS.st === k ? 'on' : ''}">${t}</button>`).join('');
+  $('moods').innerHTML = MOODS.map(([k, t]) => `<button type="button" data-m="${k}" class="${MUS.mood === k ? 'on' : ''}">${t}</button>`).join('');
+  $('moods').classList.toggle('hide', MUS.st !== 'user:onyourwave');
+  if (document.activeElement !== $('vol')) $('vol').value = MUS.vol;
+}
+$('sts').onclick = e => { const b = e.target.closest('[data-st]'); if (!b) return; MUS.st = b.dataset.st; MUS.name = b.textContent; renderWave(); saveMusic(); toast('Включаю: ' + b.textContent); };
+$('moods').onclick = e => { const b = e.target.closest('[data-m]'); if (!b) return; MUS.mood = b.dataset.m; renderWave(); saveMusic(); toast('Настроение: ' + b.textContent); };
+let volT = 0;
+$('vol').oninput = () => { MUS.vol = +$('vol').value; clearTimeout(volT); volT = setTimeout(saveMusic, 250); };
+
+/* ---------- кнопки ---------- */
+document.querySelector('.ctl').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return;
+  if (b.dataset.c === 'toggle' && NOW) { NOW.paused = !NOW.paused; NOW.pos = (NOW.pos || 0) + (NOW.paused ? Date.now() - (NOW.at || Date.now()) : 0); NOW.at = Date.now(); renderNow(); }
+  cmd(b.dataset.c); };
+$('up').onclick = e => { const b = e.target.closest('[data-un]'); if (b) { cmd('unqueue', { id2: b.dataset.un }); toast('Убрано из очереди'); } };
+
+/* ---------- поиск ---------- */
+let qT = 0, qSeq = 0;
+$('q').oninput = () => { clearTimeout(qT); qT = setTimeout(search, 450); };
+$('q').onkeydown = e => { if (e.key === 'Enter') { clearTimeout(qT); search(); $('q').blur(); } };
+async function search(){
+  const text = $('q').value.trim(), my = ++qSeq;
+  if (!text) { $('res').innerHTML = ''; return; }
+  $('res').innerHTML = '<div class="list"><div class="empty">Ищу…</div></div>';
+  try {
+    const r = await fetch(TV.YM.worker + '/search?k=' + encodeURIComponent(TV.YM.key) + '&q=' + encodeURIComponent(text));
+    const j = await r.json(); if (my !== qSeq) return;
+    if (r.status === 404 || j.error === 'not-found') throw new Error('поиск ещё не включён на сервере музыки');
+    found = j.tracks || [];
+    $('res').innerHTML = '<div class="list">' + (found.length ? found.map((t, i) => `<div class="row"><div class="cv" style="background-image:url('${esc(t.cover)}')"></div><div class="mt"><div class="a">${esc(t.title)}</div><div class="b">${esc(t.artist)} · ${fmt(t.durationMs)}</div></div><button type="button" data-q="${i}" aria-label="В очередь">${IC.add}</button><button type="button" class="pl" data-p="${i}" aria-label="Включить сейчас">${IC.play}</button></div>`).join('') : '<div class="empty">Ничего не нашлось</div>') + '</div>';
+  } catch (e) { if (my === qSeq) $('res').innerHTML = `<div class="list"><div class="empty">Не получилось найти: ${esc(e.message || 'нет связи')}</div></div>`; }
+}
+$('res').onclick = e => {
+  const p = e.target.closest('[data-p]'), q = e.target.closest('[data-q]');
+  const t = found[p ? +p.dataset.p : q ? +q.dataset.q : -1]; if (!t) return;
+  cmd(p ? 'track' : 'queue', { t });
+  toast(p ? 'Включаю на ТВ: ' + t.title : 'В очереди: ' + t.title);
+};
+
+/* ---------- вход и подписка на базу ---------- */
+(function start(){
+  const cfg = window.FIREBASE_CONFIG; if (!cfg) { toast('Нет настроек базы'); return; }
+  if (!firebase.apps.length) firebase.initializeApp(cfg);
+  const auth = firebase.auth(); db = firebase.database();
+  auth.onAuthStateChanged(u => {
+    if (!u) { $('auth').classList.remove('hide'); $('app').classList.add('hide'); return; }
+    $('auth').classList.add('hide'); $('app').classList.remove('hide'); renderWave();
+    db.ref('pub/' + TV.KEY + '/music').on('value', s => { MUS = TV.normalizeMusic(s.val()); renderWave(); });
+    db.ref('pub/' + TV.KEY + '/now').on('value', s => { NOW = s.val(); renderNow(); }, () => {});
+  });
+  $('authf').onsubmit = async e => { e.preventDefault(); $('aerr').textContent = '';
+    try { await auth.signInWithEmailAndPassword($('em').value.trim(), $('pw').value); } catch (er) { $('aerr').textContent = 'Не удалось войти: проверьте почту и пароль'; } };
+})();
+</script>
+</body>
+</html>

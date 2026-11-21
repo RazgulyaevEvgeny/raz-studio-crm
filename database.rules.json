@@ -11,7 +11,11 @@
     "pub": {
       "$key": {
         ".read": "$key.length >= 24",
-        ".write": "auth != null && (auth.token.email == 'design.onegin@gmail.com' || auth.token.email == 'raz.brandstudio@gmail.com' || auth.token.email == 'bot@raz.kz')"
+        ".write": "auth != null && (auth.token.email == 'design.onegin@gmail.com' || auth.token.email == 'raz.brandstudio@gmail.com' || auth.token.email == 'bot@raz.kz')",
+        "now": {
+          ".write": "$key.length >= 24",
+          ".validate": "newData.hasChildren(['at']) && newData.child('at').isNumber()"
+        }
       }
     }
   }
