@@ -25,6 +25,7 @@ import android.provider.Settings;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -281,7 +282,7 @@ public class MainActivity extends Activity {
       LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(-2, -2); bl.rightMargin = 18;
       row.addView(b1, bl); row.addView(b2, new LinearLayout.LayoutParams(bl)); row.addView(b3, new LinearLayout.LayoutParams(bl));
       updV.addView(row);
-      TextView hint = new TextView(this); hint.setText("←  →  выбрать · OK — нажать · «Назад» — закрыть"); hint.setTextColor(0x99FFFFFF); hint.setTextSize(14);
+      TextView hint = new TextView(this); hint.setText("←  →  выбрать · OK — нажать · «Назад» — закрыть · мышкой: клик по кнопке, колесо — закрыть"); hint.setTextColor(0x99FFFFFF); hint.setTextSize(14);
       LinearLayout.LayoutParams hl = new LinearLayout.LayoutParams(-2, -2); hl.topMargin = 20; updV.addView(hint, hl);
       root.addView(updV, new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER));
     }
@@ -300,6 +301,19 @@ public class MainActivity extends Activity {
     }
     updInfo.setText(b.toString());
   }
+  // мышка: нажатие на колесо открывает/закрывает окно «Обновления» (правая кнопка — как «Назад», закрывает)
+  private long midAt;
+  private boolean midClick(MotionEvent e) {
+    boolean mid = (e.getActionMasked() == MotionEvent.ACTION_BUTTON_PRESS && e.getActionButton() == MotionEvent.BUTTON_TERTIARY)
+      || (e.getActionMasked() == MotionEvent.ACTION_DOWN && (e.getButtonState() & MotionEvent.BUTTON_TERTIARY) != 0);
+    if (!mid) return false;
+    long now = System.currentTimeMillis(); if (now - midAt < 400) return true; midAt = now;   // одно нажатие приходит двумя событиями
+    if (updOpen()) closeUpdates(); else openUpdates();
+    return true;
+  }
+  @Override public boolean dispatchGenericMotionEvent(MotionEvent e) { if (midClick(e)) return true; return super.dispatchGenericMotionEvent(e); }
+  @Override public boolean dispatchTouchEvent(MotionEvent e) { if (midClick(e)) return true; return super.dispatchTouchEvent(e); }
+
   private void closeUpdates() { if (updV != null) updV.setVisibility(View.GONE); }
   private boolean updOpen() { return updV != null && updV.getVisibility() == View.VISIBLE; }
 
