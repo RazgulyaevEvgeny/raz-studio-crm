@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>/* в приложении страница сразу раскладывается на 1920 точек и приставка масштабирует её сама —
+  без CSS-масштаба, от которого в снимке текст выходил сжатым по ширине */
+if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('content', 'width=1920, initial-scale=' + (screen.width ? Math.min(1, screen.width / 1920) : 0.5));</script>
 <title>Разгуляев — экран для ТВ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -118,7 +121,7 @@
 window.__errs=[];window.onerror=function(m,s,l){window.__errs.push(String(m).slice(0,120)+' @'+l);var d=document.getElementById('diag');if(d){d.style.display='block';d.textContent='Ошибка: '+window.__errs.join(' | ')}};
 </script>
 <script src="firebase-config.js?v=202611132203"></script>
-<script src="tv-core.js?v=202611182220"></script>
+<script src="tv-core.js?v=202611211900"></script>
 </head>
 <body>
 <div id="stage">
@@ -313,6 +316,8 @@ addEventListener('keydown', e => {
 function applyMusic(m){
   if (window.RazApp && RazApp.music) { MUSIC = TV.normalizeMusic(m); showStation(); nativeMusic(); return; }
   const n = TV.normalizeMusic(m), o = MUSIC; MUSIC = n; showStation();
+  if (n.cmd && n.cmd.id && o.cmd && n.cmd.id !== o.cmd.id && Date.now() - n.cmd.at < 120000) {   // пульт с телефона (в браузере — только основное)
+    if (n.cmd.do === 'next') playNext(); else if (n.cmd.do === 'prev') playNext(true); else if (n.cmd.do === 'toggle') togglePause(); }
   audio.volume = n.vol / 100;
   if (n.st !== o.st || n.mood !== o.mood || n.div !== o.div || n.lang !== o.lang) { queue = []; lastId = ''; batch = ''; fb('radioStarted'); busy = false; playNext(); return; }
   if (n.skip && n.skip !== o.skip) { if (cur) fb('skip',{trackId:cur.id,albumId:cur.albumId,played:Math.round(audio.currentTime||0)}); busy = false; playNext(); }
@@ -321,7 +326,11 @@ showStation();
 let musicStarted = false;
 /* в приложении «Студия» музыку играет сама приставка (ExoPlayer) — страница только передаёт настройки и показывает трек */
 const nativeMusic = () => { try { RazApp.music(JSON.stringify(Object.assign({ worker: YM.worker, key: YM.key }, MUSIC))); } catch (e) {} };
-window.razNow = t => { try { showTrack(t || {}); showStation(); } catch (e) {} };
+window.razNow = t => { try { showTrack(t || {}); showStation(); } catch (e) {} reportNow(t); };
+/* что играет — для пульта в телефоне (CRM): пишем в базу не чаще раза в 2 сек */
+let nowT = 0, nowLast = null;
+function reportNow(t){ nowLast = t; if (nowT) return; nowT = setTimeout(() => { nowT = 0; const db = TV.DB(); if (!db || !nowLast) return;
+  fetch(db + '/pub/' + TV.KEY + '/now.json', { method: 'PUT', body: JSON.stringify(Object.assign({}, nowLast, { at: Date.now() })) }).catch(() => {}); }, 2000); }
 function startMusic(){ if (musicStarted || !YM.worker) return; if (window.RazApp && RazApp.music) { musicStarted = true; nativeMusic(); return; } musicStarted = true; fb('radioStarted'); playNext(); }
 setTimeout(startMusic, 4000); // если база не ответила — играем с настройками по умолчанию
 
@@ -371,12 +380,42 @@ const NATIVE = !!window.RazApp;
 if (NATIVE) { document.documentElement.classList.add('native'); document.getElementById('stage').classList.add('native', 'm-chrome'); }
 let nq = Promise.resolve(), nbase = '';
 const nstage = () => document.getElementById('stage');
-const nmode = m => { const st = nstage(); st.classList.remove('m-bg', 'm-chrome', 'm-scene', 'novid'); st.classList.add(m); if (m === 'm-bg' && nbase) st.style.setProperty('background', nbase, 'important'); else st.style.removeProperty('background'); };
+const nmode = m => { if (liveOn) return; const st = nstage(); st.classList.remove('m-bg', 'm-chrome', 'm-scene', 'novid'); st.classList.add(m); if (m === 'm-bg' && nbase) st.style.setProperty('background', nbase, 'important'); else st.style.removeProperty('background'); };
+/* Шрифты Inter Tight / Inter грузятся из сети. Если снять экран раньше, текст выходит системным шрифтом
+   (шире и другой формы), подгонка размера считается по нему — и в приложении текст «съезжает».
+   Поэтому перед каждым снимком ждём шрифты (не дольше 8 сек). */
+const FONTS = ['500 20px "Inter Tight"', '600 20px "Inter Tight"', '700 20px "Inter Tight"', '800 20px "Inter Tight"', '400 20px Inter', '500 20px Inter', '600 20px Inter'];
+const fontsOk = () => { try { return FONTS.every(f => document.fonts.check(f)); } catch (e) { return true; } };
+const fontsP = (() => { try { return Promise.race([Promise.all(FONTS.map(f => document.fonts.load(f, 'Аа12'))), new Promise(r => setTimeout(r, 8000))]).catch(() => {}); } catch (e) { return Promise.resolve(); } })();
+let fontsLate = false;   // шрифты пришли позже первых снимков — пересобрать экраны
+// замер для журнала приложения: как страница видит экран и шрифты
+if (NATIVE) setTimeout(() => { try { const h = document.querySelector('.f .h, .f .t, .f .cap, .shd .sh1'); const cs = h ? getComputedStyle(h) : null;
+  const cv = document.createElement('canvas').getContext('2d'), mw = f => { cv.font = f; return Math.round(cv.measureText('Статистика заказов').width); };
+  RazApp.log('ширина текста: Inter Tight ' + mw('800 68px "Inter Tight"') + ' · Inter ' + mw('800 68px Inter') + ' · системный ' + mw('800 68px sans-serif') + ' · узкий ' + mw('800 68px sans-serif-condensed'));
+  RazApp.log('страница: ' + innerWidth + '×' + innerHeight + ' dpr ' + (window.devicePixelRatio || 1) + ' масштаб ' + (window.visualViewport ? visualViewport.scale.toFixed(3) : '?') + ' · шрифты ' + (fontsOk() ? 'загружены' : 'НЕ загружены') + (cs ? ' · ' + cs.fontFamily.split(',')[0] + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' растяжение ' + cs.fontStretch + ' межбукв ' + cs.letterSpacing : '') + ' · ' + navigator.userAgent.replace(/.*Chrome\/(\d+).*/, 'Chrome $1')); } catch (e) {} }, 12000);
+const fontsRedo = () => { if (NATIVE && fontsLate && fontsOk()) { fontsLate = false; try { build(); } catch (e) {} } };
+fontsP.then(fontsRedo); try { document.fonts.addEventListener('loadingdone', () => setTimeout(fontsRedo, 500)); } catch (e) {}
 const settle = (ms) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; setTimeout(r, ms || 60); } }; try { requestAnimationFrame(() => requestAnimationFrame(f)); } catch (e) {} setTimeout(f, 300); });
+// приложение снимает слой дважды — на чёрном и на белом фоне — и по разнице считает прозрачность
+window.razBgc = (c, t) => { [document.documentElement, document.body, nstage()].forEach(e => { if (c) e.style.setProperty('background', c, 'important'); else e.style.removeProperty('background'); });
+  if (t) requestAnimationFrame(() => requestAnimationFrame(() => { try { RazApp.painted(t); } catch (e) {} })); };
 const shot = (kind, json) => new Promise(r => { let d = false; const f = () => { if (!d) { d = true; r(); } }; window.razAck = f; setTimeout(f, 4000); try { RazApp.shot(kind, json || ''); } catch (e) { f(); } });
-const nrect = el => { const r = el.getBoundingClientRect(), k = window.devicePixelRatio || 1; return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };
+const NK = () => (window.devicePixelRatio || 1) * (window.visualViewport ? visualViewport.scale : 1);   // CSS-пиксель → пиксель снимка
+const nrect = el => { const r = el.getBoundingClientRect(), k = NK(); return [Math.round(r.left * k), Math.round(r.top * k), Math.round(r.width * k), Math.round(r.height * k)]; };
 window.razBg = () => (nq = nq.then(async () => { nmode('m-bg'); await settle(); await shot('bg'); }).catch(() => {}));
-window.razChrome = (i) => (nq = nq.then(async () => { [...pager.children].forEach((d, j) => d.classList.toggle('on', j === i)); nmode('m-chrome'); await settle(); const dot = pager.children[i]; await shot('chrome', JSON.stringify({ dot: dot ? nrect(dot) : null, dark: DATA.theme === 'dark', hd: nrect(document.querySelector('header')), ft: nrect(document.querySelector('footer')) })); }).catch(() => {}));
+/* Шапка и низ снимаются без точек-страниц: точки рисует само приложение. Тогда смена экрана не требует
+   нового снимка (снимок на приставке тормозит видео), шапку переснимаем только когда в ней что-то поменялось. */
+// проверка из окна обновлений: показать экран i самой страницей, как в браузере
+let liveOn = false;
+window.razLive = (i) => { liveOn = true; const st = nstage(); st.dataset.nc = st.className; st.classList.remove('native', 'm-bg', 'm-chrome', 'm-scene', 'novid', 'notext');
+  [...box.children].forEach(x => x.classList.remove('on', 'nshow')); const s = box.children[i]; if (s) { TV.hydrate(s); s.classList.add('on'); TV.fitText(s); } };
+window.razLiveEnd = () => { liveOn = false; const st = nstage(); if (st.dataset.nc) st.className = st.dataset.nc; [...box.children].forEach(x => x.classList.remove('on')); };
+window.razChrome = (i) => (nq = nq.then(async () => { await fontsP; [...pager.children].forEach(d => d.classList.remove('on')); nmode('m-chrome'); await settle();
+  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * NK(), d0 = pager.children[0];
+  const pg = { r: nrect(pager), n: pager.children.length, z, c: d0 ? getComputedStyle(d0).backgroundColor : '' };
+  pager.style.visibility = 'hidden'; await settle();
+  await shot('chrome', JSON.stringify({ pg, dark: DATA.theme === 'dark', hd: nrect(document.querySelector('header')), ft: nrect(document.querySelector('footer')) }));
+  pager.style.visibility = ''; }).catch(() => { pager.style.visibility = ''; }));
 window.razScene = (i) => (nq = nq.then(async () => {
   const s = box.children[i], sc0 = LIST[i]; if (!s || !sc0) return;
   [...box.children].forEach(x => x.classList.remove('nshow'));
@@ -384,13 +423,14 @@ window.razScene = (i) => (nq = nq.then(async () => {
   if (sc0.facts.some(f => f.kind === 'weather' || f.kind === 'fx')) await Promise.race([wxP, new Promise(r => setTimeout(r, 4000))]);
   TV.hydrate(s); try { refreshWidgets(); } catch (e) {} s.classList.add('nshow');
   const L = TV.LITE; TV.LITE = true; s.querySelectorAll('.num[data-to]').forEach(el => TV.countUp(el)); TV.LITE = L;
+  await fontsP; if (!fontsOk()) fontsLate = true;
   nmode('m-scene'); nstage().classList.add('notext'); await settle(120); TV.fitText(s); await settle(120);
-  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * (window.devicePixelRatio || 1);
-  const cards = [...s.querySelectorAll('.f')].map((f, k) => { const v = f.querySelector('video[data-vid]');
+  const st = nstage(), z = (st.getBoundingClientRect().width / 1920) * NK(); let nv = 0;
+  const cards = [...s.querySelectorAll('.f')].map((f, k) => { let v = f.querySelector('video[data-vid]');
     const d = f.classList.contains('shd') ? {} : (sc0.facts[k] || {});
-    return { kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
+    return { tr: f.classList.contains('shd'), kb: !!(d.photo && d.photoMode !== 'top' && d.zoom && !d.video), r: nrect(f), rad: Math.round((parseFloat(getComputedStyle(f).borderTopLeftRadius) || 0) * z), i: k, v: v ? { id: v.dataset.vid, r: nrect(v), url: TV.DB() + '/pub/' + TV.IMG + v.dataset.vid } : null }; });
   const an = (s.className.match(/an-(\w+)/) || [])[1] || 'spring';
-  await shot('scene', JSON.stringify({ live: sc0.facts.slice(0, TV.cnt(sc0)).some(f => f.kind), i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
+  await shot('scene', JSON.stringify({ live: sc0.facts.slice(0, TV.cnt(sc0)).reduce((m, f) => Math.max(m, f.kind === 'clock' || f.kind === 'music' ? 2 : f.kind === 'weather' || f.kind === 'fx' || f.kind === 'countdown' ? 1 : 0), 0), i, sec: (+sc0.sec) || DATA.slideSec, anim: an, tanim: sc0.tanim || 'fade', shift: Math.round(40 * z), cards }));
   st.classList.remove('notext'); st.classList.add('novid'); await settle(120); await shot('over'); st.classList.remove('novid');
   nmode('m-chrome');
 }).catch(() => {}));
@@ -448,7 +488,8 @@ async function runUpdate(){
   const apply = (d) => { if (!d) return; TV.AUTO = d.auto || {}; if (musicStarted) applyMusic(d.music); else { MUSIC = TV.normalizeMusic(d.music); audio.volume = MUSIC.vol / 100; showStation(); startMusic(); } const j = JSON.stringify({ s: d.screens, n: d.slideSec, fx: d.fx, sh: d.show, l: d.lite, th: d.theme, p: d.pill, bg: d.bg, ft: d.foot, hd: d.hdr }); if (j === last) return; last = j; queueUpdate(d); };
   try {
     const es = new EventSource(url);
-    const on = e => { try { const m = JSON.parse(e.data); if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
+    const on = e => { try { const m = JSON.parse(e.data); if (m && m.path && m.path.indexOf('/now') === 0) return;   // это мы сами пишем «что играет»
+      if (m && m.path === '/') apply(m.data); else fetch(url).then(r => r.json()).then(apply); } catch (_) {} };
     es.addEventListener('put', on); es.addEventListener('patch', on);
     es.onerror = () => {}; // EventSource сам переподключается
   } catch (_) { setInterval(() => fetch(url).then(r => r.json()).then(apply).catch(() => {}), 60000); }

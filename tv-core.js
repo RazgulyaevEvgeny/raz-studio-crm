@@ -59,7 +59,7 @@ TV.icon = (name) => TV.ICONS[name] ? `<svg viewBox="0 0 24 24" fill="none" strok
 /* ---------- значения по умолчанию ---------- */
 const F = (o) => Object.assign({
   style:'plain', bg:'#007aff', fg:'', icon:'', color:'blue', label:'',
-  kind:'', wcity:'Павлодар', wlat:52.2873, wlon:76.9674, wmode:'days', qrUrl:'', wifiSsid:'', wifiPass:'', wifiSec:'WPA', wifiShow:true, fxList:'USD,EUR,RUB,CNY', cdDate:'', goalTo:0,
+  kind:'', wcity:'Павлодар', wlat:52.2873, wlon:76.9674, wmode:'days', qrUrl:'', ct:'', ctMsg:'', ctBrand:true, wifiSsid:'', wifiPass:'', wifiSec:'WPA', wifiShow:true, fxList:'USD,EUR,RUB,CNY', cdDate:'', goalTo:0,
   big:'', unit:'', plus:false, numColor:false, title:'', caption:'', list:'',
   visual:'', swatch:'#ffffff', photo:'', photoMode:'bg', photoFit:'cover', dim:45, zoom:true,
   sizeBig:'auto', sizeText:'m', align:'left', valign:'between', cLabel:'', cBig:'', cTitle:'', cCap:'', cList:'', video:'', stars:0, oLabel:'', oBig:'', oTitle:'', oCap:'', oList:'', icBg:'', icFg:'',
@@ -135,7 +135,8 @@ TV.normalizeMusic = (m) => { m = m || {}; return {
   mood: ['all','calm','fun','active','sad'].indexOf(m.mood) >= 0 ? m.mood : 'calm',
   div: ['default','favorite','popular','discover'].indexOf(m.div) >= 0 ? m.div : 'default',
   lang: ['any','russian','not-russian'].indexOf(m.lang) >= 0 ? m.lang : 'any',
-  vol: m.vol == null ? 60 : Math.max(0, Math.min(100, +m.vol || 0)), skip: +m.skip || 0 }; };
+  vol: m.vol == null ? 60 : Math.max(0, Math.min(100, +m.vol || 0)), skip: +m.skip || 0,
+  cmd: m.cmd && typeof m.cmd === 'object' ? { id: String(m.cmd.id || ''), do: String(m.cmd.do || ''), at: +m.cmd.at || 0, t: m.cmd.t || null, id2: String(m.cmd.id2 || '') } : null }; };
 TV.AUTO_SRC = { orders:'Выданные заказы студии', kaspi:'Продажи Kaspi', clients:'Клиенты студии' };
 TV.value = f => { const b = +String(f.big).replace(/\s/g,'') || 0; const v = f.auto && TV.AUTO[f.auto] != null ? Math.max(0, +TV.AUTO[f.auto] - (+f.autoFrom || 0)) : 0; return b + v; };
 
@@ -277,6 +278,17 @@ TV.CSS = `
 .kza{fill:none;stroke:#ff9f0a;stroke-width:3;stroke-linecap:round}.kzg{fill:#ff9f0a;opacity:.22}.kzd{fill:#ff9f0a;stroke:#fff;stroke-width:3}.kzh{fill:#0a84ff;stroke:#fff;stroke-width:4}
 .kzs{flex:0 0 auto;display:flex;align-items:baseline;gap:22px 28px;flex-wrap:wrap}.wdg .h.kzn{font-size:96px;font-weight:800;line-height:1;letter-spacing:-.04em}.kzs .t{font-size:40px}.kzl{display:flex;gap:28px;flex-wrap:wrap;margin-left:auto}
 .kzt{display:flex;gap:12px;font-size:32px;color:var(--fg2);white-space:nowrap}.kzt b{color:var(--fg);font-weight:800}
+.ctq{--q:300px;justify-content:center!important}.ctq>.ft{display:none!important}.ctq>.fb{flex:1 1 auto;min-height:0;display:flex;align-items:center;margin:0!important}
+.ctq .ctop{display:flex;align-items:center;gap:calc(var(--q) * .06);min-width:0;margin:0 0 calc(var(--q) * .09)!important;min-height:0!important}
+.ctq .ctl{flex:none;width:calc(var(--q) * .2);height:calc(var(--q) * .2);border-radius:calc(var(--q) * .07);background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.12)}.ctq .ctl svg{width:62%;height:62%}
+.ctq .ctop .lt{font-size:calc(var(--q) * .1)!important;font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;color:var(--fg2)}.ctq.ctbrand .ctop .lt{color:#fff}
+.ctq .ctw{display:flex;align-items:center;gap:calc(var(--q) * .13);width:100%;min-width:0}
+.ctq .qri{flex:none;width:var(--q);height:var(--q);padding:calc(var(--q) * .055);border-radius:calc(var(--q) * .09);background:#fff;box-sizing:border-box;box-shadow:0 6px 24px rgba(0,0,0,.14)}.ctq .qri .qrs{display:block;width:100%;height:100%}
+.ctq .qre{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#8e8e93;font-size:calc(var(--q) * .12);font-weight:800;text-align:center}
+.ctq .ctt{flex:1;min-width:0}.ctq .ctn{display:flex;align-items:center;gap:calc(var(--q) * .06);font-size:calc(var(--q) * .175);font-weight:800;letter-spacing:-.02em;line-height:1.1;min-width:0;color:inherit}.ctq .ctx{min-width:0;white-space:nowrap;overflow:hidden}
+.ctq .ctc{font-size:calc(var(--q) * .092);line-height:1.32;margin-top:calc(var(--q) * .05);color:var(--fg2);-webkit-hyphens:none;hyphens:none;word-break:normal;overflow-wrap:normal;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.ctq .ctc b{color:inherit;font-weight:800;opacity:1}
+.ctq.ctbrand .ctc{color:rgba(255,255,255,.88)}
+.ctq.ctv .ctw{flex-direction:column;text-align:center;gap:0}.ctq.ctv .ctt{display:contents}.ctq.ctv .ctop{order:-1;justify-content:center;max-width:100%;margin-bottom:calc(var(--q) * .12)!important}.ctq.ctv .qri{margin-bottom:calc(var(--q) * .12)}.ctq.ctv .ctn,.ctq.ctv .ctc{width:100%}.ctq.ctv .ctn{justify-content:center}
 .qrw{display:flex;align-items:center;gap:40px}.qri .qrs{display:block;width:100%;height:100%}.qrt .cap b{color:var(--fg)}.qri{width:calc(300px * var(--fz,1));height:calc(300px * var(--fz,1));flex:none;background:#fff;border-radius:24px;padding:calc(18px * var(--fz,1));box-sizing:border-box;object-fit:contain}
 .qre{display:flex;align-items:center;justify-content:center;color:#8e8e93;font-size:60px;font-weight:800}.hero .qri{width:calc(400px * var(--fz,1));height:calc(400px * var(--fz,1))}
 .qrt{min-width:0}.wdg .qrt .h{font-size:calc(60px * var(--fz,1))!important;line-height:1.1;-webkit-hyphens:none;hyphens:none;overflow-wrap:normal;word-break:normal;letter-spacing:-.02em}.hero.wdg .qrt .h{font-size:calc(76px * var(--fz,1))!important}.wdg .qrt .cap{margin-top:18px}
@@ -502,9 +514,38 @@ TV.kzMap = (towns) => {
   return `<svg class="kzsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="${path}" class="kzb"/>${arcs}${dots}<circle cx="${home[0].toFixed(1)}" cy="${home[1].toFixed(1)}" r="13" class="kzh"/><circle cx="${home[0].toFixed(1)}" cy="${home[1].toFixed(1)}" r="5" fill="#fff"/></svg>`;
 };
 
+/* ---------- карточки-контакты: QR, Wi-Fi, Instagram, WhatsApp, почта ----------
+   единая вёрстка: логотип и подпись сверху, QR слева, крупно — ник/номер/почта, ниже пояснение.
+   Все размеры считаются от размера QR (--q), а он — от размера карточки (TV.fitText), поэтому
+   в любых карточках пропорции одинаковые и текст не скачет. */
+const SVG = (p, extra) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra || ''}>${p}</svg>`;
+TV.CONTACT = {
+  qr:    { name: 'QR-код', bg: '', ic: SVG('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'), color: '#0a84ff', label: 'Наведите камеру телефона', cap: 'откроется ссылка' },
+  wifi:  { name: 'Wi-Fi', bg: 'linear-gradient(135deg,#0a84ff,#5e5ce6)', ic: SVG('<path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1.1" fill="currentColor"/>'), color: '#0a84ff', label: 'Бесплатный Wi-Fi', cap: 'Наведите камеру — и вы в сети' },
+  insta: { name: 'Instagram', bg: 'linear-gradient(135deg,#f9a33b 0%,#ee2a7b 45%,#9b30c8 75%,#5b51d8 100%)', ic: SVG('<rect x="3" y="3" width="18" height="18" rx="5.2"/><circle cx="12" cy="12" r="4.1"/><circle cx="17.4" cy="6.6" r="1.15" fill="currentColor" stroke="none"/>'), color: '#d62976', label: 'Мы в Instagram', cap: 'Работы, новинки и акции' },
+  wa:    { name: 'WhatsApp', bg: 'linear-gradient(135deg,#25d366,#0e9f6e)', ic: SVG('<path d="M3.6 20.4l1.4-4.3a8.6 8.6 0 1 1 3.1 3z"/><path d="M8.8 8.2c.2-.6.6-.7 1-.7h.5l1 2.3-.8 1c.6 1.2 1.6 2.2 2.8 2.8l1-.8 2.3 1v.5c0 .4-.2.8-.7 1-2.9 1-7.7-3.8-7.1-7.1z" fill="currentColor" stroke="none"/>'), color: '#12b76a', label: 'Напишите нам в WhatsApp', cap: 'Наведите камеру — откроется чат' },
+  mail:  { name: 'Почта', bg: 'linear-gradient(135deg,#3a8dff,#1d4ed8)', ic: SVG('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/>'), color: '#1d4ed8', label: 'Наша почта', cap: 'Наведите камеру — откроется письмо' }
+};
+TV.instaUser = v => String(v || '').trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[\/?#].*$/, '');
+TV.waDigits = v => { let d = String(v || '').replace(/\D/g, ''); if (d.length === 11 && d[0] === '8') d = '7' + d.slice(1); if (d.length === 10) d = '7' + d; return d; };
+TV.phoneFmt = d => d.length === 11 ? `+${d[0]} ${d.slice(1, 4)} ${d.slice(4, 7)} ${d.slice(7, 9)} ${d.slice(9)}` : (d ? '+' + d : '');
+TV.contactParts = (f, k) => {
+  const C = TV.CONTACT[k]; let link = '', title = '', cap = f.caption || C.cap;
+  if (k === 'qr') { link = String(f.qrUrl || '').trim(); title = f.title || (link ? link.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : 'Вставьте ссылку'); }
+  else if (k === 'wifi') { const e = s => String(s || '').replace(/([\;,:"])/g, '\\$1'), ss = String(f.wifiSsid || '').trim(), open = f.wifiSec === 'nopass';
+    if (ss) link = `WIFI:T:${open ? 'nopass' : 'WPA'};S:${e(ss)};${open ? '' : 'P:' + e(f.wifiPass) + ';'};`;
+    title = ss || 'Название сети'; cap = (!open && f.wifiShow !== false && f.wifiPass ? `Пароль: <b>${esc(f.wifiPass)}</b><br>` : '') + esc(f.title || C.cap); }
+  else if (k === 'insta') { const u = TV.instaUser(f.ct); if (u) link = 'https://instagram.com/' + u; title = u ? '@' + u : '@ваш_ник'; }
+  else if (k === 'wa') { const d = TV.waDigits(f.ct); if (d) link = 'https://wa.me/' + d + (f.ctMsg ? '?text=' + encodeURIComponent(f.ctMsg) : ''); title = TV.phoneFmt(d) || '+7 ••• ••• •• ••'; }
+  else if (k === 'mail') { const m = String(f.ct || '').trim(); if (m) link = 'mailto:' + m + (f.ctMsg ? '?subject=' + encodeURIComponent(f.ctMsg) : ''); title = m || 'почта@пример.kz'; }
+  const qr = link ? TV.qr(link) : `<div class="qre">${esc(C.name)}</div>`;
+  return { ct: k, top: '',
+    body: `<div class="ctw"><div class="qri">${qr}</div><div class="ctt"><div class="ctn"><span class="ctl" style="color:${C.color}">${C.ic}</span><span class="ctx">${esc(title)}</span></div><div class="ctc">${k === 'wifi' ? cap : esc(cap)}</div></div></div>` };
+};
+
 /* ---------- виджеты: погода, часы, «сейчас играет» ---------- */
 TV.LIVE = { wx: {}, track: null };   // живые данные: погода по городам, текущий трек
-TV.WIDGETS = { '': 'Обычная карточка', weather: 'Погода', clock: 'Часы', music: 'Сейчас играет', kzmap: 'Карта доставок Kaspi', qr: 'QR-код', wifi: 'Wi-Fi для гостей', fx: 'Курс валют', countdown: 'Обратный отсчёт', goal: 'Цель с прогрессом' };
+TV.WIDGETS = { '': 'Обычная карточка', weather: 'Погода', clock: 'Часы', music: 'Сейчас играет', kzmap: 'Карта доставок Kaspi', qr: 'QR-код (любая ссылка)', insta: 'Instagram', wa: 'WhatsApp', mail: 'Почта', wifi: 'Wi-Fi для гостей', fx: 'Курс валют', countdown: 'Обратный отсчёт', goal: 'Цель с прогрессом' };
 TV.FX_NAMES = { USD: 'Доллар', EUR: 'Евро', RUB: 'Рубль', CNY: 'Юань', KGS: 'Сом', UZS: 'Сум', TRY: 'Лира', AED: 'Дирхам', GBP: 'Фунт' };
 const DAYS = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'], DAYS_FULL = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const MONTHS = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
@@ -532,19 +573,7 @@ TV.widgetParts = (f, hero) => {
     return { top: `<div class="top"><span class="lt">${esc(f.label || 'Доставили по Казахстану')}</span></div>`,
       body: `<div class="kzw"><div class="kzm">${TV.kzMap(towns)}</div><div class="kzs">${cities ? `<div class="h kzn">${n(cities)}</div><div class="t">${pl(cities, 'город', 'города', 'городов')} · ${n(total)} ${pl(total, 'заказ', 'заказа', 'заказов')}</div><div class="kzl">${top}</div>` : `<div class="t">Города появятся, когда учёт студии обновит данные Kaspi</div>`}${f.caption ? `<div class="cap">${esc(f.caption)}</div>` : ''}</div></div>` };
   }
-  if (k === 'qr') {
-    const u = String(f.qrUrl || '').trim();
-    const img = u ? `<div class="qri">${TV.qr(u)}</div>` : '<div class="qri qre">QR</div>';
-    return { top: `<div class="top"><span class="lt">${esc(f.label || 'Наведите камеру телефона')}</span></div>`,
-      body: `<div class="qrw">${img}<div class="qrt">${f.title ? `<div class="h">${esc(f.title)}</div>` : ''}${f.caption ? `<div class="cap">${esc(f.caption)}</div>` : ''}</div></div>` };
-  }
-  if (k === 'wifi') {   // стандартный QR для подключения: телефон сам предлагает войти в сеть
-    const e = s => String(s || '').replace(/([\;,:"])/g, '\\$1'), ss = String(f.wifiSsid || '').trim(), open = f.wifiSec === 'nopass';
-    const code = ss ? `<div class="qri">${TV.qr(`WIFI:T:${open ? 'nopass' : 'WPA'};S:${e(ss)};${open ? '' : 'P:' + e(f.wifiPass) + ';'};`)}</div>` : '<div class="qri qre">Wi-Fi</div>';
-    const wic = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0"/><circle cx="12" cy="20" r="1.2" fill="currentColor"/></svg>';
-    return { top: `<div class="top"><span class="ic" style="background:${TV.col(f.color) || TV.col('blue')}">${wic}</span><span class="lt">${esc(f.label || 'Бесплатный Wi-Fi')}</span></div>`,
-      body: `<div class="qrw">${code}<div class="qrt"><div class="h">${esc(f.title || 'Наведите камеру — и вы в сети')}</div>${ss ? `<div class="cap">Сеть: <b>${esc(ss)}</b>${!open && f.wifiShow !== false && f.wifiPass ? `<br>Пароль: <b>${esc(f.wifiPass)}</b>` : ''}</div>` : ''}</div></div>` };
-  }
+  if (TV.CONTACT[k]) return TV.contactParts(f, k);
   if (k === 'fx') {
     const r = TV.LIVE.fx || {}, list = String(f.fxList || 'USD,EUR,RUB').toUpperCase().split(/[\s,;]+/).filter(Boolean).slice(0, 5);
     const fmt = v => v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1).replace('.', ',') : v.toFixed(2).replace('.', ',');
@@ -598,6 +627,7 @@ TV.factHTML = (f, hero, idx, gx) => {
   const wp = TV.widgetParts(f, hero);
   if (wp) {   // виджет: своё содержимое, но те же стили, цвета и размеры, что у обычных карточек
     cls.push('wdg', 'wdg-' + f.kind);
+    if (wp.ct) { cls.push('ctq'); const C = TV.CONTACT[wp.ct]; if (C.bg && f.ctBrand !== false) { cls.push('on-color', 'ctbrand'); style += `background:${C.bg};color:#fff;`; } }
     let bgw = '';
     if (wp.cover && f.wcover !== false) { cls.push('has-bg', 'on-color'); bgw = `<div class="bgph" style="background-image:url('${esc(wp.cover.replace('200x200', '600x600'))}')"></div><div class="shade"></div>`; style += '--dim:.5;'; }
     return `<div class="${cls.join(' ')}" data-w="${f.kind}" style="${style}">${bgw}<div class="ft">${wp.top}</div><div class="fb">${wp.body}</div></div>`;
@@ -649,6 +679,16 @@ TV.fitText = (root) => {
     const set = s => { if (s >= 1) { f.style.removeProperty('--fz'); f.style.padding = ''; } else { f.style.setProperty('--fz', s.toFixed(3)); f.style.padding = Math.round(48 * Math.max(s, .5)) + 'px ' + Math.round(50 * Math.max(s, .5)) + 'px'; } };
     set(1);
     if (!kids.length || !f.clientHeight || !f.clientWidth) return;
+    if (f.classList.contains('ctq')) {   // карточки-контакты: QR и текст от размера карточки, одинаковые пропорции везде
+      const iw = f.clientWidth - 100, ih = f.clientHeight - 96, vert = iw < ih * 1.15;
+      f.classList.toggle('ctv', vert);
+      let q = vert ? Math.min(iw * .74, ih * .5) : Math.min(ih * .96, iw * .4);
+      const pad = q < 230 ? Math.max(.55, q / 230) : 1;
+      if (pad < 1) f.style.padding = Math.round(48 * pad) + 'px ' + Math.round(50 * pad) + 'px';
+      const fits = () => { const t = f.querySelector('.ctn .ctx'), lb = null, fr = f.getBoundingClientRect(), last = kids[kids.length - 1].getBoundingClientRect(); return (!t || t.scrollWidth <= t.clientWidth + 2) && (!lb || lb.scrollWidth <= lb.clientWidth + 2 || q < 160) && last.bottom <= fr.bottom - 10; };
+      for (let i = 0; i < 14; i++) { f.style.setProperty('--q', Math.round(q) + 'px'); if (fits() || q < 90) break; q *= .93; }
+      return;
+    }
     const over = () => {
       const cs = getComputedStyle(f), pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
       const fr = f.getBoundingClientRect(), k = fr.height / (f.offsetHeight || 1);   // k — масштаб сцены на экране

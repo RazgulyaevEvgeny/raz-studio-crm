@@ -59,6 +59,8 @@ public class Music {
   private final ExecutorService dl = Executors.newSingleThreadExecutor();    // скачивание треков на диск
   private final File dir;
   private final LinkedList<Track> queue = new LinkedList<>();
+  private final LinkedList<Track> userQueue = new LinkedList<>();   // треки, выбранные с телефона: идут раньше волны
+  private String lastCmd = null;   // последняя команда пульта (id), чтобы не выполнить её дважды
   private final LinkedList<Track> played = new LinkedList<>();
   private final Set<String> downloading = new HashSet<>();
   private final LinkedList<String> log = new LinkedList<>();
@@ -88,7 +90,7 @@ public class Music {
         if (s == Player.STATE_ENDED) { if (cur != null) feedback("trackFinished", cur, (int) (player.getDuration() / 1000)); next(false); }
         if (s == Player.STATE_BUFFERING) l("жду данные трека…");
       }
-      @Override public void onIsPlayingChanged(boolean p) { if (p) { errs = 0; l("играет: " + (cur != null ? cur.title : "")); } }
+      @Override public void onIsPlayingChanged(boolean p) { if (p) { errs = 0; l("играет: " + (cur != null ? cur.title : "")); } state(); }
       @Override public void onPlayerError(PlaybackException e) {
         l("ошибка плеера: " + e.getErrorCodeName());
         if (cur != null) new File(dir, "m_" + cur.id + ".mp3").delete();
@@ -108,14 +110,49 @@ public class Music {
     boolean wave = !nst.equals(st) || !nmood.equals(mood) || !ndiv.equals(div) || !nlang.equals(lang);
     boolean sk = !nskip.isEmpty() && !nskip.equals(skip) && !skip.isEmpty();
     worker = w; key = k; st = nst; mood = nmood; div = ndiv; lang = nlang; skip = nskip;
+    JSONObject cmd = o.optJSONObject("cmd"); String cid = cmd != null ? cmd.optString("id", "") : "";
+    boolean fresh = cmd != null && !cid.isEmpty() && lastCmd != null && !cid.equals(lastCmd)
+      && System.currentTimeMillis() - cmd.optLong("at", 0) < 120000;   // старые команды после перезапуска не выполняем
+    if (cid.length() > 0) lastCmd = cid; else if (lastCmd == null) lastCmd = "";
     if (worker.isEmpty()) return;
     if (!started) { started = true; l("музыка запускается"); feedback("radioStarted", null, -1); next(false); return; }
     if (wave) { l("сменилась волна/настроение"); synchronized (queue) { queue.clear(); } lastId = ""; batch = ""; feedback("radioStarted", null, -1); next(false); }
     else if (sk) next(true);
+    if (fresh) remote(cmd);
+  }
+
+  // ---------- пульт с телефона (CRM): play/pause, назад, вперёд, включить трек, поставить в очередь ----------
+  private void remote(JSONObject c) {
+    String d = c.optString("do", ""); l("пульт: " + d);
+    switch (d) {
+      case "toggle": togglePause(); state(); break;
+      case "pause": if (player.getPlayWhenReady()) togglePause(); state(); break;
+      case "play": if (!player.getPlayWhenReady()) togglePause(); state(); break;
+      case "next": nextTrack(); break;
+      case "prev": prevTrack(); break;
+      case "track": case "queue": {
+        JSONObject j = c.optJSONObject("t"); if (j == null || j.optString("id", "").isEmpty()) break;
+        Track t = new Track(); t.id = j.optString("id"); t.albumId = j.optString("albumId", ""); t.title = j.optString("title", ""); t.artist = j.optString("artist", ""); t.cover = j.optString("cover", ""); t.ms = j.optLong("durationMs", 0);
+        if ("track".equals(d)) { synchronized (queue) { userQueue.addFirst(t); } nextTrack(); }
+        else { synchronized (queue) { userQueue.addLast(t); } l("в очередь: " + t.artist + " — " + t.title); state(); prefetch(); }
+        break; }
+      case "unqueue": { String id = c.optString("id2", ""); synchronized (queue) { java.util.Iterator<Track> it = userQueue.iterator(); while (it.hasNext()) if (it.next().id.equals(id)) { it.remove(); break; } } state(); break; }
+    }
+  }
+  /** Сообщить странице (а она — телефону), что играет и что дальше. */
+  private void state() { if (cur == null) return; ui.now(nowJson(cur), "state"); }
+  private JSONObject nowJson(Track t) {
+    JSONObject o = new JSONObject();
+    try { o.put("id", t.id); o.put("title", t.title); o.put("artist", t.artist); o.put("cover", t.cover); o.put("ms", t.ms);
+      o.put("paused", !player.getPlayWhenReady()); o.put("pos", player.getCurrentPosition()); o.put("vol", vol);
+      JSONArray up = new JSONArray(); synchronized (queue) { for (Track u : userQueue) { if (up.length() >= 8) break; up.put(new JSONObject().put("id", u.id).put("title", u.title).put("artist", u.artist).put("cover", u.cover).put("mine", true)); }
+        for (Track u : queue) { if (up.length() >= 8) break; up.put(new JSONObject().put("id", u.id).put("title", u.title).put("artist", u.artist).put("cover", u.cover)); } }
+      o.put("next", up); } catch (Exception ignored) {}
+    return o;
   }
 
   /** Страница перезапустилась — заново показать в шапке текущий трек. */
-  public void announce() { if (cur == null) return; try { JSONObject o = new JSONObject(); o.put("title", cur.title); o.put("artist", cur.artist); o.put("cover", cur.cover); ui.now(o, ""); } catch (Exception ignored) {} }
+  public void announce() { if (cur == null) return; ui.now(nowJson(cur), ""); }
 
   // ---------- пульт ----------
   public String togglePause() {
@@ -135,7 +172,7 @@ public class Music {
   private void next(boolean skipped) {
     if (skipped && cur != null) feedback("skip", cur, (int) (player.getCurrentPosition() / 1000));
     if (cur != null) { played.add(cur); if (played.size() > 30) played.removeFirst(); }
-    Track t; synchronized (queue) { t = queue.poll(); }
+    Track t; synchronized (queue) { t = userQueue.poll(); if (t == null) t = queue.poll(); }
     if (t == null) {
       refill(() -> { Track n; synchronized (queue) { n = queue.poll(); } if (n != null) playTrack(n, 0); else offlineTrack(); });
       return;
@@ -204,12 +241,12 @@ public class Music {
     if (!userPaused) player.play();
     if (pos == 0) feedback("trackStarted", t, -1);
     l("трек: " + t.artist + " — " + t.title + " (" + how + ")");
-    try { JSONObject o = new JSONObject(); o.put("title", t.title); o.put("artist", t.artist); o.put("cover", t.cover); ui.now(o, how); } catch (Exception ignored) {}
+    ui.now(nowJson(t), how);
   }
 
   // ---------- скачивание вперёд ----------
   private void prefetch() {
-    List<Track> want = new ArrayList<>(); synchronized (queue) { for (int i = 0; i < Math.min(2, queue.size()); i++) want.add(queue.get(i)); }
+    List<Track> want = new ArrayList<>(); synchronized (queue) { for (Track u : userQueue) { if (want.size() >= 2) break; want.add(u); } for (int i = 0; i < queue.size() && want.size() < 2; i++) want.add(queue.get(i)); }
     if (cur != null && !cur.title.equals("Из памяти приставки")) want.add(0, cur);
     for (final Track t : want) {
       final File f = new File(dir, "m_" + t.id + ".mp3");
@@ -250,7 +287,7 @@ public class Music {
     long total = 0; for (File f : fs) total += f.length();
     if (total < 600L * 1024 * 1024) return;
     Arrays.sort(fs, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
-    Set<String> keep = new HashSet<>(); if (cur != null) keep.add("m_" + cur.id + ".mp3"); synchronized (queue) { for (Track t : queue) keep.add("m_" + t.id + ".mp3"); }
+    Set<String> keep = new HashSet<>(); if (cur != null) keep.add("m_" + cur.id + ".mp3"); synchronized (queue) { for (Track t : queue) keep.add("m_" + t.id + ".mp3"); for (Track t : userQueue) keep.add("m_" + t.id + ".mp3"); }
     for (File f : fs) { if (total < 450L * 1024 * 1024) break; if (keep.contains(f.getName())) continue; total -= f.length(); f.delete(); new File(dir, f.getName().replace(".mp3", ".json")).delete(); }
   }
 
