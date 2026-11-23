@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261119094000">
+<meta name="app-build" content="20261123081500">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -6227,6 +6227,11 @@ async function kPrint(){
         const src=await PDFDocument.load(bytes);
         let boxes=[];try{boxes=await Promise.race([kInkBoxes(bytes),new Promise((ok,no)=>setTimeout(()=>no(new Error('не успели за 30 с')),30000))])}catch(e){cropErr=cropErr||(e&&e.message)||String(e);console.warn('Обрезка накладной',k.code,e)}
         for(const [i,sp] of src.getPages().entries()){
+          /* жёсткое правило: Kaspi кладёт этикетку 100×143 мм в левую верхнюю четверть листа A4.
+             Если поиск печати не сработал (pdf.js не загрузился, не успел) или нашёл почти весь лист,
+             берём эту четверть сами, чтобы накладная никогда не выходила мелкой. */
+          const {width:pw,height:ph}=sp.getSize(),a4=Math.abs(pw-595.3)<6&&Math.abs(ph-841.9)<6,bx=boxes[i];
+          if(a4&&(!bx||(bx.right-bx.left)*(bx.top-bx.bottom)>pw*ph*.5))boxes[i]={left:3,bottom:ph-418,right:296,top:ph-3};
           let ep;try{ep=await out.embedPage(sp,boxes[i]||undefined);if(boxes[i])cropOk++}catch(e){cropErr=cropErr||'вставка: '+e.message;ep=await out.embedPage(sp)}
           pages.push(ep);
         }
