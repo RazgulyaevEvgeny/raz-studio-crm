@@ -52,7 +52,7 @@ public class CehActivity extends Activity {
     super.onCreate(b);
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_FULLSCREEN);
     root = new FrameLayout(this);
-    root.setBackgroundColor(0xFFF2F2F7);
+    root.setBackgroundColor(0xFFE9E9EE);
     makeWeb();
     banner = new TextView(this);
     banner.setTextColor(Color.WHITE); banner.setTextSize(20); banner.setGravity(Gravity.CENTER);
@@ -79,7 +79,7 @@ public class CehActivity extends Activity {
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
   private void makeWeb() {
     web = new WebView(this);
-    web.setBackgroundColor(0xFFF2F2F7);
+    web.setBackgroundColor(0xFFE9E9EE);
     web.setFocusable(true); web.setFocusableInTouchMode(true);
     WebSettings ws = web.getSettings();
     ws.setJavaScriptEnabled(true);

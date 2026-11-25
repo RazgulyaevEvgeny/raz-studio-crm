@@ -12,7 +12,7 @@ if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('c
 <style>
 /* Экран для цеха: светлая тема CRM (iOS). Для слабой приставки: без размытия, теней и постоянных анимаций —
    страница перерисовывается только когда пришли новые данные, и раз в минуту — часы. */
-:root{--bg:#f2f2f7;--card:#fff;--ink:#1d1d1f;--sub:#3a3a3c;--mute:#8e8e93;--line:#e5e5ea;--blue:#007aff;--teal:#30b0c7;--purple:#af52de;--orange:#ff9500;--green:#34c759;--red:#ff3b30;--pink:#ff2d55;--kaspi:#f14635;--T:"Inter Tight",Inter,-apple-system,system-ui,sans-serif}
+:root{--bg:#e9e9ee;--card:#fff;--ink:#1d1d1f;--sub:#3a3a3c;--mute:#8e8e93;--line:#e5e5ea;--blue:#007aff;--teal:#30b0c7;--purple:#af52de;--orange:#ff9500;--green:#34c759;--red:#ff3b30;--pink:#ff2d55;--kaspi:#f14635;--T:"Inter Tight",Inter,-apple-system,system-ui,sans-serif}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);overflow:hidden}
 body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
@@ -183,6 +183,9 @@ function fit(){ var W = Math.max(1920, Math.min(2880, Math.round(1080 * innerWid
   st.style.transform = 'scale(' + s + ')'; st.style.left = Math.max(0, (innerWidth - W * s) / 2) + 'px'; st.style.top = Math.max(0, (innerHeight - 1080 * s) / 2) + 'px';
   try { if (S && S.d) render(true); } catch (e) {} }
 if (!window.RazApp) { addEventListener('resize', fit); fit(); }
+/* на телевизоре края картинки обрезаются (overscan) — в приложении отодвигаем всё от рамки на 4 % с каждой стороны */
+else (function(){ var m = Math.max(0, Math.min(10, +(store.get('ceh.margin') || 4))), k = 1 - m / 50, st = $('stage');
+  st.style.transform = 'scale(' + k + ')'; st.style.left = (1920 * m / 100) + 'px'; st.style.top = (1080 * m / 100) + 'px'; })();
 
 /* ---------- логотип как на бирке (контуры из label-logo.json, в мм) ---------- */
 fetch('label-logo.json').then(function(r){ return r.json(); }).then(function(L){
