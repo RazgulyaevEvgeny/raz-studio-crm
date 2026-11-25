@@ -61,7 +61,19 @@
   .err{color:#ff453a;font-size:14px;min-height:18px;margin-top:6px}
   #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(20px);background:rgba(44,44,46,.96);color:#fff;padding:11px 18px;border-radius:22px;font-size:15px;opacity:0;transition:.25s;pointer-events:none;max-width:90vw;text-align:center;-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
   #toast.on{opacity:1;transform:translateX(-50%)}
+  /* ?embed=1 — пульт внутри учёта (вкладка «Музыка»): без шапки и своих полей; &light=1 — светлая тема учёта */
+  html.emb body{padding:0 0 8px;max-width:none;background:transparent}
+  html.emb,html.emb body{background:transparent}
+  html.emb header{display:none}
+  html.emb #toast{bottom:16px}
+  html.light{--bg:#fff;--card:#f5f5f7;--card2:#e5e5ea;--sep:rgba(60,60,67,.18);--fg:#1d1d1f;--fg2:rgba(60,60,67,.65);--fg3:rgba(60,60,67,.4);--blue:#007aff;--pink:#ff2d55}
+  html.light .cov{box-shadow:0 6px 18px rgba(0,0,0,.12)}
+  html.light .chips button.on{background:#1d1d1f;color:#fff}
+  html.light .row button.pl{background:#1d1d1f;color:#fff}
+  html.light input[type=range]::-webkit-slider-thumb{box-shadow:0 1px 6px rgba(0,0,0,.25)}
+  html.light .st.bad{color:#c96f00}
 </style>
+<script>(function(){ var q = location.search; if (/[?&]embed=1/.test(q)) document.documentElement.classList.add('emb'); if (/[?&]light=1/.test(q)) document.documentElement.classList.add('light'); })();</script>
 </head>
 <body>
 <header><h1>Музыка на ТВ</h1><a href="index.html">Учёт</a></header>
@@ -133,6 +145,9 @@ const IC = {
 let db, MUS = TV.normalizeMusic(null), NOW = null, found = [];
 /* ?ceh=1 — тот же пульт для экрана в цехе: ключ цеха берём из учёта (sig/ceh/key) */
 const CEH = /[?&]ceh=1/.test(location.search); let KEY = CEH ? '' : TV.KEY;
+/* внутри учёта сообщаем высоту, чтобы рамка росла вместе с пультом (поиск, очередь) */
+if (/[?&]embed=1/.test(location.search) && parent !== window) { let lastH = 0; const sendH = () => { const h = document.documentElement.scrollHeight; if (h !== lastH) { lastH = h; try { parent.postMessage({ rzMusicH: h, ceh: CEH }, location.origin); } catch (e) {} } };
+  if (window.ResizeObserver) new ResizeObserver(sendH).observe(document.body); setInterval(sendH, 1000); addEventListener('load', sendH); }
 if (CEH) { document.title = 'Музыка в цехе — пульт'; const h = document.querySelector('header h1'); if (h) h.textContent = 'Музыка в цехе'; }
 let toastT = 0;
 const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); };
