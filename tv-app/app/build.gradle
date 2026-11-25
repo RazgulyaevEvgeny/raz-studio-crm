@@ -6,11 +6,28 @@ android {
   namespace 'kz.raz.tv'
   compileSdk 35
   defaultConfig {
-    applicationId 'kz.raz.tv'
     minSdk 23
     targetSdk 34
     versionCode 300 + runNo
     versionName "3.1." + runNo
+  }
+  // два приложения из одного кода: «Студия» (клиентская зона, tv.html) и «Цех» (экран для работников, ceh.html)
+  flavorDimensions 'screen'
+  productFlavors {
+    studio {
+      dimension 'screen'
+      applicationId 'kz.raz.tv'
+      buildConfigField 'String', 'PAGE', '"https://razgulyaevevgeny.github.io/raz-studio-crm/tv.html?app=2"'
+      buildConfigField 'String', 'REL', '"tv-"'
+      resValue 'string', 'app_name', 'Студия'
+    }
+    ceh {
+      dimension 'screen'
+      applicationId 'kz.raz.ceh'
+      buildConfigField 'String', 'PAGE', '"https://razgulyaevevgeny.github.io/raz-studio-crm/ceh.html?app=2"'
+      buildConfigField 'String', 'REL', '"ceh-"'
+      resValue 'string', 'app_name', 'Цех'
+    }
   }
   signingConfigs {
     // постоянный ключ подписи (из секретов GitHub) — без него обновление не встанет поверх старой версии

@@ -64,8 +64,8 @@ public class Updater {
           JSONObject r = rs.getJSONObject(i);
           if (r.optBoolean("draft") || r.optBoolean("prerelease")) continue;
           String tag = r.optString("tag_name");
-          if (!tag.startsWith("tv-")) continue;
-          int code; try { code = Integer.parseInt(tag.substring(3)); } catch (Exception e) { continue; }
+          if (!tag.startsWith(BuildConfig.REL)) continue;
+          int code; try { code = Integer.parseInt(tag.substring(BuildConfig.REL.length())); } catch (Exception e) { continue; }
           if (code > bestCode) { bestCode = code; best = r; }
           String d = r.optString("published_at", ""); if (d.length() >= 16) d = d.substring(8, 10) + "." + d.substring(5, 7) + " " + d.substring(11, 16) + " UTC";
           l.add(new String[]{ String.valueOf(code), r.optString("name", tag), d });
@@ -76,7 +76,7 @@ public class Updater {
           String url = null; JSONArray as = best.optJSONArray("assets");
           for (int i = 0; as != null && i < as.length(); i++) { JSONObject x = as.getJSONObject(i); if (x.optString("name").endsWith(".apk")) { url = x.optString("browser_download_url"); break; } }
           if (url == null) throw new Exception("в выпуске нет APK");
-          final String name = best.optString("name", "tv-" + bestCode);
+          final String name = best.optString("name", BuildConfig.REL + bestCode);
           log.l("есть обновление " + name + " — скачиваю");
           ui("Есть обновление " + name + " — скачиваю…", 0, 0);
           final File f = new File(a.getCacheDir(), "update.apk");
@@ -94,7 +94,7 @@ public class Updater {
   private void install(File f, String name) {
     // Android 8+: один раз нужно разрешить «Студии» ставить приложения
     if (Build.VERSION.SDK_INT >= 26 && !a.getPackageManager().canRequestPackageInstalls()) {
-      ui("Разрешите «Студии» устанавливать обновления: включите переключатель и нажмите «Назад»", -1, 20000);
+      ui("Разрешите приложению «" + a.getString(R.string.app_name) + "» устанавливать обновления: включите переключатель и нажмите «Назад»", -1, 20000);
       try { a.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + a.getPackageName()))); } catch (Exception ignored) {}
       h.postDelayed(() -> check(false), 60_000);
       return;

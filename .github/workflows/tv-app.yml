@@ -18,12 +18,17 @@ jobs:
         env: { STUDIO_KS: '${{ secrets.STUDIO_KS }}' }
         run: |
           if [ -n "$STUDIO_KS" ]; then echo "$STUDIO_KS" | base64 -d > "$RUNNER_TEMP/studio.jks"; echo "KS_FILE=$RUNNER_TEMP/studio.jks" >> "$GITHUB_ENV"; echo "ключ есть"; else echo "ключа нет — сборка с временным ключом, обновление по воздуху не встанет"; fi
-      - run: gradle --no-daemon :app:assembleRelease
+      - run: gradle --no-daemon :app:assembleStudioRelease :app:assembleCehRelease
         working-directory: tv-app
         env: { KS_PASS: '${{ secrets.STUDIO_KS_PASS }}' }
-      - run: cp tv-app/app/build/outputs/apk/release/app-release.apk raz-tv.apk && ls -la raz-tv.apk
+      - run: |
+          cp tv-app/app/build/outputs/apk/studio/release/app-studio-release.apk raz-tv.apk
+          cp tv-app/app/build/outputs/apk/ceh/release/app-ceh-release.apk ceh.apk
+          ls -la raz-tv.apk ceh.apk
       - uses: actions/upload-artifact@v4
         with: { name: raz-tv-apk, path: raz-tv.apk }
+      - uses: actions/upload-artifact@v4
+        with: { name: raz-ceh-apk, path: ceh.apk }
       # выпуск для обновления по воздуху: только из main и только с постоянным ключом
       - name: Выпуск для приставок
         if: github.ref == 'refs/heads/main' && env.KS_FILE != ''
@@ -32,3 +37,4 @@ jobs:
           CODE=$((300 + ${{ github.run_number }}))
           cp raz-tv.apk studio.apk
           gh release create "tv-$CODE" studio.apk --title "Студия 3.1.${{ github.run_number }}" --notes "Обновление приложения «Студия» для ТВ. Приставки установят его сами." --target "${{ github.sha }}"
+          gh release create "ceh-$CODE" ceh.apk --title "Цех 3.1.${{ github.run_number }}" --notes "Приложение «Цех» — экран для производства. Приставки установят обновление сами." --target "${{ github.sha }}"
