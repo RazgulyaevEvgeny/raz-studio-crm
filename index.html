@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261123081500">
+<meta name="app-build" content="20261125150000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -2774,6 +2774,7 @@ const SERVICES=[
   {id:'sign3d',label:'3D-вывеска',unit:'шт'},
   {id:'embroidery',label:'Вышивка',unit:'шт'},
   {id:'printing',label:'Распечатка',unit:'листов'},
+  {id:'polygraphy',label:'Полиграфия',unit:'шт'},
   {id:'kaspi',label:'Kaspi',unit:'шт'},
   {id:'other',label:'Другое',unit:'шт'}
 ];
@@ -4946,6 +4947,7 @@ function ximSvc(t){
   if(/каспи|kaspi/.test(t))return ['kaspi',''];
   if(/3\s*д|3d/.test(t))return ['print3d',''];
   if(/вышивк/.test(t))return ['embroidery',''];
+  if(/полиграф|визитк|листовк|флаер|буклет/.test(t))return ['polygraphy',''];
   if(/^\s*печать\s*$|распечат/.test(t))return ['printing',''];
   if(/винил|наклейк/.test(t))return ['vinyl',''];
   if(/павлодарск|павлодавск|павло(?![а-я])/.test(t))return ['other','Одежда «Павлодарский»'];
@@ -8193,7 +8195,7 @@ async function paySave(name){try{const b=Math.max(0,+$('py-b').value||0),p=Math.
   await fxSave('pay',cur=>({...cur,people:{...(cur.people||{}),[name]:{base:b,pct:p}},updatedAt:Date.now()}));closeSheet();render();toast('Сохранено')}catch(e){toast(handleWriteError(e))}}
 
 /* ===== загрузка производства (календарь) ===== */
-const CAP_SVC=['dtf','embroidery','vinyl','print3d','sign3d','printing'];
+const CAP_SVC=['dtf','embroidery','vinyl','print3d','sign3d','printing','polygraphy'];
 function loadDays(){
   const open=orders.filter(o=>!CLOSED.has(o.status)&&o.deadline&&o.service!=='kaspi'),cap=fx.cap||{},out=[];
   const d=new Date();for(let i=0;out.length<7&&i<14;i++,d.setDate(d.getDate()+1)){if(!(d.getDay()%6))continue;const k=ds(d);
@@ -8400,7 +8402,7 @@ html.dark .eq-tag.red{color:#ff6b62}html.dark .eq-tag.or{color:#ffb340}html.dark
         <div class="fld"><label for="eq-bought">Когда купили</label><input id="eq-bought" type="date"></div>
       </div>
       <div class="fld"><span class="lb">На каких услугах зарабатывает</span><div class="svc-pick" id="eq-svcs" role="group"></div>
-        <span class="hint">Учёт сам сложит прибыль с заказов этих услуг (кроме отменённых), начиная с даты покупки. Если одна услуга стоит у нескольких станков, прибыль делится между ними поровну.</span></div>
+        <span class="hint">Учёт сам сложит прибыль только с заказов выбранных услуг (кроме отменённых), начиная с даты покупки. «Kaspi» — это прибыль с проданных заказов Kaspi. Если одна услуга стоит у нескольких станков, прибыль делится между ними поровну.</span></div>
       <div class="fld"><label for="eq-base">Заработано до учёта (вручную)</label><div class="suffix"><input id="eq-base" type="number" min="0" step="1" inputmode="numeric" placeholder="0"><span>₸</span></div>
         <span class="hint">Для старого оборудования: сколько оно принесло до того, как заказы стали вести в учёте. Прибавится к подсчёту.</span></div>
       <div class="fld"><span class="lb">Обслуживание</span>
@@ -8446,7 +8448,7 @@ function eqRing(v,s,w,fs){const r=(s-w)/2,C=2*Math.PI*r,f=Math.max(0,Math.min(v,
 /* сколько заработал станок */
 function eqShare(){const m={};equip.forEach(e=>(e.svcs||[]).forEach(s=>m[s]=(m[s]||0)+1));return m}
 function eqOrders(e){const sv=new Set(e.svcs||[]);if(!sv.size)return [];
-  return orders.filter(o=>o.status!=='cancel'&&sv.has(o.service)&&(!e.bought||(receivedOf(o)||'9')>=e.bought))}
+  return (sv.has('kaspi')?[...orders,...kVirtualOrders()]:orders).filter(o=>o.status!=='cancel'&&sv.has(o.service)&&(!e.bought||(receivedOf(o)||'9')>=e.bought))}
 function eqStat(e,share){share=share||eqShare();
   const fromOrders=Math.round(eqOrders(e).reduce((s,o)=>s+Math.max(0,profitOf(o))/(share[o.service]||1),0));
   const earned=fromOrders+(+e.base||0),price=+e.price||0;
@@ -8557,7 +8559,7 @@ function closeEq(){$('eqd').hidden=true;eqEditing=null;eqDraft=null}
 function eqRenderForm(){const d=eqDraft;
   $('eq-types').innerHTML=EQ_TYPES.map(t=>`<button type="button" data-eqtype="${t.id}" aria-pressed="${d.type===t.id}"><i style="background:${esc(d.color)}">${t.i}</i>${t.label}</button>`).join('');
   $('eq-cols').innerHTML=EQ_COLORS.map(c=>`<button type="button" data-eqcol="${c}" style="--c:${c}" aria-pressed="${d.color===c}" aria-label="Цвет"></button>`).join('');
-  $('eq-svcs').innerHTML=SERVICES.filter(s=>s.id!=='kaspi').map(s=>`<button type="button" data-eqsvc="${s.id}" aria-pressed="${d.svcs.includes(s.id)}">${esc(s.label)}</button>`).join('');
+  $('eq-svcs').innerHTML=SERVICES.map(s=>`<button type="button" data-eqsvc="${s.id}" aria-pressed="${d.svcs.includes(s.id)}">${esc(s.label)}</button>`).join('');
   eqRenderWorks();
   $('eq-del').innerHTML=eqEditing==='new'||!canWrite?'':eqAskDel?`<span class="err">Удалить?</span> <button class="btn danger solid sm" type="button" data-eqdel="yes">Удалить</button> <button class="btn soft sm" type="button" data-eqdel="no">Нет</button>`:`<button class="btn danger sm" type="button" data-eqdel="ask">Удалить</button>`;
 }

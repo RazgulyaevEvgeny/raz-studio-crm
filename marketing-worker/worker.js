@@ -323,7 +323,7 @@ const addD = (s, n) => new Date(Date.parse(s) + n * 864e5).toISOString().slice(0
 const wdOf = s => new Date(Date.parse(s)).getUTCDay();
 const WDN = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 const tg = n => Math.round(n || 0).toLocaleString('ru-RU') + ' ₸';
-const SVC_NAME = { vinyl: 'Винил на авто', dtf: 'DTF-печать', print3d: '3D-печать', sign3d: '3D-вывеска', embroidery: 'Вышивка', printing: 'Распечатка', kaspi: 'Kaspi', other: 'Другое' };
+const SVC_NAME = { vinyl: 'Винил на авто', dtf: 'DTF-печать', print3d: '3D-печать', sign3d: '3D-вывеска', embroidery: 'Вышивка', printing: 'Распечатка', polygraphy: 'Полиграфия', kaspi: 'Kaspi', other: 'Другое' };
 const SVC_RX = { 'Винил на авто': /винил|наклейк|оклейк|авто|машин|стекл|плот/i, 'DTF-печать': /dtf|дтф|футболк|худи|свитшот|принт|мерч|одежд/i, '3D-вывески и таблички': /табличк|вывеск|навигац|qr|кофе|кафе|барбер|салон/i, '3D-печать': /3d|3д|принтер|печат.*3|фигурк|bambu/i };
 const ABOUT_L = { city: 'Город и адрес', contacts: 'Контакты', hours: 'График', usp: 'Чем мы лучше', services: 'Услуги и условия', audience: 'Клиенты', tone: 'Как общаемся', brand: 'Фирменный стиль', shooting: 'Чем и где снимаем', cases: 'Кейсы', goals: 'Цели на 3 месяца', tried: 'Что не сработало', notes: 'Дополнительно' };
 
