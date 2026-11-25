@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261125190000">
+<meta name="app-build" content="20261125203000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -7295,7 +7295,7 @@ function annaListen(){
      До переезда читаем чаты по-старому из Firestore. */
   let unW=null,unL=null,mvW=null,rtW={},rtL={},rtDone={};
   const rtApply=()=>{const pend=new Set(Object.values(rtDone).map(d=>d&&d.kind+':'+d.id));
-    annaWait=Object.values(rtW).filter(c=>c&&!pend.has('manager:'+c.id));annaLead=Object.values(rtL).filter(c=>c&&!pend.has('lead:'+c.id));renderAnna()};
+    annaWait=Object.values(rtW).filter(c=>c&&!pend.has('manager:'+c.id));annaLead=Object.values(rtL).filter(c=>c&&!pend.has('lead:'+c.id));renderAnna();cehSync()};
   r.ref('sig/chatsMovedAt').on('value',m=>{
     annaChatsRt=!!m.val();
     if(annaChatsRt){
@@ -7305,7 +7305,7 @@ function annaListen(){
         r.ref('sig/anna/leads').on('value',x=>{rtL=x.val()||{};rtApply()},()=>{annaLead=[]});
         r.ref('sig/anna/chatDone').on('value',x=>{rtDone=x.val()||{};rtApply()},()=>{});}
     }else if(!unW){
-      unW=fs.collection('wa_chats').where('needsManager','==',true).onSnapshot(s=>{annaWait=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaWait=null});
+      unW=fs.collection('wa_chats').where('needsManager','==',true).onSnapshot(s=>{annaWait=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna();cehSync()},()=>{annaWait=null});
       unL=fs.collection('wa_chats').where('leadOpen','==',true).onSnapshot(s=>{annaLead=s.docs.map(d=>({id:d.id,...d.data()}));renderAnna()},()=>{annaLead=[]});
     }
   });
@@ -7813,12 +7813,16 @@ function cehSummary(){
   const act=orders.filter(o=>ACT.includes(o.status)&&!o.deletedAt).sort((a,b)=>String(a.deadline||'9').localeCompare(String(b.deadline||'9'))||(+a.num||0)-(+b.num||0));
   const sAt=o=>(o.statusAt&&(o.statusAt[o.status]))||o.updatedAt||o.createdAt||0;
   const rec=orders.filter(o=>['ready','done'].includes(o.status)&&!o.deletedAt).sort((a,b)=>sAt(b)-sAt(a)).slice(0,6);
-  const one=(o,old)=>{const m=madeOf(o);return {c:cut(o.client||'Без имени',32),n:o.num||'',w:ow(o),s:o.status,d:o.deadline||'',m:m.m,q:m.q,...(old?{o:1,at:kd(sAt(o))}:{})}};
+  /* для окна заказа на экране (пульт/мышь): позиции со штуками, деньги, сроки, описание */
+  const one=(o,old)=>{const m=madeOf(o),pr=+o.price||0,pd=Math.min(+o.paid||0,pr||+o.paid||0);
+    return {i:o.id,c:cut(o.client||'Без имени',32),n:o.num||'',w:ow(o),s:o.status,d:o.deadline||'',df:o.deadlineFrom||'',r:receivedOf(o)||'',m:m.m,q:m.q,
+      it:(o.items||[]).slice(0,24).map(i=>({i:i.id||'',n:cut(i.name,60),q:+i.qty||0,u:i.unit||'шт',...(tracked(i)?{m:Math.min(+i.made||0,+i.qty||0)}:{})})),
+      p:pr,pd:+o.paid||0,ds:cut(o.desc,240),sv:cut(svcLabel(o.service,o),40),...(old?{o:1,at:kd(sAt(o))}:{})}};
   /* задачи на сегодня: открытые со сроком до сегодня (и без срока) + выполненные сегодня */
   const later=t=>t.showFrom&&t.showFrom>today,dn=t=>t.done&&t.doneAt&&kd(t.doneAt)===today;
   const tl=tasks.filter(t=>!t.equip||!later(t)).filter(t=>dn(t)||(!t.done&&!later(t)&&(!t.date||t.date<=today)))
     .sort((a,b)=>(a.done?1:0)-(b.done?1:0)||String(a.date||'9').localeCompare(String(b.date||'9'))||String(a.time||'99').localeCompare(String(b.time||'99')));
-  const tasksL=tl.slice(0,14).map(t=>({t:cut(t.title,90),d:t.date||'',tm:t.time||'',who:cut(t.who,20),...(t.done?{x:1,at:hm(t.doneAt)}:{})}));
+  const tasksL=tl.slice(0,14).map(t=>({i:t.id,t:cut(t.title,90),d:t.date||'',tm:t.time||'',who:cut(t.who,20),...(t.done?{x:1,at:hm(t.doneAt)}:{})}));
   /* Kaspi: что собрать и что отдать; если собирать нечего — что едет и когда придут деньги */
   let kaspi=null;
   if(kaspiLoaded){
@@ -7843,7 +7847,11 @@ function cehSummary(){
         pc:busy&&p.progress!=null&&p.progress!==''?Math.max(0,Math.min(100,Math.round(+p.progress))):0,end:rem!=null?Math.round((base+rem*6e4)/6e4)*6e4:0,
         e:p.online&&perrText(p.error,p.errorText)?1:0})}
   }catch(_){}
-  return {v:1,wk:wgtPubKey||'',orders:{act:act.length,list:act.slice(0,10).map(o=>one(o)),rec:rec.map(o=>one(o,1))},tasks:tasksL,kaspi,eq};
+  /* WhatsApp: клиенты, которых Аня передала менеджеру и которым ещё не ответили (как «ждут ответа» в виджете Ани) */
+  let wa=null;
+  if(annaWait){const L=annaWait.slice().sort((a,b)=>(+a.managerCalledAt||0)-(+b.managerCalledAt||0));
+    wa={n:L.length,list:L.slice(0,6).map(c=>({c:cut(c.clientName||c.name||c.phone||'Клиент',28),at:+c.managerCalledAt||+c.lastAt||0}))}}
+  return {v:1,wk:wgtPubKey||'',wa,orders:{act:act.length,list:act.slice(0,10).map(o=>one(o)),rec:rec.map(o=>one(o,1))},tasks:tasksL,kaspi,eq};
 }
 function cehSync(fast){clearTimeout(cehT);cehT=setTimeout(async()=>{try{
   if(!cehKey||!loaded||!tasksLoaded)return;const r=rt();if(!r)return;
@@ -7878,10 +7886,31 @@ async function openCeh(renew){
   if(pair)try{history.replaceState(null,'',location.pathname+location.search)}catch(_){}
   const go=()=>{const r=rt(),u=window.firebase&&firebase.auth&&firebase.auth().currentUser;if(!r||!u){setTimeout(go,3000);return}
     if(pair)cehPair(pair);
-    r.ref('sig/ceh/key').on('value',x=>{const k=String(x.val()||'');cehKey=k.length>=24?k:'';cehLast='';cehSync(true)},()=>{});
+    let qRef=null;
+    r.ref('sig/ceh/key').on('value',x=>{const k=String(x.val()||'');cehKey=k.length>=24?k:'';cehLast='';cehSync(true);
+      if(qRef){qRef.off();qRef=null}if(cehKey){qRef=r.ref('pub/'+cehKey+'/q');qRef.on('child_added',cehCmd,()=>{})}},()=>{});
     setInterval(()=>cehSync(),2*6e4);document.addEventListener('visibilitychange',()=>{if(!document.hidden)cehSync(true)})};
   setTimeout(go,2500);
 })();
+/* отметки с экрана цеха (пульт или мышь): задача сделана, сколько штук готово.
+   Экран кладёт их в pub/<ключ>/q, открытый учёт (у кого есть право записи) переносит в базу и стирает. */
+const cehDone=new Set();
+async function cehCmd(snap){
+  const c=snap.val()||{},id=snap.key;if(cehDone.has(id))return;
+  if(!canWrite||!db)return; /* без права записи оставляем — перенесёт другой открытый учёт */
+  cehDone.add(id);
+  try{
+    if(Date.now()-(+c.at||0)<2*864e5){
+      if(c.k==='task'){const t=tasks.find(x=>x.id===c.id);
+        if(t&&!!t.done!==!!c.x){if(t.kind==='boss')await setBossStatus(t.id,c.x?'done':'accepted');
+          else await db.doc('tasks/'+t.id).update({done:!!c.x,doneAt:c.x?Date.now():null});}}
+      if(c.k==='made'){const o=orders.find(x=>x.id===c.o);
+        if(o){const items=(o.items||[]).map(i=>i.id===c.i?{...i,made:Math.max(0,Math.min(+i.qty||0,Math.round(+c.m)||0))}:i);
+          if(JSON.stringify(items)!==JSON.stringify(o.items||[]))await db.doc('orders/'+o.id).update({items,updatedAt:Date.now()});}}
+    }
+    await snap.ref.remove();
+  }catch(e){cehDone.delete(id)}
+}
 async function wgtCopy(){
   const t=wgtScript(wgtKey);
   try{await navigator.clipboard.writeText(t);toast('Скрипт скопирован. Теперь откройте Scriptable')}
