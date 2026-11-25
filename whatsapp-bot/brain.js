@@ -40,7 +40,7 @@ const ORDER_DAYS = { embroidery: 5 };
 const ORDER_DAYS_DEFAULT = 3;
 export const SERVICE_NAMES = {
   vinyl: 'Винил на авто', dtf: 'DTF-печать', print3d: '3D-печать', sign3d: '3D-вывеска',
-  embroidery: 'Вышивка', printing: 'Распечатка', other: 'Другое',
+  embroidery: 'Вышивка', printing: 'Распечатка', polygraphy: 'Полиграфия', other: 'Другое',
 };
 
 // Что ИИ-консультант знает о студии. Адрес, график и оплату — дописать.

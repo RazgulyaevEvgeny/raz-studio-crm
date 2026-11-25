@@ -20,7 +20,7 @@
   const stOf = e => e.type === 'content' ? ST_CONTENT : ST_OTHER;
   const SVCS = { vinyl: 'Винил на авто', dtf: 'DTF-печать', sign3d: '3D-таблички и вывески', print3d: '3D-печать', toppers: 'Топперы', other: 'Другое' };
   const SVC_RX = { vinyl: /винил|наклейк|оклейк|авто|машин|стекл|плот/i, dtf: /dtf|дтф|футболк|худи|свитшот|принт|мерч|одежд/i, sign3d: /табличк|вывеск|навигац|qr|кофейн|кафе|барбер/i, print3d: /3d|3д|принтер|напечата|пластик/i, toppers: /топпер|торт/i };
-  const CRM_SVC = { vinyl: 'Винил на авто', dtf: 'DTF-печать', print3d: '3D-печать', sign3d: '3D-вывеска', embroidery: 'Вышивка', printing: 'Распечатка', kaspi: 'Kaspi', other: 'Другое' };
+  const CRM_SVC = { vinyl: 'Винил на авто', dtf: 'DTF-печать', print3d: '3D-печать', sign3d: '3D-вывеска', embroidery: 'Вышивка', printing: 'Распечатка', polygraphy: 'Полиграфия', kaspi: 'Kaspi', other: 'Другое' };
   const ABOUT = [
     ['city', 'Город и адрес', 'Город, район, ориентир, парковка'],
     ['contacts', 'Контакты', 'WhatsApp, телефон, Instagram, 2ГИС, Kaspi'],
