@@ -31,7 +31,9 @@ import org.json.JSONObject;
  * В отличие от «Студии» здесь нет видео и снимков страницы: страница сама лёгкая и перерисовывается
  * только когда пришли новые данные, поэтому её просто показываем во весь экран.
  * Музыку играет сама приставка (тот же плеер, что в «Студии»), страница передаёт ей настройки.
- * Пульт: ОК — пауза/музыка, ← → — трек назад/вперёд, ↑ три раза — проверить обновления, «Назад» дважды — выход.
+ * Пульт: стрелки и ОК управляют страницей (выбор заказа и задачи, окно заказа, музыка в шапке),
+ * «Назад» закрывает окно на странице, а если окна нет — дважды для выхода. Кнопки плеера на пульте — музыка.
+ * Мышь и клавиатура работают как в обычном браузере.
  */
 public class CehActivity extends Activity {
   private final Handler h = new Handler(Looper.getMainLooper());
@@ -40,7 +42,7 @@ public class CehActivity extends Activity {
   private TextView banner;
   private Music music;
   private Updater updater;
-  private long backAt = 0, upAt = 0; private int ups = 0;
+  private long backAt = 0;
 
   private final Runnable reload = () -> { if (web != null) web.loadUrl(BuildConfig.PAGE); };
   private final Runnable hideBanner = () -> banner.setVisibility(View.GONE);
@@ -63,7 +65,7 @@ public class CehActivity extends Activity {
       @Override public void now(JSONObject t, String how) { js("window.razNow&&razNow(" + t.toString() + ")"); }
       @Override public void js(String code) { CehActivity.this.js(code); }
     });
-    web.loadUrl(BuildConfig.PAGE);
+    web.loadUrl(BuildConfig.PAGE); web.requestFocus();
     updater = new Updater(this, t -> { if (music != null) music.note(t); }, this::banner); updater.start();
     try {   // после обновления по воздуху — показать, что новая версия встала
       android.content.SharedPreferences sp = getSharedPreferences("app", MODE_PRIVATE); int was = sp.getInt("ver", 0);
@@ -78,7 +80,7 @@ public class CehActivity extends Activity {
   private void makeWeb() {
     web = new WebView(this);
     web.setBackgroundColor(0xFFF2F2F7);
-    web.setFocusable(false);
+    web.setFocusable(true); web.setFocusableInTouchMode(true);
     WebSettings ws = web.getSettings();
     ws.setJavaScriptEnabled(true);
     ws.setDomStorageEnabled(true);          // здесь хранится ключ экрана после подключения по QR
@@ -102,6 +104,11 @@ public class CehActivity extends Activity {
 
   private class Bridge {
     @JavascriptInterface public void log(String t) { h.post(() -> { if (music != null) music.note(t); }); }
+    /** кнопки музыки со страницы: toggle / next / prev */
+    @JavascriptInterface public void musicCmd(String d) { h.post(() -> { if (music == null) return;
+      if ("next".equals(d)) music.nextTrack(); else if ("prev".equals(d)) music.prevTrack(); else { String r = music.togglePause(); js("window.razPaused&&razPaused(" + ("pause".equals(r) ? "true" : "false") + ")"); } }); }
+    /** ↑ три раза в шапке — проверить обновления и перезагрузить страницу */
+    @JavascriptInterface public void update() { h.post(() -> { banner("Версия " + BuildConfig.VERSION_NAME + " · проверяю обновления, страница перезагружается", -1, 8000); updater.check(true); h.post(reload); }); }
     @JavascriptInterface public void music(String json) { h.post(() -> { try { if (music != null) { music.settings(new JSONObject(json)); music.announce(); } } catch (Exception ignored) {} }); }
   }
 
@@ -118,23 +125,23 @@ public class CehActivity extends Activity {
   @Override public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if (f) immersive(); }
 
   @Override public boolean dispatchKeyEvent(KeyEvent e) {
-    int k = e.getKeyCode(); boolean up = e.getAction() == KeyEvent.ACTION_UP;
+    int k = e.getKeyCode(); boolean down = e.getAction() == KeyEvent.ACTION_DOWN, up = e.getAction() == KeyEvent.ACTION_UP;
     if (k == KeyEvent.KEYCODE_BACK) {
-      if (up) { long now = System.currentTimeMillis(); if (now - backAt < 2000) finish(); else { backAt = now; Toast.makeText(this, "Нажмите «Назад» ещё раз, чтобы выйти", Toast.LENGTH_SHORT).show(); } }
+      if (up) web.evaluateJavascript("(function(){try{return window.cehKey?cehKey('back'):false}catch(e){return false}})()", v -> {
+        if ("true".equals(v)) return;
+        long now = System.currentTimeMillis(); if (now - backAt < 2000) finish(); else { backAt = now; Toast.makeText(this, "Нажмите «Назад» ещё раз, чтобы выйти", Toast.LENGTH_SHORT).show(); } });
       return true;
     }
-    if (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) {
-      if (up && music != null) { String r = music.togglePause(); Toast.makeText(this, "pause".equals(r) ? "Музыка на паузе" : "play".equals(r) ? "Музыка играет" : "Музыка ещё не включилась", Toast.LENGTH_SHORT).show(); }
+    if (k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE) { if (up && music != null) music.togglePause(); return true; }
+    if (k == KeyEvent.KEYCODE_MEDIA_NEXT) { if (up && music != null) music.nextTrack(); return true; }
+    if (k == KeyEvent.KEYCODE_MEDIA_PREVIOUS) { if (up && music != null) music.prevTrack(); return true; }
+    String n = k == KeyEvent.KEYCODE_DPAD_UP ? "up" : k == KeyEvent.KEYCODE_DPAD_DOWN ? "down" : k == KeyEvent.KEYCODE_DPAD_LEFT ? "left" : k == KeyEvent.KEYCODE_DPAD_RIGHT ? "right"
+      : (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER || k == KeyEvent.KEYCODE_NUMPAD_ENTER) ? "ok" : null;
+    if (n != null) {   // стрелки и ОК — странице (повтор при удержании тоже)
+      if (down) js("window.cehKey&&cehKey('" + n + "'," + e.getRepeatCount() + ")");
       return true;
     }
-    if (k == KeyEvent.KEYCODE_DPAD_RIGHT || k == KeyEvent.KEYCODE_MEDIA_NEXT) { if (up && music != null) { music.nextTrack(); Toast.makeText(this, "Следующий трек", Toast.LENGTH_SHORT).show(); } return true; }
-    if (k == KeyEvent.KEYCODE_DPAD_LEFT || k == KeyEvent.KEYCODE_MEDIA_PREVIOUS) { if (up && music != null) { music.prevTrack(); Toast.makeText(this, "Предыдущий трек", Toast.LENGTH_SHORT).show(); } return true; }
-    if (k == KeyEvent.KEYCODE_DPAD_UP) {
-      if (up) { long now = System.currentTimeMillis(); ups = now - upAt < 1500 ? ups + 1 : 1; upAt = now;
-        if (ups >= 3) { ups = 0; banner("Версия " + BuildConfig.VERSION_NAME + " · проверяю обновления, страница перезагружается", -1, 8000); updater.check(true); h.post(reload); } }
-      return true;
-    }
-    return super.dispatchKeyEvent(e);
+    return super.dispatchKeyEvent(e);   // цифры и буквы с клавиатуры — в страницу как обычно
   }
 
   @Override protected void onDestroy() {
