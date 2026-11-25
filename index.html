@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261123081500">
+<meta name="app-build" content="20261125150000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -1990,7 +1990,7 @@ details.dsec[open]>summary::after{transform:rotate(-135deg);margin-top:4px}
       <button class="pill" type="button" data-go="office"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/></svg><span class="lf">Расходы офиса</span><span class="ls">Расходы</span></button>
       <button class="pill" type="button" data-go="supplies"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Закупки</button>
       <button class="pill" type="button" data-go="equip"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5a2.1 2.1 0 0 0 3 3l5.9-5.9a4 4 0 0 0 5.3-5.3l-2.5 2.5-2.6-.4-.4-2.6z"/></svg>Оборудование</button>
-      <button class="pill" type="button" data-go="cams"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13.5" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3"/></svg>Камеры</button>
+      <button class="pill" type="button" data-go="cams" data-nomenu hidden><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13.5" height="12" rx="3"/><path d="M16 10.5l5-3v9l-5-3"/></svg>Камеры</button>
       <button class="pill" type="button" data-go="clients"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>Клиенты</button>
       <button class="pill" type="button" data-go="docs"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Документы</button>
       <button class="pill" type="button" data-go="projects"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Проекты</button>
@@ -7941,9 +7941,9 @@ function syncBottomNav(){
   nav.querySelectorAll('[data-src]').forEach(s=>{const ids=s.dataset.src.split('|');let v='',id='';for(const k of ids){const src=$(k);const t=src&&!src.hidden?src.textContent.trim():'';if(t&&t!=='0'){v=t;id=k;break}}s.hidden=!v;s.textContent=v;if(ids.length>1)s.classList.toggle('req',id==='n-req')});
 }
 function openMore(){
-  const pills=[...document.querySelectorAll('.pills [data-go]')];
+  const pills=[...document.querySelectorAll('.pills [data-go]:not([data-nomenu])')];
   const who=document.querySelector('.who-pill');
-  sheet('Разделы',`<div class="more-g">${pills.map(p=>`<button type="button" class="${p.dataset.go===page?'on':''}" data-mgo="${p.dataset.go}">${(p.querySelector('.pi')||{outerHTML:''}).outerHTML}${esc((p.querySelector('.ls')||p.querySelector('.lf')||p).textContent.replace(/\d+$/,'').trim())}</button>`).join('')}<button type="button" style="--ic:#ff375f" onclick="location.href='tv-remote.html'"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Музыка на ТВ</button></div>
+  sheet('Разделы',`<p class="nv-hint">Зажмите раздел и перетащите, чтобы поменять порядок</p><div class="more-g">${pills.map(p=>`<button type="button" class="${p.dataset.go===page?'on':''}" data-mgo="${p.dataset.go}">${(p.querySelector('.pi')||{outerHTML:''}).outerHTML}${esc((p.querySelector('.ls')||p.querySelector('.lf')||p).textContent.replace(/\d+$/,'').trim())}</button>`).join('')}<button type="button" data-mkey="tvremote" style="--ic:#ff375f" onclick="location.href='tv-remote.html'"><svg class="pi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Музыка на ТВ</button></div>
     <div class="sh-row" style="margin-top:6px"><div class="t"><b>${esc(who?who.textContent:'')}</b><small>${esc((firebase.auth().currentUser||{}).email||'')}</small></div><div class="a">${isBoss()?'<button class="btn white" type="button" data-mstaff>Сотрудники</button>':''}<button class="btn danger" type="button" data-mout>Выйти</button></div></div>
     ${isBoss()?'<button class="btn soft" type="button" data-wgt style="margin-top:6px">📱 Виджеты на iPhone</button>':''}`);
 }
@@ -8737,5 +8737,80 @@ setInterval(()=>{if(watching()){const d=D();if(d)arr(d.list).forEach(c=>paint(c.
   setTimeout(check,4000);setInterval(check,180000);
   document.addEventListener('visibilitychange',function(){if(!document.hidden)check()});
 })();</script>
+<style>
+/* меню разделов: «Камеры» в меню не показываем (вкладка остаётся), порядок разделов можно менять зажатием */
+.pills [data-nomenu]{display:none!important}
+.nv-hint{margin:-2px 0 10px;color:var(--muted);font:400 13px/1.35 var(--fb,var(--f))}
+.nav .pills .pill,.more-g button{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.nv-sorting [data-nvk]:not(.nv-drag){animation:nvwig .26s ease-in-out infinite alternate}
+.nv-sorting [data-nvk]:nth-child(2n):not(.nv-drag){animation-delay:-.13s}
+@keyframes nvwig{from{transform:rotate(-.8deg)}to{transform:rotate(.8deg)}}
+.nv-sorting .nv-drag{position:relative;z-index:5;transform:scale(1.06);box-shadow:0 14px 34px -10px rgba(0,0,0,.38)!important;background:var(--paper)!important;border-radius:14px!important;opacity:.97}
+body.nv-dragging,body.nv-dragging *{cursor:grabbing!important}
+</style>
+<script>
+/* ---------- порядок разделов в меню: зажать раздел и перетащить (палец или мышь) ---------- */
+(function(){
+  const KEY='raz.navOrder';
+  const keyOf=el=>el.dataset.go||el.dataset.mgo||el.dataset.mkey||(el.hasAttribute('data-tvadmin')?'tvadmin':el.hasAttribute('data-tvremote')?'tvremote':'');
+  const load=()=>{try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch(_){return[]}};
+  const save=a=>{try{localStorage.setItem(KEY,JSON.stringify(a))}catch(_){}};
+  const items=box=>box?[...box.children].filter(el=>!el.hasAttribute('data-nomenu')&&!el.classList.contains('nv-more')&&keyOf(el)):[];
+  const pillsBox=()=>document.querySelector('.nav .pills');
+  function mark(box){items(box).forEach(el=>el.dataset.nvk=keyOf(el))}
+  function applyTo(box,order){
+    const its=items(box);if(its.length<2)return;mark(box);if(!order.length)return;
+    const pos=k=>{const i=order.indexOf(k);return i<0?1e3:i};
+    const ref=its[its.length-1].nextSibling;
+    its.slice().sort((a,b)=>pos(keyOf(a))-pos(keyOf(b))).forEach(el=>box.insertBefore(el,ref));
+  }
+  function commit(box){
+    const pills=pillsBox(),sub=items(box).map(keyOf);let res=sub;
+    if(box!==pills){const full=items(pills).map(keyOf),set=new Set(sub);let j=0;res=full.map(k=>set.has(k)?sub[j++]:k);sub.forEach(k=>{if(!res.includes(k))res.push(k)})}
+    save(res);if(box!==pills)applyTo(pills,res);
+  }
+  /* «Разделы» на телефоне собираются заново при каждом открытии — раскладываем их в сохранённом порядке */
+  if(typeof openMore==='function'){const om=openMore;window.openMore=openMore=function(){const r=om.apply(this,arguments);const g=document.querySelector('#sh-ov .more-g');if(g)applyTo(g,load());return r}}
+  applyTo(pillsBox(),load());
+
+  let st=null,timer=0,lastTouch=0,justDragged=0,raf=0,lastY=0;
+  const boxOf=t=>t instanceof Element?t.closest('.nav .pills,.more-g'):null;
+  function arm(t,x,y,ms){
+    const box=boxOf(t);if(!box)return;const el=items(box).find(i=>i.contains(t));if(!el)return;
+    clearTimeout(timer);st={box,el,x,y,on:false};
+    timer=setTimeout(()=>{timer=0;if(st)begin()},ms);
+  }
+  function begin(){
+    mark(st.box);st.on=true;st.el.classList.add('nv-drag');st.box.classList.add('nv-sorting');document.body.classList.add('nv-dragging');
+    try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}
+    const sp=st.box.closest('.sh')||st.box;
+    const tick=()=>{if(!st||!st.on)return;const r=sp.getBoundingClientRect();if(lastY>r.bottom-56)sp.scrollTop+=7;else if(lastY<r.top+56)sp.scrollTop-=7;raf=requestAnimationFrame(tick)};
+    lastY=st.y;raf=requestAnimationFrame(tick);
+  }
+  function move(x,y){
+    lastY=y;const t=document.elementFromPoint(x,y);if(!t)return;
+    const list=items(st.box),tg=list.find(i=>i!==st.el&&i.contains(t));if(!tg)return;
+    if(list.indexOf(st.el)<list.indexOf(tg))st.box.insertBefore(st.el,tg.nextSibling);else st.box.insertBefore(st.el,tg);
+  }
+  function end(){
+    clearTimeout(timer);timer=0;cancelAnimationFrame(raf);if(!st)return;const s=st;st=null;if(!s.on)return;
+    s.el.classList.remove('nv-drag');s.box.classList.remove('nv-sorting');document.body.classList.remove('nv-dragging');
+    justDragged=Date.now();commit(s.box);
+  }
+  const far=(x,y,d)=>st&&Math.hypot(x-st.x,y-st.y)>d;
+  /* палец */
+  document.addEventListener('touchstart',e=>{lastTouch=Date.now();if(e.touches.length!==1){end();return}const p=e.touches[0];arm(e.target,p.clientX,p.clientY,450)},{passive:true});
+  document.addEventListener('touchmove',e=>{if(!st)return;const p=e.touches[0];if(st.on){e.preventDefault();move(p.clientX,p.clientY)}else if(far(p.clientX,p.clientY,9)){clearTimeout(timer);timer=0;st=null}},{passive:false});
+  document.addEventListener('touchend',e=>{lastTouch=Date.now();if(st&&st.on)e.preventDefault();end()},{passive:false});
+  document.addEventListener('touchcancel',end);
+  /* мышь */
+  document.addEventListener('mousedown',e=>{if(e.button!==0||Date.now()-lastTouch<900)return;arm(e.target,e.clientX,e.clientY,350)});
+  document.addEventListener('mousemove',e=>{if(!st||Date.now()-lastTouch<900)return;if(st.on){e.preventDefault();move(e.clientX,e.clientY)}else if(far(e.clientX,e.clientY,6)){clearTimeout(timer);timer=0;st=null}});
+  document.addEventListener('mouseup',()=>{if(Date.now()-lastTouch<900&&!(st&&st.on))return;end()});
+  /* после перетаскивания раздел не открываем */
+  addEventListener('click',e=>{if(Date.now()-justDragged<500&&boxOf(e.target)){e.preventDefault();e.stopImmediatePropagation()}},true);
+  addEventListener('contextmenu',e=>{if(st&&boxOf(e.target))e.preventDefault()},true);
+})();
+</script>
 </body>
 </html>
