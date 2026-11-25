@@ -331,9 +331,13 @@ function drawWa(d){
 
 /* ---------- отметки с экрана: кладём в pub/<ключ>/q, открытый учёт переносит их в базу ---------- */
 function toast(t){ var e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(function(){ e.style.display = 'none'; }, 2600); }
-function sendQ(c){ if (!KEY || !DB) return; c.at = Date.now();
-  fetch(DB + '/pub/' + KEY + '/q.json', { method: 'POST', body: JSON.stringify(c) }).then(function(r){ if (!r.ok) throw new Error(r.status); })
-    .catch(function(){ toast('Не отправилось — нет связи'); }); }
+/* очередь лежит в pub/<ключ>/now/q: туда экран может писать без входа (как «что играет»), правила базы менять не нужно */
+function sendQ(c, again){ if (!KEY || !DB) return; c.at = Date.now();
+  fetch(DB + '/pub/' + KEY + '/now/q.json', { method: 'POST', body: JSON.stringify(c) }).then(function(r){
+    if (r.ok) return; if (again) throw new Error(r.status);
+    /* «что играет» ещё пусто — сначала создаём его, потом повторяем */
+    return fetch(DB + '/pub/' + KEY + '/now.json', { method: 'PATCH', body: JSON.stringify({ at: (S.now && +S.now.at) || 1 }) }).then(function(){ sendQ(c, true); });
+  }).catch(function(){ toast('Не отправилось — нет связи'); }); }
 /* если отметки долго лежат и никто их не забрал — подсказать открыть учёт */
 function qNote(){ var q = S.q || {}, old = 0; for (var k in q) if (q[k] && Date.now() - (+q[k].at || 0) > 60000) old++;
   var u = $('upd'); if (old) { u.textContent = 'Отметки ждут учёта: откройте учёт на телефоне'; u.style.color = 'var(--orange)'; } else u.style.color = ''; }
@@ -498,7 +502,8 @@ function music(){ if (!window.RazApp || !RazApp.music || !TV.YM) return;
 var nowT = 0;
 window.razNow = function(t){ if (!t) return; S.now = t; drawMusic();
   if (nowT) return; nowT = setTimeout(function(){ nowT = 0; if (!KEY || !DB) return;
-    fetch(DB + '/pub/' + KEY + '/now.json', { method: 'PUT', body: JSON.stringify(Object.assign({}, S.now, { at: Date.now() })) }).catch(function(){}); }, 2000); };
+    var n = Object.assign({}, S.now, { at: Date.now(), src: S.now.src || null }); delete n.q;   /* PATCH, чтобы не стереть очередь отметок now/q */
+    fetch(DB + '/pub/' + KEY + '/now.json', { method: 'PATCH', body: JSON.stringify(n) }).catch(function(){}); }, 2000); };
 
 /* ---------- поток из базы: pub/<ключ> (сводка d, настройки музыки, что играет) ---------- */
 function setPath(obj, path, val){ var p = path.split('/').filter(Boolean); if (!p.length) return val; obj = obj || {}; var o = obj;
@@ -518,7 +523,7 @@ var wStream = null, wKey = '';
 function start(){
   $('pair').style.display = 'none';
   stream(KEY, function(r){
-    S.d = r.d || null; S.music = r.music || null; S.q = r.q || null; qNote();
+    S.d = r.d || null; S.music = r.music || null; S.q = r.now && r.now.q || null; qNote();
     if (r.now && (!S.now || !window.RazApp)) { S.now = r.now; drawMusic(); }
     music(); wpSync(); render(); if (DLG) dlgDraw();
     var wk = S.d && S.d.wk || '';

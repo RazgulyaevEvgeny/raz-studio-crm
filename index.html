@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261125203000">
+<meta name="app-build" content="20261125210000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -7888,12 +7888,12 @@ async function openCeh(renew){
     if(pair)cehPair(pair);
     let qRef=null;
     r.ref('sig/ceh/key').on('value',x=>{const k=String(x.val()||'');cehKey=k.length>=24?k:'';cehLast='';cehSync(true);
-      if(qRef){qRef.off();qRef=null}if(cehKey){qRef=r.ref('pub/'+cehKey+'/q');qRef.on('child_added',cehCmd,()=>{})}},()=>{});
+      if(qRef){qRef.off();qRef=null}if(cehKey){qRef=r.ref('pub/'+cehKey+'/now/q');qRef.on('child_added',cehCmd,()=>{})}},()=>{});
     setInterval(()=>cehSync(),2*6e4);document.addEventListener('visibilitychange',()=>{if(!document.hidden)cehSync(true)})};
   setTimeout(go,2500);
 })();
 /* отметки с экрана цеха (пульт или мышь): задача сделана, сколько штук готово.
-   Экран кладёт их в pub/<ключ>/q, открытый учёт (у кого есть право записи) переносит в базу и стирает. */
+   Экран кладёт их в pub/<ключ>/now/q (туда можно писать без входа, как «что играет»), открытый учёт (у кого есть право записи) переносит в базу и стирает. */
 const cehDone=new Set();
 async function cehCmd(snap){
   const c=snap.val()||{},id=snap.key;if(cehDone.has(id))return;
