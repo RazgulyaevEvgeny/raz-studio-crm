@@ -80,7 +80,7 @@ import java.util.Set;
  * аппаратный плеер приставки — как в обычных видеоприложениях. Браузер в анимации не участвует.
  */
 public class MainActivity extends Activity {
-  static final String PAGE = "https://razgulyaevevgeny.github.io/raz-studio-crm/tv.html?app=2";
+  static final String PAGE = BuildConfig.PAGE;
 
   private final Handler h = new Handler(Looper.getMainLooper());
   private WebView web;
@@ -138,6 +138,8 @@ public class MainActivity extends Activity {
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
+    // приложение «Цех»: свой лёгкий экран без снимков и видео
+    if ("ceh".equals(BuildConfig.FLAVOR)) { startActivity(new Intent(this, CehActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); finish(); return; }
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager.LayoutParams.FLAG_FULLSCREEN);
     root = new FrameLayout(this);
     root.setBackgroundColor(Color.BLACK);

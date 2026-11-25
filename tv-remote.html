@@ -131,15 +131,19 @@ const IC = {
   del: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
 let db, MUS = TV.normalizeMusic(null), NOW = null, found = [];
+/* ?ceh=1 — тот же пульт для экрана в цехе: ключ цеха берём из учёта (sig/ceh/key) */
+const CEH = /[?&]ceh=1/.test(location.search); let KEY = CEH ? '' : TV.KEY;
+if (CEH) { document.title = 'Музыка в цехе — пульт'; const h = document.querySelector('header h1'); if (h) h.textContent = 'Музыка в цехе'; }
 let toastT = 0;
 const toast = t => { const e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => e.classList.remove('on'), 2200); };
 const fmt = ms => { const s = Math.max(0, Math.round((ms || 0) / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 
 function cmd(d, extra){
+  if (!KEY) { toast('Экран ещё не подключён'); return Promise.resolve(); }
   const c = Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), do: d, at: firebase.database.ServerValue ? Date.now() : Date.now() }, extra || {});
-  return db.ref('pub/' + TV.KEY + '/music/cmd').set(c).catch(e => toast('Не отправилось: ' + (e.code || e.message)));
+  return db.ref('pub/' + KEY + '/music/cmd').set(c).catch(e => toast('Не отправилось: ' + (e.code || e.message)));
 }
-function saveMusic(){ const m = Object.assign({}, MUS); delete m.cmd; return db.ref('pub/' + TV.KEY + '/music').update(m).catch(e => toast('Не сохранилось: ' + (e.code || e.message))); }
+function saveMusic(){ if (!KEY) return Promise.resolve(); const m = Object.assign({}, MUS); delete m.cmd; return db.ref('pub/' + KEY + '/music').update(m).catch(e => toast('Не сохранилось: ' + (e.code || e.message))); }
 
 /* ---------- что играет ---------- */
 function renderNow(){
@@ -211,8 +215,10 @@ $('res').onclick = e => {
   auth.onAuthStateChanged(u => {
     if (!u) { $('auth').classList.remove('hide'); $('app').classList.add('hide'); return; }
     $('auth').classList.add('hide'); $('app').classList.remove('hide'); renderWave();
-    db.ref('pub/' + TV.KEY + '/music').on('value', s => { MUS = TV.normalizeMusic(s.val()); renderWave(); });
-    db.ref('pub/' + TV.KEY + '/now').on('value', s => { NOW = s.val(); renderNow(); }, () => {});
+    const sub = () => { db.ref('pub/' + KEY + '/music').on('value', s => { MUS = TV.normalizeMusic(s.val()); renderWave(); });
+      db.ref('pub/' + KEY + '/now').on('value', s => { NOW = s.val(); renderNow(); }, () => {}); };
+    if (!CEH) sub();
+    else db.ref('sig/ceh/key').get().then(s => { KEY = String(s.val() || ''); if (KEY.length < 24) { toast('Экран цеха ещё не подключён: учёт → «Экран для цеха»'); return; } sub(); }).catch(e => toast('Нет доступа: ' + (e.code || e.message)));
   });
   $('authf').onsubmit = async e => { e.preventDefault(); $('aerr').textContent = '';
     try { await auth.signInWithEmailAndPassword($('em').value.trim(), $('pw').value); } catch (er) { $('aerr').textContent = 'Не удалось войти: проверьте почту и пароль'; } };
