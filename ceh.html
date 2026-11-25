@@ -44,8 +44,10 @@ body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);-webk
 .ord .nm{font:600 28px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ord .nm span{color:var(--mute);font-weight:500}
 .ord .w{font:500 23px Inter;color:var(--sub);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qty{display:flex;align-items:center;justify-content:space-between;margin-top:9px;font:500 21px Inter;color:var(--mute)}
-.qty .l{display:flex;align-items:center;white-space:nowrap}
-.qty .b{width:96px;height:8px;border-radius:9px;background:#ececf0;overflow:hidden;margin-right:12px;flex:none}.qty .b i{display:block;height:100%;background:var(--c);border-radius:9px}
+.qty .l{display:flex;align-items:center;white-space:nowrap;min-width:0;overflow:hidden;flex:1}
+.qty .l>span:last-child{overflow:hidden;text-overflow:ellipsis}
+.qty .pill,.ord>.pill{margin-left:12px;max-width:48%;overflow:hidden;text-overflow:ellipsis}
+.qty .b{width:72px;height:8px;border-radius:9px;background:#ececf0;overflow:hidden;margin-right:12px;flex:none}.qty .b i{display:block;height:100%;background:var(--c);border-radius:9px}
 .qty em{font-style:normal;color:var(--ink);font-weight:600}
 .ord.old .tm{color:var(--mute);font-size:24px}.ord.old .nm,.ord.old .w{color:#aeaeb2}.ord.old .pill{opacity:.6}
 .sep{font:600 19px Inter;color:var(--mute);text-transform:uppercase;letter-spacing:.6px;padding:16px 0 6px;border-top:1px solid var(--line)}
@@ -72,17 +74,18 @@ body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);-webk
 .k .r{flex:none;text-align:right;font:600 24px Inter;white-space:nowrap;margin-left:14px}
 .k .d{width:92px;flex:none;font:600 22px Inter;color:var(--blue)}
 /* принтеры */
-#eq{left:48px;right:48px;top:876px;bottom:40px;padding:14px 34px;display:flex;align-items:center}
+#eq{left:48px;right:48px;top:876px;bottom:40px;padding:14px 34px;display:flex;align-items:center;background:#00ae42;color:#fff}
+#eq .empty{color:rgba(255,255,255,.85)}
 .pr{flex:1;display:flex;align-items:center;min-width:0}
-.pdiv{width:1px;background:var(--line);align-self:stretch;margin:0 26px;flex:none}
+.pdiv{width:1px;background:rgba(255,255,255,.35);align-self:stretch;margin:0 26px;flex:none}
 .ring{position:relative;width:76px;height:76px;flex:none;margin-right:16px}.ring svg{transform:rotate(-90deg);display:block}
 .ring span{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font:600 19px Inter}
-.pr .pn{font:600 26px Inter;white-space:nowrap}.pr .pw{font:500 20px Inter;color:var(--mute);margin-top:2px;white-space:nowrap}
+.pr .pn{font:600 26px Inter;white-space:nowrap}.pr .pw{font:500 20px Inter;color:rgba(255,255,255,.8);margin-top:2px;white-space:nowrap}
 .pr .end{margin-left:auto;padding-left:10px;text-align:right;font:700 40px var(--T);line-height:1;white-space:nowrap}
-.pr .end small{display:block;font:500 18px Inter;color:var(--mute);margin-top:4px}
-.pr .free{margin-left:auto;padding-left:10px;font:500 24px Inter;color:var(--green);white-space:nowrap}
-.pr .off{margin-left:auto;padding-left:10px;font:500 24px Inter;color:var(--mute);white-space:nowrap}
-.pr .bad{margin-left:auto;padding-left:10px;font:600 24px Inter;color:var(--red);white-space:nowrap}
+.pr .end small{display:block;font:500 18px Inter;color:rgba(255,255,255,.8);margin-top:4px}
+.pr .free{margin-left:auto;padding-left:10px;font:500 24px Inter;color:#fff;white-space:nowrap}
+.pr .off{margin-left:auto;padding-left:10px;font:500 24px Inter;color:rgba(255,255,255,.8);white-space:nowrap}
+.pr .bad{margin-left:auto;font:600 22px Inter;color:var(--red);background:#fff;padding:6px 14px;border-radius:99px;white-space:nowrap}
 /* подключение по QR */
 #pair{position:absolute;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:var(--bg)}
 #pair .in{display:flex;align-items:center;background:#fff;border-radius:40px;padding:56px 64px}
@@ -126,8 +129,12 @@ var log = function(t){ try { if (window.RazApp && RazApp.log) RazApp.log(String(
 var store = { get: function(k){ try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: function(k, v){ try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} } };
 
 /* ---------- масштаб в обычном браузере (в приложении страница уже 1920 точек) ---------- */
-function fit(){ var s = Math.min(innerWidth / 1920, innerHeight / 1080); var st = $('stage');
-  st.style.transform = 'scale(' + s + ')'; st.style.left = Math.max(0, (innerWidth - 1920 * s) / 2) + 'px'; st.style.top = Math.max(0, (innerHeight - 1080 * s) / 2) + 'px'; }
+/* окно шире 16:9 — сцена растягивается вширь (колонки шире), чтобы справа не было пустой полосы */
+function fit(){ var W = Math.max(1920, Math.min(2880, Math.round(1080 * innerWidth / Math.max(1, innerHeight)))), s = Math.min(innerWidth / W, innerHeight / 1080), st = $('stage');
+  st.style.width = W + 'px'; var cw = Math.floor((W - 96 - 48) / 3);
+  $('ord').style.width = cw + 'px'; $('tsk').style.left = (48 + cw + 24) + 'px'; $('tsk').style.width = cw + 'px'; $('ksp').style.left = (48 + 2 * (cw + 24)) + 'px';
+  st.style.transform = 'scale(' + s + ')'; st.style.left = Math.max(0, (innerWidth - W * s) / 2) + 'px'; st.style.top = Math.max(0, (innerHeight - 1080 * s) / 2) + 'px';
+  try { if (S && S.d) render(true); } catch (e) {} }
 if (!window.RazApp) { addEventListener('resize', fit); fit(); }
 
 /* ---------- логотип как на бирке (контуры из label-logo.json, в мм) ---------- */
@@ -214,7 +221,7 @@ function drawKaspi(d){
   $('ksp').innerHTML = h; trim($('ksp'), '.k');
 }
 function ring(pc, col){ var c = 2 * Math.PI * 31, a = (pc / 100 * c).toFixed(1);
-  return '<div class="ring"><svg width="76" height="76"><circle cx="38" cy="38" r="31" fill="none" stroke="#f2f2f7" stroke-width="9"/>' + (pc > 0 ? '<circle cx="38" cy="38" r="31" fill="none" stroke="' + col + '" stroke-width="9" stroke-linecap="round" stroke-dasharray="' + a + ' ' + c.toFixed(1) + '"/>' : '') + '</svg><span>' + pc + '%</span></div>'; }
+  return '<div class="ring"><svg width="76" height="76"><circle cx="38" cy="38" r="31" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="9"/>' + (pc > 0 ? '<circle cx="38" cy="38" r="31" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-dasharray="' + a + ' ' + c.toFixed(1) + '"/>' : '') + '</svg><span>' + pc + '%</span></div>'; }
 var PCOL = { 'красный':'#ff3b30', 'белый':'#007aff', 'розовый':'#ff2d55' };
 function pcol(n){ var k = String(n || '').toLowerCase(); for (var x in PCOL) if (k.indexOf(x) >= 0) return PCOL[x]; return '#ff9500'; }
 var STL = { print:'печатает', pause:'на паузе', prep:'готовится', idle:'', done:'', off:'не в сети', err:'ошибка' };
