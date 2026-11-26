@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="ceh-build" content="20261126180000">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>/* в приложении «Цех» страница раскладывается сразу на 1920 точек, приставка масштабирует её сама */
 if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('content', 'width=1920, initial-scale=' + (screen.width ? Math.min(1, screen.width / 1920) : 0.5));</script>
@@ -542,8 +543,14 @@ tickClock();
 if (window.RazApp) music();   /* волна включается сразу при запуске, даже до подключения по QR */
 if (KEY) start(); else pair();
 /* раз в сутки ночью перезагружаем страницу — чтобы подтянуть обновления экрана */
-setInterval(function(){ var h = new Date().getHours(); if (h === 4 && Date.now() - (window._t0 || (window._t0 = Date.now())) > 3 * 3600e3) location.reload(); }, 30 * 6e4);
+setInterval(function(){ var h = new Date().getHours(); if (h === 4 && Date.now() - (window._t0 || (window._t0 = Date.now())) > 3 * 3600e3) fresh(); }, 30 * 6e4);
 window._t0 = Date.now();
+/* раз в 10 минут: если на сайте новая версия экрана — перезагрузиться на неё (свежую, не сохранённую копию) */
+function fresh(){ try { var u = new URL(location.href); u.searchParams.set('t', Date.now()); location.replace(u.toString()); } catch (e) { location.reload(); } }
+var BUILD = (document.querySelector('meta[name=ceh-build]') || {}).content;
+setInterval(function(){ if (!BUILD || $('dlg') && $('dlg').classList.contains('on')) return;
+  fetch(location.pathname + '?v=' + Date.now(), { cache:'no-store' }).then(function(r){ return r.ok ? r.text() : ''; }).then(function(t){
+    var m = /name="ceh-build" content="(\d+)"/.exec(t); if (m && m[1] !== BUILD) fresh(); }).catch(function(){}); }, 10 * 6e4);
 })();
 </script>
 </body>
