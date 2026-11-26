@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#e6edff">
 <script>try{if(localStorage.getItem('raz.theme')==='dark'){document.documentElement.classList.add('dark');document.querySelector('meta[name=theme-color]').content='#0a0f25'}}catch(_){}</script>
 <meta name="robots" content="noindex,nofollow">
-<meta name="app-build" content="20261125210000">
+<meta name="app-build" content="20261126070000">
 <link rel="icon" href="favicon.ico?v=3" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=3">
@@ -7823,7 +7823,7 @@ function cehSummary(){
   const tl=tasks.filter(t=>!t.equip||!later(t)).filter(t=>dn(t)||(!t.done&&!later(t)&&(!t.date||t.date<=today)))
     .sort((a,b)=>(a.done?1:0)-(b.done?1:0)||String(a.date||'9').localeCompare(String(b.date||'9'))||String(a.time||'99').localeCompare(String(b.time||'99')));
   const tasksL=tl.slice(0,14).map(t=>({i:t.id,t:cut(t.title,90),d:t.date||'',tm:t.time||'',who:cut(t.who,20),...(t.done?{x:1,at:hm(t.doneAt)}:{})}));
-  /* Kaspi: что собрать и что отдать; если собирать нечего — что едет и когда придут деньги */
+  /* Kaspi: что собрать и что отдать; если собирать нечего — что едет и когда придёт клиентам (без сумм) */
   let kaspi=null;
   if(kaspiLoaded){
     const A=['NEW','SIGN_REQUIRED','PICKUP','DELIVERY','KASPI_DELIVERY'];
@@ -7833,7 +7833,7 @@ function cehSummary(){
     const end=ds(new Date(Date.now()+21*864e5));
     const pay=(kaspiOrders||[]).filter(k=>kStage(k)==='shipped'&&kPayDay(k)&&kPayDay(k)<=end).sort((x,y)=>String(kPayDay(x)).localeCompare(String(kPayDay(y)))).slice(0,10);
     kaspi={todo:todo.slice(0,10).map(k=>({w:cut(kWhat(k),80),s:k.assembled||k.waybill?'h':'a',p:+k.transmitPlan||0})),
-      pay:pay.map(k=>({d:kPayDay(k),w:cut(kWhat(k),80),t:cut(k.town||'',24),v:kNet(k)}))};
+      pay:pay.map(k=>({d:kPayDay(k),w:cut(kWhat(k),80),t:cut(k.town||'',24)}))};
   }
   /* принтеры — как в виджете «Оборудование в студии» (облако Bambu или по сети студии + Kobra X) */
   const eq=[];
