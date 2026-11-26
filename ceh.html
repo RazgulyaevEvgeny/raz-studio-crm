@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="ceh-build" content="20261126181800">
+<meta name="ceh-build" content="20261126185000">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>/* в приложении «Цех» страница раскладывается сразу на 1920 точек, приставка масштабирует её сама */
 if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('content', 'width=1920, initial-scale=' + (screen.width ? Math.min(1, screen.width / 1920) : 0.5));</script>
@@ -33,10 +33,10 @@ body.fr4 .card:not(#eq){box-shadow:inset 0 6px 0 #007aff,inset 0 0 0 2px #d1d1d6
 .vline{width:2px;height:84px;background:#d1d1d6;margin:0 30px 0 34px;flex:none}
 .dl,.dr{min-width:0;white-space:nowrap}.dl{text-align:right}.dl b,.dr b{display:block;font:700 46px var(--T);letter-spacing:-.5px;line-height:1.1;color:var(--blue)}.dr small{display:block;font:500 19px Inter;color:var(--mute);height:0;overflow:visible}
 .sp{flex:1}
-.mus{display:flex;align-items:center;background:var(--card);border-radius:22px;padding:12px 26px 12px 12px;max-width:440px;min-width:0}
+.mus{display:flex;align-items:center;background:#1c1c1e;color:#fff;border-radius:22px;padding:12px 26px 12px 12px;max-width:440px;min-width:0}
 .cov{width:72px;height:72px;border-radius:14px;flex:none;background:linear-gradient(135deg,#ff2d55,#af52de 55%,#007aff);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-right:18px}
 .cov img{width:100%;height:100%;object-fit:cover;display:block}
-.mus small{display:block;font:500 19px Inter;color:var(--mute)}.mus b{display:block;font:600 25px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mus small{display:block;font:500 19px Inter;color:#98989f}.mus b{display:block;font:600 25px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mus .mt{min-width:0}
 #clock{font:700 108px var(--T);letter-spacing:-2px;line-height:1;margin:0 26px}
 .mid{position:absolute;left:0;right:0;top:0;height:120px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;pointer-events:none}
@@ -105,12 +105,23 @@ body.fr4 .card:not(#eq){box-shadow:inset 0 6px 0 #007aff,inset 0 0 0 2px #d1d1d6
 .ord.foc,.task.foc{background:#eaf3ff;box-shadow:0 0 0 4px var(--blue);border-top-color:transparent}
 .ord.foc+.ord,.task.foc+.task,.ord.foc+.sep{border-top-color:transparent}
 .mus{cursor:pointer}.mus.foc{box-shadow:0 0 0 4px var(--blue)}
-.mus .tip{display:none;font:500 18px Inter;color:var(--blue)}.mus.foc .tip{display:block}
+.mus .tip{display:none;font:500 18px Inter;color:#64a8ff}.mus.foc .tip{display:block}
 .task.wait .chk{border-color:var(--blue);border-style:dashed}
 body.nocur,body.nocur *{cursor:none!important}
 /* окно заказа */
 #dlg{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.38);display:none;align-items:center;justify-content:center;z-index:5}
 #dlg.on{display:flex}
+/* затемнение при открытом заказе: всё темнеет, кроме времени и даты (2 варианта: sh1 / sh2) */
+html.dim,html.dim body,body.dim #stage{transition:background .2s}
+body.dim .top{z-index:6}body.dim #logo,body.dim .brand,body.dim .mus{opacity:.15}
+body.dim #clock{color:#fff}body.dim .dl b,body.dim .dr b{color:#4da3ff}body.dim #upd{color:#aeaeb2}
+body.sh1 #dlg{background:rgba(0,0,0,.8)}html.dim.sh1,html.dim.sh1 body,body.dim.sh1 #stage{background:#2f2f30}
+body.sh2 #dlg{background:#0b0b0c}html.dim.sh2,html.dim.sh2 body,body.dim.sh2 #stage{background:#0b0b0c}
+body.sh2 #dlg .box{background:#1c1c1e;color:#fff;box-shadow:0 0 0 2px #3a3a3c}
+body.sh2 #dlg .x0,body.sh2 .it .bt{background:#3a3a3c;color:#fff}body.sh2 #dlg .sv{color:#c7c7cc}
+body.sh2 .info{background:#2c2c2e}body.sh2 .info div{border-left-color:#48484a}body.sh2 .info b{color:#fff}body.sh2 .info .red{color:#ff6961}body.sh2 .info .grn{color:#30d158}
+body.sh2 .dsc{color:#c7c7cc}body.sh2 .it{border-top-color:#38383a}body.sh2 .it .val{color:#fff}
+body.sh2 .it.foc{background:#0a3a73}body.sh2 .it .all{background:#0a3a73;color:#64a8ff}body.sh2 .it .all.full{background:#0f3d1e;color:#30d158}body.sh2 .it .pb{background:#3a3a3c}
 #dlg .box{background:#fff;border-radius:36px;width:1360px;max-height:960px;padding:38px 46px 30px;display:flex;flex-direction:column;position:relative}
 #dlg .x0{position:absolute;right:28px;top:26px;width:56px;height:56px;border-radius:50%;background:#f2f2f7;display:flex;align-items:center;justify-content:center;font:500 34px Inter;color:var(--sub);cursor:pointer;line-height:1}
 #dlg .x0.foc{box-shadow:0 0 0 4px var(--blue);background:#eaf3ff;color:var(--blue)}
@@ -146,7 +157,7 @@ body.nocur,body.nocur *{cursor:none!important}
 #pair ol{font:500 30px Inter;color:var(--sub);line-height:1.5;margin:18px 0 0 36px}
 </style>
 </head>
-<body class="fr2">
+<body class="fr2 sh1">
 <div id="stage">
   <div class="top">
     <svg id="logo" viewBox="1.5 2.6 8.2 8.2" aria-label="Разгуляев"><path id="logo-p" fill="#007aff" fill-rule="evenodd" d=""/></svg>
@@ -362,8 +373,9 @@ function madePend(o){ var has = 0; for (var k in MADE) if (k.indexOf(o.i + '/') 
 
 /* ---------- окно заказа: состав, сколько сделано, деньги, сроки ---------- */
 function fdate(d){ if (!d) return '—'; var p = d.split('-'); return (+p[2]) + ' ' + MONS[+p[1] - 1]; }
-function dlgOpen(id){ var o = ORD[id]; if (!o) return; DLG = { id: id, f: (ORD[id].it || []).length ? 1 : 0 }; $('dlg').classList.add('on'); dlgDraw(); }
-function dlgClose(){ DLG = null; $('dlg').classList.remove('on'); focShow(); }
+function dlgOpen(id){ var o = ORD[id]; if (!o) return; DLG = { id: id, f: (ORD[id].it || []).length ? 1 : 0 }; $('dlg').classList.add('on'); dim(1); dlgDraw(); }
+function dim(on){ var c = document.body.className.match(/sh\d/); document.body.classList.toggle('dim', !!on); document.documentElement.classList.toggle('dim', !!on); if (c) document.documentElement.classList.toggle(c[0], !!on); }
+function dlgClose(){ DLG = null; $('dlg').classList.remove('on'); dim(0); focShow(); }
 function dlgItems(){ return $('dlg-b').querySelectorAll('[data-f]'); }
 function dlgDraw(){
   var o = DLG && ORD[DLG.id]; if (!o) { if (DLG) dlgClose(); return; }
