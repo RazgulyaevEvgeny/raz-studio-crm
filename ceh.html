@@ -22,16 +22,17 @@ body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);-webk
 .h .n{margin-left:auto;padding-left:12px;font:500 23px Inter;color:var(--mute)}
 /* шапка */
 .top{position:absolute;left:48px;right:48px;top:22px;height:120px;display:flex;align-items:center}
-#logo{height:92px;width:auto;display:block;flex:none}
+#logo{height:104px;width:104px;display:block;flex:none}
 .vline{width:2px;height:84px;background:#d1d1d6;margin:0 30px 0 34px;flex:none}
-.dt small{display:block;font:500 22px Inter;color:var(--mute)}.dt b{display:block;font:700 50px var(--T);letter-spacing:-.5px;line-height:1.1;white-space:nowrap}
+.dl,.dr{min-width:0;white-space:nowrap}.dl{text-align:right}.dl b,.dr b{display:block;font:700 46px var(--T);letter-spacing:-.5px;line-height:1.1;color:var(--blue)}.dr small{display:block;font:500 19px Inter;color:var(--mute);height:0;overflow:visible}
 .sp{flex:1}
-.mus{display:flex;align-items:center;background:var(--card);border-radius:22px;padding:12px 26px 12px 12px;max-width:600px;min-width:0}
+.mus{display:flex;align-items:center;background:var(--card);border-radius:22px;padding:12px 26px 12px 12px;max-width:440px;min-width:0}
 .cov{width:72px;height:72px;border-radius:14px;flex:none;background:linear-gradient(135deg,#ff2d55,#af52de 55%,#007aff);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-right:18px}
 .cov img{width:100%;height:100%;object-fit:cover;display:block}
 .mus small{display:block;font:500 19px Inter;color:var(--mute)}.mus b{display:block;font:600 25px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mus .mt{min-width:0}
-#clock{font:700 118px var(--T);letter-spacing:-2px;line-height:1;margin-left:24px}
+#clock{font:700 108px var(--T);letter-spacing:-2px;line-height:1;margin:0 26px}
+.mid{position:absolute;left:0;right:0;top:0;height:120px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;pointer-events:none}
 /* пилюли этапов */
 .pill{display:inline-block;font:600 21px Inter;padding:6px 14px;border-radius:99px;white-space:nowrap;flex:none}
 .p-new{background:#e5f0ff;color:var(--blue)}.p-agree{background:#e3f6f9;color:#1b8ca1}.p-design{background:#f6eafc;color:#9440c2}.p-prod{background:#fff2df;color:#c96f00}.p-ready{background:#e8f8ed;color:#1f9d45}.p-done{background:#f2f2f7;color:#8e8e93}
@@ -141,13 +142,10 @@ body.nocur,body.nocur *{cursor:none!important}
 <body>
 <div id="stage">
   <div class="top">
-    <svg id="logo" viewBox="1.69 1.47 32.58 9.62" aria-label="студия брендирования Разгуляев."><path id="logo-p" fill="#1d1d1f" fill-rule="evenodd" d=""/></svg>
-    <div class="vline"></div>
-    <div class="dt"><small id="upd">Сегодня в цехе</small><b id="date"></b></div>
+    <svg id="logo" viewBox="1.5 2.6 8.2 8.2" aria-label="Разгуляев"><path id="logo-p" fill="#007aff" fill-rule="evenodd" d=""/></svg>
+    <div class="mid"><div class="dl"><b id="wday"></b></div><div id="clock"></div><div class="dr"><b id="date"></b><small id="upd"></small></div></div>
     <div class="sp"></div>
     <div class="mus" id="mus"><div class="cov" id="cov"><svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M9 18V5l12-2v13" stroke="#fff" stroke-width="2" fill="none"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="mt"><small id="mus-s">Играет в цехе</small><b id="track">Включаю волну…</b><span class="tip">ОК — пауза · ← → — трек</span></div></div>
-    <div class="sp"></div>
-    <div id="clock"></div>
   </div>
   <div class="card" id="ord" style="left:48px;top:162px;width:592px;height:690px"></div>
   <div class="card" id="tsk" style="left:664px;top:162px;width:592px;height:690px"></div>
@@ -189,7 +187,7 @@ else (function(){ var m = Math.max(0, Math.min(10, +(store.get('ceh.margin') || 
 
 /* ---------- логотип как на бирке (контуры из label-logo.json, в мм) ---------- */
 fetch('label-logo.json').then(function(r){ return r.json(); }).then(function(L){
-  var d = L.map(function(p){ var s = 'M' + p[0] + ',' + p[1]; for (var i = 2; i < p.length; i += 2) s += 'L' + p[i] + ',' + p[i + 1]; return s + 'Z'; }).join('');
+  var d = L.filter(function(p){ var mx = 0; for (var i = 0; i < p.length; i += 2) if (p[i] > mx) mx = p[i]; return mx < 10; }).map(function(p){ var s = 'M' + p[0] + ',' + p[1]; for (var i = 2; i < p.length; i += 2) s += 'L' + p[i] + ',' + p[i + 1]; return s + 'Z'; }).join('');
   $('logo-p').setAttribute('d', d);
 }).catch(function(){});
 
@@ -206,7 +204,7 @@ var ORD = {}, PEND = {}, MADE = {}, DLG = null;
 function today(){ return ds(new Date()); }
 function dayShift(n){ var d = new Date(); d.setDate(d.getDate() + n); return ds(d); }
 function clock(){ var n = new Date(); $('clock').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes());
-  $('date').textContent = DAYS[n.getDay()] + ', ' + n.getDate() + ' ' + MON[n.getMonth()]; }
+  $('wday').textContent = DAYS[n.getDay()]; $('date').textContent = n.getDate() + ' ' + MON[n.getMonth()]; }
 function tickClock(){ clock(); var n = new Date(); setTimeout(function(){ tickClock(); render(true); }, (60 - n.getSeconds()) * 1000 + 50); }
 
 /* ---------- отрисовка ---------- */
@@ -270,8 +268,8 @@ function drawKaspi(d){
       h += '<div class="k' + (i === 0 ? ' first' : '') + '"><span class="tg ' + (x.s === 'a' ? 'as">Собрать' : 'gv">Отдать') + '</span><div class="x two">' + esc(x.w) + '</div><div class="r">' + esc(when) + '</div></div>'; });
   } else {
     h = '<div class="kh"><span class="kl">K</span>Kaspi<span class="n" style="color:var(--green)">✓ собирать нечего</span></div>';
-    if (pay.length) { h += '<div class="ksub">Передали, деньги придут:</div>';
-      pay.forEach(function(x, i){ h += '<div class="k' + (i === 0 ? ' first' : '') + '"><span class="d">' + esc(shortDay(x.d)) + '</span><div class="x">' + esc(x.w) + (x.t ? '<small>' + esc(x.t) + '</small>' : '') + '</div><div class="r">+' + money(x.v) + '</div></div>'; }); }
+    if (pay.length) { h += '<div class="ksub">В пути, придут клиентам:</div>';
+      pay.forEach(function(x, i){ h += '<div class="k' + (i === 0 ? ' first' : '') + '"><span class="d">' + esc(shortDay(x.d)) + '</span><div class="x">' + esc(x.w) + (x.t ? '<small>' + esc(x.t) + '</small>' : '') + '</div></div>'; }); }
     else h += '<div class="empty">Заказов в пути нет</div>';
   }
   $('ksp').innerHTML = h; trim($('ksp'), '.k');
@@ -314,7 +312,7 @@ function render(clockOnly){
   try { drawWa(d); } catch (e) { log('whatsapp: ' + e.message); }
   focApply();
   var age = d.at ? Date.now() - d.at : 0, at = new Date(d.at || Date.now());
-  $('upd').textContent = age > 20 * 6e4 ? 'Сегодня в цехе · данные от ' + pad(at.getHours()) + ':' + pad(at.getMinutes()) + (ds(at) !== today() ? ', ' + shortDay(ds(at)) : '') : 'Сегодня в цехе';
+  $('upd').textContent = age > 20 * 6e4 ? 'данные от ' + pad(at.getHours()) + ':' + pad(at.getMinutes()) + (ds(at) !== today() ? ', ' + shortDay(ds(at)) : '') : '';
 }
 
 /* ---------- WhatsApp: клиенты, которых Аня передала менеджеру и которым ещё не ответили ---------- */
@@ -343,7 +341,7 @@ function sendQ(c, again){ if (!KEY || !DB) return; c.at = Date.now();
   }).catch(function(){ toast('Не отправилось — нет связи'); }); }
 /* если отметки долго лежат и никто их не забрал — подсказать открыть учёт */
 function qNote(){ var q = S.q || {}, old = 0; for (var k in q) if (q[k] && Date.now() - (+q[k].at || 0) > 60000) old++;
-  var u = $('upd'); if (old) { u.textContent = 'Отметки ждут учёта: откройте учёт на телефоне'; u.style.color = 'var(--orange)'; } else u.style.color = ''; }
+  var u = $('upd'); if (old) { u.textContent = 'отметки ждут учёта'; u.style.color = 'var(--orange)'; } else u.style.color = ''; }
 function taskToggle(el){ var id = el.getAttribute('data-t'); if (!id) return; var x = el.getAttribute('data-x') === '1' ? 0 : 1, n = new Date();
   PEND[id] = { x: x, at: pad(n.getHours()) + ':' + pad(n.getMinutes()), t: Date.now() };
   sendQ({ k: 'task', id: id, x: x }); toast(x ? 'Задача отмечена ✓' : 'Задача снова в работе'); render(true); }
