@@ -44,7 +44,9 @@ public class CehActivity extends Activity {
   private Updater updater;
   private long backAt = 0;
 
-  private final Runnable reload = () -> { if (web != null) web.loadUrl(BuildConfig.PAGE); };
+  // страница всегда свежая: метка времени в адресе, чтобы приставка не брала старую сохранённую копию
+  private static String page() { return BuildConfig.PAGE + "&t=" + System.currentTimeMillis(); }
+  private final Runnable reload = () -> { if (web != null) web.loadUrl(page()); };
   private final Runnable hideBanner = () -> banner.setVisibility(View.GONE);
 
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -65,7 +67,7 @@ public class CehActivity extends Activity {
       @Override public void now(JSONObject t, String how) { js("window.razNow&&razNow(" + t.toString() + ")"); }
       @Override public void js(String code) { CehActivity.this.js(code); }
     });
-    web.loadUrl(BuildConfig.PAGE); web.requestFocus();
+    web.loadUrl(page()); web.requestFocus();
     updater = new Updater(this, t -> { if (music != null) music.note(t); }, this::banner); updater.start();
     try {   // после обновления по воздуху — показать, что новая версия встала
       android.content.SharedPreferences sp = getSharedPreferences("app", MODE_PRIVATE); int was = sp.getInt("ver", 0);
@@ -96,7 +98,7 @@ public class CehActivity extends Activity {
       @Override public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail d) {
         // движок страницы упал (нехватка памяти) — пересоздаём его
         try { root.removeView(web); web.destroy(); } catch (Exception ignored) {}
-        makeWeb(); web.loadUrl(BuildConfig.PAGE); return true;
+        makeWeb(); web.loadUrl(page()); return true;
       }
     });
     root.addView(web, 0, new FrameLayout.LayoutParams(-1, -1));
