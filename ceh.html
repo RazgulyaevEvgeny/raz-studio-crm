@@ -81,9 +81,9 @@ body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);-webk
 .pdiv{width:1px;background:rgba(255,255,255,.35);align-self:stretch;margin:0 26px;flex:none}
 .ring{position:relative;width:76px;height:76px;flex:none;margin-right:16px}.ring svg{transform:rotate(-90deg);display:block}
 .ring span{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font:600 19px Inter}
-.pr .pn{font:600 26px Inter;white-space:nowrap}.pr .pw{font:500 20px Inter;color:rgba(255,255,255,.8);margin-top:2px;white-space:nowrap}
+.pr .pn{font:600 28px Inter;white-space:nowrap}.pr .pw{font:500 20px Inter;color:rgba(255,255,255,.8);margin-top:2px;white-space:nowrap}
 .pr .end{margin-left:auto;text-align:center;font:700 38px var(--T);line-height:1;white-space:nowrap;background:#fff;color:#00ae42;border-radius:18px;padding:9px 16px 8px}
-.pr .end small{display:block;font:600 17px Inter;color:#00ae42;margin-top:3px}
+.pr .end.free{font-size:30px;padding:12px 14px 8px}.pr .end small{display:block;font:600 17px Inter;color:#00ae42;margin-top:3px}
 .pr .off{margin-left:auto;padding-left:10px;font:500 24px Inter;color:rgba(255,255,255,.8);white-space:nowrap}
 .pr .bad{margin-left:auto;font:600 22px Inter;color:var(--red);background:#fff;padding:6px 14px;border-radius:99px;white-space:nowrap}
 /* WhatsApp: неотвеченные клиенты (данные Ани) */
@@ -289,11 +289,10 @@ function drawEq(d){
     if (p.e) right = '<div class="bad">ошибка</div>';
     else if (p.st === 'off') right = '<div class="off">не в сети</div>';
     else if (busy && p.end) { var e = new Date(p.end), day = ds(e), lab = day === t ? (e.getHours() >= 18 ? 'вечером' : 'сегодня') : day === dayShift(1) ? 'завтра' : shortDay(day);
-      right = '<div class="end">' + pad(e.getHours()) + ':' + pad(e.getMinutes()) + '<small>' + lab + '</small></div>'; }
+      right = '<div class="end">' + pad(e.getHours()) + ':' + pad(e.getMinutes()) + '<small>' + (p.st === 'pause' ? 'на паузе' : lab) + '</small></div>'; }
     else if (busy) right = '<div class="off">' + STL[p.st] + '</div>';
-    else right = '';
-    var sub = busy ? STL[p.st] : (p.e || p.st === 'off') ? '&nbsp;' : 'свободен';
-    return '<div class="pr">' + ring(pc, pcol(p.n)) + '<div style="min-width:0"><div class="pn">' + esc(p.n) + '</div><div class="pw">' + sub + '</div></div>' + right + '</div>';
+    else right = '<div class="end free">Свободен<small>можно ставить</small></div>';
+    return '<div class="pr">' + ring(pc, pcol(p.n)) + '<div style="min-width:0"><div class="pn">' + esc(p.n) + '</div></div>' + right + '</div>';
   }).join('<div class="pdiv"></div>');
 }
 function drawMusic(){ var t = S.now;
