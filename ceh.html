@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="ceh-build" content="20261126180000">
+<meta name="ceh-build" content="20261126181500">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>/* в приложении «Цех» страница раскладывается сразу на 1920 точек, приставка масштабирует её сама */
 if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('content', 'width=1920, initial-scale=' + (screen.width ? Math.min(1, screen.width / 1920) : 0.5));</script>
@@ -24,6 +24,12 @@ body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);-webk
 /* шапка */
 .top{position:absolute;left:48px;right:48px;top:22px;height:120px;display:flex;align-items:center}
 #logo{height:104px;width:104px;display:block;flex:none}
+.brand{display:flex;flex-direction:column;justify-content:center;height:84px;border-left:2px solid #c7c7cc;margin-left:24px;padding-left:22px;color:var(--ink);white-space:nowrap}.brand b{font:700 56px var(--T);line-height:1;letter-spacing:2px;color:var(--blue)}
+/* разграничение белых блоков на слабом ТВ: 4 варианта, выбирается классом fr1..fr4 на body */
+body.fr1 .card:not(#eq){box-shadow:inset 0 0 0 3px #c7c7cc}
+body.fr2 .card{box-shadow:0 6px 18px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.08)}
+body.fr3{--bg:#cfd2da}body.fr3 #stage{background:#cfd2da}
+body.fr4 .card:not(#eq){box-shadow:inset 0 6px 0 #007aff,inset 0 0 0 2px #d1d1d6}
 .vline{width:2px;height:84px;background:#d1d1d6;margin:0 30px 0 34px;flex:none}
 .dl,.dr{min-width:0;white-space:nowrap}.dl{text-align:right}.dl b,.dr b{display:block;font:700 46px var(--T);letter-spacing:-.5px;line-height:1.1;color:var(--blue)}.dr small{display:block;font:500 19px Inter;color:var(--mute);height:0;overflow:visible}
 .sp{flex:1}
@@ -140,10 +146,11 @@ body.nocur,body.nocur *{cursor:none!important}
 #pair ol{font:500 30px Inter;color:var(--sub);line-height:1.5;margin:18px 0 0 36px}
 </style>
 </head>
-<body>
+<body class="fr2">
 <div id="stage">
   <div class="top">
     <svg id="logo" viewBox="1.5 2.6 8.2 8.2" aria-label="Разгуляев"><path id="logo-p" fill="#007aff" fill-rule="evenodd" d=""/></svg>
+    <div class="brand"><b>ЦЕХ</b></div>
     <div class="mid"><div class="dl"><b id="wday"></b></div><div id="clock"></div><div class="dr"><b id="date"></b><small id="upd"></small></div></div>
     <div class="sp"></div>
     <div class="mus" id="mus"><div class="cov" id="cov"><svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M9 18V5l12-2v13" stroke="#fff" stroke-width="2" fill="none"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="mt"><small id="mus-s">Играет в цехе</small><b id="track">Включаю волну…</b><span class="tip">ОК — пауза · ← → — трек</span></div></div>
@@ -167,6 +174,8 @@ var DB = (window.FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL || '').replace(/
 var CRM = 'https://razgulyaevevgeny.github.io/raz-studio-crm/';
 var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
 var pad = function(n){ return (n < 10 ? '0' : '') + n; };
+/* время всегда по Алматы (UTC+5), даже если на приставке другой часовой пояс */
+function KZ(t){ var d = t == null ? new Date() : new Date(t); return new Date(d.getTime() + (300 + d.getTimezoneOffset()) * 6e4); }
 var ds = function(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
 var MON = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 var MONS = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
@@ -202,11 +211,11 @@ var S = { d: null, music: null, now: null, q: null }, W = null, lastJ = '';
 var ORD = {}, PEND = {}, MADE = {}, DLG = null;
 
 /* ---------- часы и дата ---------- */
-function today(){ return ds(new Date()); }
-function dayShift(n){ var d = new Date(); d.setDate(d.getDate() + n); return ds(d); }
-function clock(){ var n = new Date(); $('clock').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes());
+function today(){ return ds(KZ()); }
+function dayShift(n){ var d = KZ(); d.setDate(d.getDate() + n); return ds(d); }
+function clock(){ var n = KZ(); $('clock').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes());
   $('wday').textContent = DAYS[n.getDay()]; $('date').textContent = n.getDate() + ' ' + MON[n.getMonth()]; }
-function tickClock(){ clock(); var n = new Date(); setTimeout(function(){ tickClock(); render(true); }, (60 - n.getSeconds()) * 1000 + 50); }
+function tickClock(){ clock(); var n = KZ(); setTimeout(function(){ tickClock(); render(true); }, (60 - n.getSeconds()) * 1000 + 50); }
 
 /* ---------- отрисовка ---------- */
 var ST = { 'new':['Новый','new','blue'], agree:['согласование','agree','teal'], design:['разработка','design','purple'], prod:['производство','prod','orange'], ready:['готов','ready','green'], done:['выдан','done','mute'] };
@@ -241,7 +250,7 @@ function drawOrders(d){
   var shown = $('ord').querySelectorAll('.ord:not(.old)').length; if (shown < n) $('ord-n').textContent = n + ' в работе · на экране ' + shown;
 }
 var CHK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-function left(tm){ var p = tm.split(':'), e = new Date(); e.setHours(+p[0], +p[1] || 0, 0, 0); var m = Math.round((e - Date.now()) / 6e4); if (m <= 0) return ''; return 'осталось ' + (m >= 60 ? Math.floor(m / 60) + ' ч ' : '') + (m % 60) + ' мин'; }
+function left(tm){ var p = tm.split(':'), e = KZ(); e.setHours(+p[0], +p[1] || 0, 0, 0); var m = Math.round((e - KZ()) / 6e4); if (m <= 0) return ''; return 'осталось ' + (m >= 60 ? Math.floor(m / 60) + ' ч ' : '') + (m % 60) + ' мин'; }
 function drawTasks(d){
   var L = d.tasks || [], t = today(), h = '', done = 0;
   L.forEach(function(x){ var pv = x.i && PEND[x.i]; if (pv ? pv.x : x.x) done++; });
@@ -265,7 +274,7 @@ function drawKaspi(d){
   if (todo.length) {
     var a = todo.filter(function(x){ return x.s === 'a'; }).length, g = todo.length - a;
     h = '<div class="kh"><span class="kl">K</span>Kaspi<span class="n">' + [a ? a + ' собрать' : '', g ? g + ' отдать' : ''].filter(Boolean).join(' · ') + '</span></div>';
-    todo.forEach(function(x, i){ var p = x.p ? new Date(x.p) : null, when = p ? (ds(p) === today() ? 'до ' + pad(p.getHours()) + ':' + pad(p.getMinutes()) : shortDay(ds(p))) : '';
+    todo.forEach(function(x, i){ var p = x.p ? KZ(x.p) : null, when = p ? (ds(p) === today() ? 'до ' + pad(p.getHours()) + ':' + pad(p.getMinutes()) : shortDay(ds(p))) : '';
       h += '<div class="k' + (i === 0 ? ' first' : '') + '"><span class="tg ' + (x.s === 'a' ? 'as">Собрать' : 'gv">Отдать') + '</span><div class="x two">' + esc(x.w) + '</div><div class="r">' + esc(when) + '</div></div>'; });
   } else {
     h = '<div class="kh"><span class="kl">K</span>Kaspi<span class="n" style="color:var(--green)">✓ собирать нечего</span></div>';
@@ -289,7 +298,7 @@ function drawEq(d){
     var busy = p.st === 'print' || p.st === 'pause' || p.st === 'prep', pc = busy ? (+p.pc || 0) : 0, right;
     if (p.e) right = '<div class="bad">ошибка</div>';
     else if (p.st === 'off') right = '<div class="off">не в сети</div>';
-    else if (busy && p.end) { var e = new Date(p.end), day = ds(e), lab = day === t ? (e.getHours() >= 18 ? 'вечером' : 'сегодня') : day === dayShift(1) ? 'завтра' : shortDay(day);
+    else if (busy && p.end) { var e = KZ(p.end), day = ds(e), lab = day === t ? (e.getHours() >= 18 ? 'вечером' : 'сегодня') : day === dayShift(1) ? 'завтра' : shortDay(day);
       right = '<div class="end">' + pad(e.getHours()) + ':' + pad(e.getMinutes()) + '<small>' + (p.st === 'pause' ? 'на паузе' : lab) + '</small></div>'; }
     else if (busy) right = '<div class="off">' + STL[p.st] + '</div>';
     else right = '<div class="end free">Свободен<small>можно ставить</small></div>';
@@ -311,7 +320,7 @@ function render(clockOnly){
   try { drawEq(d); } catch (e) { log('принтеры: ' + e.message); }
   try { drawWa(d); } catch (e) { log('whatsapp: ' + e.message); }
   focApply();
-  var age = d.at ? Date.now() - d.at : 0, at = new Date(d.at || Date.now());
+  var age = d.at ? Date.now() - d.at : 0, at = KZ(d.at || Date.now());
   $('upd').textContent = age > 20 * 6e4 ? 'данные от ' + pad(at.getHours()) + ':' + pad(at.getMinutes()) + (ds(at) !== today() ? ', ' + shortDay(ds(at)) : '') : '';
 }
 
@@ -342,7 +351,7 @@ function sendQ(c, again){ if (!KEY || !DB) return; c.at = Date.now();
 /* если отметки долго лежат и никто их не забрал — подсказать открыть учёт */
 function qNote(){ var q = S.q || {}, old = 0; for (var k in q) if (q[k] && Date.now() - (+q[k].at || 0) > 60000) old++;
   var u = $('upd'); if (old) { u.textContent = 'отметки ждут учёта'; u.style.color = 'var(--orange)'; } else u.style.color = ''; }
-function taskToggle(el){ var id = el.getAttribute('data-t'); if (!id) return; var x = el.getAttribute('data-x') === '1' ? 0 : 1, n = new Date();
+function taskToggle(el){ var id = el.getAttribute('data-t'); if (!id) return; var x = el.getAttribute('data-x') === '1' ? 0 : 1, n = KZ();
   PEND[id] = { x: x, at: pad(n.getHours()) + ':' + pad(n.getMinutes()), t: Date.now() };
   sendQ({ k: 'task', id: id, x: x }); toast(x ? 'Задача отмечена ✓' : 'Задача снова в работе'); render(true); }
 setInterval(function(){ var ch = 0; for (var k in PEND) if (Date.now() - PEND[k].t > 5 * 6e4) { delete PEND[k]; ch = 1; } for (var j in MADE) if (Date.now() - MADE[j].t > 5 * 6e4) { delete MADE[j]; ch = 1; } if (ch) render(true); }, 30000);
@@ -543,7 +552,7 @@ tickClock();
 if (window.RazApp) music();   /* волна включается сразу при запуске, даже до подключения по QR */
 if (KEY) start(); else pair();
 /* раз в сутки ночью перезагружаем страницу — чтобы подтянуть обновления экрана */
-setInterval(function(){ var h = new Date().getHours(); if (h === 4 && Date.now() - (window._t0 || (window._t0 = Date.now())) > 3 * 3600e3) fresh(); }, 30 * 6e4);
+setInterval(function(){ var h = KZ().getHours(); if (h === 4 && Date.now() - (window._t0 || (window._t0 = Date.now())) > 3 * 3600e3) fresh(); }, 30 * 6e4);
 window._t0 = Date.now();
 /* раз в 10 минут: если на сайте новая версия экрана — перезагрузиться на неё (свежую, не сохранённую копию) */
 function fresh(){ try { var u = new URL(location.href); u.searchParams.set('t', Date.now()); location.replace(u.toString()); } catch (e) { location.reload(); } }
