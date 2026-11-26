@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="ceh-build" content="20261126181000">
+<meta name="ceh-build" content="20261126181500">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>/* в приложении «Цех» страница раскладывается сразу на 1920 точек, приставка масштабирует её сама */
 if (window.RazApp) document.querySelector('meta[name=viewport]').setAttribute('content', 'width=1920, initial-scale=' + (screen.width ? Math.min(1, screen.width / 1920) : 0.5));</script>
@@ -24,7 +24,7 @@ body{font-family:Inter,-apple-system,system-ui,sans-serif;color:var(--ink);-webk
 /* шапка */
 .top{position:absolute;left:48px;right:48px;top:22px;height:120px;display:flex;align-items:center}
 #logo{height:104px;width:104px;display:block;flex:none}
-.brand{display:flex;flex-direction:column;justify-content:center;height:84px;border-left:2px solid #c7c7cc;margin-left:24px;padding-left:22px;color:var(--ink);white-space:nowrap}.brand span{font:500 30px Inter;line-height:1.1;color:var(--sub)}.brand b{font:700 34px Inter;line-height:1.1;letter-spacing:-.3px}
+.brand{display:flex;flex-direction:column;justify-content:center;height:84px;border-left:2px solid #c7c7cc;margin-left:24px;padding-left:22px;color:var(--ink);white-space:nowrap}.brand b{font:700 56px var(--T);line-height:1;letter-spacing:2px;color:var(--blue)}
 /* разграничение белых блоков на слабом ТВ: 4 варианта, выбирается классом fr1..fr4 на body */
 body.fr1 .card:not(#eq){box-shadow:inset 0 0 0 3px #c7c7cc}
 body.fr2 .card{box-shadow:0 6px 18px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.08)}
@@ -146,11 +146,11 @@ body.nocur,body.nocur *{cursor:none!important}
 #pair ol{font:500 30px Inter;color:var(--sub);line-height:1.5;margin:18px 0 0 36px}
 </style>
 </head>
-<body class="fr1">
+<body class="fr2">
 <div id="stage">
   <div class="top">
     <svg id="logo" viewBox="1.5 2.6 8.2 8.2" aria-label="Разгуляев"><path id="logo-p" fill="#007aff" fill-rule="evenodd" d=""/></svg>
-    <div class="brand"><span>цех</span><b>Разгуляев.</b></div>
+    <div class="brand"><b>ЦЕХ</b></div>
     <div class="mid"><div class="dl"><b id="wday"></b></div><div id="clock"></div><div class="dr"><b id="date"></b><small id="upd"></small></div></div>
     <div class="sp"></div>
     <div class="mus" id="mus"><div class="cov" id="cov"><svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M9 18V5l12-2v13" stroke="#fff" stroke-width="2" fill="none"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="mt"><small id="mus-s">Играет в цехе</small><b id="track">Включаю волну…</b><span class="tip">ОК — пауза · ← → — трек</span></div></div>
